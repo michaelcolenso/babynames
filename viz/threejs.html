@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Baby Names: 3D Data Exploration</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a12;
+    --bg2: #12121a;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --accent: #818cf8;
+    --male: #60a5fa;
+    --female: #f472b6;
+  }
+
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(18, 18, 26, 0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    z-index: 10;
+    flex-shrink: 0;
+  }
+
+  nav .logo {
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: -0.02em;
+    margin-right: 1.5rem;
+    background: linear-gradient(135deg, #818cf8, #f472b6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  nav button {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.8rem;
+    padding: 0.4rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.25s;
+    letter-spacing: 0.02em;
+  }
+
+  nav button:hover {
+    border-color: rgba(129,140,248,0.3);
+    color: var(--text);
+  }
+
+  nav button.active {
+    background: rgba(129,140,248,0.15);
+    border-color: rgba(129,140,248,0.4);
+    color: var(--text);
+  }
+
+  nav .spacer { flex: 1; }
+
+  nav .hint {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  #canvas-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  #info-panel {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 1.5rem;
+    max-width: 380px;
+    background: rgba(18, 18, 26, 0.85);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  #info-panel .panel-number {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+  }
+
+  #info-panel h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+
+  #info-panel p {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  #legend {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  #loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    z-index: 100;
+    transition: opacity 0.6s;
+  }
+
+  #loading.hidden { opacity: 0; pointer-events: none; }
+
+  #loading span {
+    font-size: 0.9rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+  #loading span { animation: pulse 1.5s infinite; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Baby Names 3D</div>
+  <button class="active" data-scene="terrain">Birth Terrain</button>
+  <button data-scene="rivers">Name Rivers</button>
+  <button data-scene="letters">Alphabet City</button>
+  <span class="spacer"></span>
+  <span class="hint">drag to orbit &middot; scroll to zoom</span>
+</nav>
+
+<div id="canvas-container">
+  <canvas id="c"></canvas>
+  <div id="loading"><span>Loading Three.js&hellip;</span></div>
+
+  <div id="info-panel">
+    <div class="panel-number">01 / Terrain</div>
+    <h2>The Birth Landscape</h2>
+    <p>136 years of American births shaped into a 3D terrain. The blue ridge is male births, the pink ridge is female. The towering peak in the center is the baby boom (1946&ndash;1964).</p>
+  </div>
+
+  <div id="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div> Male</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f472b6"></div> Female</div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+// ============================================================
+// DATA
+// ============================================================
+
+const usTotals = [{"year":1880,"M":118399,"F":97604},{"year":1881,"M":108282,"F":98855},{"year":1882,"M":122031,"F":115696},{"year":1883,"M":112478,"F":120059},{"year":1884,"M":122739,"F":137586},{"year":1885,"M":115946,"F":141949},{"year":1886,"M":119042,"F":153736},{"year":1887,"M":109315,"F":155422},{"year":1888,"M":129905,"F":189447},{"year":1889,"M":119034,"F":189219},{"year":1890,"M":119701,"F":201661},{"year":1891,"M":109267,"F":196567},{"year":1892,"M":131453,"F":224915},{"year":1893,"M":121040,"F":225232},{"year":1894,"M":124894,"F":235972},{"year":1895,"M":126644,"F":247107},{"year":1896,"M":129072,"F":251993},{"year":1897,"M":121943,"F":248275},{"year":1898,"M":132105,"F":274146},{"year":1899,"M":115495,"F":247394},{"year":1900,"M":150486,"F":299873},{"year":1901,"M":116104,"F":239882},{"year":1902,"M":132498,"F":274929},{"year":1903,"M":129354,"F":275199},{"year":1904,"M":131649,"F":281920},{"year":1905,"M":132229,"F":282665},{"year":1906,"M":133564,"F":291094},{"year":1907,"M":146989,"F":303906},{"year":1908,"M":154324,"F":313548},{"year":1909,"M":163978,"F":323779},{"year":1910,"M":180857,"F":350052},{"year":1911,"M":185702,"F":346498},{"year":1912,"M":249091,"F":444604},{"year":1913,"M":268921,"F":455823},{"year":1914,"M":321636,"F":523561},{"year":1915,"M":403921,"F":614636},{"year":1916,"M":421696,"F":631896},{"year":1917,"M":437775,"F":641375},{"year":1918,"M":468223,"F":671875},{"year":1919,"M":452527,"F":649728},{"year":1920,"M":488979,"F":666834},{"year":1921,"M":503289,"F":673768},{"year":1922,"M":493291,"F":664534},{"year":1923,"M":495484,"F":665581},{"year":1924,"M":506045,"F":672765},{"year":1925,"M":496953,"F":666364},{"year":1926,"M":490408,"F":658287},{"year":1927,"M":494230,"F":657707},{"year":1928,"M":488037,"F":645677},{"year":1929,"M":475032,"F":630910},{"year":1930,"M":479455,"F":640279},{"year":1931,"M":460759,"F":619614},{"year":1932,"M":461484,"F":621714},{"year":1933,"M":441358,"F":599498},{"year":1934,"M":455736,"F":617222},{"year":1935,"M":449413,"F":612735},{"year":1936,"M":441113,"F":601025},{"year":1937,"M":451821,"F":617416},{"year":1938,"M":457668,"F":626988},{"year":1939,"M":451614,"F":620044},{"year":1940,"M":474990,"F":643462},{"year":1941,"M":492843,"F":669411},{"year":1942,"M":527261,"F":713942},{"year":1943,"M":541424,"F":730063},{"year":1944,"M":515468,"F":697547},{"year":1945,"M":506697,"F":689076},{"year":1946,"M":604976,"F":807428},{"year":1947,"M":664523,"F":877854},{"year":1948,"M":647876,"F":851584},{"year":1949,"M":651622,"F":856795},{"year":1950,"M":641185,"F":845338},{"year":1951,"M":654826,"F":862510},{"year":1952,"M":670831,"F":882946},{"year":1953,"M":672218,"F":889429},{"year":1954,"M":686994,"F":909024},{"year":1955,"M":693820,"F":917630},{"year":1956,"M":710547,"F":936093},{"year":1957,"M":716779,"F":944421},{"year":1958,"M":705640,"F":931327},{"year":1959,"M":710987,"F":937960},{"year":1960,"M":712124,"F":937894},{"year":1961,"M":709170,"F":935050},{"year":1962,"M":693145,"F":913817},{"year":1963,"M":677791,"F":897052},{"year":1964,"M":660585,"F":875506},{"year":1965,"M":630096,"F":839818},{"year":1966,"M":601992,"F":806638},{"year":1967,"M":582419,"F":783573},{"year":1968,"M":574793,"F":776155},{"year":1969,"M":582083,"F":788073},{"year":1970,"M":599870,"F":812230},{"year":1971,"M":567612,"F":775651},{"year":1972,"M":530101,"F":727699},{"year":1973,"M":513757,"F":709752},{"year":1974,"M":510949,"F":706792},{"year":1975,"M":510177,"F":703476},{"year":1976,"M":510884,"F":699655},{"year":1977,"M":525975,"F":714974},{"year":1978,"M":521006,"F":705942},{"year":1979,"M":541765,"F":728843},{"year":1980,"M":557073,"F":746802},{"year":1981,"M":556014,"F":743341},{"year":1982,"M":558264,"F":744063},{"year":1983,"M":553777,"F":738227},{"year":1984,"M":555991,"F":740236},{"year":1985,"M":565822,"F":752786},{"year":1986,"M":567254,"F":754580},{"year":1987,"M":575022,"F":762785},{"year":1988,"M":596197,"F":789929},{"year":1989,"M":621764,"F":822758},{"year":1990,"M":636782,"F":840923},{"year":1991,"M":620093,"F":820960},{"year":1992,"M":614958,"F":815827},{"year":1993,"M":603100,"F":800285},{"year":1994,"M":596004,"F":790065},{"year":1995,"M":588509,"F":780149},{"year":1996,"M":582846,"F":774620},{"year":1997,"M":575834,"F":765608},{"year":1998,"M":578541,"F":768116},{"year":1999,"M":576198,"F":764945},{"year":2000,"M":589002,"F":780616},{"year":2001,"M":580107,"F":770266},{"year":2002,"M":579725,"F":769069},{"year":2003,"M":583958,"F":776088},{"year":2004,"M":586217,"F":780093},{"year":2005,"M":585437,"F":779815},{"year":2006,"M":600361,"F":799067},{"year":2007,"M":599541,"F":799192},{"year":2008,"M":585220,"F":781390},{"year":2009,"M":563012,"F":754306},{"year":2010,"M":546675,"F":735214},{"year":2011,"M":541160,"F":729850},{"year":2012,"M":541584,"F":730290},{"year":2013,"M":531094,"F":718354},{"year":2014,"M":537894,"F":727245},{"year":2015,"M":538272,"F":728489}];
+
+const britishBoys = [
+  {name:"OLIVER", values:{1996:3655,1997:3647,1998:3970,1999:3958,2000:4402,2001:4534,2002:4794,2003:5062,2004:5565,2005:5516,2006:5898,2007:6438,2008:7417,2009:7364,2010:8427,2011:7007,2012:6669,2013:6949,2014:6649,2015:6941}},
+  {name:"JACK", values:{1996:10779,1997:10145,1998:9845,1999:9785,2000:9079,2001:9000,2002:9100,2003:9037,2004:8380,2005:7434,2006:7804,2007:7606,2008:8010,2009:7090,2010:7031,2011:6844,2012:6230,2013:6212,2014:5804,2015:5371}},
+  {name:"HARRY", values:{1996:4434,1997:4631,1998:4761,1999:4914,2000:6070,2001:5662,2002:4551,2003:4644,2004:4704,2005:4638,2006:5639,2007:5851,2008:6008,2009:6143,2010:6862,2011:7523,2012:7168,2013:5888,2014:5379,2015:5308}},
+  {name:"GEORGE", values:{1996:4287,1997:4586,1998:4540,1999:4286,2000:4034,2001:3858,2002:3677,2003:3479,2004:3578,2005:3540,2006:3787,2007:3939,2008:4214,2009:4347,2010:4542,2011:4347,2012:4408,2013:4202,2014:4320,2015:4869}},
+  {name:"JACOB", values:{1996:2249,1997:2590,1998:2686,1999:2746,2000:2536,2001:2595,2002:2537,2003:2903,2004:2954,2005:3057,2006:3193,2007:3155,2008:3127,2009:3214,2010:4308,2011:5047,2012:5286,2013:5126,2014:5050,2015:4850}},
+  {name:"CHARLIE", values:{1996:1912,1997:2161,1998:2401,1999:2350,2000:2355,2001:2250,2002:2585,2003:2936,2004:3666,2005:4033,2006:4734,2007:5194,2008:5291,2009:5409,2010:5410,2011:5516,2012:5571,2013:5039,2014:4642,2015:4831}},
+  {name:"NOAH", values:{1996:137,1997:216,1998:242,1999:284,2000:281,2001:320,2002:404,2003:597,2004:880,2005:1346,2006:1511,2007:1480,2008:1678,2009:2250,2010:3084,2011:3287,2012:3912,2013:3830,2014:4085,2015:4148}},
+  {name:"WILLIAM", values:{1996:4269,1997:4499,1998:4879,1999:5287,2000:4804,2001:4459,2002:5037,2003:4904,2004:5212,2005:5106,2006:4886,2007:5148,2008:5169,2009:5247,2010:5256,2011:4632,2012:4590,2013:4268,2014:4134,2015:4083}},
+  {name:"THOMAS", values:{1996:9603,1997:9479,1998:9468,1999:9454,2000:8672,2001:8337,2002:7438,2003:7213,2004:7295,2005:6792,2006:6616,2007:6530,2008:6062,2009:5520,2010:5307,2011:5353,2012:4893,2013:4591,2014:4405,2015:4075}},
+  {name:"OSCAR", values:{1996:307,1997:403,1998:488,1999:599,2000:611,2001:782,2002:836,2003:992,2004:1093,2005:1262,2006:1523,2007:1777,2008:2432,2009:2943,2010:3035,2011:3251,2012:3289,2013:4511,2014:4269,2015:4066}}
+];
+
+const britishGirls = [
+  {name:"AMELIA", values:{1996:929,1997:1145,1998:1249,1999:1511,2000:1489,2001:1709,2002:1973,2003:2299,2004:2649,2005:2976,2006:2907,2007:3250,2008:3440,2009:3625,2010:4227,2011:5054,2012:7061,2013:5570,2014:5327,2015:5158}},
+  {name:"OLIVIA", values:{1996:2456,1997:2789,1998:3550,1999:5250,2000:4546,2001:4001,2002:3798,2003:4024,2004:3985,2005:4282,2006:4961,2007:4814,2008:5325,2009:5201,2010:5279,2011:4938,2012:4585,2013:4598,2014:4724,2015:4853}},
+  {name:"EMILY", values:{1996:6415,1997:6616,1998:6550,1999:6760,2000:6232,2001:5918,2002:5390,2003:5423,2004:5399,2005:4752,2006:4474,2007:4732,2008:4881,2009:4462,2010:4310,2011:3974,2012:4029,2013:4049,2014:3991,2015:3893}},
+  {name:"ISLA", values:{1996:87,1997:84,1998:87,1999:124,2000:125,2001:115,2002:142,2003:233,2004:311,2005:432,2006:575,2007:964,2008:1599,2009:1908,2010:2384,2011:2849,2012:3501,2013:3526,2014:4012,2015:3474}},
+  {name:"AVA", values:{1996:30,1997:55,1998:51,1999:70,2000:129,2001:194,2002:214,2003:295,2004:346,2005:657,2006:966,2007:1377,2008:2314,2009:2827,2010:3438,2011:3621,2012:3779,2013:3575,2014:3171,2015:3414}},
+  {name:"ELLA", values:{1996:1137,1997:1300,1998:1538,1999:1881,2000:2022,2001:2283,2002:2763,2003:3494,2004:3274,2005:3220,2006:3286,2007:3671,2008:3042,2009:2818,2010:2601,2011:2783,2012:2559,2013:2722,2014:2465,2015:3028}},
+  {name:"JESSICA", values:{1996:6711,1997:6090,1998:5719,1999:4799,2000:4779,2001:4888,2002:5094,2003:4928,2004:4838,2005:5030,2006:4908,2007:4595,2008:4672,2009:4291,2010:4102,2011:3984,2012:4165,2013:3507,2014:2995,2015:2937}},
+  {name:"SOPHIE", values:{1996:7087,1997:6311,1998:5682,1999:5031,2000:4624,2001:4560,2002:4688,2003:4592,2004:4670,2005:4422,2006:4309,2007:4188,2008:4380,2009:4452,2010:4469,2011:3923,2012:3496,2013:3013,2014:2905,2015:2779}},
+  {name:"POPPY", values:{1996:537,1997:468,1998:534,1999:516,2000:598,2001:617,2002:828,2003:1200,2004:1246,2005:1574,2006:1794,2007:1886,2008:1975,2009:2226,2010:2706,2011:2932,2012:3203,2013:3422,2014:3273,2015:2816}},
+  {name:"LILY", values:{1996:651,1997:721,1998:873,1999:1007,2000:1124,2001:1368,2002:1706,2003:2221,2004:2803,2005:2871,2006:3407,2007:4011,2008:4047,2009:3967,2010:4257,2011:4761,2012:3802,2013:2883,2014:2965,2015:2711}}
+];
+
+const letterFreqBoys = {"A":601815,"B":284849,"C":442344,"D":313479,"E":229888,"F":156379,"G":131222,"H":322589,"I":82753,"J":972481,"K":231852,"L":425637,"M":501452,"N":136115,"O":228704,"P":59972,"Q":4319,"R":342583,"S":321482,"T":354062,"U":11022,"V":17549,"W":117601,"X":5641,"Y":27271,"Z":79596};
+const letterFreqGirls = {"A":727910,"B":145289,"C":412100,"D":133073,"E":640231,"F":138393,"G":177619,"H":248279,"I":227126,"J":265673,"K":279840,"L":519398,"M":555738,"N":161047,"O":108611,"P":140518,"Q":997,"R":259410,"S":506959,"T":144962,"U":5254,"V":37340,"W":14962,"X":1964,"Y":19861,"Z":70803};
+
+// ============================================================
+// RENDERER SETUP
+// ============================================================
+
+const canvas = document.getElementById('c');
+const container = document.getElementById('canvas-container');
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+
+function getSize() {
+  return { w: container.clientWidth, h: container.clientHeight };
+}
+
+const { w, h } = getSize();
+renderer.setSize(w, h);
+
+// Post-processing
+const composer = new EffectComposer(renderer);
+const renderPass = new RenderPass(new THREE.Scene(), new THREE.PerspectiveCamera());
+composer.addPass(renderPass);
+
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(w, h), 0.6, 0.4, 0.85
+);
+composer.addPass(bloomPass);
+
+// ============================================================
+// SCENE MANAGEMENT
+// ============================================================
+
+const scenes = {};
+let activeKey = 'terrain';
+let controls;
+
+function switchTo(key) {
+  activeKey = key;
+  const config = scenes[key];
+
+  renderPass.scene = config.scene;
+  renderPass.camera = config.camera;
+
+  if (controls) controls.dispose();
+  controls = new OrbitControls(config.camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.06;
+  controls.target.copy(config.target);
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.4;
+  controls.maxPolarAngle = Math.PI * 0.48;
+  controls.minDistance = 10;
+  controls.maxDistance = 150;
+  controls.update();
+
+  // Update UI
+  document.querySelectorAll('nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.scene === key);
+  });
+
+  const info = document.getElementById('info-panel');
+  const legend = document.getElementById('legend');
+  const descriptions = {
+    terrain: {
+      num: '01 / Terrain',
+      title: 'The Birth Landscape',
+      text: '136 years of American births shaped into a 3D terrain. The blue ridge is male births, the pink ridge is female. The towering peaks in the center mark the baby boom (1946\u20131964). Floating particles trace the flow of generations.',
+      legend: [
+        { color: '#60a5fa', label: 'Male births' },
+        { color: '#f472b6', label: 'Female births' },
+      ]
+    },
+    rivers: {
+      num: '02 / Rivers',
+      title: 'Name Rivers',
+      text: 'The top 10 British boy and girl names (1996\u20132015) flow through 3D space as luminous tubes. Height reflects popularity\u2014watch Jack descend as Oliver rises, and see Isla and Ava surge from obscurity to dominance.',
+      legend: [
+        { color: '#60a5fa', label: 'Boy names' },
+        { color: '#f472b6', label: 'Girl names' },
+      ]
+    },
+    letters: {
+      num: '03 / Skyline',
+      title: 'Alphabet City',
+      text: 'Every letter of the alphabet as a glowing tower, arranged in a circle. Height represents how many British babies (1996\u20132015) had names starting with that letter. Blue towers are boys, pink are girls. J towers over all for boys; A and E dominate for girls.',
+      legend: [
+        { color: '#60a5fa', label: 'Boy names' },
+        { color: '#f472b6', label: 'Girl names' },
+      ]
+    }
+  };
+
+  const desc = descriptions[key];
+  info.querySelector('.panel-number').textContent = desc.num;
+  info.querySelector('h2').textContent = desc.title;
+  info.querySelector('p').textContent = desc.text;
+  legend.innerHTML = desc.legend.map(l =>
+    `<div class="legend-item"><div class="legend-dot" style="background:${l.color}"></div> ${l.label}</div>`
+  ).join('');
+}
+
+// ============================================================
+// SCENE 1: BIRTH TERRAIN
+// ============================================================
+
+function buildTerrain() {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x06060c);
+  scene.fog = new THREE.FogExp2(0x06060c, 0.005);
+
+  const aspect = w / h;
+  const camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 500);
+  camera.position.set(10, 35, 65);
+
+  // --- Terrain mesh ---
+  const terrainW = 100, terrainD = 36;
+  const segX = 135, segZ = 60;
+  const geo = new THREE.PlaneGeometry(terrainW, terrainD, segX, segZ);
+  geo.rotateX(-Math.PI / 2);
+
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+
+  const maxM = Math.max(...usTotals.map(d => d.M));
+  const maxF = Math.max(...usTotals.map(d => d.F));
+  const peakHeight = 20;
+  const sigma = 4.5;
+  const ridgeOffset = 5.5;
+
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+
+    // Map x to year index
+    const t = (x + terrainW / 2) / terrainW;
+    const yearIdx = Math.min(Math.max(Math.round(t * 135), 0), 135);
+    const d = usTotals[yearIdx];
+
+    // Two Gaussian ridges
+    const maleH = (d.M / maxM) * peakHeight *
+      Math.exp(-(z + ridgeOffset) ** 2 / (2 * sigma ** 2));
+    const femaleH = (d.F / maxF) * peakHeight *
+      Math.exp(-(z - ridgeOffset) ** 2 / (2 * sigma ** 2));
+
+    const height = Math.max(maleH, femaleH, 0);
+    pos.setY(i, height);
+
+    // Vertex colors: blue for male side, pink for female side
+    const ht = Math.min(height / peakHeight, 1);
+    const blend = 1 / (1 + Math.exp(-z * 0.8)); // sigmoid: 0 = male, 1 = female
+
+    // Male: deep navy → bright blue
+    const mr = 0.08 + ht * 0.30;
+    const mg = 0.15 + ht * 0.50;
+    const mb = 0.35 + ht * 0.65;
+
+    // Female: deep magenta → bright pink
+    const fr = 0.55 + ht * 0.40;
+    const fg = 0.08 + ht * 0.25;
+    const fb = 0.30 + ht * 0.40;
+
+    colors[i * 3]     = mr + (fr - mr) * blend;
+    colors[i * 3 + 1] = mg + (fg - mg) * blend;
+    colors[i * 3 + 2] = mb + (fb - mb) * blend;
+  }
+
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+
+  const terrainMat = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: 0.65,
+    metalness: 0.12,
+    side: THREE.DoubleSide,
+  });
+  scene.add(new THREE.Mesh(geo, terrainMat));
+
+  // --- Base plane ---
+  const basePlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(140, 60),
+    new THREE.MeshStandardMaterial({ color: 0x08080e, roughness: 0.9 })
+  );
+  basePlane.rotateX(-Math.PI / 2);
+  basePlane.position.y = -0.05;
+  scene.add(basePlane);
+
+  // --- Grid ---
+  const grid = new THREE.GridHelper(120, 24, 0x1a1a2e, 0x0e0e1a);
+  grid.position.y = -0.02;
+  scene.add(grid);
+
+  // --- Decade markers (thin vertical lines) ---
+  const markerMat = new THREE.MeshBasicMaterial({ color: 0x333355, transparent: true, opacity: 0.4 });
+  for (let year = 1880; year <= 2010; year += 10) {
+    const xPos = ((year - 1880) / 135) * terrainW - terrainW / 2;
+    const markerGeo = new THREE.CylinderGeometry(0.03, 0.03, 22, 4);
+    const marker = new THREE.Mesh(markerGeo, markerMat);
+    marker.position.set(xPos, 11, -terrainD / 2 - 1);
+    scene.add(marker);
+  }
+
+  // --- Floating particles ---
+  const particleCount = 3000;
+  const pGeo = new THREE.BufferGeometry();
+  const pPos = new Float32Array(particleCount * 3);
+  const pSizes = new Float32Array(particleCount);
+
+  for (let i = 0; i < particleCount; i++) {
+    pPos[i * 3]     = (Math.random() - 0.5) * terrainW;
+    pPos[i * 3 + 1] = Math.random() * 25 + 1;
+    pPos[i * 3 + 2] = (Math.random() - 0.5) * terrainD;
+    pSizes[i] = Math.random() * 1.5 + 0.5;
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  pGeo.setAttribute('size', new THREE.BufferAttribute(pSizes, 1));
+
+  const pMat = new THREE.PointsMaterial({
+    size: 0.12,
+    color: 0x818cf8,
+    transparent: true,
+    opacity: 0.5,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+  const particles = new THREE.Points(pGeo, pMat);
+  scene.add(particles);
+
+  // --- Lights ---
+  scene.add(new THREE.AmbientLight(0x404060, 0.5));
+
+  const dirLight = new THREE.DirectionalLight(0xeeeeff, 0.9);
+  dirLight.position.set(30, 50, 20);
+  scene.add(dirLight);
+
+  const fillLight = new THREE.DirectionalLight(0x8888cc, 0.3);
+  fillLight.position.set(-30, 20, -10);
+  scene.add(fillLight);
+
+  // --- Update function ---
+  function update() {
+    const pPositions = particles.geometry.attributes.position;
+    for (let i = 0; i < particleCount; i++) {
+      let y = pPositions.getY(i);
+      y += 0.015 + pSizes[i] * 0.005;
+      if (y > 28) {
+        y = Math.random() * 2;
+        pPositions.setX(i, (Math.random() - 0.5) * terrainW);
+        pPositions.setZ(i, (Math.random() - 0.5) * terrainD);
+      }
+      pPositions.setY(i, y);
+    }
+    pPositions.needsUpdate = true;
+  }
+
+  return {
+    scene, camera,
+    target: new THREE.Vector3(0, 5, 0),
+    update
+  };
+}
+
+// ============================================================
+// SCENE 2: NAME RIVERS
+// ============================================================
+
+function buildRivers() {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x06060c);
+  scene.fog = new THREE.FogExp2(0x06060c, 0.008);
+
+  const aspect = w / h;
+  const camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 500);
+  camera.position.set(35, 18, 35);
+
+  const years = Array.from({ length: 20 }, (_, i) => 1996 + i);
+
+  const boyHues  = [0x60a5fa, 0x818cf8, 0xa78bfa, 0xc084fc, 0x38bdf8,
+                    0x22d3ee, 0x2dd4bf, 0x4ade80, 0xa3e635, 0xfacc15];
+  const girlHues = [0xf472b6, 0xfb7185, 0xf43f5e, 0xe879f9, 0xc084fc,
+                    0xa78bfa, 0x818cf8, 0x60a5fa, 0x38bdf8, 0x22d3ee];
+
+  function addTubes(data, hues, zBase, zDir) {
+    const maxVal = Math.max(...data.flatMap(d => Object.values(d.values)));
+
+    data.forEach((nameObj, idx) => {
+      const points = years.map((yr, i) => {
+        const x = (i / 19) * 50 - 25;
+        const y = (nameObj.values[yr] / maxVal) * 14;
+        const z = zBase + zDir * idx * 2.8;
+        return new THREE.Vector3(x, y, z);
+      });
+
+      const curve = new THREE.CatmullRomCurve3(points);
+      const tubeGeo = new THREE.TubeGeometry(curve, 80, 0.35, 8, false);
+      const color = new THREE.Color(hues[idx]);
+
+      const tubeMat = new THREE.MeshStandardMaterial({
+        color: color,
+        roughness: 0.35,
+        metalness: 0.3,
+        emissive: color,
+        emissiveIntensity: 0.2,
+      });
+
+      scene.add(new THREE.Mesh(tubeGeo, tubeMat));
+
+      // End cap sphere for visual termination
+      const capGeo = new THREE.SphereGeometry(0.5, 12, 12);
+      const capMat = new THREE.MeshStandardMaterial({
+        color: color, emissive: color, emissiveIntensity: 0.4,
+        roughness: 0.2, metalness: 0.5,
+      });
+      const startPt = curve.getPointAt(0);
+      const endPt = curve.getPointAt(1);
+      const cap1 = new THREE.Mesh(capGeo, capMat);
+      cap1.position.copy(startPt);
+      scene.add(cap1);
+      const cap2 = new THREE.Mesh(capGeo, capMat);
+      cap2.position.copy(endPt);
+      scene.add(cap2);
+    });
+  }
+
+  addTubes(britishBoys, boyHues, -2, -1);
+  addTubes(britishGirls, girlHues, 2, 1);
+
+  // --- Dividing plane (subtle) ---
+  const divider = new THREE.Mesh(
+    new THREE.PlaneGeometry(60, 0.03),
+    new THREE.MeshBasicMaterial({ color: 0x333355, transparent: true, opacity: 0.5 })
+  );
+  divider.position.set(0, 0, 0);
+  divider.rotation.x = -Math.PI / 2;
+  scene.add(divider);
+
+  // --- Grid floor ---
+  const grid = new THREE.GridHelper(60, 20, 0x1a1a2e, 0x0e0e1a);
+  grid.position.y = -0.5;
+  scene.add(grid);
+
+  // --- Floor ---
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(80, 80),
+    new THREE.MeshStandardMaterial({ color: 0x08080e, roughness: 0.9 })
+  );
+  floor.rotateX(-Math.PI / 2);
+  floor.position.y = -0.5;
+  scene.add(floor);
+
+  // --- Year marker lines along x-axis ---
+  const yearLineMat = new THREE.LineBasicMaterial({ color: 0x333355, transparent: true, opacity: 0.3 });
+  for (let i = 0; i < 20; i += 2) {
+    const xPos = (i / 19) * 50 - 25;
+    const points = [new THREE.Vector3(xPos, -0.5, -30), new THREE.Vector3(xPos, -0.5, 30)];
+    const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+    scene.add(new THREE.Line(lineGeo, yearLineMat));
+  }
+
+  // --- Lights ---
+  scene.add(new THREE.AmbientLight(0x404060, 0.4));
+
+  const dirLight = new THREE.DirectionalLight(0xeeeeff, 0.8);
+  dirLight.position.set(20, 40, 15);
+  scene.add(dirLight);
+
+  const pointLight1 = new THREE.PointLight(0x60a5fa, 1.5, 60);
+  pointLight1.position.set(-25, 15, -15);
+  scene.add(pointLight1);
+
+  const pointLight2 = new THREE.PointLight(0xf472b6, 1.5, 60);
+  pointLight2.position.set(-25, 15, 15);
+  scene.add(pointLight2);
+
+  return {
+    scene, camera,
+    target: new THREE.Vector3(0, 6, 0),
+    update: () => {}
+  };
+}
+
+// ============================================================
+// SCENE 3: ALPHABET CITY
+// ============================================================
+
+function buildLetters() {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x06060c);
+  scene.fog = new THREE.FogExp2(0x06060c, 0.006);
+
+  const aspect = w / h;
+  const camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 500);
+  camera.position.set(0, 30, 42);
+
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  const maxFreq = Math.max(
+    ...Object.values(letterFreqBoys),
+    ...Object.values(letterFreqGirls)
+  );
+
+  const towerMeshes = [];
+
+  letters.forEach((letter, i) => {
+    const angle = (i / 26) * Math.PI * 2 - Math.PI / 2;
+    const radiusInner = 13;
+    const radiusOuter = 18;
+
+    // Boy tower (outer ring)
+    const bFreq = letterFreqBoys[letter] || 0;
+    const bHeight = Math.sqrt(bFreq / maxFreq) * 18 + 0.3;
+    const bx = Math.cos(angle) * radiusOuter;
+    const bz = Math.sin(angle) * radiusOuter;
+
+    const bGeo = new THREE.BoxGeometry(1.2, bHeight, 1.2);
+    const bColor = new THREE.Color(0x60a5fa);
+    const bMat = new THREE.MeshStandardMaterial({
+      color: bColor,
+      emissive: bColor,
+      emissiveIntensity: 0.25,
+      roughness: 0.25,
+      metalness: 0.5,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const bMesh = new THREE.Mesh(bGeo, bMat);
+    bMesh.position.set(bx, bHeight / 2, bz);
+    bMesh.lookAt(0, bHeight / 2, 0);
+    bMesh.rotation.y += Math.PI; // face outward
+    scene.add(bMesh);
+    towerMeshes.push(bMesh);
+
+    // Wireframe edges on boy tower
+    const bEdges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(bGeo),
+      new THREE.LineBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.4 })
+    );
+    bEdges.position.copy(bMesh.position);
+    bEdges.rotation.copy(bMesh.rotation);
+    scene.add(bEdges);
+
+    // Girl tower (inner ring)
+    const gFreq = letterFreqGirls[letter] || 0;
+    const gHeight = Math.sqrt(gFreq / maxFreq) * 18 + 0.3;
+    const gx = Math.cos(angle) * radiusInner;
+    const gz = Math.sin(angle) * radiusInner;
+
+    const gColor = new THREE.Color(0xf472b6);
+    const gGeo = new THREE.BoxGeometry(1.0, gHeight, 1.0);
+    const gMat = new THREE.MeshStandardMaterial({
+      color: gColor,
+      emissive: gColor,
+      emissiveIntensity: 0.25,
+      roughness: 0.25,
+      metalness: 0.5,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const gMesh = new THREE.Mesh(gGeo, gMat);
+    gMesh.position.set(gx, gHeight / 2, gz);
+    gMesh.lookAt(0, gHeight / 2, 0);
+    gMesh.rotation.y += Math.PI;
+    scene.add(gMesh);
+    towerMeshes.push(gMesh);
+
+    // Wireframe edges on girl tower
+    const gEdges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(gGeo),
+      new THREE.LineBasicMaterial({ color: 0xf472b6, transparent: true, opacity: 0.4 })
+    );
+    gEdges.position.copy(gMesh.position);
+    gEdges.rotation.copy(gMesh.rotation);
+    scene.add(gEdges);
+
+    // Letter label as a point light at top of taller tower
+    const tallest = Math.max(bHeight, gHeight);
+    const labelLight = new THREE.PointLight(
+      bFreq > gFreq ? 0x60a5fa : 0xf472b6,
+      0.4, 8
+    );
+    labelLight.position.set(
+      Math.cos(angle) * ((bFreq > gFreq) ? radiusOuter : radiusInner),
+      tallest + 0.5,
+      Math.sin(angle) * ((bFreq > gFreq) ? radiusOuter : radiusInner)
+    );
+    scene.add(labelLight);
+  });
+
+  // --- Floor (reflective) ---
+  const floorGeo = new THREE.CircleGeometry(28, 64);
+  const floorMat = new THREE.MeshStandardMaterial({
+    color: 0x0c0c18,
+    roughness: 0.15,
+    metalness: 0.9,
+  });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotateX(-Math.PI / 2);
+  floor.position.y = -0.01;
+  scene.add(floor);
+
+  // --- Grid ---
+  const grid = new THREE.GridHelper(60, 30, 0x1a1a2e, 0x0c0c18);
+  grid.position.y = 0;
+  scene.add(grid);
+
+  // --- Central glow ---
+  const centralLight = new THREE.PointLight(0x818cf8, 3, 40);
+  centralLight.position.set(0, 12, 0);
+  scene.add(centralLight);
+
+  // --- Ambient particles ---
+  const pCount = 1500;
+  const pGeo = new THREE.BufferGeometry();
+  const pPos = new Float32Array(pCount * 3);
+  for (let i = 0; i < pCount; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 5 + Math.random() * 25;
+    pPos[i * 3]     = Math.cos(a) * r;
+    pPos[i * 3 + 1] = Math.random() * 30 + 1;
+    pPos[i * 3 + 2] = Math.sin(a) * r;
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  const pMat = new THREE.PointsMaterial({
+    size: 0.08,
+    color: 0x818cf8,
+    transparent: true,
+    opacity: 0.35,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const pSystem = new THREE.Points(pGeo, pMat);
+  scene.add(pSystem);
+
+  // --- Lights ---
+  scene.add(new THREE.AmbientLight(0x404060, 0.3));
+
+  const dirLight = new THREE.DirectionalLight(0xeeeeff, 0.5);
+  dirLight.position.set(15, 40, 20);
+  scene.add(dirLight);
+
+  // --- Update function (pulsing towers) ---
+  function update() {
+    const time = performance.now() * 0.001;
+    towerMeshes.forEach((mesh, i) => {
+      mesh.material.emissiveIntensity = 0.2 + 0.12 * Math.sin(time * 1.2 + i * 0.3);
+    });
+
+    // Slowly rotate particles
+    pSystem.rotation.y += 0.0005;
+  }
+
+  return {
+    scene, camera,
+    target: new THREE.Vector3(0, 6, 0),
+    update
+  };
+}
+
+// ============================================================
+// BUILD ALL SCENES
+// ============================================================
+
+scenes.terrain = buildTerrain();
+scenes.rivers  = buildRivers();
+scenes.letters = buildLetters();
+
+// ============================================================
+// NAV EVENT HANDLERS
+// ============================================================
+
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => switchTo(btn.dataset.scene));
+});
+
+// Start with terrain
+switchTo('terrain');
+
+// Hide loading
+document.getElementById('loading').classList.add('hidden');
+
+// ============================================================
+// ANIMATION LOOP
+// ============================================================
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  controls.update();
+
+  // Run scene-specific update
+  const config = scenes[activeKey];
+  if (config.update) config.update();
+
+  composer.render();
+}
+
+animate();
+
+// ============================================================
+// RESIZE
+// ============================================================
+
+window.addEventListener('resize', () => {
+  const { w: rw, h: rh } = getSize();
+  renderer.setSize(rw, rh);
+  composer.setSize(rw, rh);
+  bloomPass.resolution.set(rw, rh);
+
+  for (const key of Object.keys(scenes)) {
+    scenes[key].camera.aspect = rw / rh;
+    scenes[key].camera.updateProjectionMatrix();
+  }
+});
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === '1') switchTo('terrain');
+  if (e.key === '2') switchTo('rivers');
+  if (e.key === '3') switchTo('letters');
+});
+
+</script>
+</body>
+</html>
