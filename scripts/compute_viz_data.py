@@ -56,6 +56,8 @@ def compute_diversity(records):
             'top10girlPct': round(top10_girl, 4),
             'top50boyPct': round(top50_boy, 4),
             'top50girlPct': round(top50_girl, 4),
+            'coverageBoy': round(sum(boy_pcts), 4),
+            'coverageGirl': round(sum(girl_pcts), 4),
             'entropyBoy': entropy(boy_pcts),
             'entropyGirl': entropy(girl_pcts),
         })
