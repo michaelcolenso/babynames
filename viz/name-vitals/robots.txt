@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://michaelcolenso.github.io/babynames/viz/name-vitals/sitemap.xml

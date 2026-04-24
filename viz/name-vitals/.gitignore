@@ -1,0 +1,3 @@
+# The repo root's .gitignore excludes `data` globally; un-ignore our bundled data/.
+!data/
+!data/**
