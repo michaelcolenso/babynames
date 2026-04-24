@@ -1,8 +1,12 @@
 """
 Build client-side data for Name Vitals.
 
-Input: data/babynames.rda (Hadley Wickham's CC0 mirror of SSA baby names 1880-2017)
-Output (all written to name-vitals/data/):
+INPUTS (first match wins):
+  1. viz/name-vitals/data_src/yob*.txt  — native SSA files (Name,Sex,Count)
+  2. $SSA_DATA_DIR/yob*.txt              — override for CI checkouts
+  3. data/babynames.rda                  — Hadley Wickham's CC0 mirror (1880-2017)
+
+OUTPUTS (written to viz/name-vitals/data/):
   names/<letter>.json       Per-first-letter shard. See SHARD FORMAT below.
   index.json                Top names for featured/autocomplete fallback.
   meta.json                 Totals per year by sex + top-10 per year + year range.
@@ -11,7 +15,7 @@ Output (all written to name-vitals/data/):
   landing/rising.json       Latest decade >=5x previous decade, latest year >=100.
 
 SHARD FORMAT:
-  { "ym": 1880, "yM": 2017, "n": {
+  { "ym": 1880, "yM": 2024, "n": {
       "Amy|F": [firstYear, countFirstYear, countFirstYear+1, ..., countLastYearSeen],
       "Amy|M": [...],
       ...
@@ -19,33 +23,31 @@ SHARD FORMAT:
   The count array runs contiguously from firstYear to the last year the
   name appeared (>=5 per SSA rules). Years outside that window are zero.
 
-Re-run after refreshing data/babynames.rda; the schema is stable.
+Re-run after refreshing the source; the schema is stable.
 """
 from __future__ import annotations
+import csv
 import json
 import os
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
+from typing import Iterator
 
-import rdata
-
-ROOT = Path(__file__).resolve().parents[2]
-SRC = ROOT / "data" / "babynames.rda"
-OUT = ROOT / "name-vitals" / "data"
+HERE = Path(__file__).resolve()
+SITE = HERE.parents[1]            # viz/name-vitals
+REPO = HERE.parents[3]            # repo root
+OUT = SITE / "data"
 NAMES_DIR = OUT / "names"
 LANDING_DIR = OUT / "landing"
 
+# Candidate input sources, in priority order.
+LOCAL_YOB_DIR = SITE / "data_src"
+ENV_YOB_DIR = Path(os.environ["SSA_DATA_DIR"]) if os.environ.get("SSA_DATA_DIR") else None
+RDA_SRC = REPO / "data" / "babynames.rda"
 
-def load_df():
-    parsed = rdata.read_rda(str(SRC))
-    df = parsed["babynames"]
-    df = df.copy()
-    df["year"] = df["year"].astype(int)
-    df["n"] = df["n"].astype(int)
-    df["name"] = df["name"].astype(str)
-    df["sex"] = df["sex"].astype(str)
-    return df
+YOB_RE = re.compile(r"^yob(\d{4})\.txt$", re.IGNORECASE)
 
 
 def write_json(path: Path, obj) -> None:
@@ -59,33 +61,72 @@ def shard_letter(name: str) -> str:
     return ch if "A" <= ch <= "Z" else "_"
 
 
-def main() -> None:
-    if not SRC.exists():
-        sys.exit(f"missing {SRC}; download hadley/babynames babynames.rda first")
+def iter_yob_rows(folder: Path) -> Iterator[tuple[int, str, str, int]]:
+    files = sorted(p for p in folder.iterdir() if YOB_RE.match(p.name))
+    if not files:
+        raise FileNotFoundError(f"no yob*.txt files in {folder}")
+    for p in files:
+        year = int(YOB_RE.match(p.name).group(1))
+        with p.open(newline="") as f:
+            for row in csv.reader(f):
+                # SSA files: Name,Sex,Count — no header.
+                if len(row) != 3:
+                    continue
+                name, sex, n = row[0].strip(), row[1].strip(), row[2].strip()
+                if not name or not sex or not n:
+                    continue
+                yield year, sex, name, int(n)
 
+
+def iter_rda_rows() -> Iterator[tuple[int, str, str, int]]:
+    try:
+        import rdata  # type: ignore
+    except ImportError:
+        sys.exit(
+            "No yob*.txt files found and `rdata` isn't installed for the .rda fallback. "
+            f"Either drop yob*.txt into {LOCAL_YOB_DIR}/ (or set SSA_DATA_DIR), "
+            "or run: pip install rdata"
+        )
+    if not RDA_SRC.exists():
+        sys.exit(f"missing {RDA_SRC}; no input found")
+    parsed = rdata.read_rda(str(RDA_SRC))
+    df = parsed["babynames"]
+    for year, sex, name, n in zip(df["year"], df["sex"], df["name"], df["n"], strict=True):
+        yield int(year), str(sex), str(name), int(n)
+
+
+def resolve_source() -> tuple[str, Iterator[tuple[int, str, str, int]]]:
+    for candidate in (LOCAL_YOB_DIR, ENV_YOB_DIR):
+        if candidate and candidate.exists() and any(YOB_RE.match(p.name) for p in candidate.iterdir()):
+            return f"yob*.txt in {candidate}", iter_yob_rows(candidate)
+    return f"rda mirror {RDA_SRC}", iter_rda_rows()
+
+
+def main() -> None:
     NAMES_DIR.mkdir(parents=True, exist_ok=True)
     LANDING_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("loading rda...", file=sys.stderr)
-    df = load_df()
-    ym, yM = int(df["year"].min()), int(df["year"].max())
-    print(f"rows={len(df):,}  years={ym}-{yM}", file=sys.stderr)
+    label, row_iter = resolve_source()
+    print(f"loading: {label}", file=sys.stderr)
 
-    # series[name][sex] = {year: count}
+    # series[name][sex][year] = count
     series: dict[str, dict[str, dict[int, int]]] = defaultdict(lambda: defaultdict(dict))
     totals_by_year: dict[int, dict[str, int]] = defaultdict(lambda: {"M": 0, "F": 0})
     rows_by_year: dict[int, list[tuple[int, str, str]]] = defaultdict(list)
 
-    for year, sex, name, n in zip(df["year"], df["sex"], df["name"], df["n"], strict=True):
-        y = int(year)
-        c = int(n)
+    total_rows = 0
+    ym, yM = 9999, 0
+    for y, sex, name, c in row_iter:
+        total_rows += 1
+        if y < ym: ym = y
+        if y > yM: yM = y
         series[name][sex][y] = c
         totals_by_year[y][sex] += c
         rows_by_year[y].append((c, name, sex))
 
-    print(f"names={len(series):,}", file=sys.stderr)
+    print(f"rows={total_rows:,}  years={ym}-{yM}  names={len(series):,}", file=sys.stderr)
 
-    # Per-letter shards: keys "name|M" or "name|F" -> [firstYear, c0, c1, ..., cLast]
+    # Per-letter shards
     shards: dict[str, dict[str, list[int]]] = defaultdict(dict)
     for name, by_sex in series.items():
         letter = shard_letter(name)
@@ -100,8 +141,7 @@ def main() -> None:
     for letter, rows in shards.items():
         write_json(NAMES_DIR / f"{letter}.json", {"ym": ym, "yM": yM, "n": rows})
 
-    # Autocomplete index: list of [name, sexMask, peakCount, peakYear] sorted by peakCount desc.
-    # sexMask: 1=M, 2=F, 3=both.
+    # Autocomplete featured list (top 5000 by peak)
     index_rows: list[list] = []
     for name, by_sex in series.items():
         mask = 0
@@ -115,8 +155,6 @@ def main() -> None:
                     peak_year = y
         index_rows.append([name, mask, peak_count, peak_year])
     index_rows.sort(key=lambda r: (-r[2], r[0]))
-    # Keep a featured list (top 5000 by peak) to keep index.json small; shards
-    # supply full lookup for anything the user types.
     featured = index_rows[:5000]
 
     totals_M = [totals_by_year[y]["M"] for y in range(ym, yM + 1)]
@@ -133,7 +171,6 @@ def main() -> None:
         },
     )
 
-    # meta.json: light aggregates we might want for SEO/fun-stats
     top_per_year = {}
     for y, rows in rows_by_year.items():
         ms = sorted([r for r in rows if r[2] == "M"], key=lambda t: -t[0])[:10]
@@ -145,7 +182,7 @@ def main() -> None:
             "ym": ym,
             "yM": yM,
             "totalNames": len(series),
-            "totalRows": int(len(df)),
+            "totalRows": total_rows,
             "totalsByYear": {str(y): totals_by_year[y] for y in range(ym, yM + 1)},
             "top10PerYear": top_per_year,
         },
@@ -155,89 +192,49 @@ def main() -> None:
     last_year = yM
     first_year = ym
 
-    # Peak year & total counts per (name, sex)
-    rank_by_year_sex: dict[tuple[int, str], dict[str, int]] = defaultdict(dict)
-    for y, rows in rows_by_year.items():
-        ms = sorted([r for r in rows if r[2] == "M"], key=lambda t: -t[0])
-        fs = sorted([r for r in rows if r[2] == "F"], key=lambda t: -t[0])
-        for rank, (c, n, s) in enumerate(ms, start=1):
-            rank_by_year_sex[(y, "M")][n] = rank
-        for rank, (c, n, s) in enumerate(fs, start=1):
-            rank_by_year_sex[(y, "F")][n] = rank
-
-    def latest_count(name, sex):
-        return series[name][sex].get(last_year, 0)
-
-    def peak_info(name, sex):
-        yr_counts = series[name][sex]
-        if not yr_counts:
-            return (0, 0)
-        peak_y = max(yr_counts, key=lambda y: yr_counts[y])
-        return (peak_y, yr_counts[peak_y])
-
     def decade_total(name, sex, start):
         return sum(c for y, c in series[name][sex].items() if start <= y < start + 10)
 
-    extinct = []
-    endangered = []
-    rising = []
+    extinct: list[dict] = []
+    endangered: list[dict] = []
+    rising: list[dict] = []
 
     for name, by_sex in series.items():
         for sex, yr_counts in by_sex.items():
             if not yr_counts:
                 continue
-            peak_y, peak_c = peak_info(name, sex)
+            peak_y = max(yr_counts, key=lambda y: yr_counts[y])
+            peak_c = yr_counts[peak_y]
             latest = yr_counts.get(last_year, 0)
-            first_seen = min(yr_counts)
-            total_years = len(yr_counts)
-
-            # Shared compact series for tiny sparklines on landing pages
+            last_seen = max(yr_counts)
+            # Full-range series so extinct/endangered sparklines show the
+            # dramatic long zero-tail that makes the page click.
             series_arr = [yr_counts.get(y, 0) for y in range(first_year, last_year + 1)]
 
-            # Extinct: peak >= 500, not in latest year, and hasn't appeared in last 10 years
-            if peak_c >= 500 and latest == 0:
-                last_nonzero = max(yr_counts)
-                if last_year - last_nonzero >= 10:
-                    extinct.append(
-                        {
-                            "name": name,
-                            "sex": sex,
-                            "peakYear": peak_y,
-                            "peakCount": peak_c,
-                            "lastYearSeen": last_nonzero,
-                            "series": series_arr,
-                        }
-                    )
-
-            # Endangered: peak >= 500, latest > 0 and <= peak*0.1, and <= 50 in latest year
+            if peak_c >= 500 and latest == 0 and last_year - last_seen >= 10:
+                extinct.append({
+                    "name": name, "sex": sex,
+                    "peakYear": peak_y, "peakCount": peak_c,
+                    "lastYearSeen": last_seen, "series": series_arr,
+                })
             if peak_c >= 500 and 0 < latest <= 50 and latest <= peak_c * 0.1:
-                endangered.append(
-                    {
-                        "name": name,
-                        "sex": sex,
-                        "peakYear": peak_y,
-                        "peakCount": peak_c,
-                        "latestCount": latest,
-                        "declinePct": round(100 * (1 - latest / peak_c), 1),
-                        "series": series_arr,
-                    }
-                )
-
-            # Rising: latest decade total >= 5x previous decade, and latest year >= 100
-            prev = decade_total(name, sex, last_year - 19)  # years [yM-19, yM-10]
-            curr = decade_total(name, sex, last_year - 9)   # years [yM-9, yM]
+                endangered.append({
+                    "name": name, "sex": sex,
+                    "peakYear": peak_y, "peakCount": peak_c,
+                    "latestCount": latest,
+                    "declinePct": round(100 * (1 - latest / peak_c), 1),
+                    "series": series_arr,
+                })
+            prev = decade_total(name, sex, last_year - 19)
+            curr = decade_total(name, sex, last_year - 9)
             if latest >= 100 and prev >= 10 and curr >= prev * 5:
-                rising.append(
-                    {
-                        "name": name,
-                        "sex": sex,
-                        "latestCount": latest,
-                        "prevDecadeTotal": prev,
-                        "currDecadeTotal": curr,
-                        "growthX": round(curr / prev, 1) if prev else None,
-                        "series": series_arr,
-                    }
-                )
+                rising.append({
+                    "name": name, "sex": sex,
+                    "latestCount": latest,
+                    "prevDecadeTotal": prev, "currDecadeTotal": curr,
+                    "growthX": round(curr / prev, 1) if prev else None,
+                    "series": series_arr,
+                })
 
     extinct.sort(key=lambda r: -r["peakCount"])
     endangered.sort(key=lambda r: -r["peakCount"])

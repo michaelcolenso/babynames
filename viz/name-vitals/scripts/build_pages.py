@@ -21,6 +21,8 @@ INDEX = OUT / "data" / "index.json"
 TOP_N = 2000
 SITE_ORIGIN = "https://michaelcolenso.github.io"
 SITE_BASE = "/babynames/viz/name-vitals"
+# build_pages.py lives at viz/name-vitals/scripts/, so parents[2] is viz/ and
+# OUT resolves to viz/name-vitals — correct after the layout move.
 
 
 PAGE_TMPL = """<!doctype html>

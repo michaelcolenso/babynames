@@ -9,18 +9,35 @@ Lives under `viz/name-vitals/` so the repo's existing GitHub Pages workflow (whi
 
 ## Coverage
 
-Uses Hadley Wickham's CC0 mirror of the SSA dataset (1880–2017, every first name given to at least five American babies in a year). The SSA's direct `names.zip` download is blocked from most server environments; drop a fresher `data/babynames.rda` (or adapt `scripts/build_data.py` to read `yob*.txt`) to extend through the current year.
+Committed build uses Hadley Wickham's CC0 mirror of the SSA dataset (1880–2017). To pull forward through the current year, point the pipeline at `yob*.txt` files — the SSA's native format — from their `names.zip` release.
 
-## Rebuilding
+## Data sources (pipeline tries in order)
 
-```
-# one-time:
+1. `viz/name-vitals/data_src/yob*.txt` — native SSA files. Preferred.
+2. `$SSA_DATA_DIR/yob*.txt` — same, via env var (handy in CI).
+3. `data/babynames.rda` at repo root — CC0 mirror, fallback.
+
+## Rebuilding locally
+
+```bash
+# Grab the SSA zip (any normal machine works — Akamai blocks some server IPs
+# but browsers/laptops/CI runners are fine):
+curl -fsSL -o /tmp/names.zip https://www.ssa.gov/oact/babynames/names.zip
+unzip -o /tmp/names.zip -d viz/name-vitals/data_src
+find viz/name-vitals/data_src -type f ! -name 'yob*.txt' -delete
+
+# Build (no Python deps needed when reading yob*.txt):
+python3 viz/name-vitals/scripts/build_data.py    # shards + landing data
+python3 viz/name-vitals/scripts/build_pages.py   # top-2000 SEO pages + sitemap
+
+# Fallback path (using the committed .rda mirror) needs the rdata reader:
 python3 -m venv .venv && .venv/bin/pip install rdata
-
-# pipeline (from repo root):
-.venv/bin/python viz/name-vitals/scripts/build_data.py   # shards + landing data
-.venv/bin/python viz/name-vitals/scripts/build_pages.py  # top-2000 SEO pages + sitemap
+.venv/bin/python viz/name-vitals/scripts/build_data.py
 ```
+
+## Refreshing on every deploy
+
+`scripts/deploy.yml.proposed` is a drop-in replacement for `.github/workflows/deploy.yml`. It downloads `names.zip` on the GitHub runner (not blocked from GH IPs), regenerates everything, then deploys. Needs a token with `workflow` scope to land — paste it over the existing workflow manually.
 
 ## Layout
 
