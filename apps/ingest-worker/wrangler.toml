@@ -1,0 +1,33 @@
+name = "name-vitals-ingest"
+main = "src/index.ts"
+compatibility_date = "2024-09-09"
+compatibility_flags = ["nodejs_compat"]
+
+# Annual ingest is enough — SSA publishes once a year. Keep a defensive
+# weekly run so an upstream ETag bump is picked up within ~7 days. The
+# worker exits in milliseconds when the ETag is unchanged.
+[triggers]
+crons = ["0 7 * * 1"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "name-vitals"
+database_id = "REPLACE_WITH_D1_ID"
+
+[[r2_buckets]]
+binding = "INGEST_CACHE"
+bucket_name = "name-vitals-ingest"
+
+[[queues.producers]]
+binding = "INGEST_QUEUE"
+queue = "name-ingest"
+
+[[queues.consumers]]
+queue = "name-ingest"
+max_batch_size = 10
+max_batch_timeout = 5
+max_retries = 5
+dead_letter_queue = "name-ingest-dlq"
+
+[vars]
+SSA_URL = "https://www.ssa.gov/oact/babynames/names.zip"

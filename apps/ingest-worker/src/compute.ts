@@ -1,0 +1,254 @@
+// Aggregate the per-run raw buffer into staging name tables, then swap
+// staging onto live. Runs from the queue's `finalize` message after every
+// row chunk has landed.
+//
+// The aggregation reads the entire `name_year_raw_staging` for the run,
+// groups by (name, sex), classifies each series, and bulk-inserts into
+// names_staging + name_years_staging. With ~100k unique (name,sex) pairs
+// and ~1.9M year rows, this needs paging.
+
+import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
+import {
+  classify,
+  encodeSpark,
+  type ClassifyResult,
+  type Sex,
+} from "@nv/shared";
+
+export interface FinalizeOpts {
+  runId: string;
+  ym: number;
+  yM: number;
+}
+
+interface AggRow {
+  name: string;
+  sex: Sex;
+  series: Record<number, number>;
+}
+
+const NAMES_PAGE = 200; // (name, sex) pairs aggregated per round.
+
+export async function finalize(
+  db: D1Database,
+  { runId, ym, yM }: FinalizeOpts,
+): Promise<{ namesInserted: number; rowsInserted: number }> {
+  // Walk distinct (name, sex) in name-asc order so we can resume cleanly
+  // if the consumer is retried.
+  let cursor: { name: string; sex: Sex } | null = null;
+  let namesInserted = 0;
+  let rowsInserted = 0;
+
+  while (true) {
+    const page = await fetchAggPage(db, runId, cursor, NAMES_PAGE);
+    if (!page.length) break;
+    const { nameStmts, yearStmts, last } = buildPageStatements(db, page, yM);
+    await db.batch(nameStmts);
+    if (yearStmts.length) await db.batch(yearStmts);
+    namesInserted += page.length;
+    for (const a of page) rowsInserted += Object.keys(a.series).length;
+    cursor = last;
+  }
+
+  await swapStagingIntoLive(db);
+  await rebuildIndexesIfNeeded(db);
+  return { namesInserted, rowsInserted };
+}
+
+async function fetchAggPage(
+  db: D1Database,
+  runId: string,
+  cursor: { name: string; sex: Sex } | null,
+  limit: number,
+): Promise<AggRow[]> {
+  // Pull rows for the next NAMES_PAGE distinct (name, sex) pairs in one go.
+  const filter = cursor
+    ? `AND (name > ?2 OR (name = ?2 AND sex > ?3))`
+    : "";
+  const sql = `
+    WITH ordered AS (
+      SELECT name, sex
+        FROM name_year_raw_staging
+       WHERE run_id = ?1 ${filter}
+       GROUP BY name, sex
+       ORDER BY name, sex
+       LIMIT ${limit}
+    )
+    SELECT r.name, r.sex, r.year, r.count
+      FROM name_year_raw_staging r
+      JOIN ordered o ON o.name = r.name AND o.sex = r.sex
+     WHERE r.run_id = ?1
+     ORDER BY r.name, r.sex, r.year
+  `;
+  const stmt = cursor
+    ? db.prepare(sql).bind(runId, cursor.name, cursor.sex)
+    : db.prepare(sql).bind(runId);
+  const r = await stmt.all<{ name: string; sex: Sex; year: number; count: number }>();
+
+  const grouped = new Map<string, AggRow>();
+  for (const row of r.results ?? []) {
+    const key = row.name + "|" + row.sex;
+    let g = grouped.get(key);
+    if (!g) {
+      g = { name: row.name, sex: row.sex, series: {} };
+      grouped.set(key, g);
+    }
+    g.series[row.year] = row.count;
+  }
+  return [...grouped.values()];
+}
+
+interface PageStatements {
+  nameStmts: D1PreparedStatement[];
+  yearStmts: D1PreparedStatement[];
+  last: { name: string; sex: Sex } | null;
+}
+
+function buildPageStatements(
+  db: D1Database,
+  page: AggRow[],
+  yM: number,
+): PageStatements {
+  const nameStmts: D1PreparedStatement[] = [];
+  const yearStmts: D1PreparedStatement[] = [];
+
+  // names_staging — 1 row per (name, sex). Use INSERT OR REPLACE keyed on UNIQUE(name, sex).
+  const NAMES_PER_STMT = 50;
+  for (let i = 0; i < page.length; i += NAMES_PER_STMT) {
+    const slice = page.slice(i, i + NAMES_PER_STMT);
+    const values: string[] = [];
+    const binds: (string | number | null | Uint8Array)[] = [];
+    for (const a of slice) {
+      const c = classify({ series: a.series, yM });
+      if (!c) continue;
+      const ym = minYear(a.series);
+      const blob = encodeSpark(a.series, ym, yM);
+      values.push(
+        "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      );
+      binds.push(
+        a.name,
+        a.name.toLowerCase(),
+        a.sex,
+        c.firstYear,
+        c.lastYear,
+        c.peakYear,
+        c.peakCount,
+        c.totalCount,
+        c.status,
+        c.declinePct,
+        c.latestCount,
+        c.prevDecadeTotal,
+        c.currDecadeTotal,
+        c.growthX,
+        blob,
+      );
+    }
+    if (!values.length) continue;
+    const sql =
+      `INSERT INTO names_staging
+         (name, name_lower, sex, first_year, last_year, peak_year, peak_count,
+          total_count, status, decline_pct, latest_count, prev_decade,
+          curr_decade, growth_x, spark_blob)
+       VALUES ${values.join(",")}
+       ON CONFLICT(name, sex) DO UPDATE SET
+         first_year=excluded.first_year, last_year=excluded.last_year,
+         peak_year=excluded.peak_year, peak_count=excluded.peak_count,
+         total_count=excluded.total_count, status=excluded.status,
+         decline_pct=excluded.decline_pct, latest_count=excluded.latest_count,
+         prev_decade=excluded.prev_decade, curr_decade=excluded.curr_decade,
+         growth_x=excluded.growth_x, spark_blob=excluded.spark_blob`;
+    nameStmts.push(db.prepare(sql).bind(...binds));
+  }
+
+  // name_years_staging — collected by name later. We need name_id, which
+  // we resolve via a sub-SELECT keyed on (name, sex) in names_staging.
+  // Each multi-row INSERT can bind 100 (name, sex, year, count) tuples.
+  const ROWS_PER_STMT = 100;
+  const yearsBuf: { name: string; sex: Sex; year: number; count: number }[] = [];
+  for (const a of page) {
+    for (const yStr of Object.keys(a.series)) {
+      const y = Number(yStr);
+      yearsBuf.push({ name: a.name, sex: a.sex, year: y, count: a.series[y]! });
+    }
+  }
+  for (let i = 0; i < yearsBuf.length; i += ROWS_PER_STMT) {
+    const slice = yearsBuf.slice(i, i + ROWS_PER_STMT);
+    const tuples = slice
+      .map(
+        () =>
+          "((SELECT id FROM names_staging WHERE name=? AND sex=?), ?, ?)",
+      )
+      .join(",");
+    const sql =
+      `INSERT OR REPLACE INTO name_years_staging(name_id, year, count) VALUES ${tuples}`;
+    const binds: (string | number)[] = [];
+    for (const r of slice) binds.push(r.name, r.sex, r.year, r.count);
+    yearStmts.push(db.prepare(sql).bind(...binds));
+  }
+
+  const last = page[page.length - 1];
+  return {
+    nameStmts,
+    yearStmts,
+    last: last ? { name: last.name, sex: last.sex } : null,
+  };
+}
+
+function minYear(series: Record<number, number>): number {
+  let m = Number.MAX_SAFE_INTEGER;
+  for (const k of Object.keys(series)) {
+    const n = Number(k);
+    if (n < m) m = n;
+  }
+  return m;
+}
+
+// Single-transaction swap. After this returns, reads see the new dataset.
+async function swapStagingIntoLive(db: D1Database): Promise<void> {
+  await db.batch([
+    db.prepare("DROP TABLE IF EXISTS names_old"),
+    db.prepare("DROP TABLE IF EXISTS name_years_old"),
+    db.prepare("ALTER TABLE names RENAME TO names_old"),
+    db.prepare("ALTER TABLE name_years RENAME TO name_years_old"),
+    db.prepare("ALTER TABLE names_staging RENAME TO names"),
+    db.prepare("ALTER TABLE name_years_staging RENAME TO name_years"),
+    // Re-create the empty staging tables for the next ingest run.
+    db.prepare(`CREATE TABLE names_staging (
+      id INTEGER PRIMARY KEY, name TEXT NOT NULL, name_lower TEXT NOT NULL,
+      sex TEXT NOT NULL CHECK (sex IN ('M','F')),
+      first_year INTEGER NOT NULL, last_year INTEGER NOT NULL,
+      peak_year INTEGER NOT NULL, peak_count INTEGER NOT NULL,
+      total_count INTEGER NOT NULL, status TEXT NOT NULL,
+      decline_pct REAL, latest_count INTEGER NOT NULL DEFAULT 0,
+      prev_decade INTEGER, curr_decade INTEGER, growth_x REAL,
+      spark_blob BLOB, UNIQUE(name, sex))`),
+    db.prepare(`CREATE TABLE name_years_staging (
+      name_id INTEGER NOT NULL, year INTEGER NOT NULL, count INTEGER NOT NULL,
+      PRIMARY KEY (name_id, year))`),
+    db.prepare("DROP TABLE names_old"),
+    db.prepare("DROP TABLE name_years_old"),
+  ]);
+}
+
+async function rebuildIndexesIfNeeded(db: D1Database): Promise<void> {
+  // Indexes are part of the migration; ALTER TABLE ... RENAME does not
+  // detach them, but explicitly recreating is cheap and idempotent.
+  await db.batch([
+    db.prepare(
+      "CREATE INDEX IF NOT EXISTS names_lower_peak ON names(name_lower, peak_count DESC)",
+    ),
+    db.prepare(
+      "CREATE INDEX IF NOT EXISTS names_status_peak ON names(status, peak_count DESC)",
+    ),
+    db.prepare(
+      "CREATE INDEX IF NOT EXISTS names_status_curr ON names(status, curr_decade DESC)",
+    ),
+    db.prepare(
+      "CREATE INDEX IF NOT EXISTS name_years_year_count ON name_years(year, count DESC)",
+    ),
+  ]);
+}
+
+// Re-export so the queue handler can reference it.
+export type { ClassifyResult };

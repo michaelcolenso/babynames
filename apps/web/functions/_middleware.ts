@@ -1,0 +1,20 @@
+// Adds a CDN cache wrapper for every Pages Function response that opted
+// in via the `Cache-Control` header. Pages already proxies static assets
+// through Cloudflare's edge cache, but Functions get their own pass —
+// hooking caches.default here means every endpoint gets edge-caching for
+// free (with the `data_version` cache-bust trick built into each handler).
+
+import type { PagesFunction } from "@cloudflare/workers-types";
+
+export const onRequest: PagesFunction = async (ctx) => {
+  const cache = caches.default;
+  const cached = await cache.match(ctx.request);
+  if (cached) return cached;
+
+  const res = await ctx.next();
+  const cc = res.headers.get("Cache-Control");
+  if (cc && /s-maxage=\d+/.test(cc) && res.ok) {
+    ctx.waitUntil(cache.put(ctx.request, res.clone()));
+  }
+  return res;
+};

@@ -1,36 +1,33 @@
 {
   "name": "babynames",
-  "version": "0.0.1",
-  "description": "Fun with the Social Security Administration's baby name data",
-  "main": "index.js",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Name Vitals — SSA baby-name data on the Cloudflare stack (Pages + D1 + Workers)",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "test": "./test/test.js"
+    "build": "npm run -w @nv/shared build",
+    "typecheck": "tsc -b apps/web apps/ingest-worker packages/shared",
+    "dev:web": "npm run -w @nv/web dev",
+    "dev:ingest": "npm run -w @nv/ingest-worker dev",
+    "deploy:web": "npm run -w @nv/web deploy",
+    "deploy:ingest": "npm run -w @nv/ingest-worker deploy",
+    "migrations:apply": "wrangler d1 migrations apply name-vitals --remote",
+    "migrations:apply:local": "wrangler d1 migrations apply name-vitals --local",
+    "seed": "tsx scripts/seed-from-shards.ts",
+    "verify-parity": "tsx scripts/verify-parity.ts"
   },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240909.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "wrangler": "^3.78.0"
+  },
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git://github.com/TimeMagazine/babynames.git"
-  },
-  "keywords": [
-    "babies",
-    "names"
-  ],
-  "dependencies": {
-    "adm-zip": "^0.4.7",
-    "async": "^2.3.0",
-    "cheerio": "^0.22.0",
-    "csv-stringify": "^1.0.4",
-    "downcache": "0.0.9",
-    "minimist": "^1.2.0",
-    "mkdirp": "^0.5.1",
-    "mongodb": "^2.2.25",
-    "npmlog": "^4.0.2",
-    "progress": "^2.0.0",
-    "request": "^2.81.0"
-  },
-  "author": "Chris Wilson",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/TimeMagazine/babynames/issues"
-  },
-  "homepage": "https://github.com/TimeMagazine/babynames"
+    "url": "git+https://github.com/michaelcolenso/babynames.git"
+  }
 }

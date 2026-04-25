@@ -1,8 +1,126 @@
-#Baby Names!
+# Name Vitals
 
-Fun with the Social Security Administration's baby name data
+Is your name going extinct? Name Vitals shows the popularity, trajectory, and vital status of any American name since 1880, based on [Social Security Administration](https://www.ssa.gov/oact/babynames/) data.
 
-[![Build Status](https://travis-ci.org/TimeMagazine/babynames.png)](https://travis-ci.org/TimeMagazine/babynames)
+## Stack
+
+| Layer | Service |
+|---|---|
+| Frontend + API | Cloudflare Pages + Pages Functions |
+| Database | Cloudflare D1 (SQLite) |
+| Annual data refresh | Cloudflare Worker (Cron Trigger + Queues) |
+| Archive storage | Cloudflare R2 |
+
+## Repository layout
+
+```
+apps/
+  web/             Cloudflare Pages: static HTML/CSS/JS + Functions
+    public/        Served as static assets
+    functions/     Pages Functions (API routes + SSR /name/:name)
+  ingest-worker/   Cron-triggered Worker: SSA download → D1
+
+packages/
+  shared/          Types, classification logic, HTML renderer — shared by all packages
+
+migrations/        D1 SQL migrations (applied via wrangler d1 migrations apply)
+
+scripts/
+  seed-from-shards.ts   One-shot initial D1 seeding from legacy JSON shards
+  verify-parity.ts      Pre-cutover parity checks vs legacy data
+
+viz/               Legacy static site (GitHub Pages) — kept until DNS cutover
+```
+
+## First-time setup
+
+### 1. Provision Cloudflare resources
+
+```bash
+# D1 database
+wrangler d1 create name-vitals
+# Copy the database_id into both wrangler.toml files:
+#   apps/web/wrangler.toml
+#   apps/ingest-worker/wrangler.toml
+
+# Queue (fan-out ingest)
+wrangler queues create name-ingest
+wrangler queues create name-ingest-dlq
+
+# R2 bucket (SSA zip cache)
+wrangler r2 bucket create name-vitals-ingest
+```
+
+### 2. Apply schema
+
+```bash
+wrangler d1 migrations apply name-vitals --remote
+```
+
+### 3. Seed initial data
+
+Reads the existing `viz/name-vitals/data/` JSON shards to populate D1 without pulling from the SSA:
+
+```bash
+npm run seed
+# Apply each generated SQL file:
+ls migrations/seed/*.sql | sort | xargs -I{} wrangler d1 execute name-vitals --file={} --remote
+```
+
+### 4. Deploy
+
+```bash
+npm run deploy:web       # deploy Cloudflare Pages
+npm run deploy:ingest    # deploy the cron Worker
+```
+
+### 5. Verify parity
+
+```bash
+tsx scripts/verify-parity.ts --base=https://<preview>.pages.dev
+```
+
+## Local development
+
+```bash
+# Pages + Functions with local D1
+npm run dev:web
+
+# Trigger the ingest cron locally
+npm run dev:ingest          # starts wrangler dev
+# then: curl http://localhost:8787/run
+```
+
+## Data refresh
+
+The ingest Worker runs weekly (ETag-gated; exits immediately if the SSA zip is unchanged). The SSA publishes new data once a year, typically in May. Manual trigger:
+
+```bash
+wrangler dev --test-scheduled   # local
+# or POST to the /run endpoint of the deployed Worker
+```
+
+## GitHub Actions secrets
+
+Required for the CI/CD workflows in `.github/workflows/`:
+
+| Secret | Value |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | Token with Workers, Pages, and D1 write permissions |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
+
+## DNS cutover from GitHub Pages
+
+After verifying parity on the Pages preview URL:
+
+1. Add a custom domain to the Pages project in the Cloudflare dashboard.
+2. Flip the DNS CNAME from the GitHub Pages address to the Cloudflare Pages CNAME.
+3. Add 301 redirects in the old GitHub Pages `index.html` from `/babynames/viz/name-vitals/*` to the new host.
+4. After ≥1 week of monitoring, delete `viz/`, `dicts/`, `extra/`, and any remaining legacy files.
+
+## License
+
+Source data is CC0 (Social Security Administration). Code is MIT.
 
 ##Setup
 
