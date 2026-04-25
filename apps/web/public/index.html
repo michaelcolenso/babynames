@@ -19,6 +19,8 @@
       <nav>
         <a href="/extinct.html">Extinct</a>
         <a href="/endangered.html">Endangered</a>
+        <a href="/comeback.html">Comebacks</a>
+        <a href="/year.html">Birth year</a>
         <a href="/rising.html">Rising</a>
         <a href="/about.html">About</a>
       </nav>
@@ -43,7 +45,17 @@
       <div class="landing-ctas">
         <a href="/extinct.html"><strong>Extinct names →</strong><span>Popular once, now given to zero babies.</span></a>
         <a href="/endangered.html"><strong>Endangered names →</strong><span>Down 90%+ from their peak.</span></a>
+        <a href="/comeback.html"><strong>Comeback Kids →</strong><span>Flatlined, then came roaring back.</span></a>
         <a href="/rising.html"><strong>Rising names →</strong><span>Growing faster than anything else.</span></a>
+      </div>
+
+      <div class="year-widget">
+        <h2>What were the top names the year you were born?</h2>
+        <div class="year-form">
+          <input id="yr-home" type="number" min="1880" max="2030" placeholder="Enter birth year — e.g. 1987">
+          <button id="yr-go-home">Look up</button>
+        </div>
+        <div id="yr-home-result"></div>
       </div>
 
       <h2>Popular right now</h2>
@@ -60,25 +72,40 @@
   </div>
 
   <script src="/assets/app.js"></script>
+  <script src="/assets/landing.js"></script>
   <script>
     (async () => {
       const qs = new URLSearchParams(location.search);
-      const home = document.getElementById("view-home");
-      const viewName = document.getElementById("view-name");
       if (qs.get("name")) {
-        // Legacy ?name= URL — redirect to the canonical /name/<Name>/ route
-        // so SSR + edge cache do the heavy lifting.
         const params = new URLSearchParams();
         if (qs.get("sex")) params.set("sex", qs.get("sex"));
         const tail = params.toString() ? "?" + params.toString() : "";
         location.replace(`/name/${encodeURIComponent(qs.get("name"))}/${tail}`);
         return;
       }
+
       const input = document.getElementById("q");
       const suggestions = document.getElementById("suggestions");
       const go = document.getElementById("go");
       const sex = document.getElementById("sex");
       NameVitals.setupSearch(input, suggestions, go, sex);
+
+      // Year-of-birth widget on home page
+      const yrInput = document.getElementById("yr-home");
+      const yrBtn = document.getElementById("yr-go-home");
+      const yrResult = document.getElementById("yr-home-result");
+      yrBtn.addEventListener("click", async () => {
+        const y = Number(yrInput.value);
+        if (!y || y < 1880) { yrResult.innerHTML = "<p>Enter a year from 1880 onwards.</p>"; return; }
+        yrResult.innerHTML = "<p>Loading…</p>";
+        try {
+          const r = await fetch(`/api/year/${y}`);
+          if (!r.ok) { const j = await r.json(); yrResult.innerHTML = `<p class="lede">${j.error || "No data."}</p>`; return; }
+          const { rows } = await r.json();
+          renderYearTable(y, rows, yrResult);
+        } catch(e) { yrResult.innerHTML = "<p>Failed to load. Try again.</p>"; }
+      });
+      yrInput.addEventListener("keydown", (e) => { if (e.key === "Enter") yrBtn.click(); });
 
       try {
         const meta = await NameVitals.fetchMeta();

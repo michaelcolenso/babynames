@@ -16,7 +16,8 @@ function miniSpark(spark) {
 }
 
 async function renderLandingTable(kind, target) {
-  const r = await fetch(`/api/landing/${kind}`);
+  const endpoint = kind === "comeback" ? "/api/landing/comeback" : `/api/landing/${kind}`;
+  const r = await fetch(endpoint);
   const { yM, rows } = await r.json();
   const fmt = NameVitals.fmt;
 
@@ -24,6 +25,7 @@ async function renderLandingTable(kind, target) {
     extinct: `<tr><th>Name</th><th class="num">Peak year</th><th class="num">Peak</th><th class="num">Last year on record</th><th>Trajectory</th><th></th></tr>`,
     endangered: `<tr><th>Name</th><th class="num">Peak year</th><th class="num">Peak</th><th class="num">${yM}</th><th class="num">Decline</th><th>Trajectory</th><th></th></tr>`,
     rising: `<tr><th>Name</th><th class="num">${yM}</th><th class="num">Prev decade</th><th class="num">This decade</th><th class="num">Growth</th><th>Trajectory</th><th></th></tr>`,
+    comeback: `<tr><th>Name</th><th class="num">Peaked</th><th class="num">Peak</th><th class="num">${yM}</th><th class="num">Growth</th><th>Trajectory</th><th></th></tr>`,
   }[kind];
 
   const row = (r) => {
@@ -49,6 +51,16 @@ async function renderLandingTable(kind, target) {
         ${spark}${cta}
       </tr>`;
     }
+    if (kind === "comeback") {
+      return `<tr>
+        <td><a href="${linkTo}">${r.name}</a> <span class="meta">${r.sex}</span></td>
+        <td class="num">${r.peakYear}</td>
+        <td class="num">${fmt(r.peakCount)}</td>
+        <td class="num">${fmt(r.latestCount)}</td>
+        <td class="num">${r.growthX ? r.growthX + "×" : "—"}</td>
+        ${spark}${cta}
+      </tr>`;
+    }
     return `<tr>
       <td><a href="${linkTo}">${r.name}</a> <span class="meta">${r.sex}</span></td>
       <td class="num">${fmt(r.latestCount)}</td>
@@ -62,4 +74,33 @@ async function renderLandingTable(kind, target) {
   target.innerHTML = `<table class="table"><thead>${headers}</thead><tbody>${rows.map(row).join("")}</tbody></table>`;
 }
 
+// Render the year-of-birth top-names table into target.
+function renderYearTable(year, rows, target) {
+  const fmt = NameVitals.fmt;
+  const girls = rows.filter(r => r.sex === "F").slice(0, 25);
+  const boys  = rows.filter(r => r.sex === "M").slice(0, 25);
+
+  const nameList = (list) => list.map(r =>
+    `<li>
+      <span class="rank">#${r.rank}</span>
+      <a href="/name/${encodeURIComponent(r.name)}/">${r.name}</a>
+      <span class="count">${fmt(r.count)}</span>
+    </li>`
+  ).join("");
+
+  target.innerHTML = `
+    <h2 style="margin-top:1.5rem">Top names of ${year}</h2>
+    <div class="year-result-grid">
+      <div class="year-col">
+        <h3>Girls</h3>
+        <ul class="year-name-list">${nameList(girls)}</ul>
+      </div>
+      <div class="year-col">
+        <h3>Boys</h3>
+        <ul class="year-name-list">${nameList(boys)}</ul>
+      </div>
+    </div>`;
+}
+
 window.renderLandingTable = renderLandingTable;
+window.renderYearTable = renderYearTable;

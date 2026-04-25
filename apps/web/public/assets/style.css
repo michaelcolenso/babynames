@@ -269,7 +269,136 @@ h3 { font-size: 1.1rem; margin: 1.25rem 0 0.25rem; }
 }
 .affiliate a { color: var(--fg); }
 
+/* ── Generational collision callout ───────────────────────────────── */
+.collision-box {
+  background: #fff8f0;
+  border: 1px solid #f0e0c8;
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin: 1rem 0;
+  font-size: 1rem;
+}
+.collision-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+}
+.collision-row strong { font-size: 1.15rem; }
+.collision-year {
+  font-family: "SF Mono", ui-monospace, Menlo, monospace;
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-width: 6rem;
+}
+.collision-now strong { color: var(--endangered); }
+
+/* ── Name twin result ─────────────────────────────────────────────── */
+#twin-result {
+  margin-top: 1rem;
+}
+.twin-card {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+}
+.twin-card h3 { margin: 0 0 0.5rem; font-size: 1rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; font-size: 0.75rem; }
+.twin-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.twin-list li a {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--fg);
+  font-size: 0.95rem;
+  background: var(--bg);
+}
+.twin-list li a:hover { border-color: var(--accent); text-decoration: none; }
+.twin-list .similarity { color: var(--muted); font-size: 0.8rem; font-family: "SF Mono", ui-monospace, Menlo, monospace; }
+
+/* ── Year-of-birth widget and page ───────────────────────────────── */
+.year-widget {
+  margin: 2rem 0;
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.year-widget h2 { margin: 0 0 0.75rem; font-size: 1.25rem; }
+.year-form {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+.year-form input[type="number"] {
+  flex: 1;
+  max-width: 200px;
+  padding: 0.75rem 1rem;
+  font: inherit;
+  font-size: 1.05rem;
+  border: 1px solid var(--rule);
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  outline: none;
+  -moz-appearance: textfield;
+}
+.year-form input[type="number"]::-webkit-outer-spin-button,
+.year-form input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+.year-form input[type="number"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,91,219,0.12); }
+.year-form button {
+  padding: 0.75rem 1.25rem;
+  font: inherit;
+  font-weight: 600;
+  background: var(--accent);
+  color: white;
+  border: 0;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.year-result-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.25rem;
+}
+.year-col h3 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+  font-weight: 500;
+}
+.year-name-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.year-name-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.95rem;
+}
+.year-name-list li:last-child { border-bottom: 0; }
+.year-name-list .rank { color: var(--muted); font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 0.75rem; min-width: 1.5rem; }
+.year-name-list .count { color: var(--muted); font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 0.8rem; }
+.year-name-list a { font-weight: 600; color: var(--fg); }
+
+/* ── nav active state ─────────────────────────────────────────────── */
+header.site nav a[aria-current="page"] { color: var(--fg); font-weight: 600; }
+
 .hidden { display: none !important; }
+
+@media (max-width: 600px) {
+  .year-result-grid { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 480px) {
   body { font-size: 17px; }
@@ -278,4 +407,5 @@ h3 { font-size: 1.1rem; margin: 1.25rem 0 0.25rem; }
   .report h1 { font-size: 2rem; }
   header.site { flex-direction: column; align-items: flex-start; gap: 0.35rem; }
   header.site nav a { margin: 0 0.85rem 0 0; }
+  .year-widget { padding: 1rem; }
 }
