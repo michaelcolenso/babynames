@@ -19,7 +19,7 @@ export const onRequestGet: PagesFunction<Env, "year"> = async (ctx) => {
   }
 
   const [rows, yMStr, ymStr] = await Promise.all([
-    topBySpecificYear(ctx.env.DB, year, 50),
+    topBySpecificYear(ctx.env.DB, year, 25),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
     getMeta(ctx.env.DB, META_KEYS.minYear),
   ]);

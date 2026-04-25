@@ -197,23 +197,29 @@ export interface YearTopRow {
   rank: number;
 }
 
-// Top-N names for a specific birth year. Used by /api/year/:year.
+// Top-N names per sex for a specific birth year. Used by /api/year/:year.
+// Uses a CTE so the per-sex rank filter happens before truncation — a plain
+// ORDER BY sex + LIMIT would return only the first-sorted sex bucket.
 export async function topBySpecificYear(
   db: D1Database,
   year: number,
-  limit = 50,
+  perSex = 25,
 ): Promise<YearTopRow[]> {
   const r = await db
     .prepare(
-      `SELECT n.name, n.sex, ny.count,
-              ROW_NUMBER() OVER (PARTITION BY n.sex ORDER BY ny.count DESC) AS rank
-         FROM name_years ny
-         JOIN names n ON n.id = ny.name_id
-        WHERE ny.year = ?1
-        ORDER BY n.sex, ny.count DESC
-        LIMIT ?2`,
+      `WITH ranked AS (
+         SELECT n.name, n.sex, ny.count,
+                ROW_NUMBER() OVER (PARTITION BY n.sex ORDER BY ny.count DESC) AS rank
+           FROM name_years ny
+           JOIN names n ON n.id = ny.name_id
+          WHERE ny.year = ?1
+       )
+       SELECT name, sex, count, rank
+         FROM ranked
+        WHERE rank <= ?2
+        ORDER BY sex, rank`,
     )
-    .bind(year, limit)
+    .bind(year, perSex)
     .all<YearTopRow>();
   return r.results ?? [];
 }
