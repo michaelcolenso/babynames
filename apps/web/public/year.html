@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Most popular baby names by birth year | Name Vitals</title>
+  <meta name="description" content="What were the most popular baby names the year you were born? Enter any year from 1880 to the present.">
+  <link rel="canonical" href="/year.html">
+  <meta property="og:title" content="What were the top names the year you were born?">
+  <meta property="og:description" content="Enter any birth year from 1880 to present and see the top baby names. Based on 144 years of SSA data.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <div class="page">
+    <header class="site">
+      <a class="brand" href="/">Name Vitals</a>
+      <nav>
+        <a href="/extinct.html">Extinct</a>
+        <a href="/endangered.html">Endangered</a>
+        <a href="/comeback.html">Comebacks</a>
+        <a href="/year.html" aria-current="page">Birth year</a>
+        <a href="/rising.html">Rising</a>
+        <a href="/about.html">About</a>
+      </nav>
+    </header>
+
+    <h1>Names of the year</h1>
+    <p class="lede">Enter the year you were born — or any year from 1880 to the present — to see the top 25 names for girls and boys.</p>
+
+    <div class="year-form">
+      <input id="yr" type="number" min="1880" max="2030" placeholder="e.g. 1987" autocomplete="off">
+      <button id="yr-go">Look up</button>
+    </div>
+
+    <div id="year-result"></div>
+
+    <footer class="site">
+      <div>Based on SSA records 1880–present.</div>
+      <div><a href="/about.html">Methodology</a></div>
+    </footer>
+  </div>
+  <script src="/assets/app.js"></script>
+  <script src="/assets/landing.js"></script>
+  <script>
+    (async () => {
+      const input = document.getElementById("yr");
+      const btn = document.getElementById("yr-go");
+      const result = document.getElementById("year-result");
+
+      // Pre-fill from query string ?year=1987
+      const qs = new URLSearchParams(location.search);
+      const qy = qs.get("year");
+      if (qy) {
+        input.value = qy;
+        await loadYear(Number(qy), result);
+      }
+
+      btn.addEventListener("click", async () => {
+        const y = Number(input.value);
+        if (!y || y < 1880 || y > 2030) { result.innerHTML = "<p>Please enter a year between 1880 and the present.</p>"; return; }
+        history.replaceState({}, "", `?year=${y}`);
+        await loadYear(y, result);
+      });
+
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") btn.click(); });
+    })();
+
+    async function loadYear(year, target) {
+      target.innerHTML = "<p>Loading…</p>";
+      try {
+        const r = await fetch(`/api/year/${year}`);
+        if (!r.ok) { const j = await r.json(); target.innerHTML = `<p class="lede">${j.error || "No data."}</p>`; return; }
+        const { rows } = await r.json();
+        renderYearTable(year, rows, target);
+      } catch(e) {
+        target.innerHTML = "<p>Failed to load data. Try again.</p>";
+      }
+    }
+  </script>
+</body>
+</html>

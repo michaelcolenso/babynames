@@ -51,11 +51,24 @@ export function renderReport(record: NameRecord): string {
       : `<p>Down <strong>${a.declinePct ?? 0}%</strong> from its peak.</p>`;
   const totalSentence = `<p>All told, about <strong>${fmt(a.totalCount)}</strong> Americans have been named ${escape(record.name)} and recorded by the Social Security Administration since ${a.firstYear}.</p>`;
 
+  // Generational collision callout — shown for declining/endangered/extinct with
+  // a meaningful peak (500+ babies) so the contrast is emotionally legible.
+  const showCollision =
+    (a.status === "declining" || a.status === "endangered" || a.status === "extinct") &&
+    a.peakCount >= 500;
+  const collisionBox = showCollision
+    ? `<div class="collision-box">
+    <div class="collision-row"><span class="collision-year">In ${a.peakYear}:</span><strong>${fmt(a.peakCount)}</strong> ${sexLabel} named ${escape(record.name)}</div>
+    <div class="collision-row collision-now"><span class="collision-year">In ${record.yM}:</span><strong>${a.latestCount === 0 ? "0 (extinct)" : fmt(a.latestCount)}</strong> ${sexLabel} named ${escape(record.name)}</div>
+  </div>`
+    : "";
+
   return `<article class="report" data-name="${escape(record.name)}" data-sex="${record.sex}">
   <h1>${escape(record.name)}</h1>
   <div class="sex">${record.sex === "M" ? "Masculine" : "Feminine"} · first seen ${a.firstYear}</div>
   <div class="status-pill status-${a.status}">${statusCopy[a.status][0]}</div>
   ${buildSparkline(record.series, record.ym, record.yM)}
+  ${collisionBox}
   <div class="narrative">
     <p>${statusCopy[a.status][1]}</p>
     <p>${peakSentence}</p>
@@ -73,7 +86,9 @@ export function renderReport(record: NameRecord): string {
     <button class="primary" data-share="card">Download share card</button>
     <button data-share="twitter">Share on Twitter</button>
     <button data-share="copy">Copy link</button>
+    <button data-share="twin">Find my name's twin →</button>
   </div>
+  <div id="twin-result"></div>
   <div class="affiliate">
     Curious about the history of ${escape(record.name)}? Browse
     <a rel="nofollow sponsored" target="_blank" href="https://www.amazon.com/s?k=${encodeURIComponent("history of the name " + record.name)}&amp;tag=">books about the name ${escape(record.name)} on Amazon</a>.
@@ -97,6 +112,9 @@ export function renderFullPage(
     other: record.other,
   });
 
+  const origin = opts.canonical ? new URL(opts.canonical).origin : "";
+  const ogImageUrl = `${origin}/api/og/${encodeURIComponent(record.name)}`;
+
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -109,7 +127,11 @@ export function renderFullPage(
 <meta property="og:description" content="${desc}">
 <meta property="og:type" content="article">
 <meta property="og:url" content="${escape(opts.canonical)}">
+<meta property="og:image" content="${escape(ogImageUrl)}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${escape(ogImageUrl)}">
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>

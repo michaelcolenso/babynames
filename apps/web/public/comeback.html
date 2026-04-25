@@ -3,11 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Extinct baby names — Name Vitals</title>
-  <meta name="description" content="Names once given to hundreds of American babies a year, now given to none. Trajectory sparklines and death-year for each.">
-  <link rel="canonical" href="/extinct.html">
-  <meta property="og:title" content="Extinct baby names">
-  <meta property="og:description" content="Names once given to hundreds of American babies a year, now given to none.">
+  <title>Comeback Kids — names that came back from the dead | Name Vitals</title>
+  <meta name="description" content="Names that were massive in the 1890s–1970s, nearly vanished, and are now climbing back — Emma, Eleanor, Oliver, and more.">
+  <link rel="canonical" href="/comeback.html">
+  <meta property="og:title" content="Comeback Kids — names that rose from the dead">
+  <meta property="og:description" content="Once-dominant names that cratered and came roaring back. Emma was nearly extinct in the 1970s. By 2008 she was #1.">
+  <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
@@ -16,16 +17,17 @@
     <header class="site">
       <a class="brand" href="/">Name Vitals</a>
       <nav>
-        <a href="/extinct.html" aria-current="page">Extinct</a>
+        <a href="/extinct.html">Extinct</a>
         <a href="/endangered.html">Endangered</a>
-        <a href="/comeback.html">Comebacks</a>
+        <a href="/comeback.html" aria-current="page">Comebacks</a>
         <a href="/year.html">Birth year</a>
         <a href="/rising.html">Rising</a>
         <a href="/about.html">About</a>
       </nav>
     </header>
-    <h1>Extinct baby names</h1>
-    <p class="lede">Names once given to at least 500 babies in a single year, now given to none — and not given to any American baby in at least a decade.</p>
+
+    <h1>Comeback Kids</h1>
+    <p class="lede">Names that were dominant before 1975 — sometimes given to tens of thousands of babies a year — fell to near-zero, and are now climbing back. Emma is the prototype: practically extinct in the 1970s, #1 by 2008.</p>
 
     <div class="search">
       <input id="q" type="text" placeholder="Check your own name" autocomplete="off">
@@ -36,7 +38,7 @@
     <div id="t"></div>
 
     <footer class="site">
-      <div>Based on SSA records.</div>
+      <div>Based on SSA records 1880–present.</div>
       <div><a href="/about.html">Methodology</a></div>
     </footer>
   </div>
@@ -44,7 +46,7 @@
   <script src="/assets/landing.js"></script>
   <script>
     NameVitals.setupSearch(document.getElementById("q"), document.getElementById("suggestions"), document.getElementById("go"));
-    renderLandingTable("extinct", document.getElementById("t"));
+    renderLandingTable("comeback", document.getElementById("t"));
   </script>
 </body>
 </html>

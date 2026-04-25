@@ -189,3 +189,103 @@ export async function topByYear(
     .all<TopByYear>();
   return r.results ?? [];
 }
+
+export interface YearTopRow {
+  name: string;
+  sex: Sex;
+  count: number;
+  rank: number;
+}
+
+// Top-N names per sex for a specific birth year. Used by /api/year/:year.
+// Uses a CTE so the per-sex rank filter happens before truncation — a plain
+// ORDER BY sex + LIMIT would return only the first-sorted sex bucket.
+export async function topBySpecificYear(
+  db: D1Database,
+  year: number,
+  perSex = 25,
+): Promise<YearTopRow[]> {
+  const r = await db
+    .prepare(
+      `WITH ranked AS (
+         SELECT n.name, n.sex, ny.count,
+                ROW_NUMBER() OVER (PARTITION BY n.sex ORDER BY ny.count DESC) AS rank
+           FROM name_years ny
+           JOIN names n ON n.id = ny.name_id
+          WHERE ny.year = ?1
+       )
+       SELECT name, sex, count, rank
+         FROM ranked
+        WHERE rank <= ?2
+        ORDER BY sex, rank`,
+    )
+    .bind(year, perSex)
+    .all<YearTopRow>();
+  return r.results ?? [];
+}
+
+// Comeback names: peaked pre-1975 at 5k+ births, currently growing/stable with
+// meaningful counts. Proxy for "had a valley and came back."
+export async function listComeback(
+  db: D1Database,
+  limit = 200,
+): Promise<(NameRow & { spark_blob: ArrayBuffer | null })[]> {
+  const r = await db
+    .prepare(
+      `SELECT id, name, name_lower, sex, first_year, last_year,
+              peak_year, peak_count, total_count, status, decline_pct,
+              latest_count, prev_decade, curr_decade, growth_x, spark_blob
+         FROM names
+        WHERE peak_count >= 5000
+          AND peak_year <= 1975
+          AND curr_decade >= 500
+          AND status IN ('rising', 'stable')
+        ORDER BY growth_x DESC, curr_decade DESC
+        LIMIT ?1`,
+    )
+    .bind(limit)
+    .all<NameRow & { spark_blob: ArrayBuffer | null }>();
+  return r.results ?? [];
+}
+
+export interface SparkBlobRow {
+  name: string;
+  sex: Sex;
+  spark_blob: ArrayBuffer | null;
+}
+
+// Returns name + sex + spark for every name that has a blob and meaningful
+// history. Used by the /api/twin endpoint to find trajectory matches.
+export async function listNameSparks(
+  db: D1Database,
+): Promise<SparkBlobRow[]> {
+  const r = await db
+    .prepare(
+      `SELECT name, sex, spark_blob
+         FROM names
+        WHERE spark_blob IS NOT NULL
+          AND peak_count >= 200`,
+    )
+    .all<SparkBlobRow>();
+  return r.results ?? [];
+}
+
+// Fetches the spark_blob for a single name+sex. Used by /api/og.
+export async function getNameSpark(
+  db: D1Database,
+  nameLower: string,
+): Promise<(NameRow & { spark_blob: ArrayBuffer | null }) | null> {
+  const r = await db
+    .prepare(
+      `SELECT id, name, name_lower, sex, first_year, last_year,
+              peak_year, peak_count, total_count, status, decline_pct,
+              latest_count, prev_decade, curr_decade, growth_x, spark_blob
+         FROM names
+        WHERE name_lower = ?1
+        ORDER BY total_count DESC
+        LIMIT 1`,
+    )
+    .bind(nameLower)
+    .first<NameRow & { spark_blob: ArrayBuffer | null }>();
+  return r ?? null;
+}

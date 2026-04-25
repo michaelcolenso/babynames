@@ -121,11 +121,19 @@ function renderReport(record) {
   const declineSentence = a.status === "rising" || a.declineFromPeakPct <= 5
     ? "" : `<p>Down <strong>${a.declineFromPeakPct}%</strong> from its peak.</p>`;
   const totalSentence = `<p>All told, about <strong>${fmt(a.total)}</strong> Americans have been named ${record.name} and recorded by the Social Security Administration since ${a.firstYear}.</p>`;
+
+  const showCollision = (a.status === "declining" || a.status === "endangered" || a.status === "extinct") && a.peakCount >= 500;
+  const collisionBox = showCollision ? `<div class="collision-box">
+    <div class="collision-row"><span class="collision-year">In ${a.peakYear}:</span><strong>${fmt(a.peakCount)}</strong> ${sexLabel} named ${record.name}</div>
+    <div class="collision-row collision-now"><span class="collision-year">In ${record.yM}:</span><strong>${a.latest === 0 ? "0 (extinct)" : fmt(a.latest)}</strong> ${sexLabel} named ${record.name}</div>
+  </div>` : "";
+
   return `<article class="report" data-name="${record.name}" data-sex="${record.sex}">
   <h1>${record.name}</h1>
   <div class="sex">${record.sex === "M" ? "Masculine" : "Feminine"} · first seen ${a.firstYear}</div>
   <div class="status-pill status-${a.status}">${statusCopy[0]}</div>
   ${buildSparkline(record)}
+  ${collisionBox}
   <div class="narrative">
     <p>${statusCopy[1]}</p>
     <p>${peakSentence}</p>
@@ -143,7 +151,9 @@ function renderReport(record) {
     <button class="primary" data-share="card">Download share card</button>
     <button data-share="twitter">Share on Twitter</button>
     <button data-share="copy">Copy link</button>
+    <button data-share="twin">Find my name's twin →</button>
   </div>
+  <div id="twin-result"></div>
   <div class="affiliate">
     Curious about the history of ${record.name}? Browse
     <a rel="nofollow sponsored" target="_blank" href="https://www.amazon.com/s?k=${encodeURIComponent("history of the name " + record.name)}&tag=">books about the name ${record.name} on Amazon</a>.
@@ -232,7 +242,7 @@ function downloadCanvas(canvas, filename) {
 // HTML) and from any client-side render.
 function attachShareHandlers(container, record) {
   container.querySelectorAll("[data-share]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const kind = btn.getAttribute("data-share");
       const url = location.href;
       if (kind === "copy") {
@@ -245,9 +255,46 @@ function attachShareHandlers(container, record) {
       } else if (kind === "card") {
         const canvas = renderShareCard(record);
         if (canvas) downloadCanvas(canvas, `${record.name.toLowerCase()}-name-vitals.png`);
+      } else if (kind === "twin") {
+        await handleTwinButton(btn, record, container);
       }
     });
   });
+}
+
+async function handleTwinButton(btn, record, container) {
+  const resultEl = container.querySelector("#twin-result") || document.getElementById("twin-result");
+  if (!resultEl) return;
+
+  if (resultEl.dataset.loaded === "1") {
+    resultEl.style.display = resultEl.style.display === "none" ? "" : "none";
+    return;
+  }
+
+  btn.textContent = "Finding…";
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/twin/${encodeURIComponent(record.name)}?sex=${record.sex}`);
+    if (!r.ok) throw new Error("not found");
+    const { twins } = await r.json();
+    if (!twins || !twins.length) {
+      resultEl.innerHTML = "<p class='lede'>No close twins found.</p>";
+    } else {
+      const items = twins.map(t =>
+        `<li><a href="/name/${encodeURIComponent(t.name)}/">${t.name}</a> <span class="similarity">${Math.round(t.similarity * 100)}% match</span></li>`
+      ).join("");
+      resultEl.innerHTML = `<div class="twin-card">
+        <h3>Names with the most similar trajectory to ${record.name}</h3>
+        <ul class="twin-list">${items}</ul>
+      </div>`;
+    }
+    resultEl.dataset.loaded = "1";
+  } catch(e) {
+    resultEl.innerHTML = "<p class='lede'>Couldn't load twins. Try again.</p>";
+  } finally {
+    btn.textContent = "Find my name's twin →";
+    btn.disabled = false;
+  }
 }
 
 async function setupSearch(input, suggestions, submit, sexSelect) {
