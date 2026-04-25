@@ -1,0 +1,82 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+```bash
+# Development
+npm run dev:web          # Pages dev server at :8788 (includes local D1)
+npm run dev:ingest       # Ingest Worker dev server
+
+# Type checking
+npm run typecheck        # Type-check all apps + shared package
+
+# Build
+npm run build            # Compile packages/shared only (apps use wrangler bundling)
+
+# Deploy
+npm run deploy:web       # Deploy Cloudflare Pages
+npm run deploy:ingest    # Deploy Ingest Worker
+
+# Database migrations
+npm run migrations:apply:local   # Apply migrations to local D1
+npm run migrations:apply         # Apply migrations to remote D1
+
+# Scripts
+npm run seed                                    # One-time D1 population from legacy shards (run once pre-deploy)
+npm run verify-parity -- --base=<preview-url>  # Validate API parity before DNS cutover
+
+# Test cron trigger
+npm run -w @nv/ingest-worker test:scheduled    # Test scheduled handler locally
+```
+
+## Architecture
+
+**Name Vitals** — Tracks US baby name popularity using SSA data (1880–present). Monorepo with three deployment units:
+
+| Package              | Type              | Purpose                                             |
+| -------------------- | ----------------- | --------------------------------------------------- |
+| `apps/web`           | Cloudflare Pages  | Static assets + Pages Functions (API + SSR)         |
+| `apps/ingest-worker` | Cloudflare Worker | Weekly SSA data ingestion via cron + queues         |
+| `packages/shared`    | npm package       | Shared types, classification, D1 queries, renderers |
+
+### Shared Package (`@nv/shared`)
+
+Path alias `@nv/shared` maps to `packages/shared/src/` in all apps. Key exports:
+
+- **`classify.ts`** — Single source of truth for name status (rising/stable/declining/endangered/extinct) and all trend metrics. Used by ingest at write-time; do not duplicate this logic.
+- **`d1-queries.ts`** — Typed D1 query helpers shared by Pages Functions and ingest.
+- **`schema.ts`** — TypeScript types mirroring the D1 schema (`NameRow`, `SearchHit`, API contract types).
+- **`render-name.ts`** — Full-page SSR renderer for `/name/:name` — used by both edge SSR and client hydration.
+- **`spark-blob.ts`** — Encodes yearly counts into a 60-byte normalized BLOB (`encodeSpark`/`decodeSpark`). Stored in `names.spark_blob`, used for landing-page sparklines without fetching full series.
+
+### D1 Database (`name-vitals`)
+
+Shared by both apps (same `database_id` in both `wrangler.toml` files). Key tables:
+
+- **`names`** — ~100k rows, one per (name, sex). Holds all pre-classified metrics + `spark_blob`.
+- **`name_years`** — ~1.9M rows of (name_id, year, count). Sparse — only years with count > 0.
+- **`year_totals`** — Annual total births per sex (~290 rows).
+- **`meta`** — Singleton key/value store (min/max year, schema version, `data_version` UUID for cache busting, last SSA ETag).
+
+### Ingest Pipeline
+
+`scheduled()` → ETag check → fetch SSA zip → store in R2 → parse `yob*.txt` files → enqueue row chunks → `queue()` consumer inserts into staging tables → `finalize()` swaps staging → live in one transaction.
+
+**Zero-downtime swap pattern**: bulk writes go to `names_staging` / `name_years_staging`. At finalize, a single transaction renames staging → live. Indexes are dropped during bulk insert and rebuilt at finalize. The `data_version` UUID in `meta` is updated to bust edge caches.
+
+### Pages Functions Routing (`apps/web/functions/`)
+
+- `_middleware.ts` — CDN caching wrapper for all functions
+- `api/search.ts` — `GET /api/search?q=` prefix autocomplete (half-open range scan on `name_lower`)
+- `api/name/[name].ts` — `GET /api/name/:name` — full timeseries for both sexes
+- `api/meta.ts` — `GET /api/meta` — home-page aggregates + top-10 per year
+- `api/landing/[kind].ts` — `GET /api/landing/extinct|endangered|rising`
+- `name/[name]/index.ts` — `GET /name/:name/` — server-rendered HTML (replaces 2000+ legacy static files)
+
+### Key Constraints
+
+- SSA publishes new data once per year (typically May). The cron is ETag-gated so weekly runs are cheap.
+- D1 limit: 10 GB. Current usage ~2 GB.
+- `classify()` runs at ingest time and results are stored — API reads never recompute classification.

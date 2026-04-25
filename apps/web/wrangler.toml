@@ -5,4 +5,4 @@ pages_build_output_dir = "public"
 [[d1_databases]]
 binding = "DB"
 database_name = "name-vitals"
-database_id = "REPLACE_WITH_D1_ID"
+database_id = "fc4741db-1f6d-457c-b4e4-675a4ea3ebc2"

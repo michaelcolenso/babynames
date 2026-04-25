@@ -9,11 +9,7 @@
 // The staging-swap pattern means reads against /api/* keep seeing
 // consistent old data until the swap completes inside one transaction.
 
-import {
-  META_KEYS,
-  getMeta,
-  setMeta,
-} from "@nv/shared";
+import { META_KEYS, getMeta, setMeta } from "@nv/shared";
 import type {
   D1Database,
   ExecutionContext,
@@ -26,12 +22,7 @@ import type {
 import { fetchNamesZip, headEtag, unpackYobFiles } from "./ssa";
 import { parseYob } from "./parse";
 import { CHUNK_ROWS, type IngestMessage, type ChunkRow, type YearTotalRow } from "./chunks";
-import {
-  ensureStaging,
-  clearStagingForRun,
-  insertRowChunk,
-  upsertYearTotals,
-} from "./upsert";
+import { ensureStaging, clearStagingForRun, insertRowChunk, upsertYearTotals } from "./upsert";
 import { finalize } from "./compute";
 
 interface Env {
@@ -39,14 +30,11 @@ interface Env {
   INGEST_CACHE: R2Bucket;
   INGEST_QUEUE: Queue<IngestMessage>;
   SSA_URL: string;
+  TRIGGER_SECRET: string;
 }
 
 export default {
-  async scheduled(
-    _controller: ScheduledController,
-    env: Env,
-    ctx: ExecutionContext,
-  ): Promise<void> {
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(runIngest(env, /*force*/ false));
   },
 
@@ -54,6 +42,10 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url);
     if (url.pathname === "/__scheduled" || url.pathname === "/run") {
+      const auth = req.headers.get("Authorization");
+      if (!env.TRIGGER_SECRET || auth !== `Bearer ${env.TRIGGER_SECRET}`) {
+        return new Response("unauthorized\n", { status: 401 });
+      }
       const force = url.searchParams.get("force") === "1";
       ctx.waitUntil(runIngest(env, force));
       return new Response("ingest started\n", { status: 202 });
@@ -158,12 +150,9 @@ async function handleMessage(env: Env, msg: IngestMessage): Promise<void> {
         setMeta(env.DB, META_KEYS.dataVersion, dataVersion),
       ]);
       // Best-effort cleanup of the per-run buffer.
-      await env.DB.prepare("DELETE FROM name_year_raw_staging WHERE run_id = ?1")
-        .bind(msg.runId)
-        .run();
+      await env.DB.prepare("DELETE FROM name_year_raw_staging WHERE run_id = ?1").bind(msg.runId).run();
       console.log(
-        `ingest complete: rows=${result.rowsInserted} names=${result.namesInserted} ` +
-          `data_version=${dataVersion}`,
+        `ingest complete: rows=${result.rowsInserted} names=${result.namesInserted} ` + `data_version=${dataVersion}`,
       );
       return;
     }
