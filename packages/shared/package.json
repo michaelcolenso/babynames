@@ -1,0 +1,21 @@
+{
+  "name": "@nv/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./classify": "./src/classify.ts",
+    "./analyze": "./src/analyze.ts",
+    "./render-name": "./src/render-name.ts",
+    "./sparkline": "./src/sparkline.ts",
+    "./schema": "./src/schema.ts",
+    "./d1-queries": "./src/d1-queries.ts",
+    "./spark-blob": "./src/spark-blob.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}

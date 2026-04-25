@@ -1,0 +1,8 @@
+name = "name-vitals"
+compatibility_date = "2024-09-09"
+pages_build_output_dir = "public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "name-vitals"
+database_id = "REPLACE_WITH_D1_ID"
