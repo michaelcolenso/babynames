@@ -76,11 +76,18 @@
   <script>
     (async () => {
       const qs = new URLSearchParams(location.search);
-      if (qs.get("name")) {
+      const qName = qs.get("name");
+      if (qName) {
+        // Ignore route-template placeholders like ?name=:name from legacy links.
+        if (/^:[a-z][a-z0-9_-]*$/i.test(qName)) {
+          history.replaceState(null, "", "/");
+          return;
+        }
+
         const params = new URLSearchParams();
         if (qs.get("sex")) params.set("sex", qs.get("sex"));
         const tail = params.toString() ? "?" + params.toString() : "";
-        location.replace(`/name/${encodeURIComponent(qs.get("name"))}/${tail}`);
+        location.replace(`/name/${encodeURIComponent(qName)}/${tail}`);
         return;
       }
 
