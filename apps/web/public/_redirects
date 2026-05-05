@@ -1,6 +1,10 @@
+# Redirect literal placeholder query values to home.
+# Must come before the generic query redirect below.
+/?name=:name  /  302
+
 # Redirect legacy GitHub Pages ?name= URLs to the new SSR route.
 # Cloudflare Pages processes these before Pages Functions.
-/?name=:name  /name/:name/  301
+/?name=:name*  /name/:name/  301
 
 # Catch users pasting route templates literally.
 /name/%3Aname/  /  302
