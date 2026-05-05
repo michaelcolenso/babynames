@@ -1,4 +1,4 @@
-// Name Vitals — client-side app.
+// nobodynamed — client-side app.
 //
 // Key change vs the legacy version: data is fetched from /api/* endpoints
 // backed by Cloudflare D1, not from static per-letter JSON shards.
@@ -124,8 +124,8 @@ function renderReport(record) {
 
   const showCollision = (a.status === "declining" || a.status === "endangered" || a.status === "extinct") && a.peakCount >= 500;
   const collisionBox = showCollision ? `<div class="collision-box">
-    <div class="collision-row"><span class="collision-year">In ${a.peakYear}:</span><strong>${fmt(a.peakCount)}</strong> ${sexLabel} named ${record.name}</div>
-    <div class="collision-row collision-now"><span class="collision-year">In ${record.yM}:</span><strong>${a.latest === 0 ? "0 (extinct)" : fmt(a.latest)}</strong> ${sexLabel} named ${record.name}</div>
+    <div class="collision-row"><span class="collision-year">${a.peakYear}</span><strong>${fmt(a.peakCount)}</strong> ${sexLabel} named ${record.name}</div>
+    <div class="collision-row collision-now"><span class="collision-year">${record.yM}</span><strong>${a.latest === 0 ? "0 (extinct)" : fmt(a.latest)}</strong> ${sexLabel} named ${record.name}</div>
   </div>` : "";
 
   return `<article class="report" data-name="${record.name}" data-sex="${record.sex}">
@@ -155,8 +155,7 @@ function renderReport(record) {
   </div>
   <div id="twin-result"></div>
   <div class="affiliate">
-    Curious about the history of ${record.name}? Browse
-    <a rel="nofollow sponsored" target="_blank" href="https://www.amazon.com/s?k=${encodeURIComponent("history of the name " + record.name)}&tag=">books about the name ${record.name} on Amazon</a>.
+    Further reading: <a rel="nofollow sponsored noopener" target="_blank" href="https://www.amazon.com/s?k=${encodeURIComponent("history of the name " + record.name)}&tag=">books about the name ${record.name}</a>.
   </div>
 </article>`;
 }
@@ -173,7 +172,7 @@ function renderShareCard(record) {
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = accent;
   ctx.font = "500 26px 'SF Mono', ui-monospace, Menlo, monospace";
-  ctx.fillText("NAME VITALS", 80, 90);
+  ctx.fillText("NOBODYNAMED", 80, 90);
   ctx.fillStyle = fg;
   ctx.font = "700 130px 'Iowan Old Style', Palatino, Georgia, serif";
   ctx.fillText(record.name, 80, 220);
@@ -223,7 +222,7 @@ function renderShareCard(record) {
   ctx.textAlign = "left";
   ctx.fillStyle = accent;
   ctx.font = "500 22px 'SF Mono', ui-monospace, Menlo, monospace";
-  ctx.fillText("namevitals", 80, H - 50);
+  ctx.fillText("nobodynamed", 80, H - 50);
   return canvas;
 }
 
@@ -254,7 +253,7 @@ function attachShareHandlers(container, record) {
         window.open(`https://twitter.com/intent/tweet?text=${msg}&url=${encodeURIComponent(url)}`, "_blank");
       } else if (kind === "card") {
         const canvas = renderShareCard(record);
-        if (canvas) downloadCanvas(canvas, `${record.name.toLowerCase()}-name-vitals.png`);
+        if (canvas) downloadCanvas(canvas, `${record.name.toLowerCase()}-nobodynamed.png`);
       } else if (kind === "twin") {
         await handleTwinButton(btn, record, container);
       }

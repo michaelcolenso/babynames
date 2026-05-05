@@ -9,6 +9,7 @@ import {
   classify,
   getMeta,
   getNameWithSeries,
+  listRelatedNames,
   META_KEYS,
   renderFullPage,
   type NameRecord,
@@ -95,10 +96,19 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     other: other ? { sex: other.sex, series: other.series } : undefined,
   };
   const cls = classify({ series: record.series, yM: record.yM })!;
+  const primaryRow = rows.find((r) => r.row.sex === primary.sex) ?? rows[0]!;
+  const relatedNames = await listRelatedNames(
+    ctx.env.DB,
+    lower,
+    primaryRow.row.sex,
+    primaryRow.row.status,
+    primaryRow.row.peak_year,
+    6,
+  );
   const url = new URL(ctx.request.url);
   const canonical = `${url.origin}/name/${encodeURIComponent(record.name)}/`;
 
-  const html = renderFullPage(record, cls, { canonical });
+  const html = renderFullPage(record, cls, { canonical, relatedNames });
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
