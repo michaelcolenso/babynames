@@ -25,6 +25,19 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   if (typeof raw !== "string" || !raw) return notFound("missing name");
 
   const decoded = decodeURIComponent(raw);
+
+  // Guard against users pasting placeholder URLs like /name/:name/.
+  // Treat these as malformed templates and send them to home.
+  if (/^:[a-z][a-z0-9_-]*$/i.test(decoded)) {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: "/",
+        "Cache-Control": "public, s-maxage=300",
+      },
+    });
+  }
+
   const lower = decoded.toLowerCase();
   const [rows, ymStr, yMStr] = await Promise.all([
     getNameWithSeries(ctx.env.DB, lower),
