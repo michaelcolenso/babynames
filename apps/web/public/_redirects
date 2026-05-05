@@ -1,1 +1,8 @@
 # Legacy GitHub Pages ?name= URLs are redirected in functions/_middleware.ts.
+
+# Catch users pasting route templates literally.
+/name/%3Aname/  /  302
+/name/%3Aname   /  302
+
+# Enforce trailing slash canonical name URLs.
+/name/:name  /name/:name/  301
