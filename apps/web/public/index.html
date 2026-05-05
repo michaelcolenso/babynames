@@ -3,131 +3,53 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Name Vitals — Is your name going extinct?</title>
-  <meta name="description" content="Look up the popularity, trajectory, and vital status of any American name since 1880. Based on Social Security Administration data.">
+  <title>nobodynamed — is your name going extinct?</title>
+  <meta name="description" content="144 years of American baby names. See which ones are rising, falling, or already gone — drawn from public Social Security records.">
   <link rel="canonical" href="/">
-  <meta property="og:title" content="Name Vitals — Is your name going extinct?">
-  <meta property="og:description" content="Look up the trajectory and vital status of any American name since 1880.">
+  <meta property="og:title" content="nobodynamed — is your name going extinct?">
+  <meta property="og:description" content="144 years of American baby names. See which ones are rising, falling, or already gone — drawn from public Social Security records.">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="nobodynamed — is your name going extinct?">
+  <meta name="twitter:description" content="144 years of American baby names. See which ones are rising, falling, or already gone — drawn from public Social Security records.">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
   <div class="page">
     <header class="site">
-      <a class="brand" href="/">Name Vitals</a>
+      <a class="brand" href="/">nobodynamed</a>
       <nav>
-        <a href="/extinct.html">Extinct</a>
-        <a href="/endangered.html">Endangered</a>
-        <a href="/comeback.html">Comebacks</a>
-        <a href="/year.html">Birth year</a>
-        <a href="/rising.html">Rising</a>
-        <a href="/about.html">About</a>
+        <a href="/extinct.html">Extinct</a><a href="/endangered.html">Endangered</a><a href="/comeback.html">Comebacks</a><a href="/year.html">Birth year</a><a href="/rising.html">Rising</a><a href="/about.html">About</a>
       </nav>
     </header>
-
     <div id="view-home">
       <h1>Is your name going extinct?</h1>
-      <p class="lede">A vital-signs report for any American name since 1880, drawn from 144 years of Social Security Administration records.</p>
-
+      <p class="lede">Every American name has an arc — peak, plateau, decline, sometimes a return. We chart all of them, from 1880 to last year.</p>
       <div class="search">
         <input id="q" type="text" placeholder="Type a name — e.g. Dorothy, Jaxon, Khaleesi" autocomplete="off" spellcheck="false" autofocus>
-        <select id="sex" title="Limit to masculine or feminine">
-          <option value="">Either</option>
-          <option value="F">F</option>
-          <option value="M">M</option>
-        </select>
-        <button id="go">Check</button>
-        <div id="suggestions" class="suggestions hidden"></div>
+        <div class="sex-toggle" role="group" aria-label="Filter by gender"><button type="button" data-sex="" aria-pressed="true">Either</button><button type="button" data-sex="F" aria-pressed="false">Girls</button><button type="button" data-sex="M" aria-pressed="false">Boys</button></div>
+        <input type="hidden" id="sex" value="">
+        <button id="go">Look it up</button><div id="suggestions" class="suggestions hidden"></div>
       </div>
-      <p class="search-hint">Your search stays in your browser — no account, no tracking.</p>
-
-      <div class="landing-ctas">
-        <a href="/extinct.html"><strong>Extinct names →</strong><span>Popular once, now given to zero babies.</span></a>
-        <a href="/endangered.html"><strong>Endangered names →</strong><span>Down 90%+ from their peak.</span></a>
-        <a href="/comeback.html"><strong>Comeback Kids →</strong><span>Flatlined, then came roaring back.</span></a>
-        <a href="/rising.html"><strong>Rising names →</strong><span>Growing faster than anything else.</span></a>
-      </div>
+      <p class="search-hint">Your search stays in your browser. No account, no tracking.</p>
 
       <div class="year-widget">
-        <h2>What were the top names the year you were born?</h2>
-        <div class="year-form">
-          <input id="yr-home" type="number" min="1880" max="2030" placeholder="Enter birth year — e.g. 1987">
-          <button id="yr-go-home">Look up</button>
-        </div>
-        <div id="yr-home-result"></div>
+        <h3 class="section-label">What were the top names the year you were born?</h3>
+        <div class="year-form"><input id="yr-home" type="number" inputmode="numeric" min="1880" max="2030" placeholder="Birth year — e.g. 1987"><button id="yr-go-home">Look up</button></div><div id="yr-home-result"></div>
       </div>
-
-      <h2>Popular right now</h2>
-      <p class="lede" style="margin-bottom:0.75rem;">Top ten girls and boys names from the latest year on record.</p>
-      <div id="popular-grid" class="featured-grid"></div>
+      <h2>Popular right now</h2><p class="lede" style="margin-bottom:0.75rem;">The ten most-given girls' and boys' names from the latest year on record.</p><div id="popular-grid" class="featured-grid"></div>
+      <section class="landing-secondary"><h2 class="section-label">Browse the archive</h2><ul class="cta-list"><li><a href="/extinct.html"><strong>Extinct names</strong> — popular once, now given to no one.</a></li><li><a href="/endangered.html"><strong>Endangered names</strong> — down 90 percent or more from their peak.</a></li><li><a href="/comeback.html"><strong>Comeback Kids</strong> — flatlined, then came roaring back.</a></li><li><a href="/rising.html"><strong>Rising names</strong> — growing faster than anything else.</a></li></ul></section>
     </div>
-
     <div id="view-name"></div>
-
-    <footer class="site">
-      <div>Built on public-domain data from the Social Security Administration.</div>
-      <div><a href="/about.html">About</a> · <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
-    </footer>
+    <footer class="site"><div>nobodynamed is a small data project. Names are forever. Mostly.</div><div>Built on public-domain data from the Social Security Administration.</div><div><a href="/about.html">About</a> · <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/">SSA source</a></div></footer>
   </div>
-
-  <script src="/assets/app.js"></script>
-  <script src="/assets/landing.js"></script>
+  <script src="/assets/app.js"></script><script src="/assets/landing.js"></script>
   <script>
     (async () => {
-      const qs = new URLSearchParams(location.search);
-      const qName = qs.get("name");
-      if (qName) {
-        // Ignore route-template placeholders like ?name=:name from legacy links.
-        if (/^:[a-z][a-z0-9_-]*$/i.test(qName)) {
-          history.replaceState(null, "", "/");
-          return;
-        }
-
-        const params = new URLSearchParams();
-        if (qs.get("sex")) params.set("sex", qs.get("sex"));
-        const tail = params.toString() ? "?" + params.toString() : "";
-        location.replace(`/name/${encodeURIComponent(qName)}/${tail}`);
-        return;
-      }
-
-      const input = document.getElementById("q");
-      const suggestions = document.getElementById("suggestions");
-      const go = document.getElementById("go");
-      const sex = document.getElementById("sex");
-      NameVitals.setupSearch(input, suggestions, go, sex);
-
-      // Year-of-birth widget on home page
-      const yrInput = document.getElementById("yr-home");
-      const yrBtn = document.getElementById("yr-go-home");
-      const yrResult = document.getElementById("yr-home-result");
-      yrBtn.addEventListener("click", async () => {
-        const y = Number(yrInput.value);
-        if (!y || y < 1880) { yrResult.innerHTML = "<p>Enter a year from 1880 onwards.</p>"; return; }
-        yrResult.innerHTML = "<p>Loading…</p>";
-        try {
-          const r = await fetch(`/api/year/${y}`);
-          if (!r.ok) { const j = await r.json(); yrResult.innerHTML = `<p class="lede">${j.error || "No data."}</p>`; return; }
-          const { rows } = await r.json();
-          renderYearTable(y, rows, yrResult);
-        } catch(e) { yrResult.innerHTML = "<p>Failed to load. Try again.</p>"; }
-      });
-      yrInput.addEventListener("keydown", (e) => { if (e.key === "Enter") yrBtn.click(); });
-
-      try {
-        const meta = await NameVitals.fetchMeta();
-        const latest = meta.yM;
-        const top = meta.top10PerYear[String(latest)] || [];
-        const topF = top.filter(r => r[1] === "F").slice(0, 10);
-        const topM = top.filter(r => r[1] === "M").slice(0, 10);
-        const row = (name, sex) => `<a href="/name/${encodeURIComponent(name)}/">${name}<span class="suffix">${sex}</span></a>`;
-        document.getElementById("popular-grid").innerHTML =
-          topF.map(r => row(r[0], r[1])).join("") +
-          topM.map(r => row(r[0], r[1])).join("");
-      } catch (err) {
-        console.error("meta load failed", err);
-      }
+      const toggle = document.querySelector('.sex-toggle');
+      const sex = document.getElementById('sex');
+      toggle?.addEventListener('click', (e) => { const b = e.target.closest('button[data-sex]'); if (!b) return; toggle.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x===b))); sex.value = b.dataset.sex || ''; });
+      const input = document.getElementById('q'); const suggestions = document.getElementById('suggestions'); const go = document.getElementById('go'); NameVitals.setupSearch(input, suggestions, go, sex);
     })();
   </script>
-</body>
-</html>
+</body></html>
