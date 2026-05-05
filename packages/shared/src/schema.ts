@@ -38,6 +38,25 @@ export interface SearchHit {
   peak_count: number;
 }
 
+// Curated names eligible for XML sitemap inclusion.
+export interface IndexableName {
+  name: string;
+  name_lower: string;
+  total_count: number;
+  peak_count: number;
+  status: Status;
+}
+
+// Lightweight internal links for SSR name pages.
+export interface RelatedName {
+  name: string;
+  sex: Sex;
+  status: Status;
+  peak_year: number;
+  peak_count: number;
+  total_count: number;
+}
+
 // API: GET /api/name/:name
 export interface NameRecord {
   name: string;

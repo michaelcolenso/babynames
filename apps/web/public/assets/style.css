@@ -208,6 +208,55 @@ h3 { font-size: 1.1rem; margin: 1.25rem 0 0.25rem; }
   background: var(--fg); color: white; border-color: var(--fg);
 }
 
+.report-links {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0 1rem;
+}
+.report-links a {
+  display: inline-block;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--fg);
+  font-size: 0.9rem;
+  background: var(--bg);
+}
+.report-links a:hover { border-color: var(--accent); text-decoration: none; }
+
+.related-names {
+  border-top: 1px solid var(--rule);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+.related-names h2 {
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+}
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+}
+.related-grid a {
+  display: block;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  color: var(--fg);
+  background: var(--bg);
+}
+.related-grid a:hover { border-color: var(--accent); text-decoration: none; }
+.related-grid strong { display: block; }
+.related-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  margin-top: 0.1rem;
+}
+
 .featured-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

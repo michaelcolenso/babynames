@@ -3,7 +3,7 @@
 // any further shaping (cache wrapping, JSON serialization).
 
 import type { D1Database } from "@cloudflare/workers-types";
-import type { LandingKind, NameRow, SearchHit, Sex } from "./schema";
+import type { IndexableName, LandingKind, NameRow, RelatedName, SearchHit, Sex, Status } from "./schema";
 
 export async function getMeta(db: D1Database, key: string): Promise<string | null> {
   const r = await db
@@ -42,6 +42,38 @@ export async function searchByPrefix(
     )
     .bind(lo, hi, limit)
     .all<SearchHit>();
+  return r.results ?? [];
+}
+
+// Sitemap cohort: one canonical URL per spelling, using the dominant sex row.
+// The threshold keeps very sparse SSA records out of initial indexation while
+// preserving broad coverage for names with meaningful history.
+export async function listIndexableNames(
+  db: D1Database,
+  limit = 49_900,
+  offset = 0,
+): Promise<IndexableName[]> {
+  const cappedLimit = Math.max(1, Math.min(49_900, Math.floor(limit)));
+  const safeOffset = Math.max(0, Math.floor(offset));
+  const r = await db
+    .prepare(
+      `WITH ranked AS (
+         SELECT name, name_lower, total_count, peak_count, status,
+                ROW_NUMBER() OVER (
+                  PARTITION BY name_lower
+                  ORDER BY total_count DESC, peak_count DESC
+                ) AS rn
+           FROM names
+       )
+       SELECT name, name_lower, total_count, peak_count, status
+         FROM ranked
+        WHERE rn = 1
+          AND (total_count >= 1000 OR peak_count >= 100)
+        ORDER BY total_count DESC, peak_count DESC, name
+        LIMIT ?1 OFFSET ?2`,
+    )
+    .bind(cappedLimit, safeOffset)
+    .all<IndexableName>();
   return r.results ?? [];
 }
 
@@ -100,6 +132,31 @@ export async function getNameWithSeries(
     g.series.push({ year: row.year, count: row.count });
   }
   return [...grouped.values()];
+}
+
+export async function listRelatedNames(
+  db: D1Database,
+  currentNameLower: string,
+  sex: Sex,
+  status: Status,
+  peakYear: number,
+  limit = 6,
+): Promise<RelatedName[]> {
+  const cappedLimit = Math.max(1, Math.min(12, Math.floor(limit)));
+  const r = await db
+    .prepare(
+      `SELECT name, sex, status, peak_year, peak_count, total_count
+         FROM names
+        WHERE name_lower <> ?1
+          AND sex = ?2
+          AND status = ?3
+          AND (total_count >= 1000 OR peak_count >= 100)
+        ORDER BY ABS(peak_year - ?4), total_count DESC
+        LIMIT ?5`,
+    )
+    .bind(currentNameLower, sex, status, peakYear, cappedLimit)
+    .all<RelatedName>();
+  return r.results ?? [];
 }
 
 export async function listLanding(
