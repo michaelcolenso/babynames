@@ -1,3 +1,1 @@
-# Redirect legacy GitHub Pages ?name= URLs to the new SSR route.
-# Cloudflare Pages processes these before Pages Functions.
-/?name=:name  /name/:name/  301
+# Legacy GitHub Pages ?name= URLs are redirected in functions/_middleware.ts.
