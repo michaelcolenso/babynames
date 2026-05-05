@@ -85,14 +85,11 @@ h3 { font-size: 1.1rem; margin: 1.25rem 0 0.25rem; }
   outline: none;
 }
 .search input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,91,219,0.12); }
-.search select {
-  padding: 0 0.75rem;
-  font: inherit;
-  font-size: 1rem;
-  border: 1px solid var(--rule);
-  background: var(--bg-card);
-  border-radius: var(--radius);
-}
+.sex-toggle { display: inline-flex; border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; background: var(--bg-card); }
+.sex-toggle button { padding: 0.6rem 1rem; font: inherit; font-size: 0.95rem; background: transparent; color: var(--fg); border: 0; border-right: 1px solid var(--rule); cursor: pointer; }
+.sex-toggle button:last-child { border-right: 0; }
+.sex-toggle button[aria-pressed="true"] { background: var(--fg); color: var(--bg-card); }
+.sex-toggle button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .search button {
   padding: 0.9rem 1.25rem;
   font: inherit;
@@ -181,7 +178,7 @@ h3 { font-size: 1.1rem; margin: 1.25rem 0 0.25rem; }
   margin-top: 0.2rem;
 }
 
-.sparkline { width: 100%; height: 170px; display: block; margin: 0.5rem 0; }
+.sparkline { width: 100%; height: 280px; display: block; margin: 0.5rem 0; }
 .sparkline .fill { fill: rgba(59,91,219,0.12); }
 .sparkline .line { fill: none; stroke: var(--accent); stroke-width: 2; }
 .sparkline .peak { fill: var(--accent); }
@@ -369,14 +366,15 @@ h3 { font-size: 1.1rem; margin: 1.25rem 0 0.25rem; }
 
 /* ── Year-of-birth widget and page ───────────────────────────────── */
 .year-widget {
-  margin: 2rem 0;
-  padding: 1.25rem 1.5rem;
-  background: var(--bg-card);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  margin: 3rem 0 2rem;
+  padding: 1.25rem 0 0;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--rule);
+  border-radius: 0;
+  box-shadow: none;
 }
-.year-widget h2 { margin: 0 0 0.75rem; font-size: 1.25rem; }
+.year-widget h3 { margin: 0 0 0.75rem; font-size: 1.15rem; }
 .year-form {
   display: flex;
   gap: 0.5rem;
@@ -458,3 +456,12 @@ header.site nav a[aria-current="page"] { color: var(--fg); font-weight: 600; }
   header.site nav a { margin: 0 0.85rem 0 0; }
   .year-widget { padding: 1rem; }
 }
+
+.landing-secondary { margin: 3rem 0 2rem; }
+.cta-list { list-style: none; margin: 0; padding: 0; }
+.cta-list li { padding: 0.5rem 0; border-bottom: 1px solid var(--rule); }
+.cta-list li:last-child { border-bottom: 0; }
+.cta-list li a { color: var(--fg); }
+.cta-list li a strong { font-weight: 600; }
+.cta-list li a:hover { color: var(--accent); }
+.section-label { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin: 0 0 0.5rem; }
