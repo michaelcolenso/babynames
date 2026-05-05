@@ -7,6 +7,15 @@
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequest: PagesFunction = async (ctx) => {
+  const url = new URL(ctx.request.url);
+  const legacyName = url.pathname === "/" ? url.searchParams.get("name")?.trim() : "";
+  if (legacyName) {
+    const target = new URL(`/name/${encodeURIComponent(legacyName)}/`, url.origin);
+    const sex = url.searchParams.get("sex");
+    if (sex) target.searchParams.set("sex", sex);
+    return Response.redirect(target.toString(), 301);
+  }
+
   const cache = caches.default;
   const cached = await cache.match(ctx.request);
   if (cached) return cached;
