@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler pages dev public --d1=DB --compatibility-date=2024-09-09",
-    "deploy": "wrangler pages deploy public --project-name=name-vitals",
+    "deploy": "wrangler pages deploy public --project-name=nobodynamed",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
