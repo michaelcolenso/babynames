@@ -172,7 +172,7 @@ function renderShareCard(record) {
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = accent;
   ctx.font = "500 26px 'SF Mono', ui-monospace, Menlo, monospace";
-  ctx.fillText("NAME VITALS", 80, 90);
+  ctx.fillText("NOBODYNAMED", 80, 90);
   ctx.fillStyle = fg;
   ctx.font = "700 130px 'Iowan Old Style', Palatino, Georgia, serif";
   ctx.fillText(record.name, 80, 220);
@@ -222,7 +222,7 @@ function renderShareCard(record) {
   ctx.textAlign = "left";
   ctx.fillStyle = accent;
   ctx.font = "500 22px 'SF Mono', ui-monospace, Menlo, monospace";
-  ctx.fillText("namevitals", 80, H - 50);
+  ctx.fillText("nobodynamed", 80, H - 50);
   return canvas;
 }
 
@@ -253,7 +253,7 @@ function attachShareHandlers(container, record) {
         window.open(`https://twitter.com/intent/tweet?text=${msg}&url=${encodeURIComponent(url)}`, "_blank");
       } else if (kind === "card") {
         const canvas = renderShareCard(record);
-        if (canvas) downloadCanvas(canvas, `${record.name.toLowerCase()}-name-vitals.png`);
+        if (canvas) downloadCanvas(canvas, `${record.name.toLowerCase()}-nobodynamed.png`);
       } else if (kind === "twin") {
         await handleTwinButton(btn, record, container);
       }
