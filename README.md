@@ -1,6 +1,6 @@
-# Name Vitals
+# nobodynamed
 
-Is your name going extinct? Name Vitals shows the popularity, trajectory, and vital status of any American name since 1880, based on [Social Security Administration](https://www.ssa.gov/oact/babynames/) data.
+144 years of American baby names. See which ones are rising, falling, or already gone — drawn from public [Social Security Administration](https://www.ssa.gov/oact/babynames/) data.
 
 ## Stack
 

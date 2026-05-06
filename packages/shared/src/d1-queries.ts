@@ -190,6 +190,46 @@ export async function topByYear(
   return r.results ?? [];
 }
 
+// Top-1 name per sex for a single year. Used by the SSR name page to render
+// peer-name narrative copy ("when X peaked, the most popular girls' name was Y").
+// Cheaper than topByYear() when only one year is needed.
+export async function getTopNamesForYear(
+  db: D1Database,
+  year: number,
+): Promise<{ F?: string; M?: string }> {
+  const r = await db
+    .prepare(
+      `WITH ranked AS (
+         SELECT n.name, n.sex,
+                ROW_NUMBER() OVER (PARTITION BY n.sex ORDER BY ny.count DESC) AS rn
+           FROM name_years ny
+           JOIN names n ON n.id = ny.name_id
+          WHERE ny.year = ?1
+       )
+       SELECT name, sex FROM ranked WHERE rn = 1`,
+    )
+    .bind(year)
+    .all<{ name: string; sex: Sex }>();
+  const out: { F?: string; M?: string } = {};
+  for (const row of r.results ?? []) out[row.sex] = row.name;
+  return out;
+}
+
+// Total births for a single (year, sex) row in year_totals. Used for the
+// "1 in N" share-of-births narrative pattern on the SSR name page. Returns
+// null when the year is absent (e.g., before 1880 or no data for that sex).
+export async function getYearTotal(
+  db: D1Database,
+  year: number,
+  sex: Sex,
+): Promise<number | null> {
+  const r = await db
+    .prepare(`SELECT total FROM year_totals WHERE year = ?1 AND sex = ?2`)
+    .bind(year, sex)
+    .first<{ total: number }>();
+  return r?.total ?? null;
+}
+
 export interface YearTopRow {
   name: string;
   sex: Sex;

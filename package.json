@@ -2,7 +2,7 @@
   "name": "babynames",
   "private": true,
   "version": "1.0.0",
-  "description": "Name Vitals — SSA baby-name data on the Cloudflare stack (Pages + D1 + Workers)",
+  "description": "nobodynamed — SSA baby-name data on the Cloudflare stack (Pages + D1 + Workers)",
   "workspaces": [
     "apps/*",
     "packages/*"

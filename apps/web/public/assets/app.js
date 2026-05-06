@@ -1,4 +1,5 @@
-// Name Vitals — client-side app.
+// nobodynamed — client-side app.
+// (Internal JS namespace `NameVitals` is intentionally preserved.)
 //
 // Key change vs the legacy version: data is fetched from /api/* endpoints
 // backed by Cloudflare D1, not from static per-letter JSON shards.
@@ -66,11 +67,26 @@ function analyze(record) {
   return { firstYear, lastYear, peakYear, peakCount, latest, total, status, declineFromPeakPct, last5Avg, prev5Avg };
 }
 
+const SPARK_STATUS_FILL = {
+  rising: "rgba(6, 125, 74, 0.12)",
+  stable: "rgba(59, 91, 219, 0.10)",
+  declining: "rgba(183, 121, 31, 0.12)",
+  endangered: "rgba(180, 35, 24, 0.10)",
+  extinct: "rgba(42, 42, 42, 0.10)",
+};
+const SPARK_STATUS_LINE = {
+  rising: "var(--rising)",
+  stable: "var(--stable)",
+  declining: "var(--declining)",
+  endangered: "var(--endangered)",
+  extinct: "var(--extinct)",
+};
+
 function buildSparkline(record, opts = {}) {
   const { series, ym, yM } = record;
   const width = opts.width || 680;
-  const height = opts.height || 170;
-  const pad = { top: 14, right: 8, bottom: 22, left: 8 };
+  const height = opts.height || 280;
+  const pad = { top: 22, right: 8, bottom: 30, left: 8 };
   const years = [], vals = [];
   for (let y = ym; y <= yM; y++) { years.push(y); vals.push(series[y] || 0); }
   const maxV = Math.max(1, ...vals);
@@ -89,16 +105,26 @@ function buildSparkline(record, opts = {}) {
   for (let i = 0; i < vals.length; i++) if (vals[i] > vals[peakIdx]) peakIdx = i;
   const peakX = pad.left + peakIdx * xStep;
   const peakY = yScale(vals[peakIdx]);
+  const peakYear = years[peakIdx];
+  const latestX = pad.left + (years.length - 1) * xStep;
+  const latestY = yScale(vals[vals.length - 1]);
   let ticks = "";
   for (let y = Math.ceil(ym / 20) * 20; y <= yM; y += 20) {
     const x = pad.left + (y - ym) * xStep;
     ticks += `<text x="${x.toFixed(1)}" y="${height - 6}" class="axis-text" text-anchor="middle">${y}</text>`;
   }
-  return `<svg class="sparkline" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  const fill = opts.status && SPARK_STATUS_FILL[opts.status] ? SPARK_STATUS_FILL[opts.status] : "rgba(59,91,219,0.12)";
+  const line = opts.status && SPARK_STATUS_LINE[opts.status] ? SPARK_STATUS_LINE[opts.status] : "var(--accent)";
+  const styleAttr = ` style="--fill-color: ${fill}; --line-color: ${line};"`;
+  const peakLabel = `<text x="${peakX.toFixed(1)}" y="${Math.max(12, peakY - 8).toFixed(1)}" class="peak-label" text-anchor="middle">${peakYear}</text>`;
+  const latestLabel = `<text x="${(latestX - 4).toFixed(1)}" y="${Math.max(12, latestY - 8).toFixed(1)}" class="latest-label" text-anchor="end">${yM}</text>`;
+  return `<svg class="sparkline" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"${styleAttr}>
   <line class="axis" x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}"/>
   <path class="fill" d="${fillPath}"/>
   <path class="line" d="${linePath}"/>
   <circle class="peak" cx="${peakX.toFixed(1)}" cy="${peakY.toFixed(1)}" r="4"/>
+  ${peakLabel}
+  ${latestLabel}
   ${ticks}
 </svg>`;
 }
@@ -124,15 +150,16 @@ function renderReport(record) {
 
   const showCollision = (a.status === "declining" || a.status === "endangered" || a.status === "extinct") && a.peakCount >= 500;
   const collisionBox = showCollision ? `<div class="collision-box">
-    <div class="collision-row"><span class="collision-year">In ${a.peakYear}:</span><strong>${fmt(a.peakCount)}</strong> ${sexLabel} named ${record.name}</div>
-    <div class="collision-row collision-now"><span class="collision-year">In ${record.yM}:</span><strong>${a.latest === 0 ? "0 (extinct)" : fmt(a.latest)}</strong> ${sexLabel} named ${record.name}</div>
+    <div class="collision-row"><span class="collision-year">${a.peakYear}</span><strong>${fmt(a.peakCount)}</strong> ${sexLabel} named ${record.name}</div>
+    <div class="collision-row collision-now"><span class="collision-year">${record.yM}</span><strong>${a.latest === 0 ? "0 (extinct)" : fmt(a.latest)}</strong> ${sexLabel} named ${record.name}</div>
   </div>` : "";
 
   return `<article class="report" data-name="${record.name}" data-sex="${record.sex}">
+  <div class="report-meta">VITAL REPORT №${reportNumber(record.name)} · ${record.sex}</div>
   <h1>${record.name}</h1>
   <div class="sex">${record.sex === "M" ? "Masculine" : "Feminine"} · first seen ${a.firstYear}</div>
   <div class="status-pill status-${a.status}">${statusCopy[0]}</div>
-  ${buildSparkline(record)}
+  ${buildSparkline(record, { status: a.status })}
   ${collisionBox}
   <div class="narrative">
     <p>${statusCopy[1]}</p>
@@ -155,10 +182,19 @@ function renderReport(record) {
   </div>
   <div id="twin-result"></div>
   <div class="affiliate">
-    Curious about the history of ${record.name}? Browse
-    <a rel="nofollow sponsored" target="_blank" href="https://www.amazon.com/s?k=${encodeURIComponent("history of the name " + record.name)}&tag=">books about the name ${record.name} on Amazon</a>.
+    Further reading: <a rel="nofollow sponsored noopener" target="_blank" href="https://www.amazon.com/s?k=${encodeURIComponent("history of the name " + record.name)}&tag=">books about the name ${record.name}</a>.
   </div>
 </article>`;
+}
+
+// Deterministic 5-digit report number — mirrors render-name.ts reportNumber().
+function reportNumber(name) {
+  let hash = 5381;
+  for (let i = 0; i < name.length; i++) {
+    hash = ((hash << 5) + hash + name.charCodeAt(i)) | 0;
+  }
+  const n = Math.abs(hash) % 99999;
+  return String(n).padStart(5, "0");
 }
 
 function renderShareCard(record) {
@@ -173,7 +209,7 @@ function renderShareCard(record) {
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   ctx.fillStyle = accent;
   ctx.font = "500 26px 'SF Mono', ui-monospace, Menlo, monospace";
-  ctx.fillText("NAME VITALS", 80, 90);
+  ctx.fillText("NOBODYNAMED", 80, 90);
   ctx.fillStyle = fg;
   ctx.font = "700 130px 'Iowan Old Style', Palatino, Georgia, serif";
   ctx.fillText(record.name, 80, 220);
@@ -223,7 +259,7 @@ function renderShareCard(record) {
   ctx.textAlign = "left";
   ctx.fillStyle = accent;
   ctx.font = "500 22px 'SF Mono', ui-monospace, Menlo, monospace";
-  ctx.fillText("namevitals", 80, H - 50);
+  ctx.fillText("nobodynamed", 80, H - 50);
   return canvas;
 }
 
@@ -254,7 +290,7 @@ function attachShareHandlers(container, record) {
         window.open(`https://twitter.com/intent/tweet?text=${msg}&url=${encodeURIComponent(url)}`, "_blank");
       } else if (kind === "card") {
         const canvas = renderShareCard(record);
-        if (canvas) downloadCanvas(canvas, `${record.name.toLowerCase()}-name-vitals.png`);
+        if (canvas) downloadCanvas(canvas, `${record.name.toLowerCase()}-nobodynamed.png`);
       } else if (kind === "twin") {
         await handleTwinButton(btn, record, container);
       }
@@ -350,10 +386,37 @@ async function setupSearch(input, suggestions, submit, sexSelect) {
   submit.addEventListener("click", () => go());
 }
 
+// Wires a segmented .sex-toggle group to a hidden <input id="sex"> so the
+// existing setupSearch flow can read .value unchanged. Buttons carry
+// data-sex="" / "F" / "M" and aria-pressed; arrow keys move focus + selection.
+function setupSexToggle(toggleEl, hiddenInput) {
+  if (!toggleEl || !hiddenInput) return;
+  const buttons = Array.from(toggleEl.querySelectorAll("button[data-sex]"));
+  if (!buttons.length) return;
+  const select = (btn) => {
+    buttons.forEach((b) => b.setAttribute("aria-pressed", b === btn ? "true" : "false"));
+    hiddenInput.value = btn.getAttribute("data-sex") || "";
+  };
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => select(btn));
+    btn.addEventListener("keydown", (e) => {
+      const idx = buttons.indexOf(btn);
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        const next = buttons[(idx + 1) % buttons.length];
+        next.focus(); select(next); e.preventDefault();
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        const prev = buttons[(idx - 1 + buttons.length) % buttons.length];
+        prev.focus(); select(prev); e.preventDefault();
+      }
+    });
+  });
+}
+
 window.NameVitals = {
   fetchMeta,
   searchNames,
   setupSearch,
+  setupSexToggle,
   analyze,
   buildSparkline,
   renderReport,

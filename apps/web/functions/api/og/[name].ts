@@ -99,7 +99,7 @@ function buildOgSvg(
 </defs>
 <rect width="${W}" height="${H}" fill="#0a1a3a"/>
 <rect width="${W}" height="5" fill="#3b5bdb"/>
-<text x="80" y="66" font-family="monospace" font-size="17" fill="#7fb4ff" letter-spacing="4" font-weight="500">NAME VITALS</text>
+<text x="80" y="66" font-family="monospace" font-size="17" fill="#7fb4ff" letter-spacing="4" font-weight="500">NOBODYNAMED</text>
 <text x="80" y="190" font-family="Georgia,serif" font-size="110" fill="#f5f3ea" font-weight="700">${esc(name)}</text>
 <text x="80" y="233" font-family="Georgia,serif" font-size="24" fill="#7fb4ff">${esc(sexLabel)} · ${firstYear}–${yM}</text>
 <rect x="80" y="254" width="${pillW}" height="36" rx="18" fill="${esc(color)}"/>
@@ -111,7 +111,7 @@ function buildOgSvg(
 ${yearMarkers(firstYear, yM, sx, sy + sh + 20, sw)}
 <text x="80" y="570" font-family="Georgia,serif" font-size="24" fill="#f5f3ea">Peaked ${peakYear} · ${fmtNum(peakCount)}</text>
 <text x="${W - 80}" y="570" font-family="Georgia,serif" font-size="24" fill="${latestCount === 0 ? "#f87171" : "#f5f3ea"}" text-anchor="end">${yM}: ${fmtNum(latestCount)}</text>
-<text x="${W - 80}" y="612" font-family="monospace" font-size="16" fill="rgba(127,180,255,0.6)" text-anchor="end">namevitals.com</text>
+<text x="${W - 80}" y="612" font-family="monospace" font-size="16" fill="rgba(127,180,255,0.6)" text-anchor="end">nobodynamed.com</text>
 </svg>`;
 }
 
