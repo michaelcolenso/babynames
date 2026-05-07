@@ -3,53 +3,218 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>nobodynamed — is your name going extinct?</title>
-  <meta name="description" content="144 years of American baby names. See which ones are rising, falling, or already gone — drawn from public Social Security records.">
+  <title>NobodyNamed — A cultural history of American names</title>
+  <meta name="description" content="Track how American names spread, peaked, disappeared, and returned. Search any name and read its cultural vital signs from SSA records since 1880.">
   <link rel="canonical" href="/">
-  <meta property="og:title" content="nobodynamed — is your name going extinct?">
-  <meta property="og:description" content="144 years of American baby names. See which ones are rising, falling, or already gone — drawn from public Social Security records.">
+  <meta property="og:title" content="NobodyNamed — A cultural history of American names">
+  <meta property="og:description" content="Search a name and see its rise, fall, generation, rarity, and cultural vital signs.">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="nobodynamed — is your name going extinct?">
-  <meta name="twitter:description" content="144 years of American baby names. See which ones are rising, falling, or already gone — drawn from public Social Security records.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
   <div class="page">
     <header class="site">
-      <a class="brand" href="/">nobodynamed</a>
+      <a class="brand" href="/">NobodyNamed</a>
       <nav>
         <a href="/extinct.html">Extinct</a><a href="/endangered.html">Endangered</a><a href="/comeback.html">Comebacks</a><a href="/year.html">Birth year</a><a href="/rising.html">Rising</a><a href="/about.html">About</a>
       </nav>
     </header>
-    <div id="view-home">
-      <h1>Is your name going extinct?</h1>
-      <p class="lede">Every American name has an arc — peak, plateau, decline, sometimes a return. We chart all of them, from 1880 to last year.</p>
-      <div class="search">
-        <input id="q" type="text" placeholder="Type a name — e.g. Dorothy, Jaxon, Khaleesi" autocomplete="off" spellcheck="false" autofocus>
-        <div class="sex-toggle" role="group" aria-label="Filter by gender"><button type="button" data-sex="" aria-pressed="true">Either</button><button type="button" data-sex="F" aria-pressed="false">Girls</button><button type="button" data-sex="M" aria-pressed="false">Boys</button></div>
-        <input type="hidden" id="sex" value="">
-        <button id="go">Look it up</button><div id="suggestions" class="suggestions hidden"></div>
-      </div>
-      <p class="search-hint">Your search stays in your browser. No account, no tracking.</p>
 
-      <div class="year-widget">
-        <h3 class="section-label">What were the top names the year you were born?</h3>
-        <div class="year-form"><input id="yr-home" type="number" inputmode="numeric" min="1880" max="2030" placeholder="Birth year — e.g. 1987"><button id="yr-go-home">Look up</button></div><div id="yr-home-result"></div>
-      </div>
-      <h2>Popular right now</h2><p class="lede" style="margin-bottom:0.75rem;">The ten most-given girls' and boys' names from the latest year on record.</p><div id="popular-grid" class="featured-grid"></div>
-      <section class="landing-secondary"><h2 class="section-label">Browse the archive</h2><ul class="cta-list"><li><a href="/extinct.html"><strong>Extinct names</strong> — popular once, now given to no one.</a></li><li><a href="/endangered.html"><strong>Endangered names</strong> — down 90 percent or more from their peak.</a></li><li><a href="/comeback.html"><strong>Comeback Kids</strong> — flatlined, then came roaring back.</a></li><li><a href="/rising.html"><strong>Rising names</strong> — growing faster than anything else.</a></li></ul></section>
-    </div>
+    <main id="view-home">
+      <section class="home-hero" aria-labelledby="home-title">
+        <div class="hero-copy">
+          <p class="kicker">American name observatory</p>
+          <h1 id="home-title">Track the rise and fall of American names.</h1>
+          <p class="lede">A cultural archive of identity, fashion, memory, and demographic drift, built from Social Security records since 1880.</p>
+
+          <div class="search">
+            <input id="q" type="text" placeholder="Michael" autocomplete="off" spellcheck="false" autofocus>
+            <select id="sex" title="Limit by recorded sex">
+              <option value="">All</option>
+              <option value="F">Female</option>
+              <option value="M">Male</option>
+            </select>
+            <div class="sex-segments" role="group" aria-label="Recorded sex">
+              <button type="button" data-sex="" class="active">All</button>
+              <button type="button" data-sex="F">Female</button>
+              <button type="button" data-sex="M">Male</button>
+            </div>
+            <button id="go">Run Name Vitals</button>
+            <div id="suggestions" class="suggestions hidden"></div>
+          </div>
+          <p class="search-hint">No account. No tracking. Just the statistical biography of a name.</p>
+        </div>
+
+        <aside class="hero-aside" aria-label="Archive summary">
+          <p class="archive-note">Names are not stable facts. They behave like cultural organisms: they erupt, saturate classrooms, become jokes, vanish, and return as heirlooms.</p>
+          <div class="hero-index">
+            <span><b>Window</b><i>1880-present</i></span>
+            <span><b>Source</b><i>SSA records</i></span>
+            <span><b>Signal</b><i>Peak / decline / revival</i></span>
+            <span><b>Output</b><i>Cultural dossier</i></span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="section" aria-labelledby="live-status-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Live cultural status</p>
+            <h2 id="live-status-title">Recently diagnosed</h2>
+          </div>
+          <p class="lede">A few names with obvious cultural weather: collapse, recovery, endurance, and the occasional national event.</p>
+        </div>
+        <div class="diagnosis-grid">
+          <a class="diagnosis-card tone-endangered" href="/name/Linda/"><span class="card-name">Linda</span><span class="card-status">Critically endangered</span><p class="card-note">A mid-century giant now living mostly in memory.</p></a>
+          <a class="diagnosis-card tone-resurgent" href="/name/Theodore/"><span class="card-name">Theodore</span><span class="card-status">Full recovery</span><p class="card-note">The old name returned with institutional confidence.</p></a>
+          <a class="diagnosis-card tone-endangered" href="/name/Ashley/"><span class="card-name">Ashley</span><span class="card-status">Rapid decline</span><p class="card-note">A generation-defining spike that became timestamped.</p></a>
+          <a class="diagnosis-card tone-explosive" href="/name/Karen/"><span class="card-name">Karen</span><span class="card-status">Cultural event</span><p class="card-note">A normal name forced into public mythology.</p></a>
+          <a class="diagnosis-card tone-rising" href="/name/Hazel/"><span class="card-name">Hazel</span><span class="card-status">Resurgent</span><p class="card-note">A dormant classic reissued for a new century.</p></a>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="timeline-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Historical waves</p>
+            <h2 id="timeline-title">Names move through time like weather systems.</h2>
+          </div>
+          <p class="lede">Some explode and burn out. Some collapse slowly. Some survive every era. Some wait a century and return.</p>
+        </div>
+        <div class="timeline-band">
+          <div class="timeline-labels"><span>1880</span><span>1920</span><span>1960</span><span>2000</span><span>Today</span></div>
+          <svg viewBox="0 0 1100 380" preserveAspectRatio="none" role="img" aria-label="Illustrative waves showing name popularity patterns">
+            <line x1="20" y1="330" x2="1080" y2="330" stroke="rgba(246,234,216,0.18)"/>
+            <path d="M20,318 C120,315 190,95 285,108 C395,124 440,310 565,318 C740,330 870,325 1080,322" fill="none" stroke="#d9a56f" stroke-width="3"/>
+            <path d="M20,324 C180,324 270,320 385,316 C480,309 530,125 610,78 C705,22 792,290 895,315 C955,329 1020,326 1080,324" fill="none" stroke="#b36a56" stroke-width="3"/>
+            <path d="M20,302 C175,260 275,210 390,205 C530,198 630,220 745,186 C860,150 970,118 1080,100" fill="none" stroke="#6fa58e" stroke-width="3"/>
+            <path d="M20,210 C145,205 230,218 340,208 C470,197 585,210 700,202 C845,192 955,205 1080,198" fill="none" stroke="#8195ad" stroke-width="2.4"/>
+            <path d="M20,330 C155,327 240,327 360,326 C470,325 540,318 625,292 C740,250 810,132 890,92 C970,53 1035,79 1080,105" fill="none" stroke="#9270a7" stroke-width="3"/>
+          </svg>
+          <p class="timeline-caption">Illustrative patterns: explosive spike, fashion collapse, slow revival, durable classic, comeback arc.</p>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="year-title">
+        <div class="year-widget">
+          <p class="eyebrow">Birth year machine</p>
+          <h2 id="year-title">If you were born in 1987...</h2>
+          <p class="lede">Rebuild the classroom roster, then see which names are thriving, collapsing, or already preserved mostly as generational evidence.</p>
+          <div class="year-form">
+            <input id="yr-home" type="number" min="1880" max="2030" placeholder="Enter birth year">
+            <button id="yr-go-home">Open the year</button>
+          </div>
+          <div id="yr-home-result"></div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="graveyard-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Name graveyard</p>
+            <h2 id="graveyard-title">Dormant names are cultural fossils.</h2>
+          </div>
+          <p class="lede">Not bad names. Not gone forever. Just waiting below the statistical floor, carrying a century of dust.</p>
+        </div>
+        <div class="graveyard-grid">
+          <a class="graveyard-card tone-extinct" href="/name/Bertha/"><span class="card-name">Bertha</span><span class="card-status">Dormant</span></a>
+          <a class="graveyard-card tone-extinct" href="/name/Mildred/"><span class="card-name">Mildred</span><span class="card-status">Near extinction</span></a>
+          <a class="graveyard-card tone-extinct" href="/name/Elmer/"><span class="card-name">Elmer</span><span class="card-status">Rare survivor</span></a>
+          <a class="graveyard-card tone-resurgent" href="/name/Gertrude/"><span class="card-name">Gertrude</span><span class="card-status">Revival candidate</span></a>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="comeback-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">The comebacks</p>
+            <h2 id="comeback-title">Old names keep escaping the archive.</h2>
+          </div>
+          <p class="lede">A name can disappear from daily life and still return as taste, nostalgia, or status.</p>
+        </div>
+        <div class="comeback-grid">
+          <a class="comeback-card tone-resurgent" href="/name/Theodore/"><span class="card-name">Theodore</span><span class="card-status">Resurgent</span></a>
+          <a class="comeback-card tone-rising" href="/name/Hazel/"><span class="card-name">Hazel</span><span class="card-status">Recovered</span></a>
+          <a class="comeback-card tone-resurgent" href="/name/Eleanor/"><span class="card-name">Eleanor</span><span class="card-status">Classic return</span></a>
+          <a class="comeback-card tone-rising" href="/name/Violet/"><span class="card-name">Violet</span><span class="card-status">Renewed</span></a>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="popular-title">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Current census</p>
+            <h2 id="popular-title">Popular right now</h2>
+          </div>
+          <p class="lede">Top names from the latest year on record, included as a living control group.</p>
+        </div>
+        <div id="popular-grid" class="featured-grid"></div>
+      </section>
+    </main>
+
     <div id="view-name"></div>
     <footer class="site"><div>nobodynamed is a small data project. Names are forever. Mostly.</div><div>Built on public-domain data from the Social Security Administration.</div><div><a href="/about.html">About</a> · <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/">SSA source</a></div></footer>
   </div>
   <script src="/assets/app.js"></script><script src="/assets/landing.js"></script>
   <script>
     (async () => {
-      const toggle = document.querySelector('.sex-toggle');
-      const sex = document.getElementById('sex');
-      toggle?.addEventListener('click', (e) => { const b = e.target.closest('button[data-sex]'); if (!b) return; toggle.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x===b))); sex.value = b.dataset.sex || ''; });
-      const input = document.getElementById('q'); const suggestions = document.getElementById('suggestions'); const go = document.getElementById('go'); NameVitals.setupSearch(input, suggestions, go, sex);
+      const qs = new URLSearchParams(location.search);
+      const qName = qs.get("name");
+      if (qName) {
+        if (/^:[a-z][a-z0-9_-]*$/i.test(qName)) {
+          history.replaceState(null, "", "/");
+          return;
+        }
+
+        const params = new URLSearchParams();
+        if (qs.get("sex")) params.set("sex", qs.get("sex"));
+        const tail = params.toString() ? "?" + params.toString() : "";
+        location.replace(`/name/${encodeURIComponent(qName)}/${tail}`);
+        return;
+      }
+
+      const input = document.getElementById("q");
+      const suggestions = document.getElementById("suggestions");
+      const go = document.getElementById("go");
+      const sex = document.getElementById("sex");
+      NameVitals.setupSearch(input, suggestions, go, sex);
+      NameVitals.setupSexSegments(document.querySelector(".sex-segments"), sex);
+      NameVitals.rotatePlaceholder(input, ["Michael", "Jennifer", "Ashley", "Theodore", "Linda", "Karen", "Hazel"]);
+
+      const yrInput = document.getElementById("yr-home");
+      const yrBtn = document.getElementById("yr-go-home");
+      const yrResult = document.getElementById("yr-home-result");
+      yrBtn.addEventListener("click", async () => {
+        const y = Number(yrInput.value);
+        if (!y || y < 1880) { yrResult.innerHTML = "<p>Enter a year from 1880 onwards.</p>"; return; }
+        yrResult.innerHTML = "<p>Loading...</p>";
+        try {
+          const r = await fetch(`/api/year/${y}`);
+          if (!r.ok) { const j = await r.json(); yrResult.innerHTML = `<p class="lede">${j.error || "No data."}</p>`; return; }
+          const { rows } = await r.json();
+          renderYearTable(y, rows, yrResult);
+        } catch(e) { yrResult.innerHTML = "<p>Failed to load. Try again.</p>"; }
+      });
+      yrInput.addEventListener("keydown", (e) => { if (e.key === "Enter") yrBtn.click(); });
+
+      try {
+        const meta = await NameVitals.fetchMeta();
+        const latest = meta.yM;
+        const top = meta.top10PerYear[String(latest)] || [];
+        const topF = top.filter(r => r[1] === "F").slice(0, 10);
+        const topM = top.filter(r => r[1] === "M").slice(0, 10);
+        const row = (name, sex) => `<a href="/name/${encodeURIComponent(name)}/"><strong>${name}</strong><span class="suffix">${sex === "F" ? "Female" : "Male"}</span></a>`;
+        document.getElementById("popular-grid").innerHTML =
+          topF.map(r => row(r[0], r[1])).join("") +
+          topM.map(r => row(r[0], r[1])).join("");
+      } catch (err) {
+        const fallback = [["Olivia", "F"], ["Emma", "F"], ["Charlotte", "F"], ["Amelia", "F"], ["Sophia", "F"], ["Liam", "M"], ["Noah", "M"], ["Oliver", "M"], ["James", "M"], ["Elijah", "M"]];
+        document.getElementById("popular-grid").innerHTML = fallback
+          .map(([name, sex]) => `<a href="/name/${encodeURIComponent(name)}/"><strong>${name}</strong><span class="suffix">${sex === "F" ? "Female" : "Male"}</span></a>`)
+          .join("");
+      }
     })();
   </script>
 </body></html>

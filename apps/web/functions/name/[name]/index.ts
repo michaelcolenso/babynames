@@ -128,10 +128,10 @@ function renderNotFoundPage(name: string): string {
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${safe} — not found | Name Vitals</title>
+<title>${safe} — not found | NobodyNamed</title>
 <link rel="stylesheet" href="/assets/style.css">
 </head><body><div class="page">
-<header class="site"><a class="brand" href="/">Name Vitals</a></header>
+<header class="site"><a class="brand" href="/">NobodyNamed</a></header>
 <div class="report">
   <h1>${safe}</h1>
   <p class="lede">We have no record of this name. It either was given to fewer than five babies a year across the entire SSA window, or it was never issued a Social Security number.</p>

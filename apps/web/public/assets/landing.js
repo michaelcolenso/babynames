@@ -79,6 +79,12 @@ function renderYearTable(year, rows, target) {
   const fmt = NameVitals.fmt;
   const girls = rows.filter(r => r.sex === "F").slice(0, 25);
   const boys  = rows.filter(r => r.sex === "M").slice(0, 25);
+  const classroom = [...girls.slice(0, 2), ...boys.slice(0, 2)].map(r => r.name);
+  const era = year >= 1997 ? "Gen Z" :
+    year >= 1981 ? "millennial" :
+    year >= 1965 ? "Gen X" :
+    year >= 1946 ? "boomer" :
+    year >= 1928 ? "Silent Generation" : "early modern";
 
   const nameList = (list) => list.map(r =>
     `<li>
@@ -89,7 +95,8 @@ function renderYearTable(year, rows, target) {
   ).join("");
 
   target.innerHTML = `
-    <h2 style="margin-top:1.5rem">Top names of ${year}</h2>
+    <h2 style="margin-top:1.5rem">If you were born in ${year}</h2>
+    <p class="year-story">Your ${era} classroom probably included ${classroom.map(n => `<a href="/name/${encodeURIComponent(n)}/">${n}</a>`).join(", ")}. Some became durable classics; others now read like timestamps.</p>
     <div class="year-result-grid">
       <div class="year-col">
         <h3>Girls</h3>
