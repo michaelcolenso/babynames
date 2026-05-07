@@ -42,7 +42,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   if (!targetRow) {
     return new Response(JSON.stringify({ error: "Name not found" }), {
       status: 404,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json; charset=utf-8" },
     });
   }
 

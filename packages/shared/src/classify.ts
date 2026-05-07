@@ -65,7 +65,7 @@ export function classify(input: ClassifyInput): ClassifyResult | null {
   if (latestCount === 0 && lastYear <= yM - 10) status = "extinct";
   else if (peakCount >= 200 && latestCount > 0 && latestCount <= peakCount * 0.1)
     status = "endangered";
-  else if (last5 > 0 && prev5 > 0 && last5 / prev5 >= 1.2) status = "rising";
+  else if (latestCount > 0 && last5 > 0 && prev5 > 0 && last5 / prev5 >= 1.2) status = "rising";
   else if (last5 > 0 && prev5 > 0 && last5 / prev5 <= 0.8) status = "declining";
   else if (latestCount === 0) status = "declining";
   else status = "stable";

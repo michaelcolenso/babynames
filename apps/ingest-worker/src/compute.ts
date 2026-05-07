@@ -52,7 +52,9 @@ export async function finalize(
 
   await swapStagingIntoLive(db);
   await rebuildIndexesIfNeeded(db);
-  return { namesInserted, rowsInserted };
+  // Query actual count after swap so meta reflects reality, not the in-memory tally.
+  const countRow = await db.prepare("SELECT COUNT(*) as n FROM names").first<{ n: number }>();
+  return { namesInserted: countRow?.n ?? namesInserted, rowsInserted };
 }
 
 async function fetchAggPage(
