@@ -9,6 +9,8 @@ import {
   classify,
   getMeta,
   getNameWithSeries,
+  getTopNamesForYear,
+  getYearTotalsForYears,
   listRelatedNames,
   META_KEYS,
   renderFullPage,
@@ -47,16 +49,13 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   ]);
 
   if (!rows.length) {
-    return new Response(
-      renderNotFoundPage(decoded),
-      {
-        status: 404,
-        headers: {
-          "Content-Type": "text/html; charset=utf-8",
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",
-        },
+    return new Response(renderNotFoundPage(decoded), {
+      status: 404,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",
       },
-    );
+    });
   }
 
   // Redirect to the canonical casing if the URL doesn't match.
@@ -86,9 +85,8 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   }
   const m = bySex.get("M");
   const f = bySex.get("F");
-  const total = (rec: NameRecord | undefined) =>
-    rec ? Object.values(rec.series).reduce((a, b) => a + b, 0) : 0;
-  const primary = total(m) >= total(f) ? m ?? f! : f ?? m!;
+  const total = (rec: NameRecord | undefined) => (rec ? Object.values(rec.series).reduce((a, b) => a + b, 0) : 0);
+  const primary = total(m) >= total(f) ? (m ?? f!) : (f ?? m!);
   const other = primary.sex === "M" ? f : m;
 
   const record: NameRecord = {
@@ -97,18 +95,15 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   };
   const cls = classify({ series: record.series, yM: record.yM })!;
   const primaryRow = rows.find((r) => r.row.sex === primary.sex) ?? rows[0]!;
-  const relatedNames = await listRelatedNames(
-    ctx.env.DB,
-    lower,
-    primaryRow.row.sex,
-    primaryRow.row.status,
-    primaryRow.row.peak_year,
-    6,
-  );
+  const [relatedNames, peerNames, yearTotals] = await Promise.all([
+    listRelatedNames(ctx.env.DB, lower, primaryRow.row.sex, primaryRow.row.status, primaryRow.row.peak_year, 6),
+    getTopNamesForYear(ctx.env.DB, cls.peakYear, 5).catch(() => []),
+    getYearTotalsForYears(ctx.env.DB, primaryRow.row.sex, [cls.peakYear, record.yM]).catch(() => []),
+  ]);
   const url = new URL(ctx.request.url);
   const canonical = `${url.origin}/name/${encodeURIComponent(record.name)}/`;
 
-  const html = renderFullPage(record, cls, { canonical, relatedNames });
+  const html = renderFullPage(record, cls, { canonical, relatedNames, peerNames, yearTotals });
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
@@ -133,8 +128,9 @@ function renderNotFoundPage(name: string): string {
 </head><body><div class="page">
 <header class="site"><a class="brand" href="/">NobodyNamed</a></header>
 <div class="report">
+  <div class="section-label">404</div>
   <h1>${safe}</h1>
-  <p class="lede">We have no record of this name. It either was given to fewer than five babies a year across the entire SSA window, or it was never issued a Social Security number.</p>
+  <p class="lede">That name is not in the SSA file. It may have been given to fewer than five babies a year, recorded with another spelling, or never issued through the baby-name dataset.</p>
   <p><a href="/">Try another name</a>.</p>
 </div></div></body></html>`;
 }

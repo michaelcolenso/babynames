@@ -4,6 +4,7 @@
 //     hydrating from the embedded <script type="application/json">)
 
 import { classify, type ClassifyResult } from "./classify";
+import type { YearTopRow, YearTotal } from "./d1-queries";
 import { buildSparkline } from "./sparkline";
 import type { NameRecord, RelatedName, Status } from "./schema";
 
@@ -20,7 +21,10 @@ function generationForYear(year: number): string {
   return "Greatest Generation";
 }
 
-function describeStatus(record: NameRecord, a: ClassifyResult): {
+function describeStatus(
+  record: NameRecord,
+  a: ClassifyResult,
+): {
   status: string;
   trajectory: string;
   vitality: string;
@@ -33,22 +37,37 @@ function describeStatus(record: NameRecord, a: ClassifyResult): {
   const peakEra = generationForYear(a.peakYear);
   const current = a.latestCount;
   const vitality =
-    a.status === "extinct" ? "Dormant" :
-    current >= 5000 ? "Strong" :
-    current >= 1000 ? "Healthy" :
-    current >= 100 ? "Fragile" :
-    current > 0 ? "Rare" : "Below reporting floor";
+    a.status === "extinct"
+      ? "Dormant"
+      : current >= 5000
+        ? "Strong"
+        : current >= 1000
+          ? "Healthy"
+          : current >= 100
+            ? "Fragile"
+            : current > 0
+              ? "Rare"
+              : "Below reporting floor";
   const rarity =
-    current === 0 ? "Statistical floor" :
-    current < 50 ? "99th percentile rare" :
-    current < 250 ? "Very uncommon" :
-    current < 1000 ? "Uncommon" :
-    current < 5000 ? "Mainstream" : "Mass culture";
+    current === 0
+      ? "Statistical floor"
+      : current < 50
+        ? "99th percentile rare"
+        : current < 250
+          ? "Very uncommon"
+          : current < 1000
+            ? "Uncommon"
+            : current < 5000
+              ? "Mainstream"
+              : "Mass culture";
   const stability =
-    decline < 35 ? "High cross-era durability" :
-    decline < 70 ? "Moderate cultural durability" :
-    decline < 90 ? "Era-bound, still legible" :
-    "Highly era-bound";
+    decline < 35
+      ? "High cross-era durability"
+      : decline < 70
+        ? "Moderate cultural durability"
+        : decline < 90
+          ? "Era-bound, still legible"
+          : "Highly era-bound";
 
   if (a.status === "extinct") {
     return {
@@ -100,14 +119,17 @@ function describeStatus(record: NameRecord, a: ClassifyResult): {
   };
 }
 
+interface RenderReportOptions {
+  relatedNames?: RelatedName[];
+  peerNames?: YearTopRow[];
+  yearTotals?: YearTotal[];
+}
+
 export function renderReport(record: NameRecord): string {
   return renderReportWithOptions(record);
 }
 
-function renderReportWithOptions(
-  record: NameRecord,
-  opts: { relatedNames?: RelatedName[] } = {},
-): string {
+function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions = {}): string {
   const a = classify({ series: record.series, yM: record.yM });
   if (!a) {
     return `<div class="report"><h1>${escape(record.name)}</h1><p class="lede">No data for this name.</p></div>`;
@@ -120,6 +142,7 @@ function renderReportWithOptions(
     ? `In ${record.yM}, only <strong>${fmt(a.latestCount)}</strong> ${sexLabel} were given the name.`
     : `No ${sexLabel} were recorded with this name in ${record.yM} — at least not five of them (the SSA's reporting floor).`;
 
+  const narrativeExtras = renderNarrativeInsights(record, a, opts, sexLabel);
   const declineSentence =
     a.status === "rising" || (a.declinePct ?? 0) <= 5
       ? ""
@@ -128,15 +151,12 @@ function renderReportWithOptions(
   const exploreLinks = renderExploreLinks(a);
   const relatedNames = renderRelatedNames(opts.relatedNames ?? []);
 
-  // Generational collision callout — shown for declining/endangered/extinct with
-  // a meaningful peak (500+ babies) so the contrast is emotionally legible.
   const showCollision =
-    (a.status === "declining" || a.status === "endangered" || a.status === "extinct") &&
-    a.peakCount >= 500;
+    (a.status === "declining" || a.status === "endangered" || a.status === "extinct") && a.peakCount >= 500;
   const collisionBox = showCollision
     ? `<div class="collision-box">
-    <div class="collision-row"><span class="collision-year">In ${a.peakYear}:</span><strong>${fmt(a.peakCount)}</strong> ${sexLabel} named ${escape(record.name)}</div>
-    <div class="collision-row collision-now"><span class="collision-year">In ${record.yM}:</span><strong>${a.latestCount === 0 ? "0 (extinct)" : fmt(a.latestCount)}</strong> ${sexLabel} named ${escape(record.name)}</div>
+    <div class="collision-row"><span class="collision-year">${a.peakYear}</span><strong>${fmt(a.peakCount)}</strong> ${sexLabel} named ${escape(record.name)}</div>
+    <div class="collision-row collision-now"><span class="collision-year">${record.yM}</span><strong>${a.latestCount === 0 ? "0 (extinct)" : fmt(a.latestCount)}</strong> ${sexLabel} named ${escape(record.name)}</div>
   </div>`
     : "";
 
@@ -207,10 +227,16 @@ function renderReportWithOptions(
 export function renderFullPage(
   record: NameRecord,
   classifyResult: ClassifyResult,
-  opts: { canonical: string; siteName?: string; relatedNames?: RelatedName[] } = { canonical: "" },
+  opts: {
+    canonical: string;
+    siteName?: string;
+    relatedNames?: RelatedName[];
+    peerNames?: YearTopRow[];
+    yearTotals?: YearTotal[];
+  } = { canonical: "" },
 ): string {
-  const statusLabel = labelStatus(classifyResult.status);
   const desc = buildMetaDescription(record, classifyResult);
+  const statusLabel = labelStatus(classifyResult.status);
   const title = `${record.name} name popularity (${statusLabel}, peak ${classifyResult.peakYear}) | NobodyNamed`;
   const dataJson = JSON.stringify({
     name: record.name,
@@ -223,12 +249,14 @@ export function renderFullPage(
 
   const origin = opts.canonical ? new URL(opts.canonical).origin : "";
   const ogImageUrl = `${origin}/api/og/${encodeURIComponent(record.name)}`;
-  const structuredDataJson = JSON.stringify(buildStructuredData(record, classifyResult, {
-    canonical: opts.canonical,
-    title,
-    description: desc,
-    origin,
-  })).replace(/</g, "\\u003c");
+  const structuredDataJson = JSON.stringify(
+    buildStructuredData(record, classifyResult, {
+      canonical: opts.canonical,
+      title,
+      description: desc,
+      origin,
+    }),
+  ).replace(/</g, "\\u003c");
 
   return `<!doctype html>
 <html lang="en">
@@ -247,13 +275,19 @@ export function renderFullPage(
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${escape(ogImageUrl)}">
+<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
 <link rel="stylesheet" href="/assets/style.css">
 <script type="application/ld+json">${structuredDataJson}</script>
 </head>
 <body>
 <div class="page">
   <header class="site">
+<<<<<<< Updated upstream
     <a class="brand" href="/">NobodyNamed</a>
+=======
+    <a class="brand" href="/">nobodynamed</a>
+>>>>>>> Stashed changes
     <nav>
       <a href="/extinct.html">Extinct</a>
       <a href="/endangered.html">Endangered</a>
@@ -262,11 +296,30 @@ export function renderFullPage(
       <a href="/rising.html">Rising</a>
       <a href="/about.html">About</a>
     </nav>
+    <details class="mobile-nav">
+      <summary aria-label="Open navigation"><span></span><span></span><span></span></summary>
+      <nav>
+        <a href="/extinct.html">Extinct</a>
+        <a href="/endangered.html">Endangered</a>
+        <a href="/comeback.html">Comebacks</a>
+        <a href="/year.html">Birth year</a>
+        <a href="/rising.html">Rising</a>
+        <a href="/about.html">About</a>
+      </nav>
+    </details>
   </header>
-  <div id="view-name">${renderReportWithOptions(record, { relatedNames: opts.relatedNames })}</div>
+  <div id="view-name">${renderReportWithOptions(record, {
+    relatedNames: opts.relatedNames,
+    peerNames: opts.peerNames,
+    yearTotals: opts.yearTotals,
+  })}</div>
   <footer class="site">
-    <div>Built on public-domain data from the Social Security Administration.</div>
-    <div><a href="/about.html">About</a> · <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
+    <div>
+      <div>nobodynamed is a small data project about American first names.</div>
+      <!-- TODO: compute footer counts from D1 once. -->
+      <div class="footer-note">Built on public-domain Social Security Administration data: about 100,000 name/sex records and 2 million yearly observations.</div>
+    </div>
+    <div><a href="/about.html">About</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
   </footer>
 </div>
 <script type="application/json" id="nv-data">${dataJson.replace(/</g, "\\u003c")}</script>
@@ -281,6 +334,97 @@ export function renderFullPage(
 </script>
 </body>
 </html>`;
+}
+
+function renderNarrativeInsights(
+  record: NameRecord,
+  a: ClassifyResult,
+  opts: RenderReportOptions,
+  sexLabel: string,
+): string[] {
+  const peerSentence = renderPeerSentence(record, a, opts.peerNames ?? []);
+  const shareSentence = renderShareSentence(record, a, opts.yearTotals ?? [], sexLabel);
+  const risingHighSentence = renderRisingHighSentence(record, a, sexLabel);
+
+  // TODO: Pattern C requires last_top_1000_year column on names + ingest recompute.
+  const out: string[] = [];
+  if (a.status === "rising") {
+    if (risingHighSentence) out.push(`<p>${risingHighSentence}</p>`);
+    if (peerSentence) out.push(`<p>${peerSentence}</p>`);
+  } else if (a.status === "extinct") {
+    if (peerSentence) out.push(`<p>${peerSentence}</p>`);
+  } else {
+    if (peerSentence) out.push(`<p>${peerSentence}</p>`);
+    if (shareSentence) out.push(`<p>${shareSentence}</p>`);
+  }
+  return out;
+}
+
+function renderPeerSentence(record: NameRecord, a: ClassifyResult, peerNames: YearTopRow[]): string {
+  const peers = peerNames
+    .filter((row) => row.sex === record.sex && row.name.toLowerCase() !== record.name.toLowerCase())
+    .slice(0, 4)
+    .map((row) => row.name);
+  if (!peers.length) return "";
+
+  const sexTable = record.sex === "M" ? "boys" : "girls";
+  return `In ${a.peakYear}, the same ${sexTable} table was led by ${escape(formatList(peers))}.`;
+}
+
+function renderShareSentence(record: NameRecord, a: ClassifyResult, yearTotals: YearTotal[], sexLabel: string): string {
+  const totalByYear = new Map(yearTotals.map((row) => [row.year, row.total]));
+  const peakTotal = totalByYear.get(a.peakYear);
+  if (!peakTotal) return "";
+
+  const peakShare = formatShare(a.peakCount, peakTotal);
+  const latestTotal = totalByYear.get(record.yM);
+  const latestShare =
+    latestTotal && a.latestCount
+      ? `<strong>${formatShare(a.latestCount, latestTotal)}</strong>`
+      : "below the SSA reporting floor";
+  return `At peak, ${escape(record.name)} accounted for <strong>${peakShare}</strong> of recorded ${sexLabel} births. In ${record.yM}, it was ${latestShare}.`;
+}
+
+function renderRisingHighSentence(record: NameRecord, a: ClassifyResult, sexLabel: string): string {
+  if (a.status !== "rising" || a.latestCount <= 0) return "";
+  const cutoff = record.yM - 10;
+  let priorYear: number | null = null;
+  let priorCount = 0;
+  for (let year = cutoff; year >= record.ym; year--) {
+    const count = record.series[year] ?? 0;
+    if (count > a.latestCount) {
+      priorYear = year;
+      priorCount = count;
+      break;
+    }
+  }
+  if (!priorYear) {
+    return `${escape(record.name)} is at a modern high in the latest SSA record.`;
+  }
+  return `${escape(record.name)} has not been this common since ${priorYear}, when ${fmt(priorCount)} ${sexLabel} received it.`;
+}
+
+function formatShare(count: number, total: number): string {
+  const pct = (count / total) * 100;
+  if (pct > 0 && pct < 0.01) return "less than 0.01%";
+  if (pct >= 1) return `${pct.toFixed(1).replace(/\.0$/, "")}%`;
+  return `${pct.toFixed(2)}%`;
+}
+
+function formatList(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? "";
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
+
+function reportNumber(name: string, sex: string): string {
+  let hash = 5381;
+  const raw = `${name}:${sex}`;
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash << 5) + hash) ^ raw.charCodeAt(i);
+    hash |= 0;
+  }
+  return String(Math.abs(hash) % 100000).padStart(5, "0");
 }
 
 function renderExploreLinks(a: ClassifyResult): string {
@@ -365,9 +509,5 @@ function buildStructuredData(
 }
 
 function escape(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

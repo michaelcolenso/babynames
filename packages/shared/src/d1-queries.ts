@@ -281,6 +281,36 @@ export async function topBySpecificYear(
   return r.results ?? [];
 }
 
+export async function getTopNamesForYear(
+  db: D1Database,
+  year: number,
+  perSex = 5,
+): Promise<YearTopRow[]> {
+  return topBySpecificYear(db, year, perSex);
+}
+
+export async function getYearTotalsForYears(
+  db: D1Database,
+  sex: Sex,
+  years: number[],
+): Promise<YearTotal[]> {
+  const uniqueYears = [...new Set(years.map((year) => Math.floor(year)).filter(Number.isFinite))];
+  if (!uniqueYears.length) return [];
+
+  const placeholders = uniqueYears.map((_, idx) => `?${idx + 2}`).join(", ");
+  const r = await db
+    .prepare(
+      `SELECT year, sex, total
+         FROM year_totals
+        WHERE sex = ?1
+          AND year IN (${placeholders})
+        ORDER BY year`,
+    )
+    .bind(sex, ...uniqueYears)
+    .all<YearTotal>();
+  return r.results ?? [];
+}
+
 // Comeback names: peaked pre-1975 at 5k+ births, currently growing/stable with
 // meaningful counts. Proxy for "had a valley and came back."
 export async function listComeback(
