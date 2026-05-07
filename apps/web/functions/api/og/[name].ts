@@ -28,11 +28,7 @@ const STATUS_LABEL: Record<Status, string> = {
 };
 
 function esc(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function fmtNum(n: number): string {
@@ -48,7 +44,8 @@ function yearMarkers(ym: number, yM: number, sx: number, ty: number, sw: number)
   const start = Math.ceil(ym / step) * step;
   for (let y = start; y <= yM; y += step) {
     const x = sx + ((y - ym) / span) * sw;
-    out += `<text x="${x.toFixed(1)}" y="${ty}" font-family="monospace" font-size="13" ` +
+    out +=
+      `<text x="${x.toFixed(1)}" y="${ty}" font-family="monospace" font-size="13" ` +
       `fill="rgba(247,239,225,0.35)" text-anchor="middle">${y}</text>`;
   }
   return out;
@@ -65,8 +62,12 @@ function buildOgSvg(
   yM: number,
   spark: number[],
 ): string {
-  const W = 1200, H = 630;
-  const sx = 80, sy = 360, sw = W - 160, sh = 140;
+  const W = 1200,
+    H = 630;
+  const sx = 80,
+    sy = 360,
+    sw = W - 160,
+    sh = 140;
 
   const max = Math.max(1, ...spark);
   let linePath = "";
@@ -76,9 +77,8 @@ function buildOgSvg(
     const y = sy + sh - (spark[i]! / max) * sh;
     linePath += `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
   }
-  fillPath = linePath +
-    `L${(sx + sw).toFixed(1)},${(sy + sh).toFixed(1)}` +
-    `L${sx.toFixed(1)},${(sy + sh).toFixed(1)}Z`;
+  fillPath =
+    linePath + `L${(sx + sw).toFixed(1)},${(sy + sh).toFixed(1)}` + `L${sx.toFixed(1)},${(sy + sh).toFixed(1)}Z`;
 
   let peakIdx = 0;
   for (let i = 0; i < spark.length; i++) if ((spark[i] ?? 0) > (spark[peakIdx] ?? 0)) peakIdx = i;
@@ -126,10 +126,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   }
   const nameLower = decodeURIComponent(raw).toLowerCase();
 
-  const [row, yMStr] = await Promise.all([
-    getNameSpark(ctx.env.DB, nameLower),
-    getMeta(ctx.env.DB, META_KEYS.maxYear),
-  ]);
+  const [row, yMStr] = await Promise.all([getNameSpark(ctx.env.DB, nameLower), getMeta(ctx.env.DB, META_KEYS.maxYear)]);
 
   if (!row) {
     return new Response("not found", { status: 404 });

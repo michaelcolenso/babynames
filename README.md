@@ -1,6 +1,6 @@
-# Name Vitals
+# nobodynamed
 
-Is your name going extinct? Name Vitals shows the popularity, trajectory, and vital status of any American name since 1880, based on [Social Security Administration](https://www.ssa.gov/oact/babynames/) data.
+Is your name going extinct? nobodynamed shows the popularity, trajectory, and vital status of any American name since 1880, based on [Social Security Administration](https://www.ssa.gov/oact/babynames/) data.
 
 ## Stack
 
