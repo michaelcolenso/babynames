@@ -283,11 +283,7 @@ export function renderFullPage(
 <body>
 <div class="page">
   <header class="site">
-<<<<<<< Updated upstream
-    <a class="brand" href="/">NobodyNamed</a>
-=======
     <a class="brand" href="/">nobodynamed</a>
->>>>>>> Stashed changes
     <nav>
       <a href="/extinct.html">Extinct</a>
       <a href="/endangered.html">Endangered</a>
