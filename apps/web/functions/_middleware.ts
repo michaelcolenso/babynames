@@ -17,13 +17,17 @@ export const onRequest: PagesFunction = async (ctx) => {
   }
 
   const cache = caches.default;
-  const cached = await cache.match(ctx.request);
+  const cacheKeyHeader = ctx.request.headers.get("X-Cache-Key");
+  const baseKey = cacheKeyHeader ? new Request(ctx.request.url, { headers: { "X-Cache-Key": cacheKeyHeader } }) : ctx.request;
+  const cached = await cache.match(baseKey);
   if (cached) return cached;
 
   const res = await ctx.next();
   const cc = res.headers.get("Cache-Control");
+  const responseKey = res.headers.get("X-Cache-Key");
+  const cacheKey = responseKey ? new Request(ctx.request.url, { headers: { "X-Cache-Key": responseKey } }) : baseKey;
   if (cc && /s-maxage=\d+/.test(cc) && res.ok) {
-    ctx.waitUntil(cache.put(ctx.request, res.clone()));
+    ctx.waitUntil(cache.put(cacheKey, res.clone()));
   }
   return res;
 };

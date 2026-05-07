@@ -55,6 +55,20 @@ export default {
       const li = await getMeta(env.DB, META_KEYS.lastIngestAt);
       return Response.json({ dataVersion: dv, lastIngestAt: li });
     }
+    if (url.pathname === "/enrich") {
+      const name = (url.searchParams.get("name") ?? "").trim();
+      const sex = (url.searchParams.get("sex") ?? "").trim().toUpperCase();
+      if (!name) return Response.json({ error: "missing_name" }, { status: 400 });
+      const normalized = name[0]!.toUpperCase() + name.slice(1).toLowerCase();
+      const sexLabel = sex === "M" ? "masculine" : sex === "F" ? "feminine" : "given";
+      const snippet =
+        `${normalized} is a ${sexLabel} name in SSA records. ` +
+        "This enrichment endpoint is live and can be expanded with external sources next.";
+      return Response.json(
+        { name: normalized, sex: sex || null, snippet, sources: [{ id: "ssa", label: "SSA naming records" }] },
+        { headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=86400" } },
+      );
+    }
     return new Response("not found\n", { status: 404 });
   },
 

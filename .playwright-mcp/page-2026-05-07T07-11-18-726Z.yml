@@ -1,0 +1,174 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - link "nobodynamed" [ref=e4] [cursor=pointer]:
+      - /url: /
+    - navigation [ref=e5]:
+      - link "Extinct" [ref=e6] [cursor=pointer]:
+        - /url: /extinct.html
+      - link "Endangered" [ref=e7] [cursor=pointer]:
+        - /url: /endangered.html
+      - link "Comebacks" [ref=e8] [cursor=pointer]:
+        - /url: /comeback.html
+      - link "Birth year" [ref=e9] [cursor=pointer]:
+        - /url: /year.html
+      - link "Rising" [ref=e10] [cursor=pointer]:
+        - /url: /rising.html
+      - link "About" [ref=e11] [cursor=pointer]:
+        - /url: /about.html
+    - group [ref=e12]:
+      - generic "Open navigation" [ref=e13]
+  - article [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: Feminine dossier · first seen 1880
+        - heading "Anna" [level=1] [ref=e19]
+        - generic [ref=e21]:
+          - generic [ref=e22]: Stable
+          - generic [ref=e23]: Cross-generational persistence
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - generic [ref=e26]: Peak era
+            - generic [ref=e27]: "1918"
+          - generic [ref=e28]:
+            - generic [ref=e29]: Peak rank proxy
+            - generic [ref=e30]: 15,666
+          - generic [ref=e31]:
+            - generic [ref=e32]: Current vitality
+            - generic [ref=e33]: Healthy
+          - generic [ref=e34]:
+            - generic [ref=e35]: Generation
+            - generic [ref=e36]: Greatest Generation
+      - region "Anna annual popularity chart" [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]: "1880"
+          - generic [ref=e40]: Peak 1918
+          - generic [ref=e41]: "2017"
+        - img [ref=e42]:
+          - generic [ref=e46]: peak 1918
+          - generic [ref=e47]: "2017"
+          - generic [ref=e48]: "1880"
+          - generic [ref=e49]: "1900"
+          - generic [ref=e50]: "1920"
+          - generic [ref=e51]: "1940"
+          - generic [ref=e52]: "1960"
+          - generic [ref=e53]: "1980"
+          - generic [ref=e54]: "2000"
+      - generic [ref=e55]:
+        - generic [ref=e56]:
+          - generic [ref=e57]: Peak year
+          - generic [ref=e58]: "1918"
+        - generic [ref=e59]:
+          - generic [ref=e60]: Decline from peak
+          - generic [ref=e61]: 71.1%
+        - generic [ref=e62]:
+          - generic [ref=e63]: "2017"
+          - generic [ref=e64]: 4,520
+        - generic [ref=e65]:
+          - generic [ref=e66]: All-time
+          - generic [ref=e67]: 888,505
+      - navigation "Explore more name data" [ref=e68]:
+        - link "Top names from 1918" [ref=e69] [cursor=pointer]:
+          - /url: /year.html?year=1918
+    - complementary [ref=e70]:
+      - generic [ref=e71]:
+        - paragraph [ref=e72]: "Anna has avoided the sharper boom-and-bust cycles of fashion naming. Its strength is not novelty but endurance: steady recognition across eras, families, and classrooms."
+        - paragraph [ref=e73]:
+          - text: Your name peaked in 1918, when
+          - strong [ref=e74]: 15,666
+          - text: girls were named Anna.
+        - paragraph [ref=e75]:
+          - text: In 2017, only
+          - strong [ref=e76]: 4,520
+          - text: girls were given the name.
+        - paragraph [ref=e77]:
+          - text: Down
+          - strong [ref=e78]: 71.1%
+          - text: from its peak.
+        - paragraph [ref=e79]:
+          - text: All told, about
+          - strong [ref=e80]: 888,505
+          - text: Americans have been named Anna and recorded by the Social Security Administration since 1880.
+      - region "Anna enrichment" [ref=e81]:
+        - heading "SSA enrichment" [level=2] [ref=e82]
+        - paragraph [ref=e83]: "Anna peaked in 1918 with 15,666 girls, roughly #10 for that year. The recent record is comparatively steady: 4,520 girls were recorded in 2017, around #53."
+        - generic [ref=e84]:
+          - generic [ref=e85]:
+            - term [ref=e86]: First seen
+            - definition [ref=e87]: "1880"
+          - generic [ref=e88]:
+            - term [ref=e89]: Peak
+            - definition [ref=e90]: 15,666 girls in 1918
+          - generic [ref=e91]:
+            - term [ref=e92]: Peak rank
+            - definition [ref=e93]: "#10 · 1918 girls"
+          - generic [ref=e94]:
+            - term [ref=e95]: Latest rank
+            - definition [ref=e96]: "#53 · 2017 girls"
+          - generic [ref=e97]:
+            - term [ref=e98]: All-time records
+            - definition [ref=e99]: 888,505
+          - generic [ref=e100]:
+            - term [ref=e101]: Decade trend
+            - definition [ref=e102]: 0.6x · 93,570 to 57,141
+        - link "Social Security Administration baby-name records" [ref=e103] [cursor=pointer]:
+          - /url: https://www.ssa.gov/oact/babynames/
+      - generic [ref=e104]:
+        - generic [ref=e105]:
+          - generic [ref=e106]: Rarity score
+          - strong [ref=e107]: Mainstream
+        - generic [ref=e108]:
+          - generic [ref=e109]: Association
+          - strong [ref=e110]: Greatest Generation
+        - generic [ref=e111]:
+          - generic [ref=e112]: Stability
+          - strong [ref=e113]: Era-bound, still legible
+        - generic [ref=e114]:
+          - generic [ref=e115]: Trajectory
+          - strong [ref=e116]: Cross-generational persistence
+      - region "Related names" [ref=e117]:
+        - heading "Related names" [level=2] [ref=e118]
+        - generic [ref=e119]:
+          - link "Eva Feminine · Stable · peak 1918" [ref=e120] [cursor=pointer]:
+            - /url: /name/Eva/
+            - strong [ref=e121]: Eva
+            - generic [ref=e122]: Feminine · Stable · peak 1918
+          - link "Jessie Feminine · Stable · peak 1918" [ref=e123] [cursor=pointer]:
+            - /url: /name/Jessie/
+            - strong [ref=e124]: Jessie
+            - generic [ref=e125]: Feminine · Stable · peak 1918
+          - link "Adele Feminine · Stable · peak 1918" [ref=e126] [cursor=pointer]:
+            - /url: /name/Adele/
+            - strong [ref=e127]: Adele
+            - generic [ref=e128]: Feminine · Stable · peak 1918
+          - link "Selma Feminine · Stable · peak 1918" [ref=e129] [cursor=pointer]:
+            - /url: /name/Selma/
+            - strong [ref=e130]: Selma
+            - generic [ref=e131]: Feminine · Stable · peak 1918
+          - link "Nola Feminine · Stable · peak 1918" [ref=e132] [cursor=pointer]:
+            - /url: /name/Nola/
+            - strong [ref=e133]: Nola
+            - generic [ref=e134]: Feminine · Stable · peak 1918
+          - link "Roxie Feminine · Stable · peak 1918" [ref=e135] [cursor=pointer]:
+            - /url: /name/Roxie/
+            - strong [ref=e136]: Roxie
+            - generic [ref=e137]: Feminine · Stable · peak 1918
+      - generic [ref=e138]:
+        - button "Download share card" [ref=e139] [cursor=pointer]
+        - button "Share" [ref=e140] [cursor=pointer]
+        - button "Copy link" [ref=e141] [cursor=pointer]
+        - button "Find similar names" [ref=e142] [cursor=pointer]
+      - generic [ref=e143]:
+        - text: Curious about the history of Anna? Browse
+        - link "books about the name Anna on Amazon" [ref=e144] [cursor=pointer]:
+          - /url: https://www.amazon.com/s?k=history%20of%20the%20name%20Anna&tag=
+        - text: .
+  - contentinfo [ref=e145]:
+    - generic [ref=e146]:
+      - generic [ref=e147]: nobodynamed is a small data project about American first names.
+      - generic [ref=e148]: "Built on public-domain Social Security Administration data: about 100,000 name/sex records and 2 million yearly observations."
+    - generic [ref=e149]:
+      - link "About" [ref=e150] [cursor=pointer]:
+        - /url: /about.html
+      - text: ·
+      - link "SSA source" [ref=e151] [cursor=pointer]:
+        - /url: https://www.ssa.gov/oact/babynames/

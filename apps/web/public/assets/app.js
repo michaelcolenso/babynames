@@ -359,6 +359,24 @@ async function handleTwinButton(btn, record, container) {
   }
 }
 
+async function hydrateEnrichment(container, record) {
+  if (!container || !record?.name) return;
+  const host = container.querySelector(".narrative");
+  if (!host) return;
+  try {
+    const r = await fetch(`/api/enrich/${encodeURIComponent(record.name)}?sex=${record.sex || ""}`);
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!data?.snippet) return;
+    const p = document.createElement("p");
+    p.className = "lede";
+    p.textContent = data.snippet;
+    host.appendChild(p);
+  } catch (_err) {
+    // best-effort progressive enhancement.
+  }
+}
+
 async function setupSearch(input, suggestions, submit, sexSelect) {
   let currentSuggestions = [];
   let activeIdx = -1;
@@ -422,6 +440,7 @@ window.NameVitals = {
   buildSparkline,
   renderReport,
   attachShareHandlers,
+  hydrateEnrichment,
   titleCase,
   fmt,
 };
