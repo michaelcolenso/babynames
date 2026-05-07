@@ -59,13 +59,18 @@ export const onRequestGet: PagesFunction<unknown, "year"> = async (ctx) => {
       var r = await fetch("/api/year/${year}");
       if (!r.ok) {
         var j = await r.json();
-        target.innerHTML = "<p class='lede'>" + (j.error || "No data.") + "</p>";
+        var msg = document.createElement("p");
+        msg.className = "lede";
+        msg.textContent = j.error || "No data.";
+        target.replaceChildren(msg);
         return;
       }
       var data = await r.json();
       renderYearTable(${year}, data.rows, target);
     } catch (e) {
-      target.innerHTML = "<p>Failed to load data. Try again.</p>";
+      var errMsg = document.createElement("p");
+      errMsg.textContent = "Failed to load data. Try again.";
+      target.replaceChildren(errMsg);
     }
   })();
 </script>

@@ -16,7 +16,10 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const limit = Math.max(1, Math.min(25, Number(url.searchParams.get("limit") ?? 10)));
   if (q.length < 2) {
     return Response.json({ q, results: [] }, {
-      headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=86400" },
+      headers: {
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=86400",
+        "Content-Type": "application/json; charset=utf-8",
+      },
     });
   }
 
