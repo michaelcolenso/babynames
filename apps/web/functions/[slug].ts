@@ -1,0 +1,110 @@
+// Root-level editorial route aliases required for programmatic SEO.
+
+import type { PagesFunction } from "@cloudflare/workers-types";
+
+const PAGES: Record<string, { title: string; eyebrow: string; lede: string; names: string[]; body: string; table?: string }> = {
+  comebacks: {
+    title: "Comeback names — NobodyNamed",
+    eyebrow: "Recovered names",
+    lede: "Names that fell out of daily use, waited in the archive, and returned as taste, nostalgia, or status.",
+    names: ["Theodore", "Hazel", "Eleanor", "Violet", "Oliver", "Emma"],
+    body: "Comebacks reveal that naming culture is cyclical. A name can sound exhausted to one generation and newly authoritative to the next.",
+    table: "comeback",
+  },
+  "millennial-names": {
+    title: "Millennial names — NobodyNamed",
+    eyebrow: "Generation dossier",
+    lede: "The classroom names of the 1980s and 1990s: high-volume, unmistakable, and now aging into cultural memory.",
+    names: ["Michael", "Jessica", "Ashley", "Christopher", "Amanda", "Matthew"],
+    body: "Millennial names are defined by saturation. Many were not merely popular; they were ambient facts of school rosters and suburban life.",
+  },
+  "gen-z-names": {
+    title: "Gen Z names — NobodyNamed",
+    eyebrow: "Generation dossier",
+    lede: "The names that rose through the late 1990s and 2000s as naming culture became faster, more fragmented, and more image-conscious.",
+    names: ["Madison", "Ethan", "Ava", "Aiden", "Isabella", "Jayden"],
+    body: "Gen Z naming patterns show sharper fashion cycles, more spelling variation, and a faster path from novelty to overexposure.",
+  },
+  "classic-names": {
+    title: "Classic names — NobodyNamed",
+    eyebrow: "Durability file",
+    lede: "Names that resisted the sharpest boom-and-bust cycles and remained legible across American generations.",
+    names: ["James", "Elizabeth", "William", "Anna", "John", "Mary"],
+    body: "Classic names derive power from repetition. They do not need a single peak moment because they carry institutional memory across eras.",
+  },
+  "future-grandparent-names": {
+    title: "Future grandparent names — NobodyNamed",
+    eyebrow: "Forecast by memory",
+    lede: "The names that may sound young now, then ordinary, then old, then charmingly available again.",
+    names: ["Harper", "Luna", "Mason", "Ava", "Liam", "Olivia"],
+    body: "Every cute contemporary name is also a future old-person name. That is not an insult; it is the entire lifecycle of cultural identity.",
+  },
+};
+
+export const onRequestGet: PagesFunction<unknown, "slug"> = async (ctx) => {
+  const slug = String(ctx.params.slug || "");
+
+  if (slug === "extinct") return Response.redirect(new URL("/extinct.html", ctx.request.url).toString(), 301);
+  if (slug === "rising") return Response.redirect(new URL("/rising.html", ctx.request.url).toString(), 301);
+  if (slug === "endangered") return Response.redirect(new URL("/endangered.html", ctx.request.url).toString(), 301);
+
+  const page = PAGES[slug];
+  if (!page) return new Response("not found", { status: 404 });
+
+  const cards = page.names.map((name) =>
+    `<a class="diagnosis-card" href="/name/${encodeURIComponent(name)}/"><span class="card-name">${name}</span><span class="card-status">Open dossier</span></a>`,
+  ).join("");
+  const table = page.table ? `<section class="section"><div id="t"></div></section>` : "";
+  const tableScript = page.table ? `<script>renderLandingTable("${page.table}", document.getElementById("t"));</script>` : "";
+
+  return new Response(`<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${page.title}</title>
+<meta name="description" content="${page.lede}">
+<link rel="canonical" href="/${slug}">
+<meta property="og:title" content="${page.title}">
+<meta property="og:description" content="${page.lede}">
+<meta property="og:type" content="article">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="page">
+  <header class="site">
+    <a class="brand" href="/">NobodyNamed</a>
+    <nav>
+      <a href="/extinct.html">Extinct</a>
+      <a href="/endangered.html">Endangered</a>
+      <a href="/comeback.html">Comebacks</a>
+      <a href="/year.html">Birth year</a>
+      <a href="/rising.html">Rising</a>
+      <a href="/about.html">About</a>
+    </nav>
+  </header>
+  <main>
+    <p class="eyebrow">${page.eyebrow}</p>
+    <h1>${page.title.replace(" — NobodyNamed", "")}</h1>
+    <p class="lede">${page.lede}</p>
+    <p class="archive-note">${page.body}</p>
+    <div class="diagnosis-grid">${cards}</div>
+    ${table}
+  </main>
+  <footer class="site">
+    <div>Built on public-domain data from the Social Security Administration.</div>
+    <div><a href="/about.html">Methodology</a></div>
+  </footer>
+</div>
+<script src="/assets/app.js"></script>
+<script src="/assets/landing.js"></script>
+${tableScript}
+</body>
+</html>`, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
+    },
+  });
+};

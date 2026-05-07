@@ -1,5 +1,5 @@
 // GET /api/og/:name  — SVG social card for og:image meta tags.
-// 1200×630 px, navy background, name + status pill + sparkline + stats.
+// 1200×630 px editorial card, name + status pill + sparkline + stats.
 // Works on Slack, iMessage, WhatsApp, Discord, LinkedIn, Facebook.
 // Twitter/X requires a raster PNG — add @cf-wasm/og for that upgrade.
 
@@ -22,7 +22,7 @@ const STATUS_COLOR: Record<Status, string> = {
 const STATUS_LABEL: Record<Status, string> = {
   rising: "RISING",
   stable: "STABLE",
-  declining: "DECLINING",
+  declining: "STABLE DECLINE",
   endangered: "ENDANGERED",
   extinct: "EXTINCT",
 };
@@ -49,7 +49,7 @@ function yearMarkers(ym: number, yM: number, sx: number, ty: number, sw: number)
   for (let y = start; y <= yM; y += step) {
     const x = sx + ((y - ym) / span) * sw;
     out += `<text x="${x.toFixed(1)}" y="${ty}" font-family="monospace" font-size="13" ` +
-      `fill="rgba(245,243,234,0.35)" text-anchor="middle">${y}</text>`;
+      `fill="rgba(247,239,225,0.35)" text-anchor="middle">${y}</text>`;
   }
   return out;
 }
@@ -93,25 +93,29 @@ function buildOgSvg(
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
 <defs>
   <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="#7fb4ff" stop-opacity="0.28"/>
-    <stop offset="100%" stop-color="#7fb4ff" stop-opacity="0.04"/>
+    <stop offset="0%" stop-color="#d9a56f" stop-opacity="0.30"/>
+    <stop offset="100%" stop-color="#d9a56f" stop-opacity="0.04"/>
   </linearGradient>
+  <pattern id="grain" width="5" height="5" patternUnits="userSpaceOnUse">
+    <circle cx="1" cy="1" r="0.45" fill="rgba(247,239,225,0.16)"/>
+  </pattern>
 </defs>
-<rect width="${W}" height="${H}" fill="#0a1a3a"/>
-<rect width="${W}" height="5" fill="#3b5bdb"/>
-<text x="80" y="66" font-family="monospace" font-size="17" fill="#7fb4ff" letter-spacing="4" font-weight="500">NAME VITALS</text>
-<text x="80" y="190" font-family="Georgia,serif" font-size="110" fill="#f5f3ea" font-weight="700">${esc(name)}</text>
-<text x="80" y="233" font-family="Georgia,serif" font-size="24" fill="#7fb4ff">${esc(sexLabel)} · ${firstYear}–${yM}</text>
+<rect width="${W}" height="${H}" fill="#171511"/>
+<rect width="${W}" height="${H}" fill="url(#grain)" opacity="0.45"/>
+<path d="M80 510H1120" stroke="rgba(247,239,225,0.16)"/>
+<text x="80" y="66" font-family="monospace" font-size="17" fill="#d9a56f" letter-spacing="4" font-weight="700">NOBODYNAMED / NAME VITALS</text>
+<text x="80" y="185" font-family="Georgia,serif" font-size="108" fill="#f7efe1" font-weight="500">${esc(name.toUpperCase())}</text>
+<text x="80" y="229" font-family="Georgia,serif" font-size="24" fill="rgba(247,239,225,0.68)">${esc(sexLabel)} · ${firstYear}–${yM}</text>
 <rect x="80" y="254" width="${pillW}" height="36" rx="18" fill="${esc(color)}"/>
 <text x="${80 + pillW / 2}" y="278" font-family="monospace" font-size="15" fill="white" text-anchor="middle" font-weight="600">${esc(label)}</text>
-<line x1="${sx}" y1="${sy + sh}" x2="${sx + sw}" y2="${sy + sh}" stroke="rgba(245,243,234,0.15)" stroke-width="1"/>
+<line x1="${sx}" y1="${sy + sh}" x2="${sx + sw}" y2="${sy + sh}" stroke="rgba(247,239,225,0.15)" stroke-width="1"/>
 <path d="${esc(fillPath)}" fill="url(#sg)"/>
-<path d="${esc(linePath)}" fill="none" stroke="#7fb4ff" stroke-width="2.5"/>
-<circle cx="${peakX.toFixed(1)}" cy="${peakY.toFixed(1)}" r="7" fill="#fbbf24"/>
+<path d="${esc(linePath)}" fill="none" stroke="#d9a56f" stroke-width="2.8"/>
+<circle cx="${peakX.toFixed(1)}" cy="${peakY.toFixed(1)}" r="7" fill="#f1d18a"/>
 ${yearMarkers(firstYear, yM, sx, sy + sh + 20, sw)}
-<text x="80" y="570" font-family="Georgia,serif" font-size="24" fill="#f5f3ea">Peaked ${peakYear} · ${fmtNum(peakCount)}</text>
-<text x="${W - 80}" y="570" font-family="Georgia,serif" font-size="24" fill="${latestCount === 0 ? "#f87171" : "#f5f3ea"}" text-anchor="end">${yM}: ${fmtNum(latestCount)}</text>
-<text x="${W - 80}" y="612" font-family="monospace" font-size="16" fill="rgba(127,180,255,0.6)" text-anchor="end">namevitals.com</text>
+<text x="80" y="570" font-family="Georgia,serif" font-size="25" fill="#f7efe1">Peak: ${peakYear} · ${fmtNum(peakCount)}</text>
+<text x="${W - 80}" y="570" font-family="Georgia,serif" font-size="25" fill="${latestCount === 0 ? "#d9a56f" : "#f7efe1"}" text-anchor="end">${yM}: ${fmtNum(latestCount)}</text>
+<text x="${W - 80}" y="612" font-family="monospace" font-size="16" fill="rgba(217,165,111,0.75)" text-anchor="end">nobodynamed.com</text>
 </svg>`;
 }
 

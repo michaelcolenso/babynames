@@ -10,6 +10,96 @@ import type { NameRecord, RelatedName, Status } from "./schema";
 const fmt = (n: number | null | undefined): string =>
   n === null || n === undefined ? "—" : Number(n).toLocaleString("en-US");
 
+function generationForYear(year: number): string {
+  if (year >= 2013) return "Gen Alpha";
+  if (year >= 1997) return "Gen Z";
+  if (year >= 1981) return "Millennial";
+  if (year >= 1965) return "Gen X";
+  if (year >= 1946) return "Boomer";
+  if (year >= 1928) return "Silent Generation";
+  return "Greatest Generation";
+}
+
+function describeStatus(record: NameRecord, a: ClassifyResult): {
+  status: string;
+  trajectory: string;
+  vitality: string;
+  summary: string;
+  rarity: string;
+  stability: string;
+} {
+  const decline = a.declinePct ?? 0;
+  const name = escape(record.name);
+  const peakEra = generationForYear(a.peakYear);
+  const current = a.latestCount;
+  const vitality =
+    a.status === "extinct" ? "Dormant" :
+    current >= 5000 ? "Strong" :
+    current >= 1000 ? "Healthy" :
+    current >= 100 ? "Fragile" :
+    current > 0 ? "Rare" : "Below reporting floor";
+  const rarity =
+    current === 0 ? "Statistical floor" :
+    current < 50 ? "99th percentile rare" :
+    current < 250 ? "Very uncommon" :
+    current < 1000 ? "Uncommon" :
+    current < 5000 ? "Mainstream" : "Mass culture";
+  const stability =
+    decline < 35 ? "High cross-era durability" :
+    decline < 70 ? "Moderate cultural durability" :
+    decline < 90 ? "Era-bound, still legible" :
+    "Highly era-bound";
+
+  if (a.status === "extinct") {
+    return {
+      status: "Extinct",
+      trajectory: "Near statistical disappearance",
+      vitality,
+      rarity,
+      stability,
+      summary: `${name} has moved from ordinary use into the archive. Its peak belongs most strongly to the ${peakEra} naming world, and its absence today gives the name the strange clarity of a cultural fossil.`,
+    };
+  }
+  if (a.status === "endangered") {
+    return {
+      status: "Endangered",
+      trajectory: `Down ${decline}% from peak`,
+      vitality,
+      rarity,
+      stability,
+      summary: `${name} once had enough force to mark a generation, but its current usage is a small remnant of that peak. The name still exists, yet now reads as a timestamp: personal, recognizable, and culturally receding.`,
+    };
+  }
+  if (a.status === "rising") {
+    return {
+      status: a.peakYear < record.yM - 25 && decline > 45 ? "Resurgent" : "Rising",
+      trajectory: "Gaining cultural share",
+      vitality,
+      rarity,
+      stability,
+      summary: `${name} is accumulating new signal in the present tense. Whether it is a revival or a fresh adoption curve, the name is moving from background noise toward cultural visibility again.`,
+    };
+  }
+  if (a.status === "declining") {
+    return {
+      status: "Stable Decline",
+      trajectory: `Gradual decline from ${a.peakYear}`,
+      vitality,
+      rarity,
+      stability,
+      summary: `${name} is past its period of maximum cultural dominance, but it has not disappeared. Unlike names that burn out quickly, it still carries enough usage to remain cross-generational rather than purely nostalgic.`,
+    };
+  }
+  return {
+    status: "Stable",
+    trajectory: "Cross-generational persistence",
+    vitality,
+    rarity,
+    stability,
+    summary: `${name} has avoided the sharper boom-and-bust cycles of fashion naming. Its strength is not novelty but endurance: steady recognition across eras, families, and classrooms.`,
+  };
+}
+
 export function renderReport(record: NameRecord): string {
   return renderReportWithOptions(record);
 }
@@ -23,29 +113,7 @@ function renderReportWithOptions(
     return `<div class="report"><h1>${escape(record.name)}</h1><p class="lede">No data for this name.</p></div>`;
   }
   const sexLabel = record.sex === "M" ? "boys" : "girls";
-
-  const statusCopy: Record<Status, [string, string]> = {
-    rising: [
-      "Rising",
-      `More babies were named ${escape(record.name)} in the last five years than in the five before that — the name is gaining ground.`,
-    ],
-    stable: [
-      "Stable",
-      `Popularity of ${escape(record.name)} has held roughly steady over the last decade.`,
-    ],
-    declining: [
-      "Declining",
-      `${escape(record.name)} is losing ground: the last five years came in below the five before.`,
-    ],
-    endangered: [
-      "Endangered",
-      `${escape(record.name)} has fallen ${a.declinePct ?? 0}% from its peak and only ${fmt(a.latestCount)} babies received it in ${record.yM}.`,
-    ],
-    extinct: [
-      "Extinct",
-      `No babies have been named ${escape(record.name)} in ${record.yM - a.lastYear} years. It last appeared in ${a.lastYear}, when ${fmt(record.series[a.lastYear] ?? 0)} ${sexLabel} were given the name.`,
-    ],
-  };
+  const dossier = describeStatus(record, a);
 
   const peakSentence = `Your name peaked in ${a.peakYear}, when <strong>${fmt(a.peakCount)}</strong> ${sexLabel} were named ${escape(record.name)}.`;
   const latestSentence = a.latestCount
@@ -73,37 +141,66 @@ function renderReportWithOptions(
     : "";
 
   return `<article class="report" data-name="${escape(record.name)}" data-sex="${record.sex}">
-  <h1>${escape(record.name)}</h1>
-  <div class="sex">${record.sex === "M" ? "Masculine" : "Feminine"} · first seen ${a.firstYear}</div>
-  <div class="status-pill status-${a.status}">${statusCopy[a.status][0]}</div>
-  ${buildSparkline(record.series, record.ym, record.yM)}
-  ${collisionBox}
-  <div class="narrative">
-    <p>${statusCopy[a.status][1]}</p>
-    <p>${peakSentence}</p>
-    <p>${latestSentence}</p>
-    ${declineSentence}
-    ${totalSentence}
+  <div>
+    <header class="dossier-head">
+      <div class="sex">${record.sex === "M" ? "Masculine" : "Feminine"} dossier · first seen ${a.firstYear}</div>
+      <h1>${escape(record.name)}</h1>
+      <div class="status-stack">
+        <div class="status-line">
+          <span class="status-pill status-${a.status}">${dossier.status}</span>
+          <span class="trajectory-label">${dossier.trajectory}</span>
+        </div>
+      </div>
+      <div class="dossier-grid">
+        <div class="dossier-metric"><div class="label">Peak era</div><div class="value">${a.peakYear}</div></div>
+        <div class="dossier-metric"><div class="label">Peak rank proxy</div><div class="value">${fmt(a.peakCount)}</div></div>
+        <div class="dossier-metric"><div class="label">Current vitality</div><div class="value">${dossier.vitality}</div></div>
+        <div class="dossier-metric"><div class="label">Generation</div><div class="value">${generationForYear(a.peakYear)}</div></div>
+      </div>
+    </header>
+
+    <section class="chart-panel" aria-label="${escape(record.name)} annual popularity chart">
+      <div class="chart-caption"><span>${a.firstYear}</span><span>Peak ${a.peakYear}</span><span>${record.yM}</span></div>
+      ${buildSparkline(record.series, record.ym, record.yM)}
+    </section>
+
+    <div class="stats">
+      <div class="stat"><div class="label">Peak year</div><div class="value">${a.peakYear}</div></div>
+      <div class="stat"><div class="label">Decline from peak</div><div class="value">${a.declinePct ?? 0}%</div></div>
+      <div class="stat"><div class="label">${record.yM}</div><div class="value">${fmt(a.latestCount)}</div></div>
+      <div class="stat"><div class="label">All-time</div><div class="value">${fmt(a.totalCount)}</div></div>
+    </div>
+    ${exploreLinks}
   </div>
-  <div class="stats">
-    <div class="stat"><div class="label">Peak year</div><div class="value">${a.peakYear}</div></div>
-    <div class="stat"><div class="label">Peak count</div><div class="value">${fmt(a.peakCount)}</div></div>
-    <div class="stat"><div class="label">${record.yM}</div><div class="value">${fmt(a.latestCount)}</div></div>
-    <div class="stat"><div class="label">All-time</div><div class="value">${fmt(a.totalCount)}</div></div>
-  </div>
-  ${exploreLinks}
-  ${relatedNames}
-  <div class="share-row">
-    <button class="primary" data-share="card">Download share card</button>
-    <button data-share="twitter">Share on Twitter</button>
-    <button data-share="copy">Copy link</button>
-    <button data-share="twin">Find my name's twin →</button>
-  </div>
-  <div id="twin-result"></div>
-  <div class="affiliate">
-    Curious about the history of ${escape(record.name)}? Browse
-    <a rel="nofollow sponsored" target="_blank" href="https://www.amazon.com/s?k=${encodeURIComponent("history of the name " + record.name)}&amp;tag=">books about the name ${escape(record.name)} on Amazon</a>.
-  </div>
+
+  <aside class="report-sidebar">
+    <div class="narrative">
+      <p>${dossier.summary}</p>
+      <p>${peakSentence}</p>
+      <p>${latestSentence}</p>
+      ${declineSentence}
+      ${totalSentence}
+    </div>
+    <div class="insight-panel">
+      <div class="insight-row"><span>Rarity score</span><strong>${dossier.rarity}</strong></div>
+      <div class="insight-row"><span>Association</span><strong>${generationForYear(a.peakYear)}</strong></div>
+      <div class="insight-row"><span>Stability</span><strong>${dossier.stability}</strong></div>
+      <div class="insight-row"><span>Trajectory</span><strong>${dossier.trajectory}</strong></div>
+    </div>
+    ${collisionBox}
+    ${relatedNames}
+    <div class="share-row">
+      <button class="primary" data-share="card">Download share card</button>
+      <button data-share="twitter">Share</button>
+      <button data-share="copy">Copy link</button>
+      <button data-share="twin">Find similar names</button>
+    </div>
+    <div id="twin-result"></div>
+    <div class="affiliate">
+      Curious about the history of ${escape(record.name)}? Browse
+      <a rel="nofollow sponsored" target="_blank" href="https://www.amazon.com/s?k=${encodeURIComponent("history of the name " + record.name)}&amp;tag=">books about the name ${escape(record.name)} on Amazon</a>.
+    </div>
+  </aside>
 </article>`;
 }
 
@@ -114,7 +211,7 @@ export function renderFullPage(
 ): string {
   const statusLabel = labelStatus(classifyResult.status);
   const desc = buildMetaDescription(record, classifyResult);
-  const title = `${record.name} name popularity (${statusLabel}, peak ${classifyResult.peakYear}) | Name Vitals`;
+  const title = `${record.name} name popularity (${statusLabel}, peak ${classifyResult.peakYear}) | NobodyNamed`;
   const dataJson = JSON.stringify({
     name: record.name,
     sex: record.sex,
@@ -156,10 +253,12 @@ export function renderFullPage(
 <body>
 <div class="page">
   <header class="site">
-    <a class="brand" href="/">Name Vitals</a>
+    <a class="brand" href="/">NobodyNamed</a>
     <nav>
       <a href="/extinct.html">Extinct</a>
       <a href="/endangered.html">Endangered</a>
+      <a href="/comeback.html">Comebacks</a>
+      <a href="/year.html">Birth year</a>
       <a href="/rising.html">Rising</a>
       <a href="/about.html">About</a>
     </nav>
@@ -242,7 +341,7 @@ function buildStructuredData(
     description: opts.description,
     isPartOf: {
       "@type": "WebSite",
-      name: "Name Vitals",
+      name: "NobodyNamed",
       url: opts.origin || opts.canonical,
     },
     mainEntity: {

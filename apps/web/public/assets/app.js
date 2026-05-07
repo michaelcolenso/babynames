@@ -14,6 +14,56 @@ const fmt = (n) => {
 const titleCase = (s) =>
   s.toLowerCase().replace(/(^|[\s'-])([a-z])/g, (_, sep, ch) => sep + ch.toUpperCase());
 
+const statusLabel = (status) => ({
+  rising: "Rising",
+  stable: "Stable",
+  declining: "Stable Decline",
+  endangered: "Endangered",
+  extinct: "Extinct",
+})[status] || "Stable";
+
+const statusColor = (status) => ({
+  rising: "#22745d",
+  stable: "#465d75",
+  declining: "#a96720",
+  endangered: "#a96720",
+  extinct: "#3c3a35",
+})[status] || "#465d75";
+
+function generationForYear(year) {
+  if (year >= 2013) return "Gen Alpha";
+  if (year >= 1997) return "Gen Z";
+  if (year >= 1981) return "Millennial";
+  if (year >= 1965) return "Gen X";
+  if (year >= 1946) return "Boomer";
+  if (year >= 1928) return "Silent Generation";
+  return "Greatest Generation";
+}
+
+function setupSexSegments(group, sexSelect) {
+  if (!group || !sexSelect) return;
+  const buttons = [...group.querySelectorAll("[data-sex]")];
+  const sync = (value) => {
+    sexSelect.value = value;
+    buttons.forEach((btn) => btn.classList.toggle("active", btn.dataset.sex === value));
+  };
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => sync(btn.dataset.sex || ""));
+  });
+  sync(sexSelect.value || "");
+}
+
+function rotatePlaceholder(input, examples, intervalMs = 2200) {
+  if (!input || !examples?.length) return;
+  let i = 0;
+  input.placeholder = examples[i];
+  window.setInterval(() => {
+    if (document.activeElement === input || input.value) return;
+    i = (i + 1) % examples.length;
+    input.placeholder = examples[i];
+  }, intervalMs);
+}
+
 let _metaCache = null;
 async function fetchMeta() {
   if (_metaCache) return _metaCache;
@@ -164,40 +214,50 @@ function renderReport(record) {
 function renderShareCard(record) {
   const a = analyze(record);
   if (!a) return;
-  const W = 1200, H = 630;
+  const W = 1080, H = 1920;
   const canvas = document.createElement("canvas");
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext("2d");
-  const bg = getComputedStyle(document.body).getPropertyValue("--share-bg").trim() || "#0a1a3a";
-  const fg = "#f5f3ea", accent = "#7fb4ff";
+  const bg = getComputedStyle(document.body).getPropertyValue("--share-bg").trim() || "#171511";
+  const fg = "#f7efe1", accent = "#d9a56f";
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "rgba(247,239,225,0.06)";
+  for (let x = 90; x < W; x += 120) {
+    ctx.fillRect(x, 0, 1, H);
+  }
   ctx.fillStyle = accent;
-  ctx.font = "500 26px 'SF Mono', ui-monospace, Menlo, monospace";
-  ctx.fillText("NAME VITALS", 80, 90);
+  ctx.font = "700 28px 'SF Mono', ui-monospace, Menlo, monospace";
+  ctx.fillText("NOBODYNAMED / NAME VITALS", 76, 120);
   ctx.fillStyle = fg;
-  ctx.font = "700 130px 'Iowan Old Style', Palatino, Georgia, serif";
-  ctx.fillText(record.name, 80, 220);
-  ctx.fillStyle = accent;
-  ctx.font = "400 28px 'Iowan Old Style', Palatino, Georgia, serif";
-  ctx.fillText(`${record.sex === "M" ? "Masculine" : "Feminine"} · ${a.firstYear}–${record.yM}`, 80, 258);
-  const statusLabel = { rising: "RISING", stable: "STABLE", declining: "DECLINING", endangered: "ENDANGERED", extinct: "EXTINCT" }[a.status];
-  const statusColor = { rising: "#34d399", stable: "#9ca3af", declining: "#fbbf24", endangered: "#f87171", extinct: "#d1d5db" }[a.status];
-  ctx.font = "600 22px 'SF Mono', ui-monospace, Menlo, monospace";
-  const pw = ctx.measureText(statusLabel).width + 28;
-  ctx.fillStyle = statusColor;
+  ctx.font = "500 162px 'Iowan Old Style', Palatino, Georgia, serif";
+  const nameMax = W - 150;
+  let nameFont = 162;
+  while (ctx.measureText(record.name.toUpperCase()).width > nameMax && nameFont > 78) {
+    nameFont -= 8;
+    ctx.font = `500 ${nameFont}px 'Iowan Old Style', Palatino, Georgia, serif`;
+  }
+  ctx.fillText(record.name.toUpperCase(), 76, 285);
+  ctx.fillStyle = "rgba(247,239,225,0.7)";
+  ctx.font = "400 34px 'Iowan Old Style', Palatino, Georgia, serif";
+  ctx.fillText(`${record.sex === "M" ? "Masculine" : "Feminine"} name, first recorded ${a.firstYear}`, 76, 342);
+  const label = statusLabel(a.status).toUpperCase();
+  const color = statusColor(a.status);
+  ctx.font = "700 26px 'SF Mono', ui-monospace, Menlo, monospace";
+  const pw = ctx.measureText(label).width + 42;
+  ctx.fillStyle = color;
   ctx.beginPath();
-  const pillX = 80, pillY = 290, pillH = 42;
-  if (ctx.roundRect) ctx.roundRect(pillX, pillY, pw, pillH, 21);
+  const pillX = 76, pillY = 390, pillH = 52;
+  if (ctx.roundRect) ctx.roundRect(pillX, pillY, pw, pillH, 26);
   else ctx.rect(pillX, pillY, pw, pillH);
   ctx.fill();
-  ctx.fillStyle = "#0a1a3a";
-  ctx.fillText(statusLabel, pillX + 14, pillY + 28);
+  ctx.fillStyle = "#fff8ed";
+  ctx.fillText(label, pillX + 21, pillY + 35);
   const { series, ym, yM } = record;
   const vals = [];
   for (let y = ym; y <= yM; y++) vals.push(series[y] || 0);
   const maxV = Math.max(1, ...vals);
-  const sx = 80, sy = 360, sw = W - 160, sh = 150;
-  ctx.strokeStyle = "rgba(245,243,234,0.15)";
+  const sx = 76, sy = 640, sw = W - 152, sh = 520;
+  ctx.strokeStyle = "rgba(247,239,225,0.16)";
   ctx.beginPath(); ctx.moveTo(sx, sy + sh); ctx.lineTo(sx + sw, sy + sh); ctx.stroke();
   ctx.strokeStyle = accent; ctx.lineWidth = 3;
   ctx.beginPath();
@@ -208,22 +268,25 @@ function renderShareCard(record) {
   }
   ctx.stroke();
   ctx.lineTo(sx + sw, sy + sh); ctx.lineTo(sx, sy + sh);
-  ctx.fillStyle = "rgba(127,180,255,0.2)"; ctx.fill();
+  ctx.fillStyle = "rgba(217,165,111,0.16)"; ctx.fill();
   let pi = 0;
   for (let i = 0; i < vals.length; i++) if (vals[i] > vals[pi]) pi = i;
   const px = sx + (pi / (vals.length - 1)) * sw;
   const py = sy + sh - (vals[pi] / maxV) * sh;
-  ctx.fillStyle = "#fbbf24";
-  ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#f1d18a";
+  ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = fg;
-  ctx.font = "500 28px 'Iowan Old Style', Palatino, Georgia, serif";
-  ctx.fillText(`Peaked ${a.peakYear} · ${fmt(a.peakCount)}`, 80, sy + sh + 48);
-  ctx.textAlign = "right";
-  ctx.fillText(`${record.yM}: ${fmt(a.latest)}`, W - 80, sy + sh + 48);
+  ctx.font = "500 50px 'Iowan Old Style', Palatino, Georgia, serif";
+  ctx.fillText(`Peak: ${a.peakYear}`, 76, 1275);
+  ctx.fillText(`Down ${a.declineFromPeakPct}% from peak`, 76, 1345);
+  ctx.fillText(`${record.yM}: ${fmt(a.latest)} recorded births`, 76, 1415);
+  ctx.fillStyle = "rgba(247,239,225,0.68)";
+  ctx.font = "400 35px 'Iowan Old Style', Palatino, Georgia, serif";
+  ctx.fillText(`${generationForYear(a.peakYear)} association / ${fmt(a.total)} total SSA records`, 76, 1500);
   ctx.textAlign = "left";
   ctx.fillStyle = accent;
-  ctx.font = "500 22px 'SF Mono', ui-monospace, Menlo, monospace";
-  ctx.fillText("namevitals", 80, H - 50);
+  ctx.font = "700 28px 'SF Mono', ui-monospace, Menlo, monospace";
+  ctx.fillText("nobodynamed.com", 76, H - 90);
   return canvas;
 }
 
@@ -354,6 +417,8 @@ window.NameVitals = {
   fetchMeta,
   searchNames,
   setupSearch,
+  setupSexSegments,
+  rotatePlaceholder,
   analyze,
   buildSparkline,
   renderReport,
