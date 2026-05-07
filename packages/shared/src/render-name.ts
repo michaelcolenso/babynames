@@ -325,7 +325,9 @@ export function renderFullPage(
     var el = document.getElementById("nv-data");
     if (!el || !window.NameVitals) return;
     var record = JSON.parse(el.textContent);
-    NameVitals.attachShareHandlers(document.getElementById("view-name"), record);
+    var container = document.getElementById("view-name");
+    NameVitals.attachShareHandlers(container, record);
+    NameVitals.hydrateEnrichment(container, record);
   })();
 </script>
 </body>
