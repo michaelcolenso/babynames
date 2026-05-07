@@ -6,3 +6,7 @@ pages_build_output_dir = "public"
 binding = "DB"
 database_name = "nobodynamed"
 database_id = "fc4741db-1f6d-457c-b4e4-675a4ea3ebc2"
+
+[[services]]
+binding = "ENRICH_WORKER"
+service = "name-vitals-ingest"
