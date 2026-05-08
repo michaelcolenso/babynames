@@ -32,6 +32,6 @@ SSA_URL = "https://www.ssa.gov/oact/babynames/names.zip"
 # Outside the May release window, weekly is plenty.
 [triggers]
 crons = [
-  "0 14 * 5 *",   # Daily at 14:00 UTC during May (release window)
-  "0 14 * * 1",   # Weekly fallback Mondays 14:00 UTC
+  "0 14 * 5 *",        # Daily at 14:00 UTC during May (release window)
+  "0 14 * 1-4,6-12 1", # Weekly Mondays 14:00 UTC, outside May
 ]
