@@ -36,3 +36,7 @@ jobs:
 
       - name: Deploy web app to Cloudflare Pages
         run: npm run deploy:web
+
+      - name: Deploy ingest worker
+        run: npm run deploy:ingest
+
