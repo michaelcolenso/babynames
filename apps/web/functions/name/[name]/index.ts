@@ -21,6 +21,10 @@ import type { PagesFunction, D1Database } from "@cloudflare/workers-types";
 
 interface Env {
   DB: D1Database;
+  // Optional Amazon Associates tracking ID. When set as a Pages env var,
+  // name pages render an affiliate book-search link. When unset (default),
+  // the link is omitted entirely rather than shipped with an empty `tag=`.
+  AMAZON_ASSOCIATES_TAG?: string;
 }
 
 export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
@@ -103,7 +107,13 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   const url = new URL(ctx.request.url);
   const canonical = `${url.origin}/name/${encodeURIComponent(record.name)}/`;
 
-  const html = renderFullPage(record, cls, { canonical, relatedNames, peerNames, yearTotals });
+  const html = renderFullPage(record, cls, {
+    canonical,
+    relatedNames,
+    peerNames,
+    yearTotals,
+    affiliateTag: ctx.env.AMAZON_ASSOCIATES_TAG,
+  });
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",

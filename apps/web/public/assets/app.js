@@ -204,9 +204,6 @@ function renderReport(record) {
     <button data-share="twin">Find my name's twin →</button>
   </div>
   <div id="twin-result"></div>
-  <div class="affiliate">
-    Further reading: <a rel="nofollow sponsored noopener" target="_blank" href="https://www.amazon.com/s?k=${encodeURIComponent("history of the name " + record.name)}&tag=">books about the name ${record.name}</a>.
-  </div>
 </article>`;
 }
 
