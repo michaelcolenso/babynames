@@ -44,9 +44,19 @@ const PAGES: Record<string, { title: string; eyebrow: string; lede: string; name
 export const onRequestGet: PagesFunction<unknown, "slug"> = async (ctx) => {
   const slug = String(ctx.params.slug || "");
 
+  // Pages Functions take precedence over static assets at root level, so this
+  // catch-all was shadowing /extinct.html, /endangered.html, /comeback.html,
+  // /year.html, /rising.html, /about.html, and /favicon.svg — all of which
+  // exist in /public and were silently returning 404 sitewide.
+  // Any slug that contains a dot is a filename — let the static asset handler
+  // serve it instead of trying to match it as an editorial route.
+  if (slug.includes(".")) return ctx.next();
   if (slug === "extinct") return Response.redirect(new URL("/extinct.html", ctx.request.url).toString(), 301);
   if (slug === "rising") return Response.redirect(new URL("/rising.html", ctx.request.url).toString(), 301);
   if (slug === "endangered") return Response.redirect(new URL("/endangered.html", ctx.request.url).toString(), 301);
+  if (slug === "comeback") return Response.redirect(new URL("/comeback.html", ctx.request.url).toString(), 301);
+  if (slug === "year") return Response.redirect(new URL("/year.html", ctx.request.url).toString(), 301);
+  if (slug === "about") return Response.redirect(new URL("/about.html", ctx.request.url).toString(), 301);
 
   const page = PAGES[slug];
   if (!page) return new Response("not found", { status: 404 });

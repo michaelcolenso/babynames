@@ -11,6 +11,11 @@ import type { NameRecord, RelatedName, Status } from "./schema";
 const fmt = (n: number | null | undefined): string =>
   n === null || n === undefined ? "—" : Number(n).toLocaleString("en-US");
 
+// A name flagged "endangered" by classify.ts (down 90%+ from peak) but still
+// generating this many births per year is more honestly described as "Past
+// peak" — see displayStatus() below for the full rationale.
+const STILL_COMMON_THRESHOLD = 5000;
+
 function generationForYear(year: number): string {
   if (year >= 2013) return "Gen Alpha";
   if (year >= 1997) return "Gen Z";
@@ -80,13 +85,16 @@ function describeStatus(
     };
   }
   if (a.status === "endangered") {
+    const stillCommon = current >= STILL_COMMON_THRESHOLD;
     return {
-      status: "Endangered",
+      status: stillCommon ? "Past peak" : "Endangered",
       trajectory: `Down ${decline}% from peak`,
       vitality,
       rarity,
       stability,
-      summary: `${name} once had enough force to mark a generation, but its current usage is a small remnant of that peak. The name still exists, yet now reads as a timestamp: personal, recognizable, and culturally receding.`,
+      summary: stillCommon
+        ? `${name} once had enough force to define a generation, and it is well off that peak now — yet it remains a mass-culture name. Past peak, but very much still in the room.`
+        : `${name} once had enough force to mark a generation, but its current usage is a small remnant of that peak. The name still exists, yet now reads as a timestamp: personal, recognizable, and culturally receding.`,
     };
   }
   if (a.status === "rising") {
@@ -123,6 +131,10 @@ interface RenderReportOptions {
   relatedNames?: RelatedName[];
   peerNames?: YearTopRow[];
   yearTotals?: YearTotal[];
+  // Amazon Associates tracking ID. When unset or empty, the affiliate
+  // link is omitted entirely rather than emitted with an empty `tag=`
+  // (which earns no commission and looks unfinished).
+  affiliateTag?: string;
 }
 
 export function renderReport(record: NameRecord): string {
@@ -216,10 +228,12 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <button data-share="twin">Find similar names</button>
     </div>
     <div id="twin-result"></div>
-    <div class="affiliate">
+    ${opts.affiliateTag
+      ? `<div class="affiliate">
       Curious about the history of ${escape(record.name)}? Browse
-      <a rel="nofollow sponsored" target="_blank" href="https://www.amazon.com/s?k=${encodeURIComponent("history of the name " + record.name)}&amp;tag=">books about the name ${escape(record.name)} on Amazon</a>.
-    </div>
+      <a rel="nofollow sponsored" target="_blank" href="https://www.amazon.com/s?k=${encodeURIComponent("history of the name " + record.name)}&amp;tag=${encodeURIComponent(opts.affiliateTag)}">books about the name ${escape(record.name)} on Amazon</a>.
+    </div>`
+      : ""}
   </aside>
 </article>`;
 }
@@ -233,10 +247,11 @@ export function renderFullPage(
     relatedNames?: RelatedName[];
     peerNames?: YearTopRow[];
     yearTotals?: YearTotal[];
+    affiliateTag?: string;
   } = { canonical: "" },
 ): string {
   const desc = buildMetaDescription(record, classifyResult);
-  const statusLabel = labelStatus(classifyResult.status);
+  const statusLabel = displayStatus(classifyResult, record.yM);
   const title = `${record.name} name popularity (${statusLabel}, peak ${classifyResult.peakYear}) | NobodyNamed`;
   const dataJson = JSON.stringify({
     name: record.name,
@@ -271,10 +286,11 @@ export function renderFullPage(
 <meta property="og:type" content="article">
 <meta property="og:url" content="${escape(opts.canonical)}">
 <meta property="og:image" content="${escape(ogImageUrl)}">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/svg+xml">
+<meta property="og:image:alt" content="${escape(record.name)} — ${statusLabel}, peak ${classifyResult.peakYear}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${escape(ogImageUrl)}">
+<meta name="twitter:image:alt" content="${escape(record.name)} — ${statusLabel}, peak ${classifyResult.peakYear}">
 <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
 <link rel="stylesheet" href="/assets/style.css">
@@ -308,6 +324,7 @@ export function renderFullPage(
     relatedNames: opts.relatedNames,
     peerNames: opts.peerNames,
     yearTotals: opts.yearTotals,
+    affiliateTag: opts.affiliateTag,
   })}</div>
   <footer class="site">
     <div>
@@ -462,12 +479,31 @@ function labelStatus(status: Status): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
+// Visible status label for headings, titles, pill text, and meta descriptions.
+// Distinct from the internal `status` enum (used for CSS classes, schema.org,
+// and landing-page filtering) because the classifier flags any name down 90%+
+// from peak as "endangered" regardless of absolute volume — which is misleading
+// for high-volume names like Michael (8,189 births in 2024) that are still
+// mass-culture even after a 91% decline. When a name still gets 5,000+ births,
+// "Past peak" reads more honestly than "Endangered".
+function displayStatus(a: ClassifyResult, yM: number): string {
+  if (a.status === "endangered" && a.latestCount >= STILL_COMMON_THRESHOLD) {
+    return "Past peak";
+  }
+  if (a.status === "rising" && a.peakYear < yM - 25 && (a.declinePct ?? 0) > 45) {
+    return "Resurgent";
+  }
+  if (a.status === "declining") return "Stable Decline";
+  return labelStatus(a.status);
+}
+
 function buildMetaDescription(record: NameRecord, a: ClassifyResult): string {
   const sexLabel = record.sex === "M" ? "boys" : "girls";
   const latest = a.latestCount
     ? `${fmt(a.latestCount)} ${sexLabel} were named ${record.name} in ${record.yM}`
     : `no ${sexLabel} were recorded with the name ${record.name} in ${record.yM}`;
-  return `${record.name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} ${sexLabel}; ${latest}. See SSA baby-name popularity, trend, and ${a.status} status.`;
+  const trendDescriptor = a.status === "endangered" && a.latestCount >= STILL_COMMON_THRESHOLD ? "past-peak" : a.status;
+  return `${record.name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} ${sexLabel}; ${latest}. See SSA baby-name popularity, trend, and ${trendDescriptor} status.`;
 }
 
 function buildStructuredData(
