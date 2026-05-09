@@ -9,7 +9,7 @@
 // The staging-swap pattern means reads against /api/* keep seeing
 // consistent old data until the swap completes inside one transaction.
 
-import { META_KEYS, getMeta, setMeta } from "@nv/shared";
+import { META_KEYS, getMeta, setMeta, enrichName } from "@nv/shared";
 import type {
   D1Database,
   ExecutionContext,
@@ -59,15 +59,14 @@ export default {
       const name = (url.searchParams.get("name") ?? "").trim();
       const sex = (url.searchParams.get("sex") ?? "").trim().toUpperCase();
       if (!name) return Response.json({ error: "missing_name" }, { status: 400 });
-      const normalized = name[0]!.toUpperCase() + name.slice(1).toLowerCase();
-      const sexLabel = sex === "M" ? "masculine" : sex === "F" ? "feminine" : "given";
-      const snippet =
-        `${normalized} is a ${sexLabel} name in SSA records. ` +
-        "This enrichment endpoint is live and can be expanded with external sources next.";
-      return Response.json(
-        { name: normalized, sex: sex || null, snippet, sources: [{ id: "ssa", label: "SSA naming records" }] },
-        { headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=86400" } },
+      const result = await enrichName(
+        env.DB,
+        name,
+        sex === "M" || sex === "F" ? sex : undefined,
       );
+      return Response.json(result, {
+        headers: { "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=86400" },
+      });
     }
     return new Response("not found\n", { status: 404 });
   },

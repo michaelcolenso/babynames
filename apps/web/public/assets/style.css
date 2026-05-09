@@ -552,7 +552,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   text-transform: uppercase;
   line-height: 0.82;
   margin-bottom: 0.8rem;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 .sex {
   color: var(--muted);
