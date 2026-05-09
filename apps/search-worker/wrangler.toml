@@ -1,0 +1,13 @@
+name = "name-vitals-search"
+main = "src/index.ts"
+compatibility_date = "2026-05-07"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "name-vitals"
+database_id = "fc4741db-1f6d-457c-b4e4-675a4ea3ebc2"
+
+[observability]
+enabled = true
+head_sampling_rate = 1

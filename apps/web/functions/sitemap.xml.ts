@@ -10,12 +10,12 @@ interface Env {
 
 const STATIC_PATHS = [
   "/",
-  "/extinct.html",
-  "/endangered.html",
-  "/comeback.html",
-  "/rising.html",
-  "/year.html",
-  "/about.html",
+  "/extinct",
+  "/endangered",
+  "/comeback",
+  "/rising",
+  "/year",
+  "/about",
 ];
 
 const MAX_SITEMAP_URLS = 50_000;
