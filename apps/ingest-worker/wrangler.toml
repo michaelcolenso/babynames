@@ -26,12 +26,7 @@ dead_letter_queue = "name-ingest-dlq"
 [vars]
 SSA_URL = "https://www.ssa.gov/oact/babynames/names.zip"
 
-# SSA releases the new year's names dataset on Mother's Day each May. The
-# scheduled() handler in src/index.ts checks the ETag before re-ingesting,
-# so running daily through May costs nothing if the dataset hasn't changed.
-# Outside the May release window, weekly is plenty.
+# SSA releases new data once per year (typically May). The scheduled() handler
+# checks the ETag so runs cost nothing when the dataset hasn't changed.
 [triggers]
-crons = [
-  "0 14 * 5 *",        # Daily at 14:00 UTC during May (release window)
-  "0 14 * 1-4,6-12 1", # Weekly Mondays 14:00 UTC, outside May
-]
+crons = ["0 14 * * 1"] # Weekly Mondays 14:00 UTC
