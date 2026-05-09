@@ -1,6 +1,6 @@
 // Root-level editorial route aliases required for programmatic SEO.
 
-import type { PagesFunction } from "@cloudflare/workers-types";
+import type { Fetcher, PagesFunction } from "@cloudflare/workers-types";
 
 const PAGES: Record<string, { title: string; eyebrow: string; lede: string; names: string[]; body: string; table?: string }> = {
   comebacks: {
@@ -41,16 +41,16 @@ const PAGES: Record<string, { title: string; eyebrow: string; lede: string; name
   },
 };
 
-export const onRequestGet: PagesFunction<unknown, "slug"> = async (ctx) => {
+type Env = { ASSETS: Fetcher };
+
+export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   const slug = String(ctx.params.slug || "");
 
-  // Pages Functions take precedence over static assets at root level, so this
-  // catch-all was shadowing /extinct.html, /endangered.html, /comeback.html,
-  // /year.html, /rising.html, /about.html, and /favicon.svg — all of which
-  // exist in /public and were silently returning 404 sitewide.
-  // Any slug that contains a dot is a filename — let the static asset handler
-  // serve it instead of trying to match it as an editorial route.
-  if (slug.includes(".")) return ctx.next();
+  // Pages Functions take precedence over static assets. Any slug that contains
+  // a dot is a filename (e.g. extinct.html, favicon.svg) — use env.ASSETS to
+  // serve it directly rather than ctx.next(), which is unreliable for static
+  // asset serving from within route functions.
+  if (slug.includes(".")) return ctx.env.ASSETS.fetch(ctx.request);
   if (slug === "extinct") return Response.redirect(new URL("/extinct.html", ctx.request.url).toString(), 301);
   if (slug === "rising") return Response.redirect(new URL("/rising.html", ctx.request.url).toString(), 301);
   if (slug === "endangered") return Response.redirect(new URL("/endangered.html", ctx.request.url).toString(), 301);
