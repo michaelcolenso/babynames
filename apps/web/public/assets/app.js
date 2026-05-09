@@ -164,13 +164,13 @@ function renderReport(record) {
     endangered: ["Endangered", `${record.name} has fallen ${a.declineFromPeakPct}% from its peak and only ${fmt(a.latest)} babies received it in ${record.yM}.`],
     extinct: ["Extinct", `No babies have been named ${record.name} in ${record.yM - a.lastYear} years. It last appeared in ${a.lastYear}, when ${fmt(record.series[a.lastYear])} ${sexLabel} were given the name.`],
   }[a.status];
-  const peakSentence = `Your name peaked in ${a.peakYear}, when <strong>${fmt(a.peakCount)}</strong> ${sexLabel} were named ${record.name}.`;
+  const peakSentence = `${record.name} peaked in ${a.peakYear}, when <strong>${fmt(a.peakCount)}</strong> ${sexLabel} were given the name.`;
   const latestSentence = a.latest
     ? `In ${record.yM}, only <strong>${fmt(a.latest)}</strong> ${sexLabel} were given the name.`
     : `No ${sexLabel} were recorded with this name in ${record.yM} — at least not five of them (the SSA's reporting floor).`;
   const declineSentence = a.status === "rising" || a.declineFromPeakPct <= 5
     ? "" : `<p>Down <strong>${a.declineFromPeakPct}%</strong> from its peak.</p>`;
-  const totalSentence = `<p>All told, about <strong>${fmt(a.total)}</strong> Americans have been named ${record.name} and recorded by the Social Security Administration since ${a.firstYear}.</p>`;
+  const totalSentence = `<p>In all, the Social Security Administration has recorded about <strong>${fmt(a.total)}</strong> Americans named ${record.name} since ${a.firstYear}.</p>`;
 
   const showCollision = (a.status === "declining" || a.status === "endangered" || a.status === "extinct") && a.peakCount >= 500;
   const collisionBox = showCollision ? `<div class="collision-box">
@@ -360,6 +360,7 @@ async function hydrateEnrichment(container, record) {
   if (!container || !record?.name) return;
   const host = container.querySelector(".narrative");
   if (!host) return;
+  if (host.querySelector("p")) return;
   try {
     const r = await fetch(`/api/enrich/${encodeURIComponent(record.name)}?sex=${record.sex || ""}`);
     if (!r.ok) return;

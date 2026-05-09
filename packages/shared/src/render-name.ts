@@ -131,6 +131,7 @@ interface RenderReportOptions {
   relatedNames?: RelatedName[];
   peerNames?: YearTopRow[];
   yearTotals?: YearTotal[];
+  enrichmentSnippet?: string;
   // Amazon Associates tracking ID. When unset or empty, the affiliate
   // link is omitted entirely rather than emitted with an empty `tag=`
   // (which earns no commission and looks unfinished).
@@ -148,8 +149,9 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
   }
   const sexLabel = record.sex === "M" ? "boys" : "girls";
   const dossier = describeStatus(record, a);
+  const openingParagraph = opts.enrichmentSnippet?.trim() || dossier.summary;
 
-  const peakSentence = `Your name peaked in ${a.peakYear}, when <strong>${fmt(a.peakCount)}</strong> ${sexLabel} were named ${escape(record.name)}.`;
+  const peakSentence = `${escape(record.name)} peaked in ${a.peakYear}, when <strong>${fmt(a.peakCount)}</strong> ${sexLabel} were given the name.`;
   const latestSentence = a.latestCount
     ? `In ${record.yM}, only <strong>${fmt(a.latestCount)}</strong> ${sexLabel} were given the name.`
     : `No ${sexLabel} were recorded with this name in ${record.yM} — at least not five of them (the SSA's reporting floor).`;
@@ -159,7 +161,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
     a.status === "rising" || (a.declinePct ?? 0) <= 5
       ? ""
       : `<p>Down <strong>${a.declinePct ?? 0}%</strong> from its peak.</p>`;
-  const totalSentence = `<p>All told, about <strong>${fmt(a.totalCount)}</strong> Americans have been named ${escape(record.name)} and recorded by the Social Security Administration since ${a.firstYear}.</p>`;
+  const totalSentence = `<p>In all, the Social Security Administration has recorded about <strong>${fmt(a.totalCount)}</strong> Americans named ${escape(record.name)} since ${a.firstYear}.</p>`;
   const exploreLinks = renderExploreLinks(a);
   const relatedNames = renderRelatedNames(opts.relatedNames ?? []);
 
@@ -185,9 +187,9 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       </div>
       <div class="dossier-grid">
         <div class="dossier-metric"><div class="label">Peak era</div><div class="value">${a.peakYear}</div></div>
-        <div class="dossier-metric"><div class="label">Peak rank proxy</div><div class="value">${fmt(a.peakCount)}</div></div>
+        <div class="dossier-metric"><div class="label">Peak births</div><div class="value">${fmt(a.peakCount)}</div></div>
         <div class="dossier-metric"><div class="label">Current vitality</div><div class="value">${dossier.vitality}</div></div>
-        <div class="dossier-metric"><div class="label">Generation</div><div class="value">${generationForYear(a.peakYear)}</div></div>
+        <div class="dossier-metric"><div class="label">Peak generation</div><div class="value">${generationForYear(a.peakYear)}</div></div>
       </div>
     </header>
 
@@ -207,7 +209,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
 
   <aside class="report-sidebar">
     <div class="narrative">
-      <p>${dossier.summary}</p>
+      <p>${escape(openingParagraph)}</p>
       <p>${peakSentence}</p>
       <p>${latestSentence}</p>
       ${declineSentence}
@@ -215,7 +217,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
     </div>
     <div class="insight-panel">
       <div class="insight-row"><span>Rarity score</span><strong>${dossier.rarity}</strong></div>
-      <div class="insight-row"><span>Association</span><strong>${generationForYear(a.peakYear)}</strong></div>
+      <div class="insight-row"><span>Peak generation</span><strong>${generationForYear(a.peakYear)}</strong></div>
       <div class="insight-row"><span>Stability</span><strong>${dossier.stability}</strong></div>
       <div class="insight-row"><span>Trajectory</span><strong>${dossier.trajectory}</strong></div>
     </div>
@@ -247,6 +249,7 @@ export function renderFullPage(
     relatedNames?: RelatedName[];
     peerNames?: YearTopRow[];
     yearTotals?: YearTotal[];
+    enrichmentSnippet?: string;
     affiliateTag?: string;
   } = { canonical: "" },
 ): string {
@@ -324,6 +327,7 @@ export function renderFullPage(
     relatedNames: opts.relatedNames,
     peerNames: opts.peerNames,
     yearTotals: opts.yearTotals,
+    enrichmentSnippet: opts.enrichmentSnippet,
     affiliateTag: opts.affiliateTag,
   })}</div>
   <footer class="site">
