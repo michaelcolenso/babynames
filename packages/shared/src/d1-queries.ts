@@ -376,3 +376,38 @@ export async function getNameSpark(
     .first<NameRow & { spark_blob: ArrayBuffer | null }>();
   return r ?? null;
 }
+
+export interface DecadeTopRow {
+  name: string;
+  sex: Sex;
+  decade_total: number;
+  rank: number;
+}
+
+// Top names aggregated across a calendar decade (inclusive start/end).
+// Ranks per sex and returns the top N from each sex bucket.
+export async function topByDecade(
+  db: D1Database,
+  startYear: number,
+  endYear: number,
+  perSex = 25,
+): Promise<DecadeTopRow[]> {
+  const r = await db
+    .prepare(
+      `WITH ranked AS (
+         SELECT n.name, n.sex, SUM(ny.count) AS decade_total,
+                ROW_NUMBER() OVER (PARTITION BY n.sex ORDER BY SUM(ny.count) DESC) AS rank
+           FROM name_years ny
+           JOIN names n ON n.id = ny.name_id
+          WHERE ny.year >= ?1 AND ny.year <= ?2
+          GROUP BY n.id
+       )
+       SELECT name, sex, decade_total, rank
+         FROM ranked
+        WHERE rank <= ?3
+        ORDER BY sex, rank`,
+    )
+    .bind(startYear, endYear, perSex)
+    .all<DecadeTopRow>();
+  return r.results ?? [];
+}
