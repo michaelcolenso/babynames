@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "include": [
+    "/name/*",
+    "/api/*",
+    "/era/*",
+    "/sitemap.xml",
+    "/extinct",
+    "/endangered",
+    "/comeback",
+    "/rising",
+    "/year",
+    "/about"
+  ],
+  "exclude": [
+    "/assets/*",
+    "/favicon.svg",
+    "/robots.txt",
+    "/404.html"
+  ]
+}
