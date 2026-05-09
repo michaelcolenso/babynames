@@ -51,12 +51,9 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   // serve it directly rather than ctx.next(), which is unreliable for static
   // asset serving from within route functions.
   if (slug.includes(".")) return ctx.env.ASSETS.fetch(ctx.request);
-  if (slug === "extinct") return Response.redirect(new URL("/extinct.html", ctx.request.url).toString(), 301);
-  if (slug === "rising") return Response.redirect(new URL("/rising.html", ctx.request.url).toString(), 301);
-  if (slug === "endangered") return Response.redirect(new URL("/endangered.html", ctx.request.url).toString(), 301);
-  if (slug === "comeback") return Response.redirect(new URL("/comeback.html", ctx.request.url).toString(), 301);
-  if (slug === "year") return Response.redirect(new URL("/year.html", ctx.request.url).toString(), 301);
-  if (slug === "about") return Response.redirect(new URL("/about.html", ctx.request.url).toString(), 301);
+  // Serve static HTML pages directly — avoids redirect loops with Cloudflare Pages Pretty URLs.
+  const staticPages = new Set(["extinct", "rising", "endangered", "comeback", "year", "about"]);
+  if (staticPages.has(slug)) return ctx.env.ASSETS.fetch(new URL(`/${slug}.html`, ctx.request.url));
 
   const page = PAGES[slug];
   if (!page) return new Response("not found", { status: 404 });
@@ -86,12 +83,12 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   <header class="site">
     <a class="brand" href="/">NobodyNamed</a>
     <nav>
-      <a href="/extinct.html">Extinct</a>
-      <a href="/endangered.html">Endangered</a>
-      <a href="/comeback.html">Comebacks</a>
-      <a href="/year.html">Birth year</a>
-      <a href="/rising.html">Rising</a>
-      <a href="/about.html">About</a>
+      <a href="/extinct">Extinct</a>
+      <a href="/endangered">Endangered</a>
+      <a href="/comeback">Comebacks</a>
+      <a href="/year">Birth year</a>
+      <a href="/rising">Rising</a>
+      <a href="/about">About</a>
     </nav>
   </header>
   <main>
@@ -104,7 +101,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   </main>
   <footer class="site">
     <div>Built on public-domain data from the Social Security Administration.</div>
-    <div><a href="/about.html">Methodology</a></div>
+    <div><a href="/about">Methodology</a></div>
   </footer>
 </div>
 <script src="/assets/app.js"></script>
