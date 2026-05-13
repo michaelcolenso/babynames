@@ -23,8 +23,13 @@
     </header>
 
     <main id="view-home">
-      <section class="home-hero" aria-labelledby="home-title">
-        <div class="hero-copy">
+      <section class="river-hero" aria-labelledby="home-title">
+        <div class="river-deck">
+          <span class="river-deck-window">1880 → present · ~150 names · Source: SSA</span>
+          <span class="river-deck-thesis">A century-and-a-half of American naming, woven.</span>
+        </div>
+        <svg class="river-svg" aria-label="Streamgraph of US baby name popularity since 1880" role="img"></svg>
+        <div class="river-search">
           <p class="kicker">American name observatory</p>
           <h1 id="home-title">Track the rise and fall of American names.</h1>
           <p class="lede">A cultural archive of identity, fashion, memory, and demographic drift, built from Social Security records since 1880.</p>
@@ -46,16 +51,22 @@
           </div>
           <p class="search-hint">No account. No tracking. Just the statistical biography of a name.</p>
         </div>
+        <noscript>
+          <img class="river-fallback" src="/assets/timeline-fallback.svg" alt="Illustrative timeline of name popularity">
+        </noscript>
+      </section>
 
-        <aside class="hero-aside" aria-label="Archive summary">
-          <p class="archive-note">Names are not stable facts. They behave like cultural organisms: they erupt, saturate classrooms, become jokes, vanish, and return as heirlooms.</p>
-          <div class="hero-index">
-            <span><b>Window</b><i>1880-present</i></span>
-            <span><b>Source</b><i>SSA records</i></span>
-            <span><b>Signal</b><i>Peak / decline / revival</i></span>
-            <span><b>Output</b><i>Cultural dossier</i></span>
+      <section class="section" aria-labelledby="year-title">
+        <div class="year-widget">
+          <p class="eyebrow">Birth year machine</p>
+          <h2 id="year-title">If you were born in 1987...</h2>
+          <p class="lede">Rebuild the classroom roster, then see which names are thriving, collapsing, or already preserved mostly as generational evidence.</p>
+          <div class="year-form">
+            <input id="yr-home" type="number" min="1880" max="2030" placeholder="Enter birth year">
+            <button id="yr-go-home">Open the year</button>
           </div>
-        </aside>
+          <div id="yr-home-result"></div>
+        </div>
       </section>
 
       <section class="section" aria-labelledby="live-status-title">
@@ -72,41 +83,6 @@
           <a class="diagnosis-card tone-endangered" href="/name/Ashley/"><span class="card-name">Ashley</span><span class="card-status">Rapid decline</span><p class="card-note">A generation-defining spike that became timestamped.</p></a>
           <a class="diagnosis-card tone-explosive" href="/name/Karen/"><span class="card-name">Karen</span><span class="card-status">Cultural event</span><p class="card-note">A normal name forced into public mythology.</p></a>
           <a class="diagnosis-card tone-rising" href="/name/Hazel/"><span class="card-name">Hazel</span><span class="card-status">Resurgent</span><p class="card-note">A dormant classic reissued for a new century.</p></a>
-        </div>
-      </section>
-
-      <section class="section" aria-labelledby="timeline-title">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Historical waves</p>
-            <h2 id="timeline-title">Names move through time like weather systems.</h2>
-          </div>
-          <p class="lede">Some explode and burn out. Some collapse slowly. Some survive every era. Some wait a century and return.</p>
-        </div>
-        <div class="timeline-band">
-          <div class="timeline-labels"><span>1880</span><span>1920</span><span>1960</span><span>2000</span><span>Today</span></div>
-          <svg viewBox="0 0 1100 380" preserveAspectRatio="none" role="img" aria-label="Illustrative waves showing name popularity patterns">
-            <line x1="20" y1="330" x2="1080" y2="330" stroke="rgba(246,234,216,0.18)"/>
-            <path d="M20,318 C120,315 190,95 285,108 C395,124 440,310 565,318 C740,330 870,325 1080,322" fill="none" stroke="#d9a56f" stroke-width="3"/>
-            <path d="M20,324 C180,324 270,320 385,316 C480,309 530,125 610,78 C705,22 792,290 895,315 C955,329 1020,326 1080,324" fill="none" stroke="#b36a56" stroke-width="3"/>
-            <path d="M20,302 C175,260 275,210 390,205 C530,198 630,220 745,186 C860,150 970,118 1080,100" fill="none" stroke="#6fa58e" stroke-width="3"/>
-            <path d="M20,210 C145,205 230,218 340,208 C470,197 585,210 700,202 C845,192 955,205 1080,198" fill="none" stroke="#8195ad" stroke-width="2.4"/>
-            <path d="M20,330 C155,327 240,327 360,326 C470,325 540,318 625,292 C740,250 810,132 890,92 C970,53 1035,79 1080,105" fill="none" stroke="#9270a7" stroke-width="3"/>
-          </svg>
-          <p class="timeline-caption">Illustrative patterns: explosive spike, fashion collapse, slow revival, durable classic, comeback arc.</p>
-        </div>
-      </section>
-
-      <section class="section" aria-labelledby="year-title">
-        <div class="year-widget">
-          <p class="eyebrow">Birth year machine</p>
-          <h2 id="year-title">If you were born in 1987...</h2>
-          <p class="lede">Rebuild the classroom roster, then see which names are thriving, collapsing, or already preserved mostly as generational evidence.</p>
-          <div class="year-form">
-            <input id="yr-home" type="number" min="1880" max="2030" placeholder="Enter birth year">
-            <button id="yr-go-home">Open the year</button>
-          </div>
-          <div id="yr-home-result"></div>
         </div>
       </section>
 
@@ -158,6 +134,10 @@
     <footer class="site"><div>nobodynamed is a small data project. Names are forever. Mostly.</div><div>Built on public-domain data from the Social Security Administration.</div><div><a href="/about">About</a> · <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/">SSA source</a></div></footer>
   </div>
   <script src="/assets/app.js"></script><script src="/assets/landing.js"></script>
+  <script type="module">
+    import { renderRiver } from "/assets/river.js";
+    window.__renderRiver = renderRiver;
+  </script>
   <script>
     (async () => {
       const qs = new URLSearchParams(location.search);
@@ -199,8 +179,9 @@
       });
       yrInput.addEventListener("keydown", (e) => { if (e.key === "Enter") yrBtn.click(); });
 
+      let meta = null;
       try {
-        const meta = await NameVitals.fetchMeta();
+        meta = await NameVitals.fetchMeta();
         const latest = meta.yM;
         const top = meta.top10PerYear[String(latest)] || [];
         const topF = top.filter(r => r[1] === "F").slice(0, 10);
@@ -214,6 +195,32 @@
         document.getElementById("popular-grid").innerHTML = fallback
           .map(([name, sex]) => `<a href="/name/${encodeURIComponent(name)}/"><strong>${name}</strong><span class="suffix">${sex === "F" ? "Female" : "Male"}</span></a>`)
           .join("");
+      }
+
+      try {
+        if (!meta) return;
+        const svg = document.querySelector(".river-svg");
+        if (!svg || typeof window.__renderRiver !== "function") return;
+        const cacheKey = "river:" + (meta.dataVersion || "");
+        let river = null;
+        try {
+          const cached = cacheKey ? sessionStorage.getItem(cacheKey) : null;
+          if (cached) river = JSON.parse(cached);
+        } catch (_) { /* sessionStorage disabled / corrupt — ignore */ }
+        if (!river) {
+          const r = await fetch("/api/river");
+          if (!r.ok) return;
+          river = await r.json();
+          try { if (cacheKey) sessionStorage.setItem(cacheKey, JSON.stringify(river)); } catch (_) { /* quota */ }
+        }
+        window.__renderRiver(svg, {
+          names: river.names,
+          totalsByYear: meta.totalsByYear,
+          ym: meta.ym,
+          yM: meta.yM,
+        });
+      } catch (err) {
+        /* river is decorative — never block search on its failure */
       }
     })();
   </script>
