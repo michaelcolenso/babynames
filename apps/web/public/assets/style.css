@@ -203,10 +203,18 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 .search {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+  margin: clamp(1.3rem, 3vw, 2rem) 0 0.55rem;
+}
+.search-extras {
+  display: grid;
+  grid-template-columns: auto auto;
   gap: 0.65rem;
   align-items: stretch;
-  margin: clamp(1.3rem, 3vw, 2rem) 0 0.55rem;
+}
+.search.search--collapsed .search-extras {
+  display: none;
 }
 .search input[type="text"] {
   min-width: 0;
@@ -1022,7 +1030,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
     margin-bottom: 1.5rem;
   }
   header.site nav { justify-content: flex-start; }
-  .search {
+  .search-extras {
     grid-template-columns: 1fr;
   }
   .sex-segments {

@@ -11,7 +11,7 @@
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/style.css?v=2">
+  <link rel="stylesheet" href="/assets/style.css?v=3">
 </head>
 <body>
   <div class="page">
@@ -34,19 +34,21 @@
           <h1 id="home-title">Track the rise and fall of American names.</h1>
           <p class="lede">A cultural archive of identity, fashion, memory, and demographic drift, built from Social Security records since 1880.</p>
 
-          <div class="search">
+          <div class="search search--collapsed">
             <input id="q" type="text" placeholder="Michael" autocomplete="off" spellcheck="false" autofocus>
             <select id="sex" title="Limit by recorded sex">
               <option value="">All</option>
               <option value="F">Female</option>
               <option value="M">Male</option>
             </select>
-            <div class="sex-segments" role="group" aria-label="Recorded sex">
-              <button type="button" data-sex="" class="active">All</button>
-              <button type="button" data-sex="F">Female</button>
-              <button type="button" data-sex="M">Male</button>
+            <div class="search-extras">
+              <div class="sex-segments" role="group" aria-label="Recorded sex">
+                <button type="button" data-sex="" class="active">All</button>
+                <button type="button" data-sex="F">Female</button>
+                <button type="button" data-sex="M">Male</button>
+              </div>
+              <button id="go">Run Name Vitals</button>
             </div>
-            <button id="go">Run Name Vitals</button>
             <div id="suggestions" class="suggestions hidden"></div>
           </div>
           <p class="search-hint">No account. No tracking. Just the statistical biography of a name.</p>
@@ -135,7 +137,7 @@
   </div>
         <script src="/assets/app.js"></script><script src="/assets/landing.js"></script>
     <script type="module">
-      import { renderPulse } from "/assets/pulse.js?v=2";
+      import { renderPulse } from "/assets/pulse.js?v=3";
 
       (async () => {
         const qs = new URLSearchParams(location.search);
@@ -160,6 +162,20 @@
         NameVitals.setupSearch(input, suggestions, go, sex);
         NameVitals.setupSexSegments(document.querySelector(".sex-segments"), sex);
         NameVitals.rotatePlaceholder(input, ["Michael", "Jennifer", "Ashley", "Theodore", "Linda", "Karen", "Hazel"]);
+
+        /* Collapse/expand search controls */
+        const searchBox = document.querySelector(".search");
+        let blurTimer;
+        const setExpanded = (expanded) => {
+          searchBox.classList.toggle("search--collapsed", !expanded);
+          searchBox.classList.toggle("search--expanded", expanded);
+        };
+        input.addEventListener("focus", () => setExpanded(true));
+        input.addEventListener("input", () => setExpanded(true));
+        input.addEventListener("blur", () => {
+          blurTimer = setTimeout(() => { if (!input.value.trim()) setExpanded(false); }, 200);
+        });
+        searchBox.addEventListener("mousedown", () => clearTimeout(blurTimer));
 
         const yrInput = document.getElementById("yr-home");
         const yrBtn = document.getElementById("yr-go-home");
