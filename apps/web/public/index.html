@@ -170,8 +170,7 @@
           yrResult.innerHTML = "<p>Loading...</p>";
           try {
             const r = await fetch(`/api/year/${y}`);
-            if (!r.ok) { const j = await r.json(); yrResult.innerHTML = `<p class="lede">${j.error || "No
-  data."}</p>`; return; }
+            if (!r.ok) { const j = await r.json(); yrResult.innerHTML = `<p class="lede">${j.error || "No data."}</p>`; return; }
             const { rows } = await r.json();
             renderYearTable(y, rows, yrResult);
           } catch(e) { yrResult.innerHTML = "<p>Failed to load. Try again.</p>"; }
