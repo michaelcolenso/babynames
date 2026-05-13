@@ -469,15 +469,21 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 }
 .pulse-anno line {
   stroke: var(--rule);
-  stroke-opacity: 0.5;
-  stroke-dasharray: 3 3;
+  stroke-opacity: 0.22;
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
 }
 .pulse-anno text {
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  fill: var(--muted);
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  fill: var(--ink-soft);
+  stroke: var(--paper);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
   text-anchor: middle;
 }
 .pulse-hoverline {

@@ -197,19 +197,22 @@ export function renderPulse(svgEl, payload) {
 
   const annoG = document.createElementNS(SVG_NS, "g");
   annoG.setAttribute("class", "pulse-anno");
-  for (const e of events) {
+  for (let i = 0; i < events.length; i++) {
+    const e = events[i];
     if (e.year < ym || e.year > yM) continue;
     const ax = xScale(e.year);
+    const rowY = padTop + (i % 2 === 0 ? 16 : 34);
+
     const line = document.createElementNS(SVG_NS, "line");
     line.setAttribute("x1", ax);
     line.setAttribute("x2", ax);
-    line.setAttribute("y1", padTop);
+    line.setAttribute("y1", rowY + 14);
     line.setAttribute("y2", H - padBottom);
     annoG.appendChild(line);
 
     const text = document.createElementNS(SVG_NS, "text");
     text.setAttribute("x", ax);
-    text.setAttribute("y", padTop + 10);
+    text.setAttribute("y", rowY);
     text.setAttribute("text-anchor", "middle");
     text.textContent = e.label;
     annoG.appendChild(text);
