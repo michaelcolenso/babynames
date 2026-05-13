@@ -427,9 +427,9 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   left: 0;
   max-width: 560px;
   padding: 1.4rem 1.6rem;
-  background: color-mix(in oklch, var(--paper) 88%, transparent);
-  -webkit-backdrop-filter: blur(8px) saturate(1.1);
-  backdrop-filter: blur(8px) saturate(1.1);
+  background: color-mix(in oklch, var(--paper) 38%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  backdrop-filter: blur(16px) saturate(1.2);
   border: 1px solid color-mix(in oklch, var(--ink) 12%, transparent);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
