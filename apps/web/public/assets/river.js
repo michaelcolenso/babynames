@@ -48,9 +48,7 @@ function buildStacks(names, totalsByYear, ym, yM) {
   // Inside-out order: sort by sum desc, alternate placement so largest sits
   // in the middle and edges taper to thin streams.
   const sums = values.map((v) => v.reduce((a, b) => a + b, 0));
-  const sortedBySum = names
-    .map((_, i) => i)
-    .sort((a, b) => sums[b] - sums[a]);
+  const sortedBySum = names.map((_, i) => i).sort((a, b) => sums[b] - sums[a]);
   const tops = [];
   const bottoms = [];
   let topSum = 0;
@@ -96,7 +94,7 @@ function buildStacks(names, totalsByYear, ym, yM) {
     let weighted = 0;
     for (let i = 0; i < n; i++) {
       const dF = values[order[i]][j] - values[order[i]][j - 1];
-      weighted += (n - i - 0.5) * dF;
+      weighted += ((n - 2 * i - 1) / 2) * dF;
     }
     if (totalNow > 0) baseline -= weighted / totalNow;
 
@@ -127,9 +125,17 @@ function cardinalSegments(points, tension) {
     const c2y = p2.y - f * (p3.y - p1.y);
     d +=
       " C" +
-      c1x.toFixed(2) + "," + c1y.toFixed(2) + " " +
-      c2x.toFixed(2) + "," + c2y.toFixed(2) + " " +
-      p2.x.toFixed(2) + "," + p2.y.toFixed(2);
+      c1x.toFixed(2) +
+      "," +
+      c1y.toFixed(2) +
+      " " +
+      c2x.toFixed(2) +
+      "," +
+      c2y.toFixed(2) +
+      " " +
+      p2.x.toFixed(2) +
+      "," +
+      p2.y.toFixed(2);
   }
   return d;
 }
@@ -139,13 +145,17 @@ function cardinalSegments(points, tension) {
 function streamPath(points, xScale, yScale, tension = 0.5) {
   if (!points.length) return "";
   const tops = points.map((p) => ({ x: xScale(p.x), y: yScale(p.y1) }));
-  const bottoms = points
-    .map((p) => ({ x: xScale(p.x), y: yScale(p.y0) }))
-    .reverse();
+  const bottoms = points.map((p) => ({ x: xScale(p.x), y: yScale(p.y0) })).reverse();
   let d =
-    "M" + tops[0].x.toFixed(2) + "," + tops[0].y.toFixed(2) +
+    "M" +
+    tops[0].x.toFixed(2) +
+    "," +
+    tops[0].y.toFixed(2) +
     cardinalSegments(tops, tension) +
-    " L" + bottoms[0].x.toFixed(2) + "," + bottoms[0].y.toFixed(2) +
+    " L" +
+    bottoms[0].x.toFixed(2) +
+    "," +
+    bottoms[0].y.toFixed(2) +
     cardinalSegments(bottoms, tension) +
     " Z";
   return d;
@@ -156,13 +166,17 @@ function streamPath(points, xScale, yScale, tension = 0.5) {
 function flatPath(points, xScale, centerY, tension = 0.5) {
   if (!points.length) return "";
   const tops = points.map((p) => ({ x: xScale(p.x), y: centerY }));
-  const bottoms = points
-    .map((p) => ({ x: xScale(p.x), y: centerY }))
-    .reverse();
+  const bottoms = points.map((p) => ({ x: xScale(p.x), y: centerY })).reverse();
   return (
-    "M" + tops[0].x.toFixed(2) + "," + centerY.toFixed(2) +
+    "M" +
+    tops[0].x.toFixed(2) +
+    "," +
+    centerY.toFixed(2) +
     cardinalSegments(tops, tension) +
-    " L" + bottoms[0].x.toFixed(2) + "," + centerY.toFixed(2) +
+    " L" +
+    bottoms[0].x.toFixed(2) +
+    "," +
+    centerY.toFixed(2) +
     cardinalSegments(bottoms, tension) +
     " Z"
   );
@@ -275,10 +289,7 @@ export function renderRiver(svgEl, payload) {
   // centerline together.
   const bloom = document.createElementNS(SVG_NS, "g");
   bloom.setAttribute("class", "river-bloom");
-  bloom.setAttribute(
-    "transform",
-    "matrix(1 0 0 0.001 0 " + (centerY * (1 - 0.001)).toFixed(3) + ")",
-  );
+  bloom.setAttribute("transform", "matrix(1 0 0 0.001 0 " + (centerY * (1 - 0.001)).toFixed(3) + ")");
   svgEl.appendChild(bloom);
 
   const streamPaths = [];
@@ -367,13 +378,11 @@ export function renderRiver(svgEl, payload) {
     const peakYear = target.dataset.peakYear;
     const peakCount = Number(target.dataset.peakCount).toLocaleString("en-US");
     tip.innerHTML =
-      '<strong>' + name + '</strong>' +
-      ' <span>' + sex + '</span><br>' +
-      'peak ' + peakYear + ' · ' + peakCount;
+      "<strong>" + name + "</strong>" + " <span>" + sex + "</span><br>" + "peak " + peakYear + " · " + peakCount;
     tip.style.display = "block";
     const hostRect = svgEl.parentElement.getBoundingClientRect();
-    tip.style.left = (e.clientX - hostRect.left + 14) + "px";
-    tip.style.top = (e.clientY - hostRect.top - 8) + "px";
+    tip.style.left = e.clientX - hostRect.left + 14 + "px";
+    tip.style.top = e.clientY - hostRect.top - 8 + "px";
   };
 
   const onLeave = () => {
@@ -394,8 +403,7 @@ export function renderRiver(svgEl, payload) {
 
   // Bloom reveal. Skip when the user has asked for reduced motion.
   const reduced =
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   if (reduced) {
     bloom.removeAttribute("transform");
