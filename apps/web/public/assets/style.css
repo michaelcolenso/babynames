@@ -477,7 +477,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   font-size: 0.62rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  fill: var(--brand-faded);
+  fill: var(--muted);
   text-anchor: middle;
 }
 .pulse-hoverline {
