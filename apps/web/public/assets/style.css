@@ -467,11 +467,16 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   stroke-opacity: 0.35;
   stroke-dasharray: 2 4;
 }
-.pulse-anno line {
-  stroke: var(--rule);
-  stroke-opacity: 0.22;
+.pulse-anno .anno-leader {
+  stroke: var(--ink);
+  stroke-opacity: 0.18;
   stroke-width: 1;
-  stroke-dasharray: 2 3;
+}
+.pulse-anno .anno-dot {
+  fill: var(--ink);
+  fill-opacity: 0.4;
+  stroke: var(--paper);
+  stroke-width: 1.5px;
 }
 .pulse-anno text {
   font-family: var(--sans);

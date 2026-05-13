@@ -201,18 +201,33 @@ export function renderPulse(svgEl, payload) {
     const e = events[i];
     if (e.year < ym || e.year > yM) continue;
     const ax = xScale(e.year);
-    const rowY = padTop + (i % 2 === 0 ? 16 : 34);
+    const d = data.find(t => t.year === e.year);
+    const dataY = d ? yScale(d.total) : yScale(0);
+
+    // 1957 peak sits at the very top — place its label below
+    const placeAbove = e.year !== 1957;
+    const labelY = placeAbove ? dataY - 14 : dataY + 20;
+    const lineY1 = placeAbove ? dataY - 3 : dataY + 3;
+    const lineY2 = placeAbove ? labelY + 4 : labelY - 4;
 
     const line = document.createElementNS(SVG_NS, "line");
     line.setAttribute("x1", ax);
+    line.setAttribute("y1", lineY1);
     line.setAttribute("x2", ax);
-    line.setAttribute("y1", rowY + 14);
-    line.setAttribute("y2", H - padBottom);
+    line.setAttribute("y2", lineY2);
+    line.setAttribute("class", "anno-leader");
     annoG.appendChild(line);
+
+    const dot = document.createElementNS(SVG_NS, "circle");
+    dot.setAttribute("cx", ax);
+    dot.setAttribute("cy", dataY);
+    dot.setAttribute("r", 2.5);
+    dot.setAttribute("class", "anno-dot");
+    annoG.appendChild(dot);
 
     const text = document.createElementNS(SVG_NS, "text");
     text.setAttribute("x", ax);
-    text.setAttribute("y", rowY);
+    text.setAttribute("y", labelY);
     text.setAttribute("text-anchor", "middle");
     text.textContent = e.label;
     annoG.appendChild(text);
