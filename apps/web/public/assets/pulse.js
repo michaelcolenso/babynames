@@ -9,8 +9,8 @@
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 function fmtK(n) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-  if (n >= 1_000) return Math.round(n / 1_000) + "K";
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+  if (n >= 1000) return Math.round(n / 1000) + "K";
   return String(n);
 }
 
