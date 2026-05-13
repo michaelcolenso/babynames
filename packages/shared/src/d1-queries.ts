@@ -584,6 +584,60 @@ export async function getNameSpark(
   return r ?? null;
 }
 
+export interface RiverNameRow {
+  name: string;
+  sex: Sex;
+  peakYear: number;
+  peakCount: number;
+  series: Record<number, number>;
+}
+
+// Names that have ever ranked top-N in some (year, sex). One query: rank with a
+// window function, dedupe the id set, then re-join to pull every (year, count)
+// for those names. The (year, count DESC) covering index on name_years keeps
+// the inner window cheap.
+export async function riverNames(
+  db: D1Database,
+  perBucket = 30,
+): Promise<RiverNameRow[]> {
+  const r = await db
+    .prepare(
+      `WITH ranked AS (
+         SELECT n.id,
+                ROW_NUMBER() OVER (PARTITION BY ny.year, n.sex ORDER BY ny.count DESC) AS rn
+           FROM name_years ny
+           JOIN names n ON n.id = ny.name_id
+       ),
+       river_ids AS (SELECT DISTINCT id FROM ranked WHERE rn <= ?1)
+       SELECT n.id AS id, n.name AS name, n.sex AS sex,
+              n.peak_year AS peak_year, n.peak_count AS peak_count,
+              ny.year AS year, ny.count AS count
+         FROM river_ids r
+         JOIN names n ON n.id = r.id
+         JOIN name_years ny ON ny.name_id = r.id
+        ORDER BY n.id, ny.year`,
+    )
+    .bind(perBucket)
+    .all<{ id: number; name: string; sex: Sex; peak_year: number; peak_count: number; year: number; count: number }>();
+
+  const grouped = new Map<number, RiverNameRow>();
+  for (const row of r.results ?? []) {
+    let g = grouped.get(row.id);
+    if (!g) {
+      g = {
+        name: row.name,
+        sex: row.sex,
+        peakYear: row.peak_year,
+        peakCount: row.peak_count,
+        series: {},
+      };
+      grouped.set(row.id, g);
+    }
+    g.series[row.year] = row.count;
+  }
+  return [...grouped.values()];
+}
+
 export interface DecadeTopRow {
   name: string;
   sex: Sex;

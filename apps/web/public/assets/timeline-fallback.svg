@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 380" preserveAspectRatio="none" role="img" aria-label="Illustrative waves showing name popularity patterns">
+  <rect width="1100" height="380" fill="#181713"/>
+  <line x1="20" y1="330" x2="1080" y2="330" stroke="rgba(246,234,216,0.18)"/>
+  <path d="M20,318 C120,315 190,95 285,108 C395,124 440,310 565,318 C740,330 870,325 1080,322" fill="none" stroke="#d9a56f" stroke-width="3"/>
+  <path d="M20,324 C180,324 270,320 385,316 C480,309 530,125 610,78 C705,22 792,290 895,315 C955,329 1020,326 1080,324" fill="none" stroke="#b36a56" stroke-width="3"/>
+  <path d="M20,302 C175,260 275,210 390,205 C530,198 630,220 745,186 C860,150 970,118 1080,100" fill="none" stroke="#6fa58e" stroke-width="3"/>
+  <path d="M20,210 C145,205 230,218 340,208 C470,197 585,210 700,202 C845,192 955,205 1080,198" fill="none" stroke="#8195ad" stroke-width="2.4"/>
+  <path d="M20,330 C155,327 240,327 360,326 C470,325 540,318 625,292 C740,250 810,132 890,92 C970,53 1035,79 1080,105" fill="none" stroke="#9270a7" stroke-width="3"/>
+</svg>
