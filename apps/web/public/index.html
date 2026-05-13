@@ -133,95 +133,84 @@
     <div id="view-name"></div>
     <footer class="site"><div>nobodynamed is a small data project. Names are forever. Mostly.</div><div>Built on public-domain data from the Social Security Administration.</div><div><a href="/about">About</a> · <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/">SSA source</a></div></footer>
   </div>
-  <script src="/assets/app.js"></script><script src="/assets/landing.js"></script>
-  <script type="module">
-    import { renderRiver } from "/assets/river.js";
-    window.__renderRiver = renderRiver;
-  </script>
-  <script>
-    (async () => {
-      const qs = new URLSearchParams(location.search);
-      const qName = qs.get("name");
-      if (qName) {
-        if (/^:[a-z][a-z0-9_-]*$/i.test(qName)) {
-          history.replaceState(null, "", "/");
+        <script src="/assets/app.js"></script><script src="/assets/landing.js"></script>
+    <script type="module">
+      import { renderPulse } from "/assets/pulse.js";
+
+      (async () => {
+        const qs = new URLSearchParams(location.search);
+        const qName = qs.get("name");
+        if (qName) {
+          if (/^:[a-z][a-z0-9_-]*$/i.test(qName)) {
+            history.replaceState(null, "", "/");
+            return;
+          }
+
+          const params = new URLSearchParams();
+          if (qs.get("sex")) params.set("sex", qs.get("sex"));
+          const tail = params.toString() ? "?" + params.toString() : "";
+          location.replace(`/name/${encodeURIComponent(qName)}/${tail}`);
           return;
         }
 
-        const params = new URLSearchParams();
-        if (qs.get("sex")) params.set("sex", qs.get("sex"));
-        const tail = params.toString() ? "?" + params.toString() : "";
-        location.replace(`/name/${encodeURIComponent(qName)}/${tail}`);
-        return;
-      }
+        const input = document.getElementById("q");
+        const suggestions = document.getElementById("suggestions");
+        const go = document.getElementById("go");
+        const sex = document.getElementById("sex");
+        NameVitals.setupSearch(input, suggestions, go, sex);
+        NameVitals.setupSexSegments(document.querySelector(".sex-segments"), sex);
+        NameVitals.rotatePlaceholder(input, ["Michael", "Jennifer", "Ashley", "Theodore", "Linda", "Karen", "Hazel"]);
 
-      const input = document.getElementById("q");
-      const suggestions = document.getElementById("suggestions");
-      const go = document.getElementById("go");
-      const sex = document.getElementById("sex");
-      NameVitals.setupSearch(input, suggestions, go, sex);
-      NameVitals.setupSexSegments(document.querySelector(".sex-segments"), sex);
-      NameVitals.rotatePlaceholder(input, ["Michael", "Jennifer", "Ashley", "Theodore", "Linda", "Karen", "Hazel"]);
-
-      const yrInput = document.getElementById("yr-home");
-      const yrBtn = document.getElementById("yr-go-home");
-      const yrResult = document.getElementById("yr-home-result");
-      yrBtn.addEventListener("click", async () => {
-        const y = Number(yrInput.value);
-        if (!y || y < 1880) { yrResult.innerHTML = "<p>Enter a year from 1880 onwards.</p>"; return; }
-        yrResult.innerHTML = "<p>Loading...</p>";
-        try {
-          const r = await fetch(`/api/year/${y}`);
-          if (!r.ok) { const j = await r.json(); yrResult.innerHTML = `<p class="lede">${j.error || "No data."}</p>`; return; }
-          const { rows } = await r.json();
-          renderYearTable(y, rows, yrResult);
-        } catch(e) { yrResult.innerHTML = "<p>Failed to load. Try again.</p>"; }
-      });
-      yrInput.addEventListener("keydown", (e) => { if (e.key === "Enter") yrBtn.click(); });
-
-      let meta = null;
-      try {
-        meta = await NameVitals.fetchMeta();
-        const latest = meta.yM;
-        const top = meta.top10PerYear[String(latest)] || [];
-        const topF = top.filter(r => r[1] === "F").slice(0, 10);
-        const topM = top.filter(r => r[1] === "M").slice(0, 10);
-        const row = (name, sex) => `<a href="/name/${encodeURIComponent(name)}/"><strong>${name}</strong><span class="suffix">${sex === "F" ? "Female" : "Male"}</span></a>`;
-        document.getElementById("popular-grid").innerHTML =
-          topF.map(r => row(r[0], r[1])).join("") +
-          topM.map(r => row(r[0], r[1])).join("");
-      } catch (err) {
-        const fallback = [["Olivia", "F"], ["Emma", "F"], ["Charlotte", "F"], ["Amelia", "F"], ["Sophia", "F"], ["Liam", "M"], ["Noah", "M"], ["Oliver", "M"], ["James", "M"], ["Elijah", "M"]];
-        document.getElementById("popular-grid").innerHTML = fallback
-          .map(([name, sex]) => `<a href="/name/${encodeURIComponent(name)}/"><strong>${name}</strong><span class="suffix">${sex === "F" ? "Female" : "Male"}</span></a>`)
-          .join("");
-      }
-
-      try {
-        if (!meta) return;
-        const svg = document.querySelector(".river-svg");
-        if (!svg || typeof window.__renderRiver !== "function") return;
-        const cacheKey = "river:" + (meta.dataVersion || "");
-        let river = null;
-        try {
-          const cached = cacheKey ? sessionStorage.getItem(cacheKey) : null;
-          if (cached) river = JSON.parse(cached);
-        } catch (_) { /* sessionStorage disabled / corrupt — ignore */ }
-        if (!river) {
-          const r = await fetch("/api/river");
-          if (!r.ok) return;
-          river = await r.json();
-          try { if (cacheKey) sessionStorage.setItem(cacheKey, JSON.stringify(river)); } catch (_) { /* quota */ }
-        }
-        window.__renderRiver(svg, {
-          names: river.names,
-          totalsByYear: meta.totalsByYear,
-          ym: meta.ym,
-          yM: meta.yM,
+        const yrInput = document.getElementById("yr-home");
+        const yrBtn = document.getElementById("yr-go-home");
+        const yrResult = document.getElementById("yr-home-result");
+        yrBtn.addEventListener("click", async () => {
+          const y = Number(yrInput.value);
+          if (!y || y < 1880) { yrResult.innerHTML = "<p>Enter a year from 1880 onwards.</p>"; return; }
+          yrResult.innerHTML = "<p>Loading...</p>";
+          try {
+            const r = await fetch(`/api/year/${y}`);
+            if (!r.ok) { const j = await r.json(); yrResult.innerHTML = `<p class="lede">${j.error || "No
+  data."}</p>`; return; }
+            const { rows } = await r.json();
+            renderYearTable(y, rows, yrResult);
+          } catch(e) { yrResult.innerHTML = "<p>Failed to load. Try again.</p>"; }
         });
-      } catch (err) {
-        /* river is decorative — never block search on its failure */
-      }
-    })();
-  </script>
+        yrInput.addEventListener("keydown", (e) => { if (e.key === "Enter") yrBtn.click(); });
+
+        let meta = null;
+        try {
+          meta = await NameVitals.fetchMeta();
+          const latest = meta.yM;
+          const top = meta.top10PerYear[String(latest)] || [];
+          const topF = top.filter(r => r[1] === "F").slice(0, 10);
+          const topM = top.filter(r => r[1] === "M").slice(0, 10);
+          const row = (name, sex) => `<a href="/name/${encodeURIComponent(name)}/"><strong>${name}</strong><span
+  class="suffix">${sex === "F" ? "Female" : "Male"}</span></a>`;
+          document.getElementById("popular-grid").innerHTML =
+            topF.map(r => row(r[0], r[1])).join("") +
+            topM.map(r => row(r[0], r[1])).join("");
+        } catch (err) {
+          const fallback = [["Olivia", "F"], ["Emma", "F"], ["Charlotte", "F"], ["Amelia", "F"], ["Sophia", "F"],
+  ["Liam", "M"], ["Noah", "M"], ["Oliver", "M"], ["James", "M"], ["Elijah", "M"]];
+          document.getElementById("popular-grid").innerHTML = fallback
+            .map(([name, sex]) => `<a href="/name/${encodeURIComponent(name)}/"><strong>${name}</strong><span
+  class="suffix">${sex === "F" ? "Female" : "Male"}</span></a>`)
+            .join("");
+        }
+
+        try {
+          if (!meta) return;
+          const svg = document.querySelector(".river-svg");
+          if (!svg) return;
+          renderPulse(svg, {
+            totalsByYear: meta.totalsByYear,
+            ym: meta.ym,
+            yM: meta.yM,
+          });
+        } catch (err) {
+          /* pulse is decorative — never block search on its failure */
+        }
+      })();
+    </script>
 </body></html>

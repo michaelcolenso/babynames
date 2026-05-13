@@ -446,21 +446,62 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   margin-bottom: 0.7rem;
   max-width: 520px;
 }
-.river-stream {
-  transition: opacity 200ms ease-out;
-  cursor: pointer;
-}
-.river-stream--dim { opacity: 0.22; }
-.river-stream--focus { opacity: 1; }
-.river-label {
-  font-family: var(--serif);
-  fill: var(--ink);
-  stroke: var(--paper);
-  stroke-width: 3px;
-  paint-order: stroke fill;
-  text-anchor: middle;
+.pulse-area { pointer-events: none; }
+.pulse-line {
+  fill: none;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
   pointer-events: none;
+}
+.pulse-line--f { stroke: #c4786e; stroke-opacity: 0.5; }
+.pulse-line--m { stroke: #6a8aaa; stroke-opacity: 0.45; }
+.pulse-grid line {
+  stroke: var(--rule);
+  stroke-opacity: 0.35;
+  stroke-dasharray: 2 4;
+}
+.pulse-anno line {
+  stroke: var(--rule);
+  stroke-opacity: 0.5;
+  stroke-dasharray: 3 3;
+}
+.pulse-anno text {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  fill: var(--brand-faded);
+  text-anchor: middle;
+}
+.pulse-hoverline {
+  stroke: var(--ink);
+  stroke-opacity: 0.15;
+  stroke-width: 1;
+  pointer-events: none;
+}
+.pulse-tooltip .pulse-tip-year {
+  font-family: var(--serif);
+  font-size: 0.95rem;
   font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+.pulse-tooltip .pulse-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.1rem;
+}
+.pulse-tooltip .pulse-tip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.pulse-tooltip .pulse-tip-total {
+  margin-top: 0.2rem;
+  padding-top: 0.2rem;
+  border-top: 1px solid rgba(247, 239, 225, 0.15);
+  color: rgba(247, 239, 225, 0.7);
 }
 .river-tick {
   font-family: var(--mono);
