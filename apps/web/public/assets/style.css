@@ -402,16 +402,16 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 
 .river-hero {
   position: relative;
-  min-height: clamp(560px, 82vh, 820px);
   margin-bottom: clamp(1.5rem, 5vw, 4.4rem);
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
 }
 .river-svg {
   display: block;
   width: 100%;
-  height: 100%;
-  position: absolute;
-  inset: 0;
+  height: clamp(420px, 60vh, 620px);
+  position: relative;
 }
 .river-deck {
   position: absolute;
@@ -430,15 +430,14 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   z-index: 1;
 }
 .river-search {
-  position: absolute;
-  bottom: 6vh;
-  left: 0;
+  position: relative;
+  bottom: auto;
+  left: auto;
   max-width: 560px;
   padding: 1.4rem 1.6rem;
-  background: color-mix(in oklch, var(--paper) 38%, transparent);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
-  backdrop-filter: blur(16px) saturate(1.2);
-  border: 1px solid color-mix(in oklch, var(--ink) 12%, transparent);
+  margin-top: 0.75rem;
+  background: rgba(251, 248, 241, 0.75);
+  border: 1px solid rgba(23, 21, 17, 0.16);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   z-index: 2;
