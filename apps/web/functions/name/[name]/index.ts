@@ -139,7 +139,7 @@ function renderNotFoundPage(name: string): string {
 <title>${safe} — not found | NobodyNamed</title>
 <link rel="stylesheet" href="/assets/style.css">
 </head><body><div class="page">
-<header class="site"><a class="brand" href="/">NobodyNamed</a></header>
+<header class="site"><a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a></header>
 <div class="report">
   <div class="section-label">404</div>
   <h1>${safe}</h1>
