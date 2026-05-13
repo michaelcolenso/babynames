@@ -1,6 +1,9 @@
 :root {
   color-scheme: light;
   --paper: #f4f0e7;
+  --brand-ink: #0e0e0c;
+  --brand-faded: #b5b0a0;
+  --brand-faded-contrast: #9a968a;
   --paper-deep: #e8dfd0;
   --ink: #171511;
   --ink-soft: #4d4941;
@@ -76,12 +79,16 @@ header.site {
   font-family: var(--sans);
 }
 header.site .brand {
-  color: var(--ink);
-  font-family: var(--mono);
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  color: var(--brand-ink);
+  text-decoration: none;
+}
+
+header.site .brand-logo {
+  display: block;
+  width: clamp(160px, 22vw, 230px);
+  height: auto;
 }
 header.site nav {
   display: flex;
