@@ -11,11 +11,7 @@ import {
   type LandingResponse,
   type LandingRow,
 } from "@nv/shared";
-import type { PagesFunction, D1Database } from "@cloudflare/workers-types";
-
-interface Env {
-  DB: D1Database;
-}
+import type { PagesFunction } from "@cloudflare/workers-types";
 
 const VALID = new Set<LandingKind>(["extinct", "endangered", "rising"]);
 

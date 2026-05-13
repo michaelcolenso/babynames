@@ -1,13 +1,7 @@
-// GET /api/twin/:name
-// Find the names with the most similar trajectory (spark_blob cosine similarity).
-// "Michael and Jennifer have the same lifecycle." — shareable pairing content.
-//
-// Fetches all name sparks with peak_count >= 200 (~30-50k rows, ~2MB),
-// computes cosine similarity in-process, returns top 5 matches per sex.
+// GET /name/:name/twin/ — HTML page showing names with similar trajectories.
 
-import { getNameSpark, getCachedNameSparks, decodeSpark, getMeta, META_KEYS } from "@nv/shared";
+import { getNameSpark, getCachedNameSparks, decodeSpark, renderTwinPage, getMeta, META_KEYS } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
-import type { Sex } from "@nv/shared";
 
 function cosineSim(a: number[], b: number[]): number {
   let dot = 0, normA = 0, normB = 0;
@@ -28,7 +22,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   const nameLower = decodeURIComponent(raw).toLowerCase();
 
   const url = new URL(ctx.request.url);
-  const sexParam = url.searchParams.get("sex") as Sex | null;
+  const sexParam = (url.searchParams.get("sex") ?? "").trim().toUpperCase();
 
   const dataVersion = (await getMeta(ctx.env.DB, META_KEYS.dataVersion)) ?? "dev";
   const [targetRow, allSparks] = await Promise.all([
@@ -37,18 +31,14 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   ]);
 
   if (!targetRow) {
-    return new Response(JSON.stringify({ error: "Name not found" }), {
-      status: 404,
-      headers: { "Content-Type": "application/json; charset=utf-8" },
-    });
+    return new Response("not found", { status: 404 });
   }
 
-  const targetSex = sexParam ?? targetRow.sex;
+  const targetSex = sexParam === "M" || sexParam === "F" ? sexParam : targetRow.sex;
   const targetSpark = targetRow.spark_blob
     ? decodeSpark(targetRow.spark_blob)
     : new Array(60).fill(0);
 
-  // Score all candidates (same sex, exclude the name itself)
   const scored = allSparks
     .filter((r) => r.name.toLowerCase() !== nameLower && r.sex === targetSex)
     .map((r) => ({
@@ -59,17 +49,19 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
 
-  return Response.json(
-    {
-      name: targetRow.name,
-      sex: targetSex,
-      twins: scored.map((r) => ({ name: r.name, sex: r.sex, similarity: +r.score.toFixed(4) })),
-    },
-    {
-      headers: {
-        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
-        "Content-Type": "application/json; charset=utf-8",
-      },
-    },
+  const canonical = `${url.origin}/name/${encodeURIComponent(targetRow.name)}/twin/`;
+  const html = renderTwinPage(
+    targetRow.name,
+    targetSex,
+    scored.map((r) => ({ name: r.name, sex: r.sex, similarity: +r.score.toFixed(4) })),
+    { canonical, origin: url.origin },
   );
+
+  return new Response(html, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
+      Link: `<${canonical}>; rel="canonical"`,
+    },
+  });
 };

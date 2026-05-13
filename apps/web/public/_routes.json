@@ -4,6 +4,7 @@
     "/name/*",
     "/api/*",
     "/era/*",
+    "/year/*",
     "/sitemap.xml",
     "/extinct",
     "/endangered",

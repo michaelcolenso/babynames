@@ -11,11 +11,7 @@ import {
   type LandingResponse,
   type LandingRow,
 } from "@nv/shared";
-import type { PagesFunction, D1Database } from "@cloudflare/workers-types";
-
-interface Env {
-  DB: D1Database;
-}
+import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const [rows, yMStr] = await Promise.all([

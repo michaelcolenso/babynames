@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler pages dev public --compatibility-date=2024-09-09",
+    "dev": "wrangler pages dev public --compatibility-date=2026-05-03",
     "deploy": "wrangler pages deploy public --project-name=nobodynamed",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
@@ -12,7 +12,7 @@
     "@nv/shared": "*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240909.0",
+    "@cloudflare/workers-types": "^4.20260510.1",
     "typescript": "^5.5.4",
     "wrangler": "^4.85.0"
   }

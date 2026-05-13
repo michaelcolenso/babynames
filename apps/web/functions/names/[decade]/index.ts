@@ -4,11 +4,7 @@
 // Follows the same shell + embedded-data pattern as /era/:year/.
 
 import { getMeta, topByDecade, META_KEYS } from "@nv/shared";
-import type { PagesFunction, D1Database } from "@cloudflare/workers-types";
-
-interface Env {
-  DB: D1Database;
-}
+import type { PagesFunction } from "@cloudflare/workers-types";
 
 function parseDecade(raw: string): { label: string; start: number; end: number } | null {
   const m = /^((?:18|19|20)\d{2})s$/.exec(raw);
@@ -93,6 +89,8 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
     rows,
   }).replace(/</g, "\\u003c");
 
+  const ogImageUrl = `/api/og/decade/${decade.label}`;
+
   const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -105,7 +103,9 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
 <meta property="og:description" content="${escapeHtml(desc)}">
 <meta property="og:type" content="article">
 <meta property="og:url" content="/names/${decade.label}/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="${escapeHtml(ogImageUrl)}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${escapeHtml(ogImageUrl)}">
 <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
 <link rel="stylesheet" href="/assets/style.css">
@@ -113,7 +113,7 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
 <body>
 <div class="page">
   <header class="site">
-    <a class="brand" href="/">nobodynamed</a>
+    <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
     <nav>
       <a href="/extinct.html">Extinct</a>
       <a href="/endangered.html">Endangered</a>

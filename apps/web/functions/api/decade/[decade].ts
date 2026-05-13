@@ -3,11 +3,7 @@
 // Aggregates counts across all years in the decade and ranks per sex.
 
 import { getMeta, topByDecade, META_KEYS } from "@nv/shared";
-import type { PagesFunction, D1Database } from "@cloudflare/workers-types";
-
-interface Env {
-  DB: D1Database;
-}
+import type { PagesFunction } from "@cloudflare/workers-types";
 
 function parseDecade(raw: string): { label: string; start: number; end: number } | null {
   const m = /^((?:18|19|20)\d{2})s$/.exec(raw);

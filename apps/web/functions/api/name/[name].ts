@@ -3,11 +3,7 @@
 // client renderer expects: { name, sex, ym, yM, series, other }.
 
 import { getMeta, getNameWithSeries, META_KEYS, type NameRecord, type Sex } from "@nv/shared";
-import type { PagesFunction, D1Database } from "@cloudflare/workers-types";
-
-interface Env {
-  DB: D1Database;
-}
+import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   const name = ctx.params.name;

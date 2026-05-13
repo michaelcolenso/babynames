@@ -8,9 +8,18 @@ export interface SsaFetchResult {
   bytes: Uint8Array;
 }
 
+const MAX_ZIP_BYTES = 50 * 1024 * 1024; // 50 MB — well above the known ~10 MB zip.
+
 export async function fetchNamesZip(url: string): Promise<SsaFetchResult> {
   const r = await fetch(url, { cf: { cacheTtl: 0 } });
   if (!r.ok) throw new Error(`SSA fetch failed: ${r.status} ${r.statusText}`);
+  const contentLength = r.headers.get("content-length");
+  if (contentLength) {
+    const len = Number(contentLength);
+    if (!Number.isFinite(len) || len > MAX_ZIP_BYTES) {
+      throw new Error(`SSA zip too large: ${len} bytes`);
+    }
+  }
   const etag = r.headers.get("etag");
   const buf = new Uint8Array(await r.arrayBuffer());
   return { etag, bytes: buf };

@@ -14,12 +14,8 @@
 // will show no image rather than a broken one.
 
 import { getMeta, getNameSpark, META_KEYS, decodeSpark } from "@nv/shared";
-import type { PagesFunction, D1Database } from "@cloudflare/workers-types";
+import type { PagesFunction } from "@cloudflare/workers-types";
 import type { Status, Sex } from "@nv/shared";
-
-interface Env {
-  DB: D1Database;
-}
 
 const STATUS_COLOR: Record<Status, string> = {
   rising: "#067d4a",

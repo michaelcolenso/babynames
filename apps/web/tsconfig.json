@@ -8,5 +8,5 @@
       "@nv/shared/*": ["../../packages/shared/src/*"]
     }
   },
-  "include": ["functions/**/*.ts"]
+  "include": ["functions/**/*.ts", "functions/**/*.d.ts"]
 }

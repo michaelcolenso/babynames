@@ -2,6 +2,8 @@ export * from "./schema";
 export * from "./classify";
 export * from "./sparkline";
 export * from "./render-name";
+export * from "./render-twin";
+export * from "./render-year";
 export * from "./d1-queries";
 export * from "./spark-blob";
 export * from "./enrich";

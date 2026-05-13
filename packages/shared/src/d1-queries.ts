@@ -3,7 +3,20 @@
 // any further shaping (cache wrapping, JSON serialization).
 
 import type { D1Database } from "@cloudflare/workers-types";
-import type { IndexableName, LandingKind, NameRow, RelatedName, SearchHit, Sex, Status } from "./schema";
+import type {
+  IndexableName,
+  LandingKind,
+  NameDiscoveryCard,
+  NameDiscoveryCluster,
+  NameDiscoveryClusterKind,
+  NameDiscoveryModule,
+  NameRow,
+  RelatedName,
+  SearchHit,
+  Sex,
+  Status,
+} from "./schema";
+import { decodeSpark } from "./spark-blob";
 
 export async function getMeta(db: D1Database, key: string): Promise<string | null> {
   const r = await db
@@ -57,19 +70,50 @@ export async function listIndexableNames(
   const safeOffset = Math.max(0, Math.floor(offset));
   const r = await db
     .prepare(
-      `WITH ranked AS (
-         SELECT name, name_lower, total_count, peak_count, status,
+      `WITH canonical AS (
+         SELECT name, name_lower, total_count, peak_count, latest_count, status, curr_decade, growth_x,
                 ROW_NUMBER() OVER (
                   PARTITION BY name_lower
                   ORDER BY total_count DESC, peak_count DESC
                 ) AS rn
            FROM names
+       ),
+       scored AS (
+         SELECT name, name_lower, total_count, peak_count, latest_count, status, curr_decade, growth_x,
+                (
+                  CASE WHEN total_count >= 1000 THEN 2 ELSE 0 END +
+                  CASE WHEN peak_count >= 100 THEN 2 WHEN peak_count >= 50 THEN 1 ELSE 0 END +
+                  CASE WHEN latest_count >= 50 THEN 2 WHEN latest_count >= 20 THEN 1 ELSE 0 END +
+                  CASE
+                    WHEN COALESCE(curr_decade, 0) >= 250 THEN 2
+                    WHEN COALESCE(curr_decade, 0) >= 100 THEN 1
+                    ELSE 0
+                  END +
+                  CASE
+                    WHEN COALESCE(growth_x, 0) >= 3 THEN 2
+                    WHEN COALESCE(growth_x, 0) >= 1.5 THEN 1
+                    ELSE 0
+                  END +
+                  CASE
+                    WHEN status IN ('stable', 'rising') THEN 1
+                    WHEN status = 'endangered' AND peak_count >= 500 THEN 1
+                    WHEN status = 'extinct' AND total_count >= 5000 THEN 1
+                    ELSE 0
+                  END
+                ) AS quality_score
+           FROM canonical
+          WHERE rn = 1
        )
        SELECT name, name_lower, total_count, peak_count, status
-         FROM ranked
-        WHERE rn = 1
-          AND (total_count >= 1000 OR peak_count >= 100)
-        ORDER BY total_count DESC, peak_count DESC, name
+         FROM scored
+        WHERE quality_score >= 3
+          AND (
+            total_count >= 300
+            OR peak_count >= 40
+            OR latest_count >= 10
+            OR COALESCE(curr_decade, 0) >= 50
+          )
+        ORDER BY quality_score DESC, total_count DESC, peak_count DESC, latest_count DESC, name
         LIMIT ?1 OFFSET ?2`,
     )
     .bind(cappedLimit, safeOffset)
@@ -157,6 +201,133 @@ export async function listRelatedNames(
     .bind(currentNameLower, sex, status, peakYear, cappedLimit)
     .all<RelatedName>();
   return r.results ?? [];
+}
+
+export async function listStatusNeighbors(
+  db: D1Database,
+  currentNameLower: string,
+  sex: Sex,
+  status: Status,
+  totalCount: number,
+  limit = 4,
+): Promise<NameDiscoveryCard[]> {
+  const cappedLimit = Math.max(1, Math.min(8, Math.floor(limit)));
+  const r = await db
+    .prepare(
+      `SELECT name, sex, status, peak_year, peak_count, total_count, latest_count
+         FROM names
+        WHERE name_lower <> ?1
+          AND sex = ?2
+          AND status = ?3
+          AND (
+            total_count >= 750
+            OR peak_count >= 75
+            OR latest_count >= 25
+            OR COALESCE(curr_decade, 0) >= 100
+          )
+        ORDER BY ABS(total_count - ?4), peak_count DESC, latest_count DESC, name
+        LIMIT ?5`,
+    )
+    .bind(currentNameLower, sex, status, totalCount, cappedLimit)
+    .all<NameDiscoveryCard>();
+  return r.results ?? [];
+}
+
+export async function listPeakEraNeighbors(
+  db: D1Database,
+  currentNameLower: string,
+  sex: Sex,
+  peakYear: number,
+  limit = 4,
+): Promise<NameDiscoveryCard[]> {
+  const cappedLimit = Math.max(1, Math.min(8, Math.floor(limit)));
+  const r = await db
+    .prepare(
+      `SELECT name, sex, status, peak_year, peak_count, total_count, latest_count
+         FROM names
+        WHERE name_lower <> ?1
+          AND sex = ?2
+          AND peak_year BETWEEN ?3 AND ?4
+          AND (
+            total_count >= 750
+            OR peak_count >= 75
+            OR latest_count >= 25
+          )
+        ORDER BY ABS(peak_year - ?5), peak_count DESC, total_count DESC, name
+        LIMIT ?6`,
+    )
+    .bind(currentNameLower, sex, peakYear - 8, peakYear + 8, peakYear, cappedLimit)
+    .all<NameDiscoveryCard>();
+  return r.results ?? [];
+}
+
+export async function listCurrentAlternatives(
+  db: D1Database,
+  currentNameLower: string,
+  sex: Sex,
+  limit = 4,
+): Promise<NameDiscoveryCard[]> {
+  const cappedLimit = Math.max(1, Math.min(8, Math.floor(limit)));
+  const r = await db
+    .prepare(
+      `SELECT name, sex, status, peak_year, peak_count, total_count, latest_count
+         FROM names
+        WHERE name_lower <> ?1
+          AND sex = ?2
+          AND latest_count > 0
+          AND (
+            latest_count >= 100
+            OR COALESCE(curr_decade, 0) >= 250
+            OR (status = 'rising' AND COALESCE(growth_x, 0) >= 2)
+          )
+        ORDER BY latest_count DESC, COALESCE(curr_decade, 0) DESC, peak_count DESC, name
+        LIMIT ?3`,
+    )
+    .bind(currentNameLower, sex, cappedLimit)
+    .all<NameDiscoveryCard>();
+  return r.results ?? [];
+}
+
+export async function getNameDiscoveryClusters(
+  db: D1Database,
+  args: {
+    currentNameLower: string;
+    sex: Sex;
+    status: Status;
+    peakYear: number;
+    totalCount: number;
+  },
+): Promise<NameDiscoveryModule> {
+  const [sameStatus, sameEra, currentAlternatives] = await Promise.all([
+    listStatusNeighbors(db, args.currentNameLower, args.sex, args.status, args.totalCount, 4),
+    listPeakEraNeighbors(db, args.currentNameLower, args.sex, args.peakYear, 4),
+    listCurrentAlternatives(db, args.currentNameLower, args.sex, 4),
+  ]);
+
+  const seen = new Set<string>([args.currentNameLower]);
+  const dedupe = (items: NameDiscoveryCard[]): NameDiscoveryCard[] => {
+    const out: NameDiscoveryCard[] = [];
+    for (const item of items) {
+      const key = item.name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(item);
+    }
+    return out;
+  };
+
+  const clusters: NameDiscoveryCluster[] = [
+    { kind: "same-status", title: "Same status", items: dedupe(sameStatus) },
+    { kind: "same-era", title: "From the same era", items: dedupe(sameEra) },
+    { kind: "current-alternatives", title: "Popular alternatives now", items: dedupe(currentAlternatives) },
+  ]
+    .map((cluster) => ({
+      ...cluster,
+      kind: cluster.kind as NameDiscoveryClusterKind,
+    }))
+    .filter((cluster) => cluster.items.length > 0);
+
+  return { clusters };
 }
 
 export async function listLanding(
@@ -355,6 +526,42 @@ export async function listNameSparks(
     )
     .all<SparkBlobRow>();
   return r.results ?? [];
+}
+
+export interface DecodedSparkRow {
+  name: string;
+  sex: Sex;
+  spark: number[];
+}
+
+// Cached variant of listNameSparks. Stores decoded sparks in caches.default
+// keyed by dataVersion so repeated twin lookups skip the D1 scan.
+export async function getCachedNameSparks(
+  db: D1Database,
+  dataVersion: string,
+): Promise<DecodedSparkRow[]> {
+  const cache = caches.default;
+  const cacheKey = new Request(`https://internal/sparks/${dataVersion}`);
+  const cached = await cache.match(cacheKey);
+  if (cached) {
+    const json = (await cached.json()) as DecodedSparkRow[];
+    return json;
+  }
+
+  const rows = await listNameSparks(db);
+  const decoded: DecodedSparkRow[] = [];
+  for (const r of rows) {
+    if (!r.spark_blob) continue;
+    decoded.push({ name: r.name, sex: r.sex, spark: decodeSpark(r.spark_blob) });
+  }
+
+  await cache.put(
+    cacheKey,
+    new Response(JSON.stringify(decoded), {
+      headers: { "Content-Type": "application/json" },
+    }),
+  );
+  return decoded;
 }
 
 // Fetches the spark_blob for a single name+sex. Used by /api/og.

@@ -3,11 +3,7 @@
 // the year you were born?" feature. Classic viral bait.
 
 import { getMeta, topBySpecificYear, META_KEYS } from "@nv/shared";
-import type { PagesFunction, D1Database } from "@cloudflare/workers-types";
-
-interface Env {
-  DB: D1Database;
-}
+import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequestGet: PagesFunction<Env, "year"> = async (ctx) => {
   const raw = ctx.params.year;

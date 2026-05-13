@@ -1,6 +1,9 @@
 :root {
   color-scheme: light;
   --paper: #f4f0e7;
+  --brand-ink: #0e0e0c;
+  --brand-faded: #b5b0a0;
+  --brand-faded-contrast: #9a968a;
   --paper-deep: #e8dfd0;
   --ink: #171511;
   --ink-soft: #4d4941;
@@ -76,12 +79,16 @@ header.site {
   font-family: var(--sans);
 }
 header.site .brand {
-  color: var(--ink);
-  font-family: var(--mono);
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  color: var(--brand-ink);
+  text-decoration: none;
+}
+
+header.site .brand-logo {
+  display: block;
+  width: clamp(160px, 22vw, 230px);
+  height: auto;
 }
 header.site nav {
   display: flex;
@@ -775,6 +782,22 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   letter-spacing: 0.12em;
   text-transform: uppercase;
   margin-bottom: 0.75rem;
+}
+.discovery-module {
+  margin-top: 0.8rem;
+}
+.discovery-cluster + .discovery-cluster {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+.discovery-cluster h3 {
+  margin: 0 0 0.7rem;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+}
+.discovery-grid {
+  grid-template-columns: 1fr;
 }
 .related-grid {
   grid-template-columns: 1fr;

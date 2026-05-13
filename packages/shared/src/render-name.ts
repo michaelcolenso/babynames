@@ -6,7 +6,14 @@
 import { classify, type ClassifyResult } from "./classify";
 import type { YearTopRow, YearTotal } from "./d1-queries";
 import { buildSparkline } from "./sparkline";
-import type { NameRecord, RelatedName, Status } from "./schema";
+import type {
+  NameDiscoveryCard,
+  NameDiscoveryClusterKind,
+  NameDiscoveryModule,
+  NameRecord,
+  RelatedName,
+  Status,
+} from "./schema";
 
 const fmt = (n: number | null | undefined): string =>
   n === null || n === undefined ? "—" : Number(n).toLocaleString("en-US");
@@ -129,6 +136,7 @@ function describeStatus(
 
 interface RenderReportOptions {
   relatedNames?: RelatedName[];
+  discovery?: NameDiscoveryModule;
   peerNames?: YearTopRow[];
   yearTotals?: YearTotal[];
   enrichmentSnippet?: string;
@@ -162,8 +170,9 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       ? ""
       : `<p>Down <strong>${a.declinePct ?? 0}%</strong> from its peak.</p>`;
   const totalSentence = `<p>In all, the Social Security Administration has recorded about <strong>${fmt(a.totalCount)}</strong> Americans named ${escape(record.name)} since ${a.firstYear}.</p>`;
-  const exploreLinks = renderExploreLinks(a);
+  const exploreLinks = renderExploreLinks(record, a);
   const relatedNames = renderRelatedNames(opts.relatedNames ?? []);
+  const discoveryModule = renderDiscoveryModule(opts.discovery);
 
   const showCollision =
     (a.status === "declining" || a.status === "endangered" || a.status === "extinct") && a.peakCount >= 500;
@@ -223,6 +232,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
     </div>
     ${collisionBox}
     ${relatedNames}
+    ${discoveryModule}
     <div class="share-row">
       <button class="primary" data-share="card">Download share card</button>
       <button data-share="twitter">Share</button>
@@ -247,6 +257,7 @@ export function renderFullPage(
     canonical: string;
     siteName?: string;
     relatedNames?: RelatedName[];
+    discovery?: NameDiscoveryModule;
     peerNames?: YearTopRow[];
     yearTotals?: YearTotal[];
     enrichmentSnippet?: string;
@@ -325,6 +336,7 @@ export function renderFullPage(
   </header>
   <div id="view-name">${renderReportWithOptions(record, {
     relatedNames: opts.relatedNames,
+    discovery: opts.discovery,
     peerNames: opts.peerNames,
     yearTotals: opts.yearTotals,
     enrichmentSnippet: opts.enrichmentSnippet,
@@ -446,7 +458,7 @@ function reportNumber(name: string, sex: string): string {
   return String(Math.abs(hash) % 100000).padStart(5, "0");
 }
 
-function renderExploreLinks(a: ClassifyResult): string {
+function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   const cohort: Partial<Record<Status, [string, string]>> = {
     extinct: ["More extinct names", "/extinct.html"],
     endangered: ["More endangered names", "/endangered.html"],
@@ -458,6 +470,8 @@ function renderExploreLinks(a: ClassifyResult): string {
     links.push(`<a href="${statusLink[1]}">${statusLink[0]}</a>`);
   }
   links.push(`<a href="/year.html?year=${a.peakYear}">Top names from ${a.peakYear}</a>`);
+  links.push(`<a href="/names/${decadeLabel(a.peakYear)}/">Names from the ${decadeLabel(a.peakYear)}</a>`);
+  links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/">Names like ${escape(record.name)}</a>`);
 
   return `<nav class="report-links" aria-label="Explore more name data">${links.join("")}</nav>`;
 }
@@ -477,6 +491,49 @@ function renderRelatedNames(relatedNames: RelatedName[]): string {
   <h2 id="related-names-title">Related names</h2>
   <div class="related-grid">${items}</div>
 </section>`;
+}
+
+function renderDiscoveryModule(module: NameDiscoveryModule | undefined): string {
+  if (!module?.clusters.length) return "";
+  const clusters = module.clusters
+    .map((cluster) => {
+      const items = cluster.items.map((item) => renderDiscoveryCard(item, cluster.kind)).join("");
+      return `<div class="discovery-cluster">
+  <h3>${escape(cluster.title)}</h3>
+  <div class="related-grid discovery-grid">${items}</div>
+</div>`;
+    })
+    .join("");
+
+  return `<section class="related-names discovery-module" aria-labelledby="discovery-module-title">
+  <h2 id="discovery-module-title">Browse nearby names</h2>
+  ${clusters}
+</section>`;
+}
+
+function renderDiscoveryCard(card: NameDiscoveryCard, kind: NameDiscoveryClusterKind): string {
+  const detail = discoveryDetail(card, kind);
+  return `<a href="/name/${encodeURIComponent(card.name)}/">
+  <strong>${escape(card.name)}</strong>
+  <span>${escape(detail)}</span>
+</a>`;
+}
+
+function discoveryDetail(card: NameDiscoveryCard, kind: NameDiscoveryClusterKind): string {
+  const sexLabel = card.sex === "M" ? "Masculine" : "Feminine";
+  const statusLabel = labelStatus(card.status);
+  if (kind === "current-alternatives") {
+    return `${sexLabel} · ${statusLabel} · ${fmt(card.latest_count)} births in the latest year`;
+  }
+  if (kind === "same-era") {
+    return `${sexLabel} · ${statusLabel} · peak ${card.peak_year}`;
+  }
+  return `${sexLabel} · ${statusLabel} · ${fmt(card.total_count)} total births`;
+}
+
+function decadeLabel(year: number): string {
+  const decadeStart = Math.floor(year / 10) * 10;
+  return `${decadeStart}s`;
 }
 
 function labelStatus(status: Status): string {
@@ -507,43 +564,54 @@ function buildMetaDescription(record: NameRecord, a: ClassifyResult): string {
     ? `${fmt(a.latestCount)} ${sexLabel} were named ${record.name} in ${record.yM}`
     : `no ${sexLabel} were recorded with the name ${record.name} in ${record.yM}`;
   const trendDescriptor = a.status === "endangered" && a.latestCount >= STILL_COMMON_THRESHOLD ? "past-peak" : a.status;
-  return `${record.name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} ${sexLabel}; ${latest}. See SSA baby-name popularity, trend, and ${trendDescriptor} status.`;
+  return `${record.name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} ${sexLabel}; ${latest}. See SSA baby-name popularity, trend, ${trendDescriptor} status, and nearby names from the same era.`;
 }
 
 function buildStructuredData(
   record: NameRecord,
   a: ClassifyResult,
   opts: { canonical: string; title: string; description: string; origin: string },
-): object {
-  return {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    name: opts.title,
-    url: opts.canonical,
-    description: opts.description,
-    isPartOf: {
-      "@type": "WebSite",
-      name: "NobodyNamed",
-      url: opts.origin || opts.canonical,
-    },
-    mainEntity: {
-      "@type": "Dataset",
-      name: `SSA baby-name counts for ${record.name}`,
-      description: `Annual Social Security Administration baby-name counts for ${record.name} from ${a.firstYear} through ${record.yM}.`,
-      temporalCoverage: `${a.firstYear}/${record.yM}`,
-      creator: {
-        "@type": "Organization",
-        name: "Social Security Administration",
-        url: "https://www.ssa.gov/oact/babynames/",
-      },
-      variableMeasured: [
-        { "@type": "PropertyValue", name: "Peak year", value: a.peakYear },
-        { "@type": "PropertyValue", name: "Peak count", value: a.peakCount },
-        { "@type": "PropertyValue", name: "Latest count", value: a.latestCount },
-        { "@type": "PropertyValue", name: "Vital status", value: a.status },
+): object[] {
+  const origin = opts.origin || opts.canonical;
+  return [
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: origin + "/" },
+        { "@type": "ListItem", position: 2, name: `${escape(record.name)} name dossier`, item: opts.canonical },
       ],
     },
-  };
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: opts.title,
+      url: opts.canonical,
+      description: opts.description,
+      isPartOf: {
+        "@type": "WebSite",
+        name: "NobodyNamed",
+        url: origin,
+      },
+      mainEntity: {
+        "@type": "Dataset",
+        name: `SSA baby-name counts for ${record.name}`,
+        description: `Annual Social Security Administration baby-name counts for ${record.name} from ${a.firstYear} through ${record.yM}.`,
+        temporalCoverage: `${a.firstYear}/${record.yM}`,
+        creator: {
+          "@type": "Organization",
+          name: "Social Security Administration",
+          url: "https://www.ssa.gov/oact/babynames/",
+        },
+        variableMeasured: [
+          { "@type": "PropertyValue", name: "Peak year", value: a.peakYear },
+          { "@type": "PropertyValue", name: "Peak count", value: a.peakCount },
+          { "@type": "PropertyValue", name: "Latest count", value: a.latestCount },
+          { "@type": "PropertyValue", name: "Vital status", value: a.status },
+        ],
+      },
+    },
+  ];
 }
 
 function escape(s: string): string {

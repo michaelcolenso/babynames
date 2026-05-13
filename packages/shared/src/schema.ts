@@ -57,6 +57,31 @@ export interface RelatedName {
   total_count: number;
 }
 
+export type NameDiscoveryClusterKind =
+  | "same-status"
+  | "same-era"
+  | "current-alternatives";
+
+export interface NameDiscoveryCard {
+  name: string;
+  sex: Sex;
+  status: Status;
+  peak_year: number;
+  peak_count: number;
+  total_count: number;
+  latest_count: number;
+}
+
+export interface NameDiscoveryCluster {
+  kind: NameDiscoveryClusterKind;
+  title: string;
+  items: NameDiscoveryCard[];
+}
+
+export interface NameDiscoveryModule {
+  clusters: NameDiscoveryCluster[];
+}
+
 // API: GET /api/name/:name
 export interface NameRecord {
   name: string;

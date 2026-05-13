@@ -8,5 +8,5 @@
       "@nv/shared/*": ["../../packages/shared/src/*"]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "worker-configuration.d.ts"]
 }

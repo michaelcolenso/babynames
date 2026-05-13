@@ -1,6 +1,6 @@
 name = "name-vitals-ingest"
 main = "src/index.ts"
-compatibility_date = "2024-09-09"
+compatibility_date = "2026-05-03"
 compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]
@@ -28,5 +28,9 @@ SSA_URL = "https://www.ssa.gov/oact/babynames/names.zip"
 
 # SSA releases new data once per year (typically May). The scheduled() handler
 # checks the ETag so runs cost nothing when the dataset hasn't changed.
+[observability]
+enabled = true
+head_sampling_rate = 1
+
 [triggers]
 crons = ["0 14 * * 1"] # Weekly Mondays 14:00 UTC
