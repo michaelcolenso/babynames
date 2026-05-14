@@ -449,7 +449,10 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 }
 .tapestry-spark-wrap {
   width: 100%;
-  height: 42px;
+  height: 52px;
+}
+.tapestry-cell {
+  padding: 0.65rem 0.7rem 0.5rem;
 }
 .tapestry-spark {
   width: 100%;
