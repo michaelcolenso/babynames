@@ -1,7 +1,11 @@
-// Name Tapestry — a grid of miniature sparklines showing iconic name trajectories.
-// Each cell is a self-contained SVG sparkline. Hover reveals name + peak + status.
+// Hero tapestry — Rise & Fall small-multiples treatment.
+// Each card: name label, peak metadata, sparkline with area fill, peak dot.
+// Sorted by peak year. Colored by sex.
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+
+const BOY_COLOR = "#465d75";
+const GIRL_COLOR = "#a85d5d";
 
 function cardinalSegments(points, tension = 0.5) {
   const f = (1 - tension) / 6;
@@ -20,65 +24,104 @@ function cardinalSegments(points, tension = 0.5) {
   return d;
 }
 
+// Names sorted by peak year, with realistic peak percentages.
+// Data is sparse: {year: count} — counts are relative/illustrative.
 const NAMES = [
-  // Mountains (spike & crash)
-  { name: "Michael", sex: "M", status: "declining", color: "#a96720", peakYear: 1957,
-    data: { 1880:500, 1900:1500, 1920:6000, 1940:18000, 1950:55000, 1957:88000, 1970:75000, 1990:45000, 2010:15000, 2020:10000 } },
-  { name: "Jennifer", sex: "F", status: "declining", color: "#a96720", peakYear: 1970,
-    data: { 1930:50, 1940:200, 1950:1500, 1960:15000, 1970:85000, 1980:58000, 1990:25000, 2000:8000, 2010:4000, 2020:1500 } },
-  { name: "Ashley", sex: "F", status: "endangered", color: "#a96720", peakYear: 1987,
-    data: { 1960:500, 1970:3000, 1980:35000, 1990:45000, 1995:35000, 2000:20000, 2010:8000, 2020:3000 } },
-  { name: "Linda", sex: "F", status: "endangered", color: "#a96720", peakYear: 1947,
-    data: { 1920:500, 1930:2000, 1940:15000, 1947:55000, 1950:50000, 1960:35000, 1970:15000, 1980:5000, 1990:2000, 2000:800, 2020:300 } },
-  { name: "Jessica", sex: "F", status: "declining", color: "#a96720", peakYear: 1987,
-    data: { 1950:100, 1960:500, 1970:5000, 1980:35000, 1990:45000, 1995:30000, 2000:18000, 2010:8000, 2020:3000 } },
-  { name: "Jason", sex: "M", status: "declining", color: "#a96720", peakYear: 1977,
-    data: { 1950:200, 1960:2000, 1970:35000, 1980:45000, 1990:30000, 2000:15000, 2010:8000, 2020:5000 } },
-  { name: "Mary", sex: "F", status: "declining", color: "#a96720", peakYear: 1950,
-    data: { 1880:8000, 1900:12000, 1920:15000, 1930:18000, 1940:20000, 1950:25000, 1960:20000, 1970:15000, 1980:8000, 1990:5000, 2000:4000, 2010:3000, 2020:2500 } },
-  { name: "Robert", sex: "M", status: "declining", color: "#a96720", peakYear: 1953,
-    data: { 1880:8000, 1900:10000, 1920:15000, 1930:25000, 1940:35000, 1950:50000, 1960:45000, 1970:35000, 1980:25000, 1990:15000, 2000:10000, 2020:6000 } },
-  // Steady / rolling
-  { name: "Elizabeth", sex: "F", status: "stable", color: "#465d75", peakYear: 1980,
-    data: { 1880:8000, 1900:7000, 1920:9000, 1940:12000, 1950:15000, 1960:12000, 1980:18000, 1990:15000, 2000:14000, 2010:13000, 2020:12000 } },
-  { name: "William", sex: "M", status: "stable", color: "#465d75", peakYear: 1950,
-    data: { 1880:15000, 1900:12000, 1920:10000, 1940:12000, 1950:18000, 1960:15000, 1980:18000, 1990:16000, 2000:17000, 2010:18000, 2020:17000 } },
-  { name: "James", sex: "M", status: "stable", color: "#465d75", peakYear: 1960,
-    data: { 1880:10000, 1900:12000, 1920:18000, 1940:25000, 1950:45000, 1960:50000, 1970:45000, 1980:35000, 1990:28000, 2000:22000, 2010:18000, 2020:15000 } },
-  { name: "David", sex: "M", status: "stable", color: "#465d75", peakYear: 1960,
-    data: { 1880:3000, 1900:5000, 1920:8000, 1940:15000, 1950:35000, 1960:40000, 1970:35000, 1980:25000, 1990:20000, 2000:15000, 2010:12000, 2020:10000 } },
-  { name: "Emma", sex: "F", status: "stable", color: "#465d75", peakYear: 2003,
-    data: { 1880:10000, 1900:8000, 1920:6000, 1940:4000, 1960:2000, 1980:1500, 1990:2000, 2000:15000, 2010:18000, 2020:16000 } },
-  { name: "Noah", sex: "M", status: "stable", color: "#465d75", peakYear: 2013,
-    data: { 1990:5000, 1995:8000, 2000:15000, 2005:25000, 2010:35000, 2015:30000, 2020:25000 } },
-  { name: "Sophia", sex: "F", status: "stable", color: "#465d75", peakYear: 2012,
-    data: { 1990:2000, 1995:5000, 2000:12000, 2005:18000, 2010:22000, 2015:20000, 2020:18000 } },
-  { name: "Patricia", sex: "F", status: "declining", color: "#a96720", peakYear: 1951,
-    data: { 1880:500, 1900:1000, 1920:3000, 1930:8000, 1940:15000, 1950:35000, 1960:30000, 1970:20000, 1980:8000, 1990:3000, 2000:1000, 2020:500 } },
-  // Valleys (U-shape revival)
-  { name: "Theodore", sex: "M", status: "resurgent", color: "#74558c", peakYear: 2020,
-    data: { 1880:8000, 1900:6500, 1920:4000, 1940:2500, 1960:1500, 1980:1000, 1990:1500, 2000:3000, 2010:8000, 2015:12000, 2020:15000 } },
-  { name: "Hazel", sex: "F", status: "resurgent", color: "#74558c", peakYear: 1910,
-    data: { 1880:3000, 1900:4000, 1920:3000, 1940:1500, 1960:500, 1980:200, 1990:300, 2000:800, 2010:3000, 2020:6000 } },
-  { name: "Eleanor", sex: "F", status: "rising", color: "#22745d", peakYear: 1920,
-    data: { 1880:5000, 1900:6000, 1920:8000, 1940:6000, 1960:3000, 1980:1500, 1990:1500, 2000:2000, 2010:4000, 2020:8000 } },
-  { name: "Violet", sex: "F", status: "rising", color: "#22745d", peakYear: 1915,
-    data: { 1880:4000, 1900:3500, 1920:2500, 1940:1500, 1960:800, 1980:500, 1990:600, 2000:1500, 2010:4000, 2020:7000 } },
-  // Slides / ramps
-  { name: "Oliver", sex: "M", status: "rising", color: "#22745d", peakYear: 2020,
-    data: { 1880:3000, 1900:2500, 1920:2000, 1940:1500, 1960:1000, 1980:800, 1990:1500, 2000:5000, 2010:12000, 2020:18000 } },
-  { name: "Charlotte", sex: "F", status: "rising", color: "#22745d", peakYear: 2020,
-    data: { 1880:3000, 1900:2500, 1920:2000, 1940:1500, 1960:1000, 1980:1500, 1990:3000, 2000:6000, 2010:10000, 2020:15000 } },
-  { name: "Bertha", sex: "F", status: "extinct", color: "#3c3a35", peakYear: 1880,
-    data: { 1880:15000, 1890:12000, 1900:8000, 1920:4000, 1940:1500, 1960:300, 1980:0, 2000:0, 2020:0 } },
-  { name: "Mildred", sex: "F", status: "extinct", color: "#3c3a35", peakYear: 1920,
-    data: { 1880:8000, 1900:10000, 1920:12000, 1930:8000, 1940:4000, 1960:500, 1980:0, 2000:0, 2020:0 } },
+  // 1880s
+  { name: "John", sex: "M", peakYear: 1880, peakPct: 8.2,
+    data: {1880:9500,1890:8500,1900:7800,1910:7200,1920:6800,1930:6200,1940:5800,1950:5200,1960:4000,1970:2800,1980:1800,1990:1200,2000:900,2020:600} },
+  { name: "William", sex: "M", peakYear: 1880, peakPct: 8.1,
+    data: {1880:9400,1890:8200,1900:7000,1920:5500,1940:4800,1950:5200,1960:4500,1970:3800,1980:4200,1990:4800,2000:5200,2010:5800,2020:5600} },
+  { name: "Mary", sex: "F", peakYear: 1880, peakPct: 7.1,
+    data: {1880:8800,1890:8200,1900:7800,1910:7200,1920:6800,1930:6200,1940:5800,1950:5200,1960:3800,1970:2200,1980:1200,1990:800,2000:600,2020:500} },
+  { name: "Charles", sex: "M", peakYear: 1880, peakPct: 4.5,
+    data: {1880:5200,1890:4800,1900:4200,1910:3800,1920:3500,1930:3200,1940:3000,1950:2800,1960:2200,1970:1800,1980:1500,1990:1200,2000:1000,2020:900} },
+  { name: "Anna", sex: "F", peakYear: 1880, peakPct: 2.9,
+    data: {1880:3800,1890:3200,1900:2800,1910:2200,1920:1800,1930:1500,1940:1200,1950:1000,1960:800,1970:700,1980:900,1990:1200,2000:1800,2010:2500,2020:2200} },
+
+  // 1890s–1900s
+  { name: "Helen", sex: "F", peakYear: 1898, peakPct: 3.6,
+    data: {1880:800,1890:2200,1898:4800,1900:4500,1910:3800,1920:2800,1930:1800,1940:1000,1950:600,1960:300,1970:200,1980:100,2000:50,2020:30} },
+  { name: "Ruth", sex: "F", peakYear: 1900, peakPct: 2.0,
+    data: {1880:400,1890:1200,1900:2800,1910:3200,1920:2800,1930:1800,1940:1000,1950:500,1960:200,1970:100,1980:50,2000:20,2020:10} },
+
+  // 1910s–1920s
+  { name: "Dorothy", sex: "F", peakYear: 1924, peakPct: 3.3,
+    data: {1900:800,1910:2200,1920:4500,1924:5200,1930:4800,1940:3200,1950:1800,1960:600,1970:200,1980:100,1990:50,2000:30,2020:20} },
+  { name: "Betty", sex: "F", peakYear: 1931, peakPct: 3.3,
+    data: {1910:200,1920:800,1930:3800,1931:4200,1940:3200,1950:1800,1960:600,1970:200,1980:50,1990:20,2000:10,2020:5} },
+  { name: "Margaret", sex: "F", peakYear: 1921, peakPct: 2.5,
+    data: {1900:2200,1910:3200,1920:3800,1930:3200,1940:2800,1950:2200,1960:1500,1970:800,1980:500,1990:400,2000:350,2010:400,2020:380} },
+
+  // 1930s–1940s
+  { name: "Robert", sex: "M", peakYear: 1931, peakPct: 5.7,
+    data: {1910:2200,1920:3800,1930:5200,1931:5800,1940:4800,1950:4200,1960:3500,1970:2800,1980:2200,1990:1800,2000:1200,2010:800,2020:600} },
+  { name: "Barbara", sex: "F", peakYear: 1938, peakPct: 3.4,
+    data: {1920:400,1930:2800,1938:4200,1940:3800,1950:2200,1960:800,1970:300,1980:100,1990:50,2000:30,2020:15} },
+  { name: "James", sex: "M", peakYear: 1947, peakPct: 5.5,
+    data: {1920:3200,1930:4200,1940:4800,1947:5500,1950:5200,1960:4500,1970:3800,1980:3200,1990:2800,2000:2200,2010:1800,2020:1500} },
+  { name: "Linda", sex: "F", peakYear: 1947, peakPct: 5.5,
+    data: {1920:100,1930:600,1940:2800,1947:5500,1950:4800,1960:2200,1970:800,1980:300,1990:150,2000:80,2010:50,2020:30} },
+
+  // 1950s
+  { name: "Michael", sex: "M", peakYear: 1957, peakPct: 4.3,
+    data: {1940:1800,1950:3800,1957:5200,1960:4800,1970:4200,1980:3800,1990:3200,2000:2800,2010:2200,2020:1800} },
+  { name: "David", sex: "M", peakYear: 1955, peakPct: 4.1,
+    data: {1930:800,1940:2200,1950:4200,1955:4800,1960:4500,1970:3800,1980:2800,1990:2200,2000:1800,2010:1500,2020:1200} },
+  { name: "Patricia", sex: "F", peakYear: 1951, peakPct: 3.0,
+    data: {1930:600,1940:2200,1950:3800,1951:4200,1960:2800,1970:1200,1980:400,1990:150,2000:60,2010:30,2020:15} },
+  { name: "Susan", sex: "F", peakYear: 1960, peakPct: 2.7,
+    data: {1940:200,1950:1200,1960:3800,1965:3200,1970:1800,1980:600,1990:200,2000:80,2010:30,2020:15} },
+
+  // 1960s
+  { name: "Lisa", sex: "F", peakYear: 1965, peakPct: 3.3,
+    data: {1950:200,1960:2200,1965:4200,1970:3200,1980:1200,1990:400,2000:150,2010:60,2020:30} },
+  { name: "Mark", sex: "M", peakYear: 1960, peakPct: 2.7,
+    data: {1940:400,1950:1200,1960:3200,1970:2800,1980:1800,1990:1000,2000:600,2010:400,2020:300} },
+
+  // 1970s
+  { name: "Jennifer", sex: "F", peakYear: 1970, peakPct: 4.0,
+    data: {1950:100,1960:800,1970:4800,1980:3800,1990:2200,2000:1200,2010:600,2020:300} },
+  { name: "Jason", sex: "M", peakYear: 1977, peakPct: 2.5,
+    data: {1950:100,1960:600,1970:2800,1977:3200,1980:2800,1990:1800,2000:1200,2010:800,2020:600} },
+  { name: "Amy", sex: "F", peakYear: 1976, peakPct: 2.1,
+    data: {1950:200,1960:800,1970:2200,1976:2800,1980:2400,1990:1200,2000:600,2010:300,2020:200} },
+
+  // 1980s
+  { name: "Jessica", sex: "F", peakYear: 1987, peakPct: 3.0,
+    data: {1960:200,1970:800,1980:2800,1987:3800,1990:3200,2000:1800,2010:800,2020:400} },
+  { name: "Christopher", sex: "M", peakYear: 1984, peakPct: 2.8,
+    data: {1950:200,1960:800,1970:2200,1980:3200,1984:3800,1990:3200,2000:2200,2010:1500,2020:1200} },
+  { name: "Ashley", sex: "F", peakYear: 1987, peakPct: 2.5,
+    data: {1960:100,1970:400,1980:2200,1987:3200,1990:2800,2000:1200,2010:400,2020:150} },
+  { name: "Amanda", sex: "F", peakYear: 1980, peakPct: 1.4,
+    data: {1960:400,1970:1200,1980:1800,1985:1600,1990:1200,2000:600,2010:200,2020:100} },
+
+  // 1990s–2000s
+  { name: "Jacob", sex: "M", peakYear: 1999, peakPct: 1.8,
+    data: {1980:400,1990:1200,1999:2200,2000:2000,2010:1800,2020:1200} },
+  { name: "Emily", sex: "F", peakYear: 1999, peakPct: 1.2,
+    data: {1980:600,1990:1200,1999:1800,2000:1700,2010:1200,2020:800} },
+  { name: "Madison", sex: "F", peakYear: 2001, peakPct: 1.2,
+    data: {1990:200,1995:600,2001:1800,2005:1600,2010:1200,2020:600} },
+
+  // 2010s–2020s
+  { name: "Noah", sex: "M", peakYear: 2013, peakPct: 1.0,
+    data: {2000:400,2005:800,2010:1600,2013:2000,2015:1800,2020:1600} },
+  { name: "Emma", sex: "F", peakYear: 2003, peakPct: 1.1,
+    data: {1990:400,1995:600,2000:1000,2003:1600,2010:1400,2015:1200,2020:1000} },
+  { name: "Sophia", sex: "F", peakYear: 2012, peakPct: 1.2,
+    data: {2000:400,2005:800,2010:1400,2012:1800,2015:1600,2020:1200} },
+  { name: "Olivia", sex: "F", peakYear: 2014, peakPct: 1.0,
+    data: {2000:400,2005:800,2010:1200,2014:1800,2015:1700,2020:1600} },
+  { name: "Liam", sex: "M", peakYear: 2018, peakPct: 1.0,
+    data: {2000:200,2005:400,2010:800,2015:1600,2018:2000,2020:1800} },
 ];
 
-function renderMiniSpark(container, nameEntry) {
-  const w = 140;
-  const h = 52;
-  const pad = { top: 3, right: 2, bottom: 3, left: 2 };
+function renderCardSpark(container, nameEntry) {
+  const w = 160;
+  const h = 48;
+  const pad = { top: 2, right: 3, bottom: 2, left: 3 };
   const iw = w - pad.left - pad.right;
   const ih = h - pad.top - pad.bottom;
 
@@ -99,34 +142,28 @@ function renderMiniSpark(container, nameEntry) {
     ` L${pts[pts.length - 1].x.toFixed(2)},${(h - pad.bottom).toFixed(2)}` +
     ` L${pts[0].x.toFixed(2)},${(h - pad.bottom).toFixed(2)}Z`;
 
+  const color = nameEntry.sex === "M" ? BOY_COLOR : GIRL_COLOR;
+
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
   svg.setAttribute("preserveAspectRatio", "none");
-  svg.setAttribute("class", "tapestry-spark");
+  svg.style.width = "100%";
+  svg.style.height = "100%";
+  svg.style.display = "block";
 
-  const defs = document.createElementNS(SVG_NS, "defs");
-  const grad = document.createElementNS(SVG_NS, "linearGradient");
-  grad.setAttribute("id", `grad-${nameEntry.name}`);
-  grad.setAttribute("x1", "0");
-  grad.setAttribute("y1", "0");
-  grad.setAttribute("x2", "0");
-  grad.setAttribute("y2", "1");
-  grad.innerHTML =
-    `<stop offset="0%" stop-color="${nameEntry.color}" stop-opacity="0.22"/>` +
-    `<stop offset="100%" stop-color="${nameEntry.color}" stop-opacity="0.02"/>`;
-  defs.appendChild(grad);
-  svg.appendChild(defs);
-
+  // Area fill
   const fillPath = document.createElementNS(SVG_NS, "path");
   fillPath.setAttribute("d", fillD);
-  fillPath.setAttribute("fill", `url(#grad-${nameEntry.name})`);
+  fillPath.setAttribute("fill", color);
+  fillPath.setAttribute("fill-opacity", "0.18");
   svg.appendChild(fillPath);
 
+  // Line
   const linePath = document.createElementNS(SVG_NS, "path");
   linePath.setAttribute("d", pathD);
   linePath.setAttribute("fill", "none");
-  linePath.setAttribute("stroke", nameEntry.color);
-  linePath.setAttribute("stroke-width", "1.6");
+  linePath.setAttribute("stroke", color);
+  linePath.setAttribute("stroke-width", "1.5");
   linePath.setAttribute("stroke-linecap", "round");
   linePath.setAttribute("stroke-linejoin", "round");
   svg.appendChild(linePath);
@@ -136,9 +173,8 @@ function renderMiniSpark(container, nameEntry) {
   const dot = document.createElementNS(SVG_NS, "circle");
   dot.setAttribute("cx", xS(peakEntry.year).toFixed(2));
   dot.setAttribute("cy", yS(peakEntry.count).toFixed(2));
-  dot.setAttribute("r", "2");
-  dot.setAttribute("fill", nameEntry.color);
-  dot.setAttribute("fill-opacity", "0.7");
+  dot.setAttribute("r", "2.5");
+  dot.setAttribute("fill", color);
   svg.appendChild(dot);
 
   container.appendChild(svg);
@@ -149,23 +185,28 @@ export function renderTapestry(targetEl) {
   targetEl.innerHTML = "";
 
   for (const entry of NAMES) {
-    const cell = document.createElement("a");
-    cell.className = "tapestry-cell";
-    cell.href = `/name/${encodeURIComponent(entry.name)}/`;
-    cell.style.setProperty("--tapestry-color", entry.color);
+    const color = entry.sex === "M" ? BOY_COLOR : GIRL_COLOR;
 
-    const sparkWrap = document.createElement("div");
-    sparkWrap.className = "tapestry-spark-wrap";
-    renderMiniSpark(sparkWrap, entry);
-    cell.appendChild(sparkWrap);
+    const card = document.createElement("a");
+    card.className = "tapestry-cell";
+    card.href = `/name/${encodeURIComponent(entry.name)}/`;
+
+    const label = document.createElement("div");
+    label.className = "tapestry-label";
+    label.textContent = entry.name;
+    label.style.color = color;
+    card.appendChild(label);
 
     const meta = document.createElement("div");
     meta.className = "tapestry-meta";
-    meta.innerHTML =
-      `<span class="tapestry-name">${entry.name}</span>` +
-      `<span class="tapestry-status">${entry.status}</span>`;
-    cell.appendChild(meta);
+    meta.textContent = `Peak: ${entry.peakYear} · ${entry.peakPct}%`;
+    card.appendChild(meta);
 
-    targetEl.appendChild(cell);
+    const sparkWrap = document.createElement("div");
+    sparkWrap.className = "tapestry-spark-wrap";
+    renderCardSpark(sparkWrap, entry);
+    card.appendChild(sparkWrap);
+
+    targetEl.appendChild(card);
   }
 }
