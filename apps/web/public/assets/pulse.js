@@ -169,6 +169,52 @@ export function renderPulse(svgEl, payload) {
   mLine.setAttribute("d", `M${mTops[0].x.toFixed(2)},${mTops[0].y.toFixed(2)}${cardinalSegments(mTops)}`);
   svgEl.appendChild(mLine);
 
+  // --- Name trajectory overlays ---
+  const overlays = [
+    {
+      name: "Michael",
+      color: "#3c3a35",
+      data: { 1880: 300, 1890: 600, 1900: 1200, 1910: 3000, 1920: 6000, 1930: 10000, 1940: 18000, 1950: 55000, 1957: 88000, 1960: 82000, 1970: 75000, 1980: 55000, 1990: 45000, 2000: 25000, 2010: 15000, 2020: 10000 }
+    },
+    {
+      name: "Jennifer",
+      color: "#8b3f2f",
+      data: { 1930: 50, 1940: 200, 1950: 1500, 1960: 15000, 1970: 85000, 1974: 62000, 1980: 58000, 1984: 45000, 1990: 25000, 2000: 8000, 2010: 4000, 2020: 1500 }
+    },
+    {
+      name: "Theodore",
+      color: "#22745d",
+      data: { 1880: 8000, 1890: 7500, 1900: 6500, 1910: 5500, 1920: 4000, 1930: 3000, 1940: 2500, 1950: 2000, 1960: 1500, 1970: 1200, 1980: 1000, 1990: 1500, 2000: 3000, 2010: 8000, 2015: 12000, 2020: 15000 }
+    }
+  ];
+
+  const overlayG = document.createElementNS(SVG_NS, "g");
+  overlayG.setAttribute("class", "pulse-overlay");
+  for (const o of overlays) {
+    const entries = Object.entries(o.data).map(([y, c]) => ({ year: Number(y), count: c }));
+    const minC = Math.min(...entries.map(e => e.count));
+    const maxC = Math.max(...entries.map(e => e.count));
+    const oY = (c) => {
+      const t = (c - minC) / Math.max(1, maxC - minC);
+      return padTop + innerH * 0.35 + (1 - t) * innerH * 0.45;
+    };
+    const pts = entries.map(e => ({ x: xScale(e.year), y: oY(e.count) }));
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute("class", "pulse-overlay-line");
+    path.setAttribute("stroke", o.color);
+    path.setAttribute("d", `M${pts[0].x.toFixed(2)},${pts[0].y.toFixed(2)}${cardinalSegments(pts)}`);
+    overlayG.appendChild(path);
+
+    const last = pts[pts.length - 1];
+    const label = document.createElementNS(SVG_NS, "text");
+    label.setAttribute("x", last.x + 6);
+    label.setAttribute("y", last.y + 3);
+    label.setAttribute("class", "pulse-overlay-label");
+    label.textContent = o.name;
+    overlayG.appendChild(label);
+  }
+  svgEl.appendChild(overlayG);
+
   // --- Decade ticks ---
   const axisG = document.createElementNS(SVG_NS, "g");
   axisG.setAttribute("class", "river-axis");

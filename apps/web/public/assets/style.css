@@ -521,6 +521,23 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   border-top: 1px solid rgba(247, 239, 225, 0.15);
   color: rgba(247, 239, 225, 0.7);
 }
+.pulse-overlay-line {
+  fill: none;
+  stroke-width: 1.8;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.pulse-overlay-label {
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  fill: var(--ink-soft);
+  stroke: var(--paper);
+  stroke-width: 2.5px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+}
 .river-tick {
   font-family: var(--mono);
   font-size: 0.72rem;

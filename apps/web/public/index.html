@@ -11,7 +11,7 @@
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/style.css?v=7">
+  <link rel="stylesheet" href="/assets/style.css?v=8">
 </head>
 <body>
   <div class="page">
@@ -25,14 +25,13 @@
     <main id="view-home">
       <section class="river-hero" aria-labelledby="home-title">
         <div class="river-deck">
-          <span class="river-deck-window">1880 → present · ~150 names · Source: SSA</span>
-          <span class="river-deck-thesis">A century-and-a-half of American naming, woven.</span>
+          <span class="river-deck-window">1880 → present · Source: SSA</span>
         </div>
-        <svg class="river-svg" aria-label="Streamgraph of US baby name popularity since 1880" role="img"></svg>
+        <svg class="river-svg" aria-label="US birth pulse since 1880 with name trajectories for Michael, Jennifer, and Theodore" role="img"></svg>
         <div class="river-search">
           <p class="kicker">American name observatory</p>
-          <h1 id="home-title">Track the rise and fall of American names.</h1>
-          <p class="lede">A cultural archive of identity, fashion, memory, and demographic drift, built from Social Security records since 1880.</p>
+          <h1 id="home-title">Every name rides a wave.</h1>
+          <p class="lede">The pulse of American births since 1880 — the tide that carried Michael, Jennifer, Ashley, and every other name through history. Search any name to see where it peaked, fell, or vanished.</p>
 
           <div class="search search--collapsed">
             <input id="q" type="text" placeholder="Michael" autocomplete="off" spellcheck="false" autofocus>
@@ -47,11 +46,11 @@
                 <button type="button" data-sex="F">Female</button>
                 <button type="button" data-sex="M">Male</button>
               </div>
-              <button id="go">Run Name Vitals</button>
+              <button id="go">Explore</button>
             </div>
             <div id="suggestions" class="suggestions hidden"></div>
           </div>
-          <p class="search-hint">No account. No tracking. Just the statistical biography of a name.</p>
+          <p class="search-hint">No account. No tracking. Just the story a name leaves in the data.</p>
         </div>
         <noscript>
           <img class="river-fallback" src="/assets/timeline-fallback.svg" alt="Illustrative timeline of name popularity">
@@ -61,7 +60,7 @@
       <section class="section" aria-labelledby="year-title">
         <div class="year-widget">
           <p class="eyebrow">Birth year machine</p>
-          <h2 id="year-title">If you were born in 1987...</h2>
+          <h2 id="year-title">If you were born in...</h2>
           <p class="lede">Rebuild the classroom roster, then see which names are thriving, collapsing, or already preserved mostly as generational evidence.</p>
           <div class="year-form">
             <input id="yr-home" type="number" min="1880" max="2030" placeholder="Enter birth year">
@@ -74,10 +73,10 @@
       <section class="section" aria-labelledby="live-status-title">
         <div class="section-head">
           <div>
-            <p class="eyebrow">Live cultural status</p>
-            <h2 id="live-status-title">Recently diagnosed</h2>
+            <p class="eyebrow">Cultural weather</p>
+            <h2 id="live-status-title">On the radar</h2>
           </div>
-          <p class="lede">A few names with obvious cultural weather: collapse, recovery, endurance, and the occasional national event.</p>
+          <p class="lede">A few names with obvious cultural patterns: collapse, recovery, endurance, and the occasional national event.</p>
         </div>
         <div class="diagnosis-grid">
           <a class="diagnosis-card tone-endangered" href="/name/Linda/"><span class="card-name">Linda</span><span class="card-status">Critically endangered</span><p class="card-note">A mid-century giant now living mostly in memory.</p></a>
@@ -104,22 +103,6 @@
         </div>
       </section>
 
-      <section class="section" aria-labelledby="comeback-title">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">The comebacks</p>
-            <h2 id="comeback-title">Old names keep escaping the archive.</h2>
-          </div>
-          <p class="lede">A name can disappear from daily life and still return as taste, nostalgia, or status.</p>
-        </div>
-        <div class="comeback-grid">
-          <a class="comeback-card tone-resurgent" href="/name/Theodore/"><span class="card-name">Theodore</span><span class="card-status">Resurgent</span></a>
-          <a class="comeback-card tone-rising" href="/name/Hazel/"><span class="card-name">Hazel</span><span class="card-status">Recovered</span></a>
-          <a class="comeback-card tone-resurgent" href="/name/Eleanor/"><span class="card-name">Eleanor</span><span class="card-status">Classic return</span></a>
-          <a class="comeback-card tone-rising" href="/name/Violet/"><span class="card-name">Violet</span><span class="card-status">Renewed</span></a>
-        </div>
-      </section>
-
       <section class="section" aria-labelledby="popular-title">
         <div class="section-head">
           <div>
@@ -137,7 +120,7 @@
   </div>
         <script src="/assets/app.js"></script><script src="/assets/landing.js"></script>
     <script type="module">
-      import { renderPulse } from "/assets/pulse.js?v=7";
+      import { renderPulse } from "/assets/pulse.js?v=8";
 
       (async () => {
         const qs = new URLSearchParams(location.search);
