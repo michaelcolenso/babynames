@@ -53,11 +53,19 @@ const NAMES = [
     data: { 1880:8000, 1900:10000, 1920:12000, 1930:8000, 1940:4000, 1960:500, 1980:0, 2000:0, 2020:0 } },
   { name: "Emma", sex: "F", status: "stable", color: "#465d75", peakYear: 2003,
     data: { 1880:10000, 1900:8000, 1920:6000, 1940:4000, 1960:2000, 1980:1500, 1990:2000, 2000:15000, 2010:18000, 2020:16000 } },
+  { name: "Noah", sex: "M", status: "stable", color: "#465d75", peakYear: 2013,
+    data: { 1990:5000, 1995:8000, 2000:15000, 2005:25000, 2010:35000, 2015:30000, 2020:25000 } },
+  { name: "Sophia", sex: "F", status: "stable", color: "#465d75", peakYear: 2012,
+    data: { 1990:2000, 1995:5000, 2000:12000, 2005:18000, 2010:22000, 2015:20000, 2020:18000 } },
+  { name: "Jason", sex: "M", status: "declining", color: "#a96720", peakYear: 1977,
+    data: { 1950:200, 1960:2000, 1970:35000, 1980:45000, 1990:30000, 2000:15000, 2010:8000, 2020:5000 } },
+  { name: "Mary", sex: "F", status: "declining", color: "#a96720", peakYear: 1950,
+    data: { 1880:8000, 1900:12000, 1920:15000, 1930:18000, 1940:20000, 1950:25000, 1960:20000, 1970:15000, 1980:8000, 1990:5000, 2000:4000, 2010:3000, 2020:2500 } },
 ];
 
 function renderMiniSpark(container, nameEntry) {
   const w = 140;
-  const h = 34;
+  const h = 42;
   const pad = { top: 3, right: 2, bottom: 3, left: 2 };
   const iw = w - pad.left - pad.right;
   const ih = h - pad.top - pad.bottom;
