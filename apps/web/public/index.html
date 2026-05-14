@@ -11,7 +11,7 @@
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/style.css?v=8">
+  <link rel="stylesheet" href="/assets/style.css?v=9">
 </head>
 <body>
   <div class="page">
@@ -24,33 +24,32 @@
 
     <main id="view-home">
       <section class="river-hero" aria-labelledby="home-title">
-        <div class="river-deck">
-          <span class="river-deck-window">1880 → present · Source: SSA</span>
-        </div>
-        <svg class="river-svg" aria-label="US birth pulse since 1880 with name trajectories for Michael, Jennifer, and Theodore" role="img"></svg>
-        <div class="river-search">
-          <p class="kicker">American name observatory</p>
-          <h1 id="home-title">Every name rides a wave.</h1>
-          <p class="lede">The pulse of American births since 1880 — the tide that carried Michael, Jennifer, Ashley, and every other name through history. Search any name to see where it peaked, fell, or vanished.</p>
+        <div class="river-hero-split">
+          <div class="river-hero-copy">
+            <p class="kicker">American name observatory</p>
+            <h1 id="home-title">Every name rides a wave.</h1>
+            <p class="lede">The pulse of American births since 1880 — the tide that carried Michael, Jennifer, Ashley, and every other name through history. Search any name to see where it peaked, fell, or vanished.</p>
 
-          <div class="search search--collapsed">
-            <input id="q" type="text" placeholder="Michael" autocomplete="off" spellcheck="false" autofocus>
-            <select id="sex" title="Limit by recorded sex">
-              <option value="">All</option>
-              <option value="F">Female</option>
-              <option value="M">Male</option>
-            </select>
-            <div class="search-extras">
-              <div class="sex-segments" role="group" aria-label="Recorded sex">
-                <button type="button" data-sex="" class="active">All</button>
-                <button type="button" data-sex="F">Female</button>
-                <button type="button" data-sex="M">Male</button>
+            <div class="search search--collapsed">
+              <input id="q" type="text" placeholder="Michael" autocomplete="off" spellcheck="false" autofocus>
+              <select id="sex" title="Limit by recorded sex">
+                <option value="">All</option>
+                <option value="F">Female</option>
+                <option value="M">Male</option>
+              </select>
+              <div class="search-extras">
+                <div class="sex-segments" role="group" aria-label="Recorded sex">
+                  <button type="button" data-sex="" class="active">All</button>
+                  <button type="button" data-sex="F">Female</button>
+                  <button type="button" data-sex="M">Male</button>
+                </div>
+                <button id="go">Explore</button>
               </div>
-              <button id="go">Explore</button>
+              <div id="suggestions" class="suggestions hidden"></div>
             </div>
-            <div id="suggestions" class="suggestions hidden"></div>
+            <p class="search-hint">No account. No tracking. Just the story a name leaves in the data.</p>
           </div>
-          <p class="search-hint">No account. No tracking. Just the story a name leaves in the data.</p>
+          <div class="river-hero-tapestry" id="tapestry"></div>
         </div>
         <noscript>
           <img class="river-fallback" src="/assets/timeline-fallback.svg" alt="Illustrative timeline of name popularity">
@@ -120,7 +119,7 @@
   </div>
         <script src="/assets/app.js"></script><script src="/assets/landing.js"></script>
     <script type="module">
-      import { renderPulse } from "/assets/pulse.js?v=8";
+      import { renderTapestry } from "/assets/tapestry.js?v=2";
 
       (async () => {
         const qs = new URLSearchParams(location.search);
@@ -198,16 +197,10 @@
         }
 
         try {
-          if (!meta) return;
-          const svg = document.querySelector(".river-svg");
-          if (!svg) return;
-          renderPulse(svg, {
-            totalsByYear: meta.totalsByYear,
-            ym: meta.ym,
-            yM: meta.yM,
-          });
+          const tapestry = document.getElementById("tapestry");
+          if (tapestry) renderTapestry(tapestry);
         } catch (err) {
-          /* pulse is decorative — never block search on its failure */
+          /* tapestry is decorative — never block search on its failure */
         }
       })();
     </script>
