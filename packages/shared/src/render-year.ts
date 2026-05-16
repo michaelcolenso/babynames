@@ -23,7 +23,7 @@ export function renderYearPage(
       "@type": "BreadcrumbList",
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: origin + "/" },
-        { "@type": "ListItem", position: 2, name: "By year", item: origin + "/year.html" },
+        { "@type": "ListItem", position: 2, name: "By year", item: origin + "/year" },
         { "@type": "ListItem", position: 3, name: String(year), item: opts.canonical },
       ],
     },
@@ -88,12 +88,12 @@ export function renderYearPage(
   <header class="site">
     <a class="brand" href="/">nobodynamed</a>
     <nav>
-      <a href="/extinct.html">Extinct</a>
-      <a href="/endangered.html">Endangered</a>
-      <a href="/comeback.html">Comebacks</a>
-      <a href="/year.html">Birth year</a>
-      <a href="/rising.html">Rising</a>
-      <a href="/about.html">About</a>
+      <a href="/extinct">Extinct</a>
+      <a href="/endangered">Endangered</a>
+      <a href="/comeback">Comebacks</a>
+      <a href="/year">Birth year</a>
+      <a href="/rising">Rising</a>
+      <a href="/about">About</a>
     </nav>
   </header>
   <main>
