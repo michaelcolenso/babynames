@@ -315,22 +315,22 @@ export function renderFullPage(
   <header class="site">
     <a class="brand" href="/">nobodynamed</a>
     <nav>
-      <a href="/extinct.html">Extinct</a>
-      <a href="/endangered.html">Endangered</a>
-      <a href="/comeback.html">Comebacks</a>
-      <a href="/year.html">Birth year</a>
-      <a href="/rising.html">Rising</a>
-      <a href="/about.html">About</a>
+      <a href="/extinct">Extinct</a>
+      <a href="/endangered">Endangered</a>
+      <a href="/comeback">Comebacks</a>
+      <a href="/year">Birth year</a>
+      <a href="/rising">Rising</a>
+      <a href="/about">About</a>
     </nav>
     <details class="mobile-nav">
       <summary aria-label="Open navigation"><span></span><span></span><span></span></summary>
       <nav>
-        <a href="/extinct.html">Extinct</a>
-        <a href="/endangered.html">Endangered</a>
-        <a href="/comeback.html">Comebacks</a>
-        <a href="/year.html">Birth year</a>
-        <a href="/rising.html">Rising</a>
-        <a href="/about.html">About</a>
+        <a href="/extinct">Extinct</a>
+        <a href="/endangered">Endangered</a>
+        <a href="/comeback">Comebacks</a>
+        <a href="/year">Birth year</a>
+        <a href="/rising">Rising</a>
+        <a href="/about">About</a>
       </nav>
     </details>
   </header>
@@ -460,16 +460,16 @@ function reportNumber(name: string, sex: string): string {
 
 function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   const cohort: Partial<Record<Status, [string, string]>> = {
-    extinct: ["More extinct names", "/extinct.html"],
-    endangered: ["More endangered names", "/endangered.html"],
-    rising: ["More rising names", "/rising.html"],
+    extinct: ["More extinct names", "/extinct"],
+    endangered: ["More endangered names", "/endangered"],
+    rising: ["More rising names", "/rising"],
   };
   const links: string[] = [];
   const statusLink = cohort[a.status];
   if (statusLink) {
     links.push(`<a href="${statusLink[1]}">${statusLink[0]}</a>`);
   }
-  links.push(`<a href="/year.html?year=${a.peakYear}">Top names from ${a.peakYear}</a>`);
+  links.push(`<a href="/year/${a.peakYear}/">Top names from ${a.peakYear}</a>`);
   links.push(`<a href="/names/${decadeLabel(a.peakYear)}/">Names from the ${decadeLabel(a.peakYear)}</a>`);
   links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/">Names like ${escape(record.name)}</a>`);
 

@@ -62,6 +62,20 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   const table = page.table ? `<section class="section"><div id="t"></div></section>` : "";
   const tableScript = page.table ? `<script>renderLandingTable("${page.table}", document.getElementById("t"));</script>` : "";
 
+  const reqUrl = new URL(ctx.request.url);
+  const pageCanonical = `${reqUrl.origin}/${slug}`;
+  const pageTitle = page.title.replace(" — NobodyNamed", "");
+  const structuredData = JSON.stringify([
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: pageTitle,
+      url: pageCanonical,
+      description: page.lede,
+      isPartOf: { "@type": "WebSite", name: "NobodyNamed", url: reqUrl.origin + "/" },
+    },
+  ]).replace(/</g, "\\u003c");
+
   return new Response(`<!doctype html>
 <html lang="en">
 <head>
@@ -69,12 +83,14 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${page.title}</title>
 <meta name="description" content="${page.lede}">
-<link rel="canonical" href="/${slug}">
+<link rel="canonical" href="${pageCanonical}">
 <meta property="og:title" content="${page.title}">
 <meta property="og:description" content="${page.lede}">
 <meta property="og:type" content="article">
+<meta property="og:url" content="${pageCanonical}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">${structuredData}</script>
 </head>
 <body>
 <div class="page">

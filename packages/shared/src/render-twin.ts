@@ -72,12 +72,12 @@ export function renderTwinPage(
   <header class="site">
     <a class="brand" href="/">nobodynamed</a>
     <nav>
-      <a href="/extinct.html">Extinct</a>
-      <a href="/endangered.html">Endangered</a>
-      <a href="/comeback.html">Comebacks</a>
-      <a href="/year.html">Birth year</a>
-      <a href="/rising.html">Rising</a>
-      <a href="/about.html">About</a>
+      <a href="/extinct">Extinct</a>
+      <a href="/endangered">Endangered</a>
+      <a href="/comeback">Comebacks</a>
+      <a href="/year">Birth year</a>
+      <a href="/rising">Rising</a>
+      <a href="/about">About</a>
     </nav>
   </header>
   <main>
@@ -91,7 +91,7 @@ export function renderTwinPage(
   </main>
   <footer class="site">
     <div>Built on public-domain data from the Social Security Administration.</div>
-    <div><a href="/about.html">Methodology</a></div>
+    <div><a href="/about">Methodology</a></div>
   </footer>
 </div>
 </body>
