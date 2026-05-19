@@ -11,7 +11,10 @@ export interface SsaFetchResult {
 const MAX_ZIP_BYTES = 50 * 1024 * 1024; // 50 MB — well above the known ~10 MB zip.
 
 export async function fetchNamesZip(url: string): Promise<SsaFetchResult> {
-  const r = await fetch(url, { cf: { cacheTtl: 0 } });
+  const r = await fetch(url, {
+    headers: { "User-Agent": "name-vitals-ingest/1.0 (+https://github.com/michaelcolenso/babynames)" },
+    cf: { cacheTtl: 0 },
+  } as RequestInit);
   if (!r.ok) throw new Error(`SSA fetch failed: ${r.status} ${r.statusText}`);
   const contentLength = r.headers.get("content-length");
   if (contentLength) {
@@ -26,7 +29,10 @@ export async function fetchNamesZip(url: string): Promise<SsaFetchResult> {
 }
 
 export async function headEtag(url: string): Promise<string | null> {
-  const r = await fetch(url, { method: "HEAD" });
+  const r = await fetch(url, {
+    method: "HEAD",
+    headers: { "User-Agent": "name-vitals-ingest/1.0 (+https://github.com/michaelcolenso/babynames)" },
+  });
   if (!r.ok) return null;
   return r.headers.get("etag");
 }

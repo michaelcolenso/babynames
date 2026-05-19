@@ -17,6 +17,7 @@
     "migrations:apply": "wrangler d1 migrations apply name-vitals --remote",
     "migrations:apply:local": "wrangler d1 migrations apply name-vitals --local",
     "seed": "tsx scripts/seed-from-shards.ts",
+    "ingest-ssa": "tsx scripts/ingest-ssa.ts",
     "verify-parity": "tsx scripts/verify-parity.ts",
     "smoke:prod": "bash scripts/smoke-prod.sh"
   },
