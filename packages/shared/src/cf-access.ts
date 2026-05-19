@@ -21,12 +21,9 @@
 // ─── Base64URL helpers (no padding, URL-safe alphabet) ──────────────────────
 
 function base64urlDecode(s: string): Uint8Array {
-  const b64 = s.replace(/-/g, "+").replace(/_/g, "/");
-  const padded = b64 + "===".slice(0, (4 - (b64.length % 4)) % 4);
-  const raw = atob(padded);
-  const out = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
+  let b64 = s.replace(/-/g, "+").replace(/_/g, "/");
+  while (b64.length % 4) b64 += "=";
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 }
 
 function base64urlEncode(buf: Uint8Array): string {
@@ -39,8 +36,9 @@ function base64urlEncode(buf: Uint8Array): string {
 
 interface AccessJwk {
   kid: string;
-  kty: "RSA";
-  alg: "RS256";
+  kty: string;
+  alg: string;
+  use?: string;
   n: string; // modulus, base64url
   e: string; // exponent, base64url
 }
@@ -50,16 +48,77 @@ interface AccessJwks {
 }
 
 async function jwkToCryptoKey(jwk: AccessJwk): Promise<CryptoKey> {
+  // Import the RSA public key via JWK. The resulting CryptoKey may silently
+  // fail to verify in some Workers runtime versions — the caller handles
+  // this by falling back to SPKI (DER) import.
   return crypto.subtle.importKey(
     "jwk",
-    {
-      kty: jwk.kty,
-      n: jwk.n,
-      e: jwk.e,
-      alg: "RS256",
-      ext: false,
-      key_ops: ["verify"],
-    },
+    { kty: jwk.kty, n: jwk.n, e: jwk.e },
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["verify"],
+  );
+}
+
+// Convert JWK RSA public key → SPKI DER (fallback when JWK import fails).
+// The Workers Web Crypto implementation is known to be stricter with SPKI
+// than JWK for RSA keys in some runtime versions.
+function jwkToSpkiDer(jwk: AccessJwk): Uint8Array {
+  // Decode base64url n (modulus) and e (exponent) to raw bytes.
+  const nBytes = base64urlDecode(jwk.n);
+  const eBytes = base64urlDecode(jwk.e);
+
+  // ── ASN.1 DER helpers ─────────────────────────────────────────────────
+  const lenByte = (len: number): number[] => {
+    if (len < 0x80) return [len];
+    const bytes: number[] = [];
+    let v = len;
+    while (v) { bytes.unshift(v & 0xff); v >>>= 8; }
+    return [0x80 | bytes.length, ...bytes];
+  };
+
+  const integer = (bytes: Uint8Array): number[] => {
+    // Strip leading zeros but ensure the integer stays positive.
+    let start = 0;
+    while (start < bytes.length && bytes[start] === 0) start++;
+    if (start === bytes.length) return [0x02, 0x01, 0x00]; // zero
+    // If the high bit of the first byte is set, prepend a zero byte.
+    const needsPad = (bytes[start]! & 0x80) !== 0;
+    const val = bytes.slice(start);
+    const len = val.length + (needsPad ? 1 : 0);
+    return [0x02, ...lenByte(len), ...(needsPad ? [0x00] : []), ...Array.from(val)];
+  };
+
+  const sequence = (items: number[][]): number[] => {
+    const body = items.flat();
+    return [0x30, ...lenByte(body.length), ...body];
+  };
+
+  const bitString = (bytes: Uint8Array): number[] => {
+    return [0x03, ...lenByte(bytes.length + 1), 0x00, ...Array.from(bytes)];
+  };
+
+  const oid = (bytes: number[]): number[] => [0x06, ...lenByte(bytes.length), ...bytes];
+
+  // rsaEncryption OID: 1.2.840.113549.1.1.1 → 2a 86 48 86 f7 0d 01 01 01
+  const rsaOid = oid([0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01]);
+  const nullParam = [0x05, 0x00]; // ASN.1 NULL
+
+  const algorithmIdentifier = sequence([rsaOid, nullParam]);
+  const publicKey = sequence([integer(nBytes), integer(eBytes)]);
+  const spki = sequence([
+    algorithmIdentifier,
+    bitString(new Uint8Array(publicKey)),
+  ]);
+
+  return new Uint8Array(spki);
+}
+
+async function jwkToCryptoKeySpki(jwk: AccessJwk): Promise<CryptoKey> {
+  const spki = jwkToSpkiDer(jwk);
+  return crypto.subtle.importKey(
+    "spki",
+    spki,
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["verify"],
@@ -143,7 +202,9 @@ export async function verifyAccessJwt(
   request: Request,
   opts: AccessJwtOptions,
 ): Promise<string | null> {
-  const jwt = request.headers.get("Cf-Access-Jwt-Assertion");
+  const jwtRaw = request.headers.get("Cf-Access-Jwt-Assertion");
+  if (!jwtRaw) return null;
+  const jwt = jwtRaw.trim();
   if (!jwt) return null;
 
   const { header, claims, signature, signingInput } = parseJwt(jwt);
@@ -151,17 +212,70 @@ export async function verifyAccessJwt(
   // 1. Fetch JWKS and locate the signing key.
   const jwks = await fetchJwks(opts.teamDomain);
   const jwk = jwks.find((k) => k.kid === header.kid);
-  if (!jwk) throw new Error("unknown_jwk_kid");
+  if (!jwk) {
+    throw new Error(
+      `unknown_jwk_kid: header kid=${header.kid}, available kids=${jwks.map((k) => k.kid).join(",")}`,
+    );
+  }
 
-  // 2. Verify the RS256 signature.
-  const key = await jwkToCryptoKey(jwk);
-  const valid = await crypto.subtle.verify(
-    "RSASSA-PKCS1-v1_5",
+  // 2. Verify the RS256 signature — try JWK import first, then SPKI.
+  const sigLen = signature.byteLength;
+  const dataLen = signingInput.length;
+  console.log(
+    `cf-access: verifying kid=${jwk.kid} nLen=${jwk.n.length} eLen=${jwk.e.length} sigLen=${sigLen} dataLen=${dataLen}`,
+  );
+  const data = new TextEncoder().encode(signingInput);
+
+  let key: CryptoKey;
+  let importMethod: string;
+  try {
+    key = await jwkToCryptoKey(jwk);
+    importMethod = "jwk";
+  } catch {
+    // JWK import failed outright — fall back to SPKI DER.
+    console.log(`cf-access: JWK import failed, trying SPKI fallback`);
+    key = await jwkToCryptoKeySpki(jwk);
+    importMethod = "spki";
+  }
+
+  const keyAlg = key.algorithm as { name: string; hash?: { name: string } };
+  console.log(
+    `cf-access: key imported via ${importMethod} type=${key.type} algName=${keyAlg.name} algHash=${keyAlg.hash?.name ?? "none"} usages=${key.usages.join(",")}`,
+  );
+
+  let valid = await crypto.subtle.verify(
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     key,
     signature,
-    new TextEncoder().encode(signingInput),
+    data,
   );
-  if (!valid) throw new Error("invalid_jwt_signature");
+
+  // If JWK-based key didn't verify, try SPKI as a fallback.
+  if (!valid && importMethod === "jwk") {
+    console.log(`cf-access: JWK key verification failed, trying SPKI fallback`);
+    try {
+      key = await jwkToCryptoKeySpki(jwk);
+      importMethod = "spki";
+      const keyAlg2 = key.algorithm as { name: string; hash?: { name: string } };
+      console.log(
+        `cf-access: SPKI key imported type=${key.type} algName=${keyAlg2.name} algHash=${keyAlg2.hash?.name ?? "none"}`,
+      );
+      valid = await crypto.subtle.verify(
+        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+        key,
+        signature,
+        data,
+      );
+    } catch (spkiErr) {
+      console.error(`cf-access: SPKI fallback also failed: ${String(spkiErr)}`);
+    }
+  }
+
+  if (!valid) {
+    throw new Error(
+      `invalid_jwt_signature: kid=${jwk.kid}, method=${importMethod}, header alg=${header.alg}, jwk alg=${jwk.alg}`,
+    );
+  }
 
   // 3. Check claims.
   const now = Math.floor(Date.now() / 1000);

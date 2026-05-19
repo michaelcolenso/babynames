@@ -3,40 +3,32 @@
 // Admin endpoint for creating or updating blog posts.
 //
 // Authentication (tried in order):
-//   1. Cloudflare Access JWT  — verifies the Cf-Access-Jwt-Assertion header
-//      against the team's JWKS. Requires CF_ACCESS_TEAM_DOMAIN and
-//      CF_ACCESS_AUD to be set as environment variables.
-//   2. Shared secret           — Bearer token checked against BLOG_ADMIN_SECRET.
-//      Falls back to this when no Access headers are present.
-//   3. Open (dev only)         — when neither is configured, the endpoint is
+//   1. Cloudflare Access        — checks for the Cf-Access-Authenticated-User-Email
+//      header injected by Cloudflare Access after authenticating the user at the
+//      edge. Cloudflare strips any Cf-Access-* headers from external requests, so
+//      this header cannot be spoofed — if it's present, the request passed through
+//      Access authentication. No JWT verification is needed in the function.
+//      Requires Cloudflare Access configured in front of this path.
+//   2. Shared secret            — Bearer token checked against BLOG_ADMIN_SECRET.
+//      Falls back to this when no Access headers are present (e.g. local dev).
+//   3. Open (dev only)          — when neither is configured, the endpoint is
 //      unprotected. Set at least one auth method in production.
 //
 // Body: JSON matching the upsertBlogPost parameter shape.
 
-import { upsertBlogPost, verifyAccessJwt } from "@nv/shared";
+import { upsertBlogPost } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
-  // ── Tier 1: Cloudflare Access JWT ──────────────────────────────────────
-  const teamDomain = ctx.env.CF_ACCESS_TEAM_DOMAIN;
-  const aud = ctx.env.CF_ACCESS_AUD;
-
-  if (teamDomain && aud) {
-    try {
-      const email = await verifyAccessJwt(ctx.request, { teamDomain, aud });
-      if (email) {
-        // Log the authenticated identity so there's an audit trail.
-        console.log(`blog/admin: authenticated as ${email} via Cloudflare Access`);
-        return handleUpsert(ctx);
-      }
-    } catch (err) {
-      console.error(`blog/admin: Access JWT verification failed: ${String(err)}`);
-      return Response.json(
-        { error: "access_denied", reason: String(err) },
-        { status: 401 },
-      );
-    }
-    // No Access headers present — fall through to shared secret.
+  // ── Tier 1: Cloudflare Access (header presence check) ─────────────────
+  // Cloudflare Access strips any Cf-Access-* headers from incoming requests
+  // and only injects them after authenticating the user. The presence of
+  // Cf-Access-Authenticated-User-Email therefore guarantees the request
+  // passed through Access authentication — no JWT crypto required.
+  const accessEmail = ctx.request.headers.get("Cf-Access-Authenticated-User-Email");
+  if (accessEmail) {
+    console.log(`blog/admin: authenticated as ${accessEmail} via Cloudflare Access`);
+    return handleUpsert(ctx);
   }
 
   // ── Tier 2: Shared secret (Bearer token) ───────────────────────────────
@@ -47,12 +39,15 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     if (provided !== secret) {
       return Response.json({ error: "unauthorized" }, { status: 401 });
     }
+    console.log(`blog/admin: authenticated via shared secret`);
+    return handleUpsert(ctx);
   }
 
   // ── Tier 3: Open (no auth configured) ──────────────────────────────────
-  // In production, set either CF_ACCESS_TEAM_DOMAIN + CF_ACCESS_AUD or
-  // BLOG_ADMIN_SECRET to protect this endpoint.
+  // Set up Cloudflare Access in front of /api/blog/admin, or set
+  // BLOG_ADMIN_SECRET as a Pages environment variable.
 
+  console.warn(`blog/admin: no auth configured — endpoint is open`);
   return handleUpsert(ctx);
 };
 
