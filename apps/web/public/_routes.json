@@ -2,6 +2,7 @@
   "version": 1,
   "include": [
     "/name/*",
+    "/names/*",
     "/api/*",
     "/era/*",
     "/year/*",
@@ -11,7 +12,12 @@
     "/comeback",
     "/rising",
     "/year",
-    "/about"
+    "/about",
+    "/comebacks",
+    "/millennial-names",
+    "/gen-z-names",
+    "/classic-names",
+    "/future-grandparent-names"
   ],
   "exclude": [
     "/assets/*",

@@ -93,6 +93,7 @@ export function renderYearPage(
       <a href="/comeback">Comebacks</a>
       <a href="/year">Birth year</a>
       <a href="/rising">Rising</a>
+      <a href="/viz">Visualizations</a>
       <a href="/about">About</a>
     </nav>
   </header>
@@ -114,7 +115,7 @@ export function renderYearPage(
   </main>
   <footer class="site">
     <div>Based on SSA records 1880–present.</div>
-    <div><a href="/about.html">Methodology</a></div>
+    <div><a href="/about">Methodology</a></div>
   </footer>
 </div>
 <script src="/assets/app.js"></script>
