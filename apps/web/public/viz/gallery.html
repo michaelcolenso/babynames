@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nobody Named Their Baby — 2025 SSA Data</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #07070f;
+    --surface: #0e0e1a;
+    --border: #1e1e30;
+    --amber: #f59e0b;
+    --amber-dim: #92600a;
+    --cyan: #22d3ee;
+    --rose: #f43f5e;
+    --violet: #a78bfa;
+    --green: #4ade80;
+    --muted: #6b7280;
+    --text: #e5e7eb;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Georgia', serif; }
+
+  header {
+    text-align: center;
+    padding: 3rem 2rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: clamp(1.4rem, 4vw, 2.4rem); color: var(--amber); letter-spacing: 0.02em; }
+  header p { margin-top: 0.6rem; color: var(--muted); font-size: 0.9rem; font-family: sans-serif; }
+
+  nav {
+    display: flex; justify-content: center; gap: 0.5rem;
+    padding: 1.5rem 1rem;
+    flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  nav button {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); padding: 0.5rem 1.1rem; border-radius: 4px;
+    cursor: pointer; font-size: 0.8rem; font-family: sans-serif;
+    transition: all 0.15s;
+  }
+  nav button:hover { border-color: var(--amber); color: var(--amber); }
+  nav button.active { background: var(--amber); border-color: var(--amber); color: #000; font-weight: 700; }
+
+  section.viz { display: none; padding: 2.5rem 2rem; max-width: 1200px; margin: 0 auto; }
+  section.viz.active { display: block; }
+
+  .viz-title { font-size: 1.4rem; color: var(--amber); margin-bottom: 0.4rem; }
+  .viz-subtitle { color: var(--muted); font-size: 0.85rem; font-family: sans-serif; margin-bottom: 2rem; }
+
+  svg text { font-family: sans-serif; }
+  .tooltip {
+    position: fixed; pointer-events: none;
+    background: #111827; border: 1px solid var(--border);
+    color: var(--text); padding: 0.6rem 0.9rem;
+    border-radius: 4px; font-family: sans-serif; font-size: 0.8rem;
+    z-index: 999; opacity: 0; transition: opacity 0.1s;
+    max-width: 220px; line-height: 1.5;
+  }
+  .tooltip.show { opacity: 1; }
+  .tooltip strong { color: var(--amber); }
+
+  /* Legend */
+  .legend { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: 1.2rem; font-family: sans-serif; font-size: 0.75rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Nobody Named Their Baby — 2025</h1>
+  <p>145 years of US baby names · SSA data 1880–2025 · 117,820 name/sex pairs</p>
+</header>
+
+<nav>
+  <button class="active" data-tab="landscape">A · Name Universe</button>
+  <button data-tab="lifespans">B · Lifespans</button>
+  <button data-tab="descent">C · Last 20 Years</button>
+  <button data-tab="waves">D · Birth Waves</button>
+  <button data-tab="beforeafter">E · Then vs Now</button>
+</nav>
+
+<div class="tooltip" id="tip"></div>
+
+<!-- A: LANDSCAPE -->
+<section class="viz active" id="tab-landscape">
+  <div class="viz-title">The Name Universe</div>
+  <div class="viz-subtitle">Every major name plotted by when it peaked (x) and how popular it was (y). Color = current status.</div>
+  <div class="legend">
+    <span class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>endangered</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#f43f5e"></span>extinct</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#6b7280"></span>declining</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#4ade80"></span>rising</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#a78bfa"></span>stable</span>
+  </div>
+  <svg id="svg-landscape"></svg>
+</section>
+
+<!-- B: LIFESPANS -->
+<section class="viz" id="tab-lifespans">
+  <div class="viz-title">Name Lifespans</div>
+  <div class="viz-subtitle">Each line = one name's run from first recorded use to last. Red = went extinct. The 2025 cliff is real.</div>
+  <svg id="svg-lifespans"></svg>
+</section>
+
+<!-- C: DESCENT -->
+<section class="viz" id="tab-descent">
+  <div class="viz-title">The Last 35 Years</div>
+  <div class="viz-subtitle">Names that went extinct — their count from 1990 to their final year. Every line ends at zero.</div>
+  <svg id="svg-descent"></svg>
+</section>
+
+<!-- D: WAVES -->
+<section class="viz" id="tab-waves">
+  <div class="viz-title">The Birth Wave</div>
+  <div class="viz-subtitle">Total US births recorded in SSA data by year and sex, 1940–2025. The baby boom, the bust, and what comes after.</div>
+  <svg id="svg-waves"></svg>
+</section>
+
+<!-- E: BEFORE/AFTER -->
+<section class="viz" id="tab-beforeafter">
+  <div class="viz-title">Then vs. Now</div>
+  <div class="viz-subtitle">Peak count (left) vs 2025 count (right) for names that were once massive. Slope = collapse.</div>
+  <svg id="svg-beforeafter"></svg>
+</section>
+
+<script>
+const tip = document.getElementById('tip');
+function showTip(html, e) {
+  tip.innerHTML = html;
+  tip.classList.add('show');
+  moveTip(e);
+}
+function moveTip(e) {
+  const x = e.clientX + 14, y = e.clientY - 10;
+  tip.style.left = Math.min(x, window.innerWidth - 240) + 'px';
+  tip.style.top = Math.max(y, 10) + 'px';
+}
+function hideTip() { tip.classList.remove('show'); }
+
+// Tab switching
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('section.viz').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+const statusColor = {
+  endangered: '#f59e0b',
+  extinct:    '#f43f5e',
+  declining:  '#6b7280',
+  rising:     '#4ade80',
+  stable:     '#a78bfa',
+};
+
+// ─── DATA ──────────────────────────────────────────────────────────────────
+
+const landscapeData = [
+  {name:"Linda",sex:"F",peak_year:1947,peak_count:99692,status:"endangered"},
+  {name:"James",sex:"M",peak_year:1947,peak_count:94767,status:"stable"},
+  {name:"Michael",sex:"M",peak_year:1957,peak_count:92781,status:"endangered"},
+  {name:"Robert",sex:"M",peak_year:1947,peak_count:91655,status:"endangered"},
+  {name:"John",sex:"M",peak_year:1947,peak_count:88324,status:"endangered"},
+  {name:"David",sex:"M",peak_year:1955,peak_count:86306,status:"endangered"},
+  {name:"Mary",sex:"F",peak_year:1921,peak_count:73984,status:"endangered"},
+  {name:"William",sex:"M",peak_year:1947,peak_count:67002,status:"declining"},
+  {name:"Jennifer",sex:"F",peak_year:1972,peak_count:63600,status:"endangered"},
+  {name:"Lisa",sex:"F",peak_year:1965,peak_count:60271,status:"endangered"},
+  {name:"Christopher",sex:"M",peak_year:1984,peak_count:60021,status:"endangered"},
+  {name:"Richard",sex:"M",peak_year:1946,peak_count:58870,status:"endangered"},
+  {name:"Mark",sex:"M",peak_year:1960,peak_count:58727,status:"endangered"},
+  {name:"Patricia",sex:"F",peak_year:1951,peak_count:56446,status:"endangered"},
+  {name:"Jason",sex:"M",peak_year:1977,peak_count:55631,status:"endangered"},
+  {name:"Deborah",sex:"F",peak_year:1954,peak_count:54674,status:"endangered"},
+  {name:"Debra",sex:"F",peak_year:1955,peak_count:50563,status:"endangered"},
+  {name:"Susan",sex:"F",peak_year:1955,peak_count:47418,status:"endangered"},
+  {name:"Thomas",sex:"M",peak_year:1952,peak_count:48647,status:"stable"},
+  {name:"Karen",sex:"F",peak_year:1957,peak_count:40591,status:"endangered"},
+  {name:"Cynthia",sex:"F",peak_year:1957,peak_count:39340,status:"endangered"},
+  {name:"Gary",sex:"M",peak_year:1952,peak_count:38754,status:"endangered"},
+  {name:"Steven",sex:"M",peak_year:1956,peak_count:38413,status:"endangered"},
+  {name:"Liam",sex:"M",peak_year:2017,peak_count:18798,status:"declining"},
+  {name:"Noah",sex:"M",peak_year:2013,peak_count:18252,status:"declining"},
+  {name:"Emma",sex:"F",peak_year:2014,peak_count:20799,status:"declining"},
+  {name:"Olivia",sex:"F",peak_year:2019,peak_count:18512,status:"declining"},
+  {name:"Ava",sex:"F",peak_year:2007,peak_count:17441,status:"declining"},
+  {name:"Sophia",sex:"F",peak_year:2011,peak_count:21695,status:"declining"},
+  {name:"Isabella",sex:"F",peak_year:2009,peak_count:22925,status:"declining"},
+  {name:"Aiden",sex:"M",peak_year:2009,peak_count:17141,status:"declining"},
+  {name:"Ethan",sex:"M",peak_year:2009,peak_count:17389,status:"declining"},
+  {name:"Theodore",sex:"M",peak_year:2025,peak_count:13355,status:"rising"},
+  {name:"Mateo",sex:"M",peak_year:2024,peak_count:11349,status:"rising"},
+  {name:"Luna",sex:"F",peak_year:2022,peak_count:8977,status:"rising"},
+  {name:"Elias",sex:"M",peak_year:2025,peak_count:8837,status:"rising"},
+  {name:"Eleanor",sex:"F",peak_year:1920,peak_count:8497,status:"rising"},
+  {name:"Hazel",sex:"F",peak_year:1918,peak_count:7615,status:"rising"},
+  {name:"Aurora",sex:"F",peak_year:2025,peak_count:7065,status:"rising"},
+  {name:"Violet",sex:"F",peak_year:2025,peak_count:7546,status:"rising"},
+  {name:"Vicki",sex:"F",peak_year:1954,peak_count:8221,status:"extinct"},
+  {name:"Vickie",sex:"F",peak_year:1956,peak_count:6957,status:"extinct"},
+  {name:"Traci",sex:"F",peak_year:1970,peak_count:3854,status:"extinct"},
+  {name:"Gayle",sex:"F",peak_year:1951,peak_count:2826,status:"extinct"},
+  {name:"Shaniqua",sex:"F",peak_year:1991,peak_count:861,status:"extinct"},
+  {name:"Kirstie",sex:"F",peak_year:1991,peak_count:635,status:"extinct"},
+  {name:"Brittni",sex:"F",peak_year:1990,peak_count:746,status:"extinct"},
+  {name:"Donna",sex:"F",peak_year:1959,peak_count:36468,status:"endangered"},
+  {name:"Timothy",sex:"M",peak_year:1959,peak_count:30783,status:"endangered"},
+  {name:"Scott",sex:"M",peak_year:1971,peak_count:30901,status:"endangered"},
+  {name:"Angela",sex:"F",peak_year:1971,peak_count:25901,status:"endangered"},
+  {name:"Amy",sex:"F",peak_year:1975,peak_count:32254,status:"endangered"},
+  {name:"Melissa",sex:"F",peak_year:1979,peak_count:34050,status:"endangered"},
+  {name:"Michelle",sex:"F",peak_year:1969,peak_count:34319,status:"endangered"},
+  {name:"Kimberly",sex:"F",peak_year:1970,peak_count:34130,status:"endangered"},
+  {name:"Brian",sex:"M",peak_year:1972,peak_count:36306,status:"endangered"},
+  {name:"Jeffrey",sex:"M",peak_year:1962,peak_count:33537,status:"endangered"},
+  {name:"Kevin",sex:"M",peak_year:1963,peak_count:30613,status:"endangered"},
+  {name:"Heather",sex:"F",peak_year:1975,peak_count:24301,status:"endangered"},
+  {name:"Kathleen",sex:"F",peak_year:1951,peak_count:26716,status:"endangered"},
+  {name:"Dennis",sex:"M",peak_year:1952,peak_count:24552,status:"endangered"},
+  {name:"Diane",sex:"F",peak_year:1955,peak_count:23290,status:"endangered"},
+  {name:"Gregory",sex:"M",peak_year:1962,peak_count:21976,status:"endangered"},
+  {name:"Tammy",sex:"F",peak_year:1963,peak_count:21199,status:"endangered"},
+  {name:"Pamela",sex:"F",peak_year:1954,peak_count:27361,status:"endangered"},
+  {name:"Debbie",sex:"F",peak_year:1959,peak_count:19540,status:"endangered"},
+  {name:"Janice",sex:"F",peak_year:1951,peak_count:15958,status:"endangered"},
+  {name:"Rebecca",sex:"F",peak_year:1981,peak_count:16737,status:"endangered"},
+  {name:"Todd",sex:"M",peak_year:1964,peak_count:15350,status:"endangered"},
+  {name:"Eric",sex:"M",peak_year:1970,peak_count:23571,status:"endangered"},
+  {name:"Tracy",sex:"F",peak_year:1970,peak_count:18464,status:"endangered"},
+  {name:"Dawn",sex:"F",peak_year:1970,peak_count:15681,status:"endangered"},
+  {name:"Shannon",sex:"F",peak_year:1970,peak_count:13547,status:"endangered"},
+  {name:"Arthur",sex:"M",peak_year:1921,peak_count:10527,status:"rising"},
+  {name:"Josephine",sex:"F",peak_year:1918,peak_count:8682,status:"rising"},
+  {name:"Ezra",sex:"M",peak_year:2024,peak_count:8822,status:"rising"},
+  {name:"Luca",sex:"M",peak_year:2025,peak_count:8759,status:"rising"},
+  {name:"Asher",sex:"M",peak_year:2022,peak_count:8418,status:"rising"},
+  {name:"Leo",sex:"M",peak_year:2022,peak_count:8293,status:"rising"},
+  {name:"June",sex:"F",peak_year:1925,peak_count:6649,status:"rising"},
+  {name:"Hudson",sex:"M",peak_year:2025,peak_count:8583,status:"rising"},
+];
+
+const lifespanData = [
+  {name:"Jean",sex:"F",first_year:1880,last_year:2024,peak_year:1927,peak_count:12512,status:"endangered"},
+  {name:"Jeanne",sex:"F",first_year:1880,last_year:2024,peak_year:1947,peak_count:4364,status:"endangered"},
+  {name:"Pam",sex:"F",first_year:1915,last_year:1996,peak_year:1959,peak_count:3677,status:"extinct"},
+  {name:"Jeanette",sex:"F",first_year:1880,last_year:2024,peak_year:1939,peak_count:2893,status:"endangered"},
+  {name:"Marquita",sex:"F",first_year:1919,last_year:2015,peak_year:1983,peak_count:2543,status:"extinct"},
+  {name:"Pat",sex:"F",first_year:1897,last_year:1991,peak_year:1941,peak_count:1900,status:"extinct"},
+  {name:"Deneen",sex:"F",first_year:1947,last_year:2007,peak_year:1964,peak_count:1604,status:"extinct"},
+  {name:"Jayne",sex:"F",first_year:1895,last_year:2024,peak_year:1957,peak_count:1524,status:"endangered"},
+  {name:"Catina",sex:"F",first_year:1949,last_year:2011,peak_year:1972,peak_count:1372,status:"extinct"},
+  {name:"Dick",sex:"M",first_year:1880,last_year:2005,peak_year:1934,peak_count:1131,status:"extinct"},
+  {name:"Vonda",sex:"F",first_year:1899,last_year:2008,peak_year:1965,peak_count:1093,status:"extinct"},
+  {name:"Tameka",sex:"F",first_year:1965,last_year:2011,peak_year:1977,peak_count:1021,status:"extinct"},
+  {name:"Pat",sex:"M",first_year:1880,last_year:2014,peak_year:1960,peak_count:1000,status:"extinct"},
+  {name:"Sharyn",sex:"F",first_year:1931,last_year:2014,peak_year:1947,peak_count:919,status:"extinct"},
+  {name:"Tammi",sex:"F",first_year:1950,last_year:2013,peak_year:1968,peak_count:873,status:"extinct"},
+  {name:"Shaniqua",sex:"F",first_year:1971,last_year:2010,peak_year:1991,peak_count:861,status:"extinct"},
+  {name:"Kathi",sex:"F",first_year:1938,last_year:2001,peak_year:1958,peak_count:824,status:"extinct"},
+  {name:"Bettye",sex:"F",first_year:1883,last_year:1998,peak_year:1933,peak_count:763,status:"extinct"},
+  {name:"Brittni",sex:"F",first_year:1974,last_year:2012,peak_year:1990,peak_count:746,status:"extinct"},
+  {name:"Gay",sex:"F",first_year:1886,last_year:1982,peak_year:1959,peak_count:682,status:"extinct"},
+  {name:"Lakesha",sex:"F",first_year:1967,last_year:2008,peak_year:1978,peak_count:679,status:"extinct"},
+  {name:"Lorri",sex:"F",first_year:1942,last_year:1996,peak_year:1961,peak_count:676,status:"extinct"},
+  {name:"Nannie",sex:"F",first_year:1880,last_year:1991,peak_year:1920,peak_count:655,status:"extinct"},
+  {name:"Kirstie",sex:"F",first_year:1950,last_year:2011,peak_year:1991,peak_count:635,status:"extinct"},
+  {name:"Dee",sex:"F",first_year:1880,last_year:2012,peak_year:1961,peak_count:623,status:"extinct"},
+  {name:"Gayla",sex:"F",first_year:1921,last_year:2014,peak_year:1954,peak_count:617,status:"extinct"},
+  {name:"Anitra",sex:"F",first_year:1923,last_year:2013,peak_year:1976,peak_count:596,status:"extinct"},
+  {name:"Kecia",sex:"F",first_year:1962,last_year:2003,peak_year:1965,peak_count:560,status:"extinct"},
+  {name:"Diann",sex:"F",first_year:1924,last_year:2014,peak_year:1947,peak_count:557,status:"extinct"},
+  {name:"Tonja",sex:"F",first_year:1940,last_year:2005,peak_year:1967,peak_count:512,status:"extinct"},
+  {name:"Keshia",sex:"F",first_year:1964,last_year:2011,peak_year:1986,peak_count:511,status:"extinct"},
+  {name:"Shonda",sex:"F",first_year:1954,last_year:2008,peak_year:1970,peak_count:510,status:"extinct"},
+  {name:"Debi",sex:"F",first_year:1946,last_year:2006,peak_year:1958,peak_count:504,status:"extinct"},
+  {name:"Vicki",sex:"F",first_year:1914,last_year:2024,peak_year:1954,peak_count:8221,status:"endangered"},
+  {name:"Vickie",sex:"F",first_year:1907,last_year:2024,peak_year:1956,peak_count:6957,status:"endangered"},
+  {name:"Traci",sex:"F",first_year:1945,last_year:2024,peak_year:1970,peak_count:3854,status:"endangered"},
+  {name:"Gayle",sex:"F",first_year:1891,last_year:2024,peak_year:1951,peak_count:2826,status:"endangered"},
+  {name:"Katina",sex:"F",first_year:1920,last_year:2024,peak_year:1972,peak_count:2747,status:"endangered"},
+];
+
+const descentData = [
+  {name:"Shaniqua",series:{1990:842,1991:861,1992:604,1993:433,1994:259,1995:184,1996:132,1997:105,1998:69,1999:36,2000:26,2001:21,2002:16,2003:19,2004:16,2005:7,2006:10,2007:5,2008:5,2010:8}},
+  {name:"Kirstie",series:{1990:537,1991:635,1992:421,1993:257,1994:192,1995:121,1996:102,1997:74,1998:65,1999:46,2000:28,2001:18,2002:16,2003:12,2004:8,2005:17,2006:6,2007:7,2008:7,2010:6,2011:5}},
+  {name:"Brittni",series:{1990:746,1991:579,1992:427,1993:360,1994:323,1995:251,1996:214,1997:142,1998:120,1999:109,2000:83,2001:44,2002:28,2003:19,2004:22,2005:18,2006:16,2007:5,2008:10,2010:6,2012:5}},
+  {name:"Keshia",series:{1990:385,1991:252,1992:169,1993:108,1994:70,1995:54,1996:27,1997:27,1998:18,1999:19,2000:17,2001:11,2002:21,2003:6,2005:11,2006:9,2007:8,2008:6,2009:5,2010:7,2011:8}},
+  {name:"Marquita",series:{1990:255,1991:246,1992:227,1993:219,1994:138,1995:92,1996:74,1997:71,1998:60,1999:45,2000:40,2001:37,2002:22,2003:28,2004:20,2005:19,2006:12,2007:14,2008:10,2009:10,2010:12,2011:8,2012:9,2014:6,2015:6}},
+  {name:"Tameka",series:{1990:235,1991:171,1992:139,1993:112,1994:96,1995:66,1996:62,1997:58,1998:47,1999:33,2000:37,2001:18,2002:21,2003:17,2004:16,2005:21,2006:9,2007:13,2008:9,2009:8,2010:7,2011:6}},
+  {name:"Lakesha",series:{1990:160,1991:135,1992:104,1993:94,1994:78,1995:66,1996:60,1997:37,1998:34,1999:19,2000:27,2001:16,2002:14,2003:14,2004:7,2005:13,2006:5,2007:15,2008:7}},
+  {name:"Shonda",series:{1990:67,1991:62,1992:56,1993:38,1994:45,1995:30,1996:19,1997:21,1998:17,1999:14,2000:16,2001:5,2002:7,2003:5,2004:8,2006:9,2007:5,2008:5}},
+  {name:"Anitra",series:{1990:59,1991:54,1992:40,1993:44,1994:30,1995:37,1996:36,1997:38,1998:32,1999:20,2000:19,2001:16,2002:17,2003:10,2004:7,2005:6,2006:11,2007:11,2008:9,2009:10,2010:6,2011:6,2012:7,2013:6}},
+  {name:"Tammi",series:{1990:37,1991:34,1992:26,1993:21,1994:28,1995:19,1996:16,1997:16,1998:13,1999:14,2000:10,2001:10,2002:7,2003:9,2004:11,2005:11,2006:10,2007:10,2008:5,2009:7,2010:5,2013:6}},
+];
+
+const birthWaveData = [
+  {year:1940,F:1143528,M:1159172},{year:1941,F:1208119,M:1228318},{year:1942,F:1350719,M:1381161},{year:1943,F:1395293,M:1427297},{year:1944,F:1327223,M:1362875},{year:1945,F:1307090,M:1345855},{year:1946,F:1571305,M:1624023},{year:1947,F:1772766,M:1829599},{year:1948,F:1697908,M:1754618},{year:1949,F:1710877,M:1773939},{year:1950,F:1713054,M:1790262},{year:1951,F:1800859,M:1882837},{year:1952,F:1854335,M:1943633},{year:1953,F:1881301,M:1972299},{year:1954,F:1941915,M:2038751},{year:1955,F:1955277,M:2059889},{year:1956,F:2007703,M:2115302},{year:1957,F:2044851,M:2157236},{year:1958,F:2011619,M:2122409},{year:1959,F:2023462,M:2134518},{year:1960,F:2021941,M:2132320},{year:1961,F:2018495,M:2124195},{year:1962,F:1966603,M:2068772},{year:1963,F:1927507,M:2031078},{year:1964,F:1894855,M:1992698},{year:1965,F:1765164,M:1860143},{year:1966,F:1692177,M:1783461},{year:1967,F:1651025,M:1743811},{year:1968,F:1640389,M:1737974},{year:1969,F:1687016,M:1788174},{year:1970,F:1748144,M:1858229},{year:1971,F:1663823,M:1768447},{year:1972,F:1521244,M:1621608},{year:1973,F:1458209,M:1558576},{year:1974,F:1467534,M:1572334},{year:1975,F:1457861,M:1561357},{year:1976,F:1465099,M:1569007},{year:1977,F:1533146,M:1643220},{year:1978,F:1531859,M:1641837},{year:1979,F:1605268,M:1721536},{year:1980,F:1660307,M:1783951},{year:1981,F:1668060,M:1791177},{year:1982,F:1693325,M:1814447},{year:1983,F:1670609,M:1792564},{year:1984,F:1683817,M:1804848},{year:1985,F:1720828,M:1848210},{year:1986,F:1715547,M:1841515},{year:1987,F:1738632,M:1866984},{year:1988,F:1780854,M:1914283},{year:1989,F:1843552,M:2000928},{year:1990,F:1898547,M:2054038},{year:1991,F:1875007,M:2020328},{year:1992,F:1843931,M:1997409},{year:1993,F:1809072,M:1961328},{year:1994,F:1785753,M:1932031},{year:1995,F:1758548,M:1903701},{year:1996,F:1753007,M:1894300},{year:1997,F:1740710,M:1885140},{year:1998,F:1766949,M:1911366},{year:1999,F:1773823,M:1920150},{year:2000,F:1816036,M:1964001},{year:2001,F:1800624,M:1942881},{year:2002,F:1796882,M:1941514},{year:2003,F:1827145,M:1975349},{year:2004,F:1836250,M:1984979},{year:2005,F:1847842,M:1997305},{year:2006,F:1901209,M:2055273},{year:2007,F:1922617,M:2075414},{year:2008,F:1890938,M:2040150},{year:2009,F:1837114,M:1983573},{year:2010,F:1777595,M:1918676},{year:2011,F:1759066,M:1899252},{year:2012,F:1761053,M:1896946},{year:2013,F:1754746,M:1891581},{year:2014,F:1786355,M:1920871},{year:2015,F:1785098,M:1916743},{year:2016,F:1772022,M:1897738},{year:2017,F:1726461,M:1850956},{year:2018,F:1701074,M:1816158},{year:2019,F:1678366,M:1794216},{year:2020,F:1616549,M:1726076},{year:2021,F:1640861,M:1749482},{year:2022,F:1640131,M:1746008},{year:2023,F:1604582,M:1710576},{year:2024,F:1620190,M:1722888},{year:2025,F:1607267,M:1708076},
+];
+
+const beforeAfterData = [
+  {name:"Linda",sex:"F",peak_year:1947,peak_count:99692,latest:1318},
+  {name:"Michael",sex:"M",peak_year:1957,peak_count:92781,latest:8094},
+  {name:"Patricia",sex:"F",peak_year:1951,peak_count:56446,latest:167},
+  {name:"Jennifer",sex:"F",peak_year:1972,peak_count:63600,latest:501},
+  {name:"Lisa",sex:"F",peak_year:1965,peak_count:60271,latest:256},
+  {name:"Deborah",sex:"F",peak_year:1954,peak_count:54674,latest:313},
+  {name:"Donna",sex:"F",peak_year:1959,peak_count:36468,latest:98},
+  {name:"Karen",sex:"F",peak_year:1957,peak_count:40591,latest:175},
+  {name:"Cynthia",sex:"F",peak_year:1957,peak_count:39340,latest:247},
+  {name:"Amy",sex:"F",peak_year:1975,peak_count:32254,latest:1200},
+  {name:"Melissa",sex:"F",peak_year:1979,peak_count:34050,latest:747},
+  {name:"Michelle",sex:"F",peak_year:1969,peak_count:34319,latest:661},
+  {name:"Tammy",sex:"F",peak_year:1963,peak_count:21199,latest:41},
+  {name:"Heather",sex:"F",peak_year:1975,peak_count:24301,latest:177},
+  {name:"Kimberly",sex:"F",peak_year:1970,peak_count:34130,latest:1009},
+  {name:"Gary",sex:"M",peak_year:1952,peak_count:38754,latest:201},
+  {name:"Dennis",sex:"M",peak_year:1952,peak_count:24552,latest:381},
+  {name:"Gregory",sex:"M",peak_year:1962,peak_count:21976,latest:493},
+  {name:"Scott",sex:"M",peak_year:1971,peak_count:30901,latest:561},
+  {name:"Brian",sex:"M",peak_year:1972,peak_count:36306,latest:979},
+];
+
+// ─── VIZ A: LANDSCAPE ──────────────────────────────────────────────────────
+(function() {
+  const el = document.getElementById('tab-landscape');
+  const W = Math.min(el.clientWidth || 900, 1100);
+  const H = 520;
+  const mg = {top:20, right:40, bottom:50, left:70};
+  const iw = W - mg.left - mg.right;
+  const ih = H - mg.top - mg.bottom;
+
+  const svg = d3.select('#svg-landscape')
+    .attr('width', W).attr('height', H)
+    .attr('viewBox', `0 0 ${W} ${H}`);
+
+  const g = svg.append('g').attr('transform', `translate(${mg.left},${mg.top})`);
+
+  const xScale = d3.scaleLinear().domain([1880, 2026]).range([0, iw]);
+  const yScale = d3.scaleLog().domain([400, 110000]).range([ih, 0]).clamp(true);
+
+  // grid
+  g.append('g').selectAll('line').data(xScale.ticks(12)).join('line')
+    .attr('x1', d => xScale(d)).attr('x2', d => xScale(d))
+    .attr('y1', 0).attr('y2', ih)
+    .attr('stroke', '#1e1e30').attr('stroke-width', 1);
+
+  g.append('g')
+    .attr('transform', `translate(0,${ih})`)
+    .call(d3.axisBottom(xScale).tickFormat(d3.format('d')).ticks(10))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill','#6b7280').attr('font-size','11'); });
+
+  g.append('g')
+    .call(d3.axisLeft(yScale).tickValues([500,1000,2000,5000,10000,25000,50000,100000]).tickFormat(d => d >= 1000 ? (d/1000)+'k' : d))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill','#6b7280').attr('font-size','11'); });
+
+  // 2025 line
+  g.append('line')
+    .attr('x1', xScale(2025)).attr('x2', xScale(2025))
+    .attr('y1', 0).attr('y2', ih)
+    .attr('stroke', '#f43f5e').attr('stroke-width', 1.5).attr('stroke-dasharray','4,3').attr('opacity', 0.6);
+  g.append('text').attr('x', xScale(2025)+4).attr('y', 14).attr('fill','#f43f5e').attr('font-size','10').text('2025');
+
+  // dots
+  const dots = g.selectAll('circle').data(landscapeData).join('circle')
+    .attr('cx', d => xScale(d.peak_year))
+    .attr('cy', d => yScale(Math.max(d.peak_count, 400)))
+    .attr('r', d => Math.max(3, Math.sqrt(d.peak_count / 800)))
+    .attr('fill', d => statusColor[d.status] || '#666')
+    .attr('opacity', 0.82)
+    .attr('stroke', '#07070f').attr('stroke-width', 0.5)
+    .style('cursor', 'pointer');
+
+  dots.on('mousemove', (e, d) => {
+    showTip(`<strong>${d.name}</strong> (${d.sex})<br>Peak: ${d.peak_year} · ${d.peak_count.toLocaleString()}<br><span style="color:${statusColor[d.status]}">${d.status}</span>`, e);
+  }).on('mouseleave', hideTip);
+
+  // axis labels
+  svg.append('text').attr('x', W/2).attr('y', H-4).attr('text-anchor','middle').attr('fill','#6b7280').attr('font-size','12').attr('font-family','sans-serif').text('Peak Year');
+  svg.append('text').attr('transform','rotate(-90)').attr('x',-H/2).attr('y',16).attr('text-anchor','middle').attr('fill','#6b7280').attr('font-size','12').attr('font-family','sans-serif').text('Peak Count (log)');
+})();
+
+// ─── VIZ B: LIFESPANS ──────────────────────────────────────────────────────
+(function() {
+  const el = document.getElementById('tab-lifespans');
+  const W = Math.min(el.clientWidth || 900, 1100);
+  const sorted = [...lifespanData].sort((a,b) => a.first_year - b.first_year);
+  const H = Math.max(420, sorted.length * 14 + 60);
+  const mg = {top:20, right:60, bottom:40, left:110};
+  const iw = W - mg.left - mg.right;
+  const ih = H - mg.top - mg.bottom;
+
+  const svg = d3.select('#svg-lifespans')
+    .attr('width', W).attr('height', H)
+    .attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${mg.left},${mg.top})`);
+
+  const xScale = d3.scaleLinear().domain([1880, 2026]).range([0, iw]);
+  const yScale = d3.scaleBand().domain(sorted.map(d => d.name + d.sex)).range([0, ih]).padding(0.25);
+
+  g.append('g').attr('transform', `translate(0,${ih})`)
+    .call(d3.axisBottom(xScale).tickFormat(d3.format('d')).ticks(10))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill','#6b7280').attr('font-size','10'); });
+
+  // 2025 line
+  g.append('line')
+    .attr('x1', xScale(2025)).attr('x2', xScale(2025))
+    .attr('y1', -5).attr('y2', ih)
+    .attr('stroke', '#f43f5e').attr('stroke-width', 1.5).attr('stroke-dasharray','4,3').attr('opacity', 0.5);
+
+  const barH = yScale.bandwidth();
+
+  sorted.forEach(d => {
+    const y = yScale(d.name + d.sex);
+    const color = d.status === 'extinct' ? '#f43f5e' : (d.status === 'endangered' ? '#f59e0b' : '#6b7280');
+
+    g.append('rect')
+      .attr('x', xScale(d.first_year))
+      .attr('y', y)
+      .attr('width', xScale(d.last_year) - xScale(d.first_year))
+      .attr('height', barH)
+      .attr('fill', color)
+      .attr('opacity', 0.75)
+      .attr('rx', 1)
+      .on('mousemove', (e) => {
+        const span = d.last_year - d.first_year;
+        showTip(`<strong>${d.name}</strong> (${d.sex})<br>${d.first_year}–${d.last_year} · ${span} yrs<br>Peak: ${d.peak_year} · ${d.peak_count.toLocaleString()}<br><span style="color:${color}">${d.status}</span>`, e);
+      }).on('mouseleave', hideTip);
+
+    // name label
+    g.append('text')
+      .attr('x', xScale(d.first_year) - 4)
+      .attr('y', y + barH/2 + 3.5)
+      .attr('text-anchor', 'end')
+      .attr('fill', '#9ca3af').attr('font-size', '9.5')
+      .attr('font-family', 'sans-serif')
+      .text(d.name);
+  });
+})();
+
+// ─── VIZ C: DESCENT ────────────────────────────────────────────────────────
+(function() {
+  const cols = 5;
+  const rows = Math.ceil(descentData.length / cols);
+  const cellW = 190, cellH = 110, padX = 14, padY = 30;
+  const W = cols * (cellW + padX);
+  const H = rows * (cellH + padY) + 40;
+
+  const svg = d3.select('#svg-descent')
+    .attr('width', W).attr('height', H)
+    .attr('viewBox', `0 0 ${W} ${H}`);
+
+  descentData.forEach((d, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const ox = col * (cellW + padX) + 10;
+    const oy = row * (cellH + padY) + 30;
+
+    const years = Object.keys(d.series).map(Number).sort((a,b)=>a-b);
+    // extend to last known year, add 0 for 2025 if extinct
+    const allYears = [];
+    for (let y = years[0]; y <= 2025; y++) allYears.push(y);
+    const points = allYears.map(y => ({y, v: d.series[y] ?? 0}));
+
+    const xS = d3.scaleLinear().domain([years[0], 2025]).range([0, cellW - 20]);
+    const maxV = Math.max(...points.map(p=>p.v));
+    const yS = d3.scaleLinear().domain([0, maxV]).range([cellH, 0]);
+
+    const g = svg.append('g').attr('transform', `translate(${ox},${oy})`);
+
+    // bg
+    g.append('rect').attr('width', cellW).attr('height', cellH+18).attr('y',-18).attr('fill','#0e0e1a').attr('rx',3);
+
+    // title
+    g.append('text').attr('x', 0).attr('y', -5).attr('fill','#e5e7eb').attr('font-size','11').attr('font-family','sans-serif').attr('font-weight','600').text(d.name);
+
+    // area
+    const area = d3.area().x(p=>xS(p.y)).y0(cellH).y1(p=>yS(p.v)).curve(d3.curveMonotoneX);
+    const line = d3.line().x(p=>xS(p.y)).y(p=>yS(p.v)).curve(d3.curveMonotoneX);
+
+    g.append('path').datum(points).attr('d', area)
+      .attr('fill', '#f43f5e').attr('opacity', 0.18);
+    g.append('path').datum(points).attr('d', line)
+      .attr('fill', 'none').attr('stroke', '#f43f5e').attr('stroke-width', 1.5);
+
+    // zero line
+    g.append('line').attr('x1',0).attr('x2',cellW-20).attr('y1',cellH).attr('y2',cellH)
+      .attr('stroke','#1e1e30').attr('stroke-width',1);
+
+    // peak label
+    const pk = points.reduce((a,b)=>a.v>b.v?a:b);
+    g.append('text').attr('x',xS(pk.y)).attr('y',yS(pk.v)-4)
+      .attr('fill','#f59e0b').attr('font-size','9').attr('text-anchor','middle')
+      .attr('font-family','sans-serif').text(pk.v);
+
+    // year labels
+    g.append('text').attr('x',0).attr('y',cellH+12).attr('fill','#4b5563').attr('font-size','8.5').attr('font-family','sans-serif').text(years[0]);
+    g.append('text').attr('x',cellW-20).attr('y',cellH+12).attr('fill','#4b5563').attr('font-size','8.5').attr('text-anchor','end').attr('font-family','sans-serif').text('2025');
+  });
+})();
+
+// ─── VIZ D: BIRTH WAVES ────────────────────────────────────────────────────
+(function() {
+  const el = document.getElementById('tab-waves');
+  const W = Math.min(el.clientWidth || 900, 1100);
+  const H = 400;
+  const mg = {top:30, right:40, bottom:50, left:80};
+  const iw = W - mg.left - mg.right;
+  const ih = H - mg.top - mg.bottom;
+
+  const svg = d3.select('#svg-waves')
+    .attr('width', W).attr('height', H)
+    .attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${mg.left},${mg.top})`);
+
+  const xS = d3.scaleLinear().domain([1940, 2025]).range([0, iw]);
+  const maxTotal = d3.max(birthWaveData, d => d.F + d.M);
+  const yS = d3.scaleLinear().domain([0, maxTotal * 1.05]).range([ih, 0]);
+
+  // area M
+  const areaM = d3.area().x(d=>xS(d.year)).y0(ih).y1(d=>yS(d.M)).curve(d3.curveMonotoneX);
+  g.append('path').datum(birthWaveData).attr('d', areaM).attr('fill','#3b82f6').attr('opacity',0.35);
+
+  // area F stacked on M
+  const areaF = d3.area().x(d=>xS(d.year)).y0(d=>yS(d.M)).y1(d=>yS(d.F+d.M)).curve(d3.curveMonotoneX);
+  g.append('path').datum(birthWaveData).attr('d', areaF).attr('fill','#ec4899').attr('opacity',0.35);
+
+  // lines
+  const lineM = d3.line().x(d=>xS(d.year)).y(d=>yS(d.M)).curve(d3.curveMonotoneX);
+  const lineT = d3.line().x(d=>xS(d.year)).y(d=>yS(d.F+d.M)).curve(d3.curveMonotoneX);
+  g.append('path').datum(birthWaveData).attr('d', lineM).attr('fill','none').attr('stroke','#3b82f6').attr('stroke-width',1.5);
+  g.append('path').datum(birthWaveData).attr('d', lineT).attr('fill','none').attr('stroke','#ec4899').attr('stroke-width',1.5);
+
+  // baby boom annotation
+  g.append('line').attr('x1',xS(1946)).attr('x2',xS(1964)).attr('y1',-10).attr('y2',-10)
+    .attr('stroke','#f59e0b').attr('stroke-width',1.5).attr('marker-end','url(#arrow)');
+  g.append('text').attr('x',xS(1955)).attr('y',-18).attr('text-anchor','middle')
+    .attr('fill','#f59e0b').attr('font-size','11').attr('font-family','sans-serif').text('Baby Boom');
+
+  g.append('g').attr('transform',`translate(0,${ih})`)
+    .call(d3.axisBottom(xS).tickFormat(d3.format('d')).ticks(10))
+    .call(ax=>{ax.select('.domain').remove();ax.selectAll('line').remove();ax.selectAll('text').attr('fill','#6b7280').attr('font-size','11');});
+
+  g.append('g')
+    .call(d3.axisLeft(yS).ticks(6).tickFormat(d => (d/1000000).toFixed(1)+'M'))
+    .call(ax=>{ax.select('.domain').remove();ax.selectAll('line').remove();ax.selectAll('text').attr('fill','#6b7280').attr('font-size','11');});
+
+  // hover line
+  const hoverLine = g.append('line').attr('y1',0).attr('y2',ih).attr('stroke','#fff').attr('stroke-width',1).attr('opacity',0).attr('pointer-events','none');
+  const hoverRect = g.append('rect').attr('width',iw).attr('height',ih).attr('fill','none').attr('pointer-events','all');
+  hoverRect.on('mousemove', (e) => {
+    const [mx] = d3.pointer(e, g.node());
+    const yr = Math.round(xS.invert(mx));
+    const row = birthWaveData.find(d=>d.year===yr);
+    if (!row) return;
+    hoverLine.attr('x1',xS(yr)).attr('x2',xS(yr)).attr('opacity',0.4);
+    showTip(`<strong>${yr}</strong><br>Girls: ${(row.F/1e6).toFixed(3)}M<br>Boys: ${(row.M/1e6).toFixed(3)}M<br>Total: ${((row.F+row.M)/1e6).toFixed(3)}M`, e);
+  }).on('mouseleave', () => { hoverLine.attr('opacity',0); hideTip(); });
+
+  // legend
+  svg.append('text').attr('x',mg.left+10).attr('y',H-8).attr('fill','#ec4899').attr('font-size','11').attr('font-family','sans-serif').text('Girls');
+  svg.append('text').attr('x',mg.left+54).attr('y',H-8).attr('fill','#3b82f6').attr('font-size','11').attr('font-family','sans-serif').text('Boys');
+  svg.append('text').attr('x',W/2).attr('y',H-4).attr('text-anchor','middle').attr('fill','#6b7280').attr('font-size','11').attr('font-family','sans-serif').text('Millions of births per year in SSA data');
+})();
+
+// ─── VIZ E: BEFORE / AFTER ─────────────────────────────────────────────────
+(function() {
+  const el = document.getElementById('tab-beforeafter');
+  const W = Math.min(el.clientWidth || 900, 900);
+  const H = beforeAfterData.length * 28 + 80;
+  const mg = {top:40, right:120, bottom:30, left:120};
+  const iw = W - mg.left - mg.right;
+
+  const svg = d3.select('#svg-beforeafter')
+    .attr('width', W).attr('height', H)
+    .attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${mg.left},${mg.top})`);
+
+  // headers
+  svg.append('text').attr('x', mg.left - 10).attr('y', 24).attr('text-anchor','end').attr('fill','#f59e0b').attr('font-size','12').attr('font-family','sans-serif').attr('font-weight','700').text('PEAK');
+  svg.append('text').attr('x', W - mg.right + 10).attr('y', 24).attr('text-anchor','start').attr('fill','#22d3ee').attr('font-size','12').attr('font-family','sans-serif').attr('font-weight','700').text('2025');
+
+  const sorted = [...beforeAfterData].sort((a,b)=>b.peak_count - a.peak_count);
+  const rowH = 28;
+  const maxPeak = d3.max(sorted, d=>d.peak_count);
+
+  sorted.forEach((d, i) => {
+    const y = i * rowH + rowH/2;
+    const peakX = -((d.peak_count / maxPeak) * (iw * 0.47));
+    const latestX = (d.latest / maxPeak) * (iw * 0.47);
+    const pctLoss = Math.round((1 - d.latest/d.peak_count)*100);
+
+    // left bar (peak)
+    g.append('rect').attr('x', peakX).attr('y', y-6).attr('width', -peakX).attr('height', 11).attr('fill','#f59e0b').attr('opacity',0.75).attr('rx',1);
+    // right bar (2025)
+    g.append('rect').attr('x', 0).attr('y', y-6).attr('width', Math.max(latestX,1)).attr('height', 11).attr('fill','#22d3ee').attr('opacity',0.75).attr('rx',1);
+
+    // center line
+    g.append('line').attr('x1',0).attr('x2',0).attr('y1',y-7).attr('y2',y+7).attr('stroke','#1e1e30').attr('stroke-width',1);
+
+    // name
+    g.append('text').attr('x',-8).attr('y',y+4).attr('text-anchor','end').attr('fill','#e5e7eb').attr('font-size','10.5').attr('font-family','sans-serif').text(d.name);
+
+    // pct loss
+    g.append('text').attr('x',iw*0.48+4).attr('y',y+4).attr('fill','#6b7280').attr('font-size','9.5').attr('font-family','sans-serif').text(`−${pctLoss}%`);
+
+    // hover
+    const hitArea = g.append('rect').attr('x',peakX).attr('y',y-8).attr('width',-peakX+iw*0.5).attr('height',16).attr('fill','transparent').attr('cursor','pointer');
+    hitArea.on('mousemove', (e) => {
+      showTip(`<strong>${d.name}</strong> (${d.sex})<br>Peak ${d.peak_year}: <span style="color:#f59e0b">${d.peak_count.toLocaleString()}</span><br>2025: <span style="color:#22d3ee">${d.latest.toLocaleString()}</span><br>Down ${pctLoss}%`, e);
+    }).on('mouseleave', hideTip);
+  });
+})();
+</script>
+</body>
+</html>
