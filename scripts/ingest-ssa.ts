@@ -129,7 +129,7 @@ async function main() {
   const NAMES_PER_FILE = 500;
   for (let i = 0; i < entries.length; i += NAMES_PER_FILE) {
     const slice = entries.slice(i, i + NAMES_PER_FILE);
-    const lines: string[] = ["BEGIN;"];
+    const lines: string[] = [];
     for (const e of slice) {
       const c = classify({ series: e.series, yM });
       if (!c) continue;
@@ -148,7 +148,6 @@ async function main() {
         `growth_x=excluded.growth_x,spark_blob=excluded.spark_blob;`,
       );
     }
-    lines.push("COMMIT;");
     const outFile = path.join(OUT_DIR, `${String(fileIdx).padStart(4, "0")}_names.sql`);
     await fs.writeFile(outFile, lines.join("\n") + "\n");
     fileIdx++;
@@ -165,7 +164,7 @@ async function main() {
   }
 
   for (const [letter, group] of [...byLetter.entries()].sort()) {
-    const lines: string[] = ["BEGIN;"];
+    const lines: string[] = [];
     for (const e of group) {
       const safeName = q(e.name);
       const safeSex = q(e.sex);
@@ -176,7 +175,6 @@ async function main() {
         );
       }
     }
-    lines.push("COMMIT;");
     const outFile = path.join(OUT_DIR, `${String(fileIdx).padStart(4, "0")}_years_${letter}.sql`);
     await fs.writeFile(outFile, lines.join("\n") + "\n");
     fileIdx++;
@@ -184,7 +182,7 @@ async function main() {
   console.error(`Wrote name_years SQL through file index ${fileIdx - 1}`);
 
   // --- year_totals ---
-  const totalLines: string[] = ["BEGIN;"];
+  const totalLines: string[] = [];
   for (const [tk, total] of yearTotals) {
     const [yearStr, sex] = tk.split(":");
     totalLines.push(
@@ -192,7 +190,6 @@ async function main() {
       `ON CONFLICT(year,sex) DO UPDATE SET total=excluded.total;`,
     );
   }
-  totalLines.push("COMMIT;");
   const totalsFile = path.join(OUT_DIR, `${String(fileIdx).padStart(4, "0")}_year_totals.sql`);
   await fs.writeFile(totalsFile, totalLines.join("\n") + "\n");
   fileIdx++;
@@ -200,7 +197,6 @@ async function main() {
   // --- meta ---
   const dataVersion = crypto.randomUUID();
   const metaLines = [
-    "BEGIN;",
     `INSERT INTO meta(key,value) VALUES('min_year','${ym}') ON CONFLICT(key) DO UPDATE SET value=excluded.value;`,
     `INSERT INTO meta(key,value) VALUES('max_year','${yM}') ON CONFLICT(key) DO UPDATE SET value=excluded.value;`,
     `INSERT INTO meta(key,value) VALUES('total_names','${entries.length}') ON CONFLICT(key) DO UPDATE SET value=excluded.value;`,
@@ -208,7 +204,6 @@ async function main() {
     `INSERT INTO meta(key,value) VALUES('schema_version','1') ON CONFLICT(key) DO UPDATE SET value=excluded.value;`,
     `INSERT INTO meta(key,value) VALUES('data_version','${dataVersion}') ON CONFLICT(key) DO UPDATE SET value=excluded.value;`,
     `INSERT INTO meta(key,value) VALUES('last_ingest_at','${new Date().toISOString()}') ON CONFLICT(key) DO UPDATE SET value=excluded.value;`,
-    "COMMIT;",
   ];
   const metaFile = path.join(OUT_DIR, `${String(fileIdx).padStart(4, "0")}_meta.sql`);
   await fs.writeFile(metaFile, metaLines.join("\n") + "\n");
