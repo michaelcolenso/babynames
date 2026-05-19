@@ -11,6 +11,8 @@ export const onRequestGet: PagesFunction<unknown, "year"> = async (ctx) => {
   const year = Number(raw);
   const title = `${year} names — generational roster | NobodyNamed`;
   const desc = `Explore the names that defined ${year}: classroom names, cohort signals, and generational naming patterns from SSA records.`;
+  const url = new URL(ctx.request.url);
+  const canonicalYear = `${url.origin}/year/${year}/`;
 
   return new Response(`<!doctype html>
 <html lang="en">
@@ -19,12 +21,14 @@ export const onRequestGet: PagesFunction<unknown, "year"> = async (ctx) => {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
 <meta name="description" content="${desc}">
-<link rel="canonical" href="/era/${year}/">
+<link rel="canonical" href="${canonicalYear}">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${desc}">
 <meta property="og:type" content="article">
+<meta property="og:url" content="${canonicalYear}">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">[{"@context":"https://schema.org","@type":"WebPage","name":"${title}","url":"${canonicalYear}","description":"${desc}","isPartOf":{"@type":"WebSite","name":"NobodyNamed","url":"${url.origin}/"}}]</script>
 </head>
 <body>
 <div class="page">

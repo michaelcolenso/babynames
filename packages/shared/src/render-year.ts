@@ -114,7 +114,7 @@ export function renderYearPage(
   </main>
   <footer class="site">
     <div>Based on SSA records 1880–present.</div>
-    <div><a href="/about.html">Methodology</a></div>
+    <div><a href="/about">Methodology</a></div>
   </footer>
 </div>
 <script src="/assets/app.js"></script>

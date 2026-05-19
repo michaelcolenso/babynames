@@ -348,7 +348,7 @@ export function renderFullPage(
       <!-- TODO: compute footer counts from D1 once. -->
       <div class="footer-note">Built on public-domain Social Security Administration data: about 100,000 name/sex records and 2 million yearly observations.</div>
     </div>
-    <div><a href="/about.html">About</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
+    <div><a href="/about">About</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
   </footer>
 </div>
 <script type="application/json" id="nv-data">${dataJson.replace(/</g, "\\u003c")}</script>

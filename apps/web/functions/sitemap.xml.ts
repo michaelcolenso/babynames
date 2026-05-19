@@ -12,6 +12,12 @@ const STATIC_PATHS = [
   "/rising",
   "/year",
   "/about",
+  "/viz",
+  "/comebacks",
+  "/millennial-names",
+  "/gen-z-names",
+  "/classic-names",
+  "/future-grandparent-names",
 ];
 
 const MAX_SITEMAP_URLS = 50_000;
