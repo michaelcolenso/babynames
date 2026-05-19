@@ -83,6 +83,17 @@ export const onRequestGet: PagesFunction<unknown, "year"> = async (ctx) => {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
+      Link: `<${canonicalYear}>; rel="canonical"`,
     },
   });
 };
+
+export const onRequestHead: PagesFunction<unknown, "year"> = async (ctx) => withoutBody(await onRequestGet(ctx));
+
+function withoutBody(response: Response): Response {
+  return new Response(null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}

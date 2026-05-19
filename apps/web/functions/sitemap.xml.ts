@@ -12,7 +12,8 @@ const STATIC_PATHS = [
   "/rising",
   "/year",
   "/about",
-  "/viz",
+  "/viz/",
+  "/viz/explore",
   "/comebacks",
   "/millennial-names",
   "/gen-z-names",
@@ -77,6 +78,16 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     },
   });
 };
+
+export const onRequestHead: PagesFunction<Env> = async (ctx) => withoutBody(await onRequestGet(ctx));
+
+function withoutBody(response: Response): Response {
+  return new Response(null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
 
 function absoluteUrl(origin: string, path: string): string {
   return new URL(path, origin).toString();

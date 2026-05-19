@@ -56,3 +56,13 @@ export const onRequestGet: PagesFunction<Env, "year"> = async (ctx) => {
     },
   });
 };
+
+export const onRequestHead: PagesFunction<Env, "year"> = async (ctx) => withoutBody(await onRequestGet(ctx));
+
+function withoutBody(response: Response): Response {
+  return new Response(null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
