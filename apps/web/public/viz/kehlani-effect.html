@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Kehlani Effect — NobodyNamed</title>
+<meta name="description" content="How Kehlani became the rare celebrity name that stuck. Interactive visualization of 2025 SSA data.">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #12121a;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --accent: #818cf8;
+    --accent2: #f472b6;
+    --accent3: #34d399;
+    --kehlani: #f472b6;
+    --khaleesi: #60a5fa;
+    --nevaeh: #fbbf24;
+    --leilani: #34d399;
+  }
+
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  .hero {
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 2rem;
+    position: relative;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 30%, rgba(244,114,182,0.12) 0%, transparent 60%);
+  }
+
+  .hero h1 {
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #f472b6, #818cf8, #34d399);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero p {
+    font-size: clamp(1rem, 2vw, 1.35rem);
+    color: var(--muted);
+    max-width: 600px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero .subtitle {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  .chart-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .chart-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .chart-title .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .chart-sub {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-container {
+    background: var(--bg2);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 3rem;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .axis text {
+    fill: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+  }
+
+  .axis path, .axis line {
+    stroke: rgba(255,255,255,0.08);
+  }
+
+  .grid line {
+    stroke: rgba(255,255,255,0.05);
+    stroke-dasharray: 2,4;
+  }
+
+  .tooltip {
+    position: absolute;
+    background: rgba(18,18,26,0.95);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    backdrop-filter: blur(8px);
+  }
+
+  .annotation {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.8rem;
+    fill: var(--muted);
+  }
+
+  .annotation-line {
+    stroke: rgba(255,255,255,0.15);
+    stroke-dasharray: 4,4;
+  }
+
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: rgba(10,10,15,0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    z-index: 100;
+  }
+
+  .nav a {
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.95rem;
+  }
+
+  .nav a:hover { color: var(--accent); }
+
+  .nav .brand {
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .cta {
+    text-align: center;
+    padding: 4rem 2rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .cta a {
+    display: inline-block;
+    padding: 0.8rem 1.6rem;
+    background: var(--text);
+    color: var(--bg);
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: transform 0.15s;
+  }
+
+  .cta a:hover { transform: translateY(-2px); }
+
+  @media (max-width: 640px) {
+    .chart-wrap { padding: 1rem; }
+    .chart-container { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="brand">NobodyNamed</a>
+  <a href="/blog/the-kehlani-effect/">Read the essay →</a>
+</nav>
+
+<section class="hero">
+  <p class="subtitle">2025 SSA Data / Visualization</p>
+  <h1>The Kehlani Effect</h1>
+  <p>How a singer's name became a permanent part of American naming culture — while every other celebrity name collapsed.</p>
+</section>
+
+<div class="chart-wrap">
+
+  <div class="chart-container">
+    <div class="chart-title"><span class="dot" style="background:var(--kehlani)"></span>Kehlani: births per year</div>
+    <div class="chart-sub">From 50 births in 2015 to 1,981 in 2025. No celebrity name has ever stuck like this.</div>
+    <div id="chart-main"></div>
+  </div>
+
+  <div class="chart-container">
+    <div class="chart-title">The comparison: three fates</div>
+    <div class="chart-sub">Kehlani vs. Khaleesi (the Game of Thrones name) vs. Nevaeh (the backwards-heaven meme). Same era. Different physics.</div>
+    <div id="chart-compare"></div>
+  </div>
+
+</div>
+
+<div class="cta">
+  <a href="/blog/the-kehlani-effect/">Read the full essay →</a>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const kehlani = [
+  {year:2015,count:50},
+  {year:2016,count:325},
+  {year:2017,count:598},
+  {year:2018,count:914},
+  {year:2019,count:1311},
+  {year:2020,count:1713},
+  {year:2021,count:1877},
+  {year:2022,count:1875},
+  {year:2023,count:1864},
+  {year:2024,count:1973},
+  {year:2025,count:1981},
+];
+
+const khaleesi = [
+  {year:2012,count:147},{year:2013,count:243},{year:2014,count:369},
+  {year:2015,count:342},{year:2016,count:378},{year:2017,count:470},
+  {year:2018,count:565},{year:2019,count:524},{year:2020,count:373},
+  {year:2021,count:411},{year:2022,count:444},{year:2023,count:399},
+  {year:2024,count:434},{year:2025,count:410},
+];
+
+const nevaeh = [
+  {year:2015,count:4028},{year:2016,count:3825},{year:2017,count:3623},
+  {year:2018,count:3410},{year:2019,count:3127},{year:2020,count:3132},
+  {year:2021,count:3071},{year:2022,count:2808},{year:2023,count:2342},
+  {year:2024,count:2200},{year:2025,count:1828},
+];
+
+const leilani = [
+  {year:2015,count:1807},{year:2016,count:1971},{year:2017,count:2284},
+  {year:2018,count:2519},{year:2019,count:2703},{year:2020,count:2892},
+  {year:2021,count:3485},{year:2022,count:3868},{year:2023,count:3562},
+  {year:2024,count:3365},{year:2025,count:3792},
+];
+
+const tooltip = d3.select('#tooltip');
+
+function showTooltip(event, html) {
+  tooltip.html(html)
+    .style('left', (event.pageX + 12) + 'px')
+    .style('top', (event.pageY - 12) + 'px')
+    .style('opacity', 1);
+}
+function hideTooltip() { tooltip.style('opacity', 0); }
+
+function drawMain() {
+  const container = d3.select('#chart-main');
+  const width = container.node().getBoundingClientRect().width;
+  const height = 420;
+  const margin = {top: 20, right: 30, bottom: 40, left: 50};
+  const innerW = width - margin.left - margin.right;
+  const innerH = height - margin.top - margin.bottom;
+
+  const svg = container.append('svg')
+    .attr('width', width)
+    .attr('height', height)
+    .attr('viewBox', `0 0 ${width} ${height}`);
+
+  const x = d3.scaleLinear().domain([2014.5, 2025.5]).range([0, innerW]);
+  const y = d3.scaleLinear().domain([0, 2200]).range([innerH, 0]);
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  g.append('g').attr('class', 'grid').call(
+    d3.axisLeft(y).tickSize(-innerW).tickFormat('').ticks(6)
+  );
+
+  g.append('g').attr('class', 'axis').attr('transform', `translate(0,${innerH})`)
+    .call(d3.axisBottom(x).tickFormat(d3.format('d')).ticks(11));
+
+  g.append('g').attr('class', 'axis')
+    .call(d3.axisLeft(y).ticks(6));
+
+  const area = d3.area()
+    .x(d => x(d.year))
+    .y0(innerH)
+    .y1(d => y(d.count))
+    .curve(d3.curveMonotoneX);
+
+  const line = d3.line()
+    .x(d => x(d.year))
+    .y(d => y(d.count))
+    .curve(d3.curveMonotoneX);
+
+  const defs = svg.append('defs');
+  const grad = defs.append('linearGradient').attr('id', 'grad-main').attr('x1','0').attr('y1','0').attr('x2','0').attr('y2','1');
+  grad.append('stop').attr('offset','0%').attr('stop-color','#f472b6').attr('stop-opacity',0.35);
+  grad.append('stop').attr('offset','100%').attr('stop-color','#f472b6').attr('stop-opacity',0.02);
+
+  g.append('path').datum(kehlani).attr('fill','url(#grad-main)').attr('d',area);
+  g.append('path').datum(kehlani).attr('fill','none').attr('stroke','#f472b6').attr('stroke-width',3).attr('d',line);
+
+  g.selectAll('.pt')
+    .data(kehlani)
+    .enter().append('circle')
+    .attr('cx', d => x(d.year))
+    .attr('cy', d => y(d.count))
+    .attr('r', 5)
+    .attr('fill', '#0a0a0f')
+    .attr('stroke', '#f472b6')
+    .attr('stroke-width', 2)
+    .on('mousemove', (e,d) => showTooltip(e, `<strong>${d.year}</strong><br>${d.count.toLocaleString()} births`))
+    .on('mouseleave', hideTooltip);
+
+  // annotation
+  const last = kehlani[kehlani.length-1];
+  g.append('text')
+    .attr('x', x(last.year) + 10)
+    .attr('y', y(last.count))
+    .attr('dy', '0.35em')
+    .attr('class', 'annotation')
+    .style('fill', '#f472b6')
+    .style('font-weight', '600')
+    .text(`${last.count.toLocaleString()} in 2025`);
+}
+
+function drawCompare() {
+  const container = d3.select('#chart-compare');
+  const width = container.node().getBoundingClientRect().width;
+  const height = 420;
+  const margin = {top: 20, right: 30, bottom: 40, left: 50};
+  const innerW = width - margin.left - margin.right;
+  const innerH = height - margin.top - margin.bottom;
+
+  const svg = container.append('svg')
+    .attr('width', width)
+    .attr('height', height)
+    .attr('viewBox', `0 0 ${width} ${height}`);
+
+  const x = d3.scaleLinear().domain([2014.5, 2025.5]).range([0, innerW]);
+  const y = d3.scaleLinear().domain([0, 4200]).range([innerH, 0]);
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  g.append('g').attr('class', 'grid').call(
+    d3.axisLeft(y).tickSize(-innerW).tickFormat('').ticks(7)
+  );
+
+  g.append('g').attr('class', 'axis').attr('transform', `translate(0,${innerH})`)
+    .call(d3.axisBottom(x).tickFormat(d3.format('d')).ticks(11));
+
+  g.append('g').attr('class', 'axis')
+    .call(d3.axisLeft(y).ticks(7).tickFormat(d => d3.format('.2s')(d)));
+
+  const line = d3.line().x(d => x(d.year)).y(d => y(d.count)).curve(d3.curveMonotoneX);
+
+  const series = [
+    {name:'Kehlani',data:kehlani,color:'#f472b6'},
+    {name:'Nevaeh',data:nevaeh,color:'#fbbf24'},
+    {name:'Khaleesi',data:khaleesi,color:'#60a5fa'},
+    {name:'Leilani',data:leilani,color:'#34d399'},
+  ];
+
+  series.forEach(s => {
+    g.append('path').datum(s.data).attr('fill','none').attr('stroke',s.color).attr('stroke-width',2.5).attr('d',line);
+    g.append('text')
+      .attr('x', x(s.data[s.data.length-1].year) + 8)
+      .attr('y', y(s.data[s.data.length-1].count))
+      .attr('dy', '0.35em')
+      .attr('class', 'annotation')
+      .style('fill', s.color)
+      .style('font-weight', '500')
+      .text(s.name);
+  });
+
+  // hover dots for all
+  const allPoints = [...kehlani.map(d=>({...d,name:'Kehlani',color:'#f472b6'})),
+                     ...nevaeh.map(d=>({...d,name:'Nevaeh',color:'#fbbf24'})),
+                     ...khaleesi.map(d=>({...d,name:'Khaleesi',color:'#60a5fa'})),
+                     ...leilani.map(d=>({...d,name:'Leilani',color:'#34d399'}))];
+
+  g.selectAll('.pt2')
+    .data(allPoints)
+    .enter().append('circle')
+    .attr('cx', d => x(d.year))
+    .attr('cy', d => y(d.count))
+    .attr('r', 4)
+    .attr('fill', '#0a0a0f')
+    .attr('stroke', d => d.color)
+    .attr('stroke-width', 1.5)
+    .style('opacity', 0)
+    .on('mousemove', (e,d) => {
+      d3.select(e.target).style('opacity', 1);
+      showTooltip(e, `<strong style="color:${d.color}">${d.name}</strong><br>${d.year}: ${d.count.toLocaleString()}`);
+    })
+    .on('mouseleave', (e) => {
+      d3.select(e.target).style('opacity', 0);
+      hideTooltip();
+    });
+}
+
+drawMain();
+drawCompare();
+
+window.addEventListener('resize', () => {
+  d3.select('#chart-main').selectAll('*').remove();
+  d3.select('#chart-compare').selectAll('*').remove();
+  drawMain();
+  drawCompare();
+});
+</script>
+</body>
+</html>
