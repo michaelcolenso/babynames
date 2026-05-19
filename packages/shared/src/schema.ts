@@ -124,6 +124,29 @@ export interface MetaResponse {
 }
 
 // Stored in `meta` key/value table.
+// Blog
+export interface BlogPost {
+  id: number;
+  slug: string;
+  title: string;
+  description: string;
+  bodyHtml: string;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  status: "draft" | "published";
+  author: string;
+  ogImage: string | null;
+}
+
+export interface BlogPostSummary {
+  slug: string;
+  title: string;
+  description: string;
+  publishedAt: string | null;
+  author: string;
+}
+
 export const META_KEYS = {
   minYear: "min_year",
   maxYear: "max_year",

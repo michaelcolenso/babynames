@@ -27,7 +27,8 @@ export const onRequestGet: PagesFunction<unknown, "year"> = async (ctx) => {
 <meta property="og:type" content="article">
 <meta property="og:url" content="${canonicalYear}">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
 <script type="application/ld+json">[{"@context":"https://schema.org","@type":"WebPage","name":"${title}","url":"${canonicalYear}","description":"${desc}","isPartOf":{"@type":"WebSite","name":"NobodyNamed","url":"${url.origin}/"}}]</script>
 </head>
 <body>

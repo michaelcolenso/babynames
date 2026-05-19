@@ -44,6 +44,10 @@ function initialUrls(origin: string): string[] {
   return "abcdefghijklmnopqrstuvwxyz".split("").map((letter) => absoluteUrl(origin, `/names/${letter}/`));
 }
 
+function endingUrls(origin: string): string[] {
+  return "abcdefghijklmnopqrstuvwxyz".split("").map((letter) => absoluteUrl(origin, `/names/ending/${letter}/`));
+}
+
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
   const [names, dataVersion, ymStr, yMStr] = await Promise.all([
@@ -58,7 +62,8 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const years = yearUrls(url.origin, ym, yM);
   const decades = decadeUrls(url.origin, ym, yM);
   const initials = initialUrls(url.origin);
-  const reserved = STATIC_PATHS.length + years.length + decades.length + initials.length;
+  const endings = endingUrls(url.origin);
+  const reserved = STATIC_PATHS.length + years.length + decades.length + initials.length + endings.length;
   const nameLimit = Math.max(0, MAX_SITEMAP_URLS - reserved);
 
   const urls = [
@@ -66,6 +71,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     ...years,
     ...decades,
     ...initials,
+    ...endings,
     ...names.slice(0, nameLimit).map((name) => absoluteUrl(url.origin, `/name/${encodeURIComponent(name.name)}/`)),
   ];
 

@@ -80,7 +80,8 @@ export function renderYearPage(
 <meta name="twitter:image" content="${escapeHtml(ogImageUrl)}">
 <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
 <script type="application/ld+json">${structuredData}</script>
 </head>
 <body>
@@ -94,6 +95,7 @@ export function renderYearPage(
       <a href="/year">Birth year</a>
       <a href="/rising">Rising</a>
       <a href="/viz">Visualizations</a>
+      <a href="/blog/">Blog</a>
       <a href="/about">About</a>
     </nav>
   </header>

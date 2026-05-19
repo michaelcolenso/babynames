@@ -121,7 +121,8 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
 <meta name="twitter:image" content="${escapeHtml(ogImageUrl)}">
 <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
 <script type="application/ld+json">${JSON.stringify([
     {
       "@context": "https://schema.org",
@@ -153,6 +154,7 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
       <a href="/year">Birth year</a>
       <a href="/names/1980s/">By decade</a>
       <a href="/names/a/">By initial</a>
+      <a href="/names/ending/a/">By ending</a>
       <a href="/rising">Rising</a>
       <a href="/about">About</a>
     </nav>
@@ -165,6 +167,7 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
         <a href="/year">Birth year</a>
         <a href="/names/1980s/">By decade</a>
         <a href="/names/a/">By initial</a>
+        <a href="/names/ending/a/">By ending</a>
         <a href="/rising">Rising</a>
         <a href="/about">About</a>
       </nav>
@@ -307,7 +310,8 @@ async function renderInitialPage(ctx: EventContext<Env, "decade", unknown>, init
 <meta name="twitter:image" content="${escapeHtml(`${origin}/api/og/default`)}">
 <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
 <script type="application/ld+json">${structuredData}</script>
 </head>
 <body>
@@ -321,6 +325,7 @@ async function renderInitialPage(ctx: EventContext<Env, "decade", unknown>, init
       <a href="/year">Birth year</a>
       <a href="/names/1980s/">By decade</a>
       <a href="/names/a/">By initial</a>
+      <a href="/names/ending/a/">By ending</a>
       <a href="/rising">Rising</a>
       <a href="/about">About</a>
     </nav>

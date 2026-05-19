@@ -4,6 +4,8 @@
 
 import type { D1Database } from "@cloudflare/workers-types";
 import type {
+  BlogPost,
+  BlogPostSummary,
   IndexableName,
   LandingKind,
   NameDiscoveryCard,
@@ -655,6 +657,8 @@ export interface InitialNameRow {
   rank: number;
 }
 
+export type EndingNameRow = InitialNameRow;
+
 // Top names by first letter, ranked separately for each recorded sex.
 export async function topByInitial(
   db: D1Database,
@@ -684,6 +688,116 @@ export async function topByInitial(
     .bind(letter, nextLetter, cappedLimit)
     .all<InitialNameRow>();
   return r.results ?? [];
+}
+
+// Top names by final letter, ranked separately for each recorded sex.
+export async function topByEnding(
+  db: D1Database,
+  ending: string,
+  perSex = 25,
+): Promise<EndingNameRow[]> {
+  const letter = ending.toLowerCase();
+  const cappedLimit = Math.max(1, Math.min(50, Math.floor(perSex)));
+  const r = await db
+    .prepare(
+      `WITH ranked AS (
+         SELECT name, sex, total_count, peak_year, latest_count, status,
+                ROW_NUMBER() OVER (
+                  PARTITION BY sex
+                  ORDER BY total_count DESC, peak_count DESC, name
+                ) AS rank
+           FROM names
+          WHERE substr(name_lower, -1) = ?1
+       )
+       SELECT name, sex, total_count, peak_year, latest_count, status, rank
+         FROM ranked
+        WHERE rank <= ?2
+        ORDER BY sex, rank`,
+    )
+    .bind(letter, cappedLimit)
+    .all<EndingNameRow>();
+  return r.results ?? [];
+}
+
+// ─── Blog ────────────────────────────────────────────────────────────────────
+
+export async function listBlogPosts(
+  db: D1Database,
+  status: "draft" | "published" = "published",
+  limit = 20,
+  offset = 0,
+): Promise<BlogPostSummary[]> {
+  const r = await db
+    .prepare(
+      `SELECT slug, title, description, published_at AS publishedAt, author
+         FROM blog_posts
+        WHERE status = ?1
+        ORDER BY published_at DESC
+        LIMIT ?2 OFFSET ?3`,
+    )
+    .bind(status, limit, offset)
+    .all<BlogPostSummary>();
+  return r.results ?? [];
+}
+
+export async function getBlogPost(
+  db: D1Database,
+  slug: string,
+): Promise<BlogPost | null> {
+  const r = await db
+    .prepare(
+      `SELECT id, slug, title, description, body_html AS bodyHtml,
+              published_at AS publishedAt, created_at AS createdAt,
+              updated_at AS updatedAt, status, author, og_image AS ogImage
+         FROM blog_posts
+        WHERE slug = ?1
+          AND status = 'published'`,
+    )
+    .bind(slug)
+    .first<BlogPost>();
+  return r ?? null;
+}
+
+// ─── Blog admin ──────────────────────────────────────────────────────────────
+
+export async function upsertBlogPost(
+  db: D1Database,
+  post: {
+    slug: string;
+    title: string;
+    description: string;
+    bodyHtml: string;
+    status: "draft" | "published";
+    author: string;
+    ogImage?: string | null;
+    publishedAt?: string | null;
+  },
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO blog_posts(slug, title, description, body_html, status, author, og_image, published_at, updated_at)
+       VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'))
+       ON CONFLICT(slug) DO UPDATE SET
+         title=excluded.title,
+         description=excluded.description,
+         body_html=excluded.body_html,
+         status=excluded.status,
+         author=excluded.author,
+         og_image=excluded.og_image,
+         published_at=excluded.published_at,
+         updated_at=datetime('now')`,
+    )
+    .bind(
+      post.slug,
+      post.title,
+      post.description,
+      post.bodyHtml,
+      post.status,
+      post.author,
+      post.ogImage ?? null,
+      post.publishedAt ?? null,
+    )
+    .run();
 }
 
 // Top names aggregated across a calendar decade (inclusive start/end).

@@ -101,7 +101,8 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
 <meta property="og:image:type" content="image/svg+xml">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${ogImageUrl}">
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
 <script type="application/ld+json">${structuredData}</script>
 </head>
 <body>
@@ -114,6 +115,8 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
       <a href="/comeback">Comebacks</a>
       <a href="/year">Birth year</a>
       <a href="/rising">Rising</a>
+      <a href="/viz">Visualizations</a>
+      <a href="/blog/">Blog</a>
       <a href="/about">About</a>
     </nav>
   </header>

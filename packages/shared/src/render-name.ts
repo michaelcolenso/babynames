@@ -307,7 +307,8 @@ export function renderFullPage(
 <meta name="twitter:image:alt" content="${escape(record.name)} — ${statusLabel}, peak ${classifyResult.peakYear}">
 <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
 <script type="application/ld+json">${structuredDataJson}</script>
 </head>
 <body>
@@ -321,6 +322,7 @@ export function renderFullPage(
       <a href="/year">Birth year</a>
       <a href="/rising">Rising</a>
       <a href="/viz">Visualizations</a>
+      <a href="/blog/">Blog</a>
       <a href="/about">About</a>
     </nav>
     <details class="mobile-nav">
@@ -332,6 +334,7 @@ export function renderFullPage(
         <a href="/year">Birth year</a>
         <a href="/rising">Rising</a>
         <a href="/viz">Visualizations</a>
+        <a href="/blog/">Blog</a>
         <a href="/about">About</a>
       </nav>
     </details>
@@ -488,6 +491,7 @@ function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   links.push(`<a href="/year/${a.peakYear}/">Top names from ${a.peakYear}</a>`);
   links.push(`<a href="/names/${decadeLabel(a.peakYear)}/">Names from the ${decadeLabel(a.peakYear)}</a>`);
   links.push(`<a href="/names/${encodeURIComponent(record.name.charAt(0).toLowerCase())}/">Names starting with ${escape(record.name.charAt(0).toUpperCase())}</a>`);
+  links.push(`<a href="/names/ending/${encodeURIComponent(record.name.charAt(record.name.length - 1).toLowerCase())}/">Names ending in ${escape(record.name.charAt(record.name.length - 1).toUpperCase())}</a>`);
   links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/">Names like ${escape(record.name)}</a>`);
 
   return `<nav class="report-links" aria-label="Explore more name data">${links.join("")}</nav>`;
