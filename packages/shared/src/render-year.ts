@@ -93,6 +93,7 @@ export function renderYearPage(
       <a href="/comeback">Comebacks</a>
       <a href="/year">Birth year</a>
       <a href="/rising">Rising</a>
+      <a href="/viz">Visualizations</a>
       <a href="/about">About</a>
     </nav>
   </header>

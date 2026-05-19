@@ -320,6 +320,7 @@ export function renderFullPage(
       <a href="/comeback">Comebacks</a>
       <a href="/year">Birth year</a>
       <a href="/rising">Rising</a>
+      <a href="/viz">Visualizations</a>
       <a href="/about">About</a>
     </nav>
     <details class="mobile-nav">
@@ -330,6 +331,7 @@ export function renderFullPage(
         <a href="/comeback">Comebacks</a>
         <a href="/year">Birth year</a>
         <a href="/rising">Rising</a>
+        <a href="/viz">Visualizations</a>
         <a href="/about">About</a>
       </nav>
     </details>
@@ -458,6 +460,16 @@ function reportNumber(name: string, sex: string): string {
   return String(Math.abs(hash) % 100000).padStart(5, "0");
 }
 
+function editorialLink(a: ClassifyResult): [string, string] | null {
+  if (a.status === "rising") return ["Rising names", "/rising"];
+  if (a.status === "extinct") return ["Extinct names", "/extinct"];
+  if (a.status === "endangered") return ["Endangered names", "/endangered"];
+  if (a.peakYear >= 2000 && a.peakYear <= 2012) return ["Gen Z names", "/gen-z-names"];
+  if (a.peakYear >= 1980 && a.peakYear <= 1999) return ["Millennial names", "/millennial-names"];
+  if (a.status === "stable" && (a.declinePct ?? 0) < 35) return ["Classic names", "/classic-names"];
+  return null;
+}
+
 function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   const cohort: Partial<Record<Status, [string, string]>> = {
     extinct: ["More extinct names", "/extinct"],
@@ -468,6 +480,10 @@ function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   const statusLink = cohort[a.status];
   if (statusLink) {
     links.push(`<a href="${statusLink[1]}">${statusLink[0]}</a>`);
+  }
+  const ed = editorialLink(a);
+  if (ed && ed[1] !== (statusLink?.[1] ?? "")) {
+    links.push(`<a href="${ed[1]}">${ed[0]}</a>`);
   }
   links.push(`<a href="/year/${a.peakYear}/">Top names from ${a.peakYear}</a>`);
   links.push(`<a href="/names/${decadeLabel(a.peakYear)}/">Names from the ${decadeLabel(a.peakYear)}</a>`);
