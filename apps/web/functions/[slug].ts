@@ -69,6 +69,14 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   const structuredData = JSON.stringify([
     {
       "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: reqUrl.origin + "/" },
+        { "@type": "ListItem", position: 2, name: pageTitle, item: pageCanonical },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
       "@type": "CollectionPage",
       name: pageTitle,
       url: pageCanonical,

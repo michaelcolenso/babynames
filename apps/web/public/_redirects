@@ -1,4 +1,7 @@
 # Legacy GitHub Pages ?name= URLs are redirected in functions/_middleware.ts.
 
+/viz/2025-obituaries  /viz/nobody-named-2025  301
+/viz/2025-obituaries.html  /viz/nobody-named-2025  301
+
 # Enforce trailing slash canonical name URLs.
 /name/:name  /name/:name/  301

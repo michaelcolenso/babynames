@@ -14,6 +14,7 @@ const STATIC_PATHS = [
   "/about",
   "/viz/",
   "/viz/explore",
+  "/viz/nobody-named-2025",
   "/comebacks",
   "/millennial-names",
   "/gen-z-names",
