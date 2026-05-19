@@ -314,7 +314,7 @@ export function renderFullPage(
 <body>
 <div class="page">
   <header class="site">
-    <a class="brand" href="/">nobodynamed</a>
+    <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
     <nav>
       <a href="/extinct">Extinct</a>
       <a href="/endangered">Endangered</a>
@@ -322,7 +322,7 @@ export function renderFullPage(
       <a href="/year">Birth year</a>
       <a href="/rising">Rising</a>
       <a href="/viz">Visualizations</a>
-      <a href="/blog/">Blog</a>
+      <a href="/blog/">Namecalling</a>
       <a href="/about">About</a>
     </nav>
     <details class="mobile-nav">
@@ -334,7 +334,7 @@ export function renderFullPage(
         <a href="/year">Birth year</a>
         <a href="/rising">Rising</a>
         <a href="/viz">Visualizations</a>
-        <a href="/blog/">Blog</a>
+        <a href="/blog/">Namecalling</a>
         <a href="/about">About</a>
       </nav>
     </details>

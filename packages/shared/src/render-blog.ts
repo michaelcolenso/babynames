@@ -23,7 +23,7 @@ function fmtDate(iso: string | null): string {
 function siteHeader(currentPath?: string): string {
   const blogActive = currentPath?.startsWith("/blog") ? ' class="active"' : "";
   return `<header class="site">
-    <a class="brand" href="/">nobodynamed</a>
+    <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
     <nav>
       <a href="/extinct">Extinct</a>
       <a href="/endangered">Endangered</a>
@@ -31,7 +31,7 @@ function siteHeader(currentPath?: string): string {
       <a href="/year">Birth year</a>
       <a href="/rising">Rising</a>
       <a href="/viz">Visualizations</a>
-      <a href="/blog/"${blogActive}>Blog</a>
+      <a href="/blog/"${blogActive}>Namecalling</a>
       <a href="/about">About</a>
     </nav>
     <details class="mobile-nav">
@@ -43,7 +43,7 @@ function siteHeader(currentPath?: string): string {
         <a href="/year">Birth year</a>
         <a href="/rising">Rising</a>
         <a href="/viz">Visualizations</a>
-        <a href="/blog/">Blog</a>
+        <a href="/blog/">Namecalling</a>
         <a href="/about">About</a>
       </nav>
     </details>
@@ -61,7 +61,7 @@ function siteFooter(): string {
 }
 
 function postMetaTags(post: BlogPost, canonical: string, origin: string): string {
-  const title = `${escape(post.title)} — NobodyNamed Blog`;
+  const title = `${escape(post.title)} — Namecalling`;
   const desc = escape(post.description);
   const ogImage = post.ogImage ?? `${origin}/api/og/default`;
   return `<title>${title}</title>
@@ -83,8 +83,8 @@ export function renderBlogIndex(
   opts: { canonical: string; origin?: string },
 ): string {
   const origin = opts.origin || new URL(opts.canonical).origin;
-  const title = "Blog — NobodyNamed";
-  const desc = "Notes on American naming culture, data, and the names that shape generations.";
+  const title = "Namecalling — NobodyNamed";
+  const desc = "Charts and notes on American naming culture, data, and the names that shape generations.";
 
   const cards = posts.length
     ? posts
@@ -108,13 +108,13 @@ export function renderBlogIndex(
       "@type": "BreadcrumbList",
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: origin + "/" },
-        { "@type": "ListItem", position: 2, name: "Blog", item: opts.canonical },
+        { "@type": "ListItem", position: 2, name: "Namecalling", item: opts.canonical },
       ],
     },
     {
       "@context": "https://schema.org",
       "@type": "Blog",
-      name: "NobodyNamed Blog",
+      name: "Namecalling",
       url: opts.canonical,
       description: desc,
       blogPost: posts.map((p) => ({
@@ -153,7 +153,7 @@ export function renderBlogIndex(
   ${siteHeader("/blog")}
   <main>
     <p class="eyebrow">Journal</p>
-    <h1>NobodyNamed Blog</h1>
+    <h1>Namecalling</h1>
     <p class="lede">${escape(desc)}</p>
     <div class="blog-index">
       ${cards}
@@ -180,7 +180,7 @@ export function renderBlogPost(
       "@type": "BreadcrumbList",
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: origin + "/" },
-        { "@type": "ListItem", position: 2, name: "Blog", item: origin + "/blog/" },
+        { "@type": "ListItem", position: 2, name: "Namecalling", item: origin + "/blog/" },
         { "@type": "ListItem", position: 3, name: post.title, item: opts.canonical },
       ],
     },
@@ -220,7 +220,7 @@ ${postMetaTags(post, opts.canonical, origin)}
   <main>
     <article class="blog-post">
       <header class="blog-post-header">
-        <p class="eyebrow"><a href="/blog/">← Blog</a></p>
+        <p class="eyebrow"><a href="/blog/">← Namecalling</a></p>
         <h1>${escape(post.title)}</h1>
         <div class="blog-post-meta">
           ${post.publishedAt ? `<time datetime="${escape(post.publishedAt)}">${fmtDate(post.publishedAt)}</time>` : ""}

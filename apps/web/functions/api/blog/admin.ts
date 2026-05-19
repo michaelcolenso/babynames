@@ -102,7 +102,7 @@ const adminFormHtml = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Blog Admin — NobodyNamed</title>
+<title>Namecalling Admin — NobodyNamed</title>
 <link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
 <style>
@@ -128,14 +128,14 @@ const adminFormHtml = `<!doctype html>
 <body>
 <div class="page">
   <header class="site">
-    <a class="brand" href="/">nobodynamed</a>
+    <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
     <nav>
-      <a href="/blog/">Blog</a>
+      <a href="/blog/">Namecalling</a>
       <a href="/">Home</a>
     </nav>
   </header>
   <main>
-    <h1>Blog admin</h1>
+    <h1>Namecalling admin</h1>
     <form class="admin-form" id="f">
       <label for="slug">Slug</label>
       <input id="slug" name="slug" type="text" placeholder="hello-world" required>

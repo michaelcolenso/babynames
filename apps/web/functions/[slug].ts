@@ -116,7 +116,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
       <a href="/year">Birth year</a>
       <a href="/rising">Rising</a>
       <a href="/viz">Visualizations</a>
-      <a href="/blog/">Blog</a>
+      <a href="/blog/">Namecalling</a>
       <a href="/about">About</a>
     </nav>
   </header>

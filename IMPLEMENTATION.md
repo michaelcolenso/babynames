@@ -45,7 +45,7 @@ These are the literal copy changes. Apply them everywhere they appear. Where a s
 
 ```
 OLD: <a class="brand" href="/">Name Vitals</a>
-NEW: <a class="brand" href="/">nobodynamed</a>
+NEW: <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
 ```
 
 ### Title tags (every page, customize the suffix)
@@ -356,7 +356,7 @@ Below 600px, replace the wrapping nav with a hamburger menu using a native `<det
 
 ```html
 <header class="site">
-  <a class="brand" href="/">nobodynamed</a>
+  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
 
   <details class="nav-mobile">
     <summary aria-label="Menu">

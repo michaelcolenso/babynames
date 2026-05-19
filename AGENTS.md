@@ -1,3 +1,5 @@
+# Project: Name Vitals — US baby name popularity tracker (SSA data, 1880–present) on Cloudflare Pages, D1, and Workers
+
 # AGENTS.md
 
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
