@@ -17,7 +17,9 @@
     "/millennial-names",
     "/gen-z-names",
     "/classic-names",
-    "/future-grandparent-names"
+    "/future-grandparent-names",
+    "/blog",
+    "/blog/*"
   ],
   "exclude": [
     "/assets/*",
