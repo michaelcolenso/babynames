@@ -645,6 +645,47 @@ export interface DecadeTopRow {
   rank: number;
 }
 
+export interface InitialNameRow {
+  name: string;
+  sex: Sex;
+  total_count: number;
+  peak_year: number;
+  latest_count: number;
+  status: Status;
+  rank: number;
+}
+
+// Top names by first letter, ranked separately for each recorded sex.
+export async function topByInitial(
+  db: D1Database,
+  initial: string,
+  perSex = 25,
+): Promise<InitialNameRow[]> {
+  const letter = initial.toLowerCase();
+  const nextLetter = String.fromCharCode(letter.charCodeAt(0) + 1);
+  const cappedLimit = Math.max(1, Math.min(50, Math.floor(perSex)));
+  const r = await db
+    .prepare(
+      `WITH ranked AS (
+         SELECT name, sex, total_count, peak_year, latest_count, status,
+                ROW_NUMBER() OVER (
+                  PARTITION BY sex
+                  ORDER BY total_count DESC, peak_count DESC, name
+                ) AS rank
+           FROM names
+          WHERE name_lower >= ?1
+            AND name_lower < ?2
+       )
+       SELECT name, sex, total_count, peak_year, latest_count, status, rank
+         FROM ranked
+        WHERE rank <= ?3
+        ORDER BY sex, rank`,
+    )
+    .bind(letter, nextLetter, cappedLimit)
+    .all<InitialNameRow>();
+  return r.results ?? [];
+}
+
 // Top names aggregated across a calendar decade (inclusive start/end).
 // Ranks per sex and returns the top N from each sex bucket.
 export async function topByDecade(

@@ -65,7 +65,16 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   const reqUrl = new URL(ctx.request.url);
   const pageCanonical = `${reqUrl.origin}/${slug}`;
   const pageTitle = page.title.replace(" — NobodyNamed", "");
+  const ogImageUrl = `${reqUrl.origin}/api/og/default`;
   const structuredData = JSON.stringify([
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: reqUrl.origin + "/" },
+        { "@type": "ListItem", position: 2, name: pageTitle, item: pageCanonical },
+      ],
+    },
     {
       "@context": "https://schema.org",
       "@type": "CollectionPage",
@@ -88,7 +97,10 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
 <meta property="og:description" content="${page.lede}">
 <meta property="og:type" content="article">
 <meta property="og:url" content="${pageCanonical}">
+<meta property="og:image" content="${ogImageUrl}">
+<meta property="og:image:type" content="image/svg+xml">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="${ogImageUrl}">
 <link rel="stylesheet" href="/assets/style.css">
 <script type="application/ld+json">${structuredData}</script>
 </head>
@@ -126,6 +138,17 @@ ${tableScript}
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
+      Link: `<${pageCanonical}>; rel="canonical"`,
     },
   });
 };
+
+export const onRequestHead: PagesFunction<Env, "slug"> = async (ctx) => withoutBody(await onRequestGet(ctx));
+
+function withoutBody(response: Response): Response {
+  return new Response(null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}

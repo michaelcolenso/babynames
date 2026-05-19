@@ -487,6 +487,7 @@ function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   }
   links.push(`<a href="/year/${a.peakYear}/">Top names from ${a.peakYear}</a>`);
   links.push(`<a href="/names/${decadeLabel(a.peakYear)}/">Names from the ${decadeLabel(a.peakYear)}</a>`);
+  links.push(`<a href="/names/${encodeURIComponent(record.name.charAt(0).toLowerCase())}/">Names starting with ${escape(record.name.charAt(0).toUpperCase())}</a>`);
   links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/">Names like ${escape(record.name)}</a>`);
 
   return `<nav class="report-links" aria-label="Explore more name data">${links.join("")}</nav>`;

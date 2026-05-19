@@ -26,3 +26,13 @@ export const onRequestGet: PagesFunction = () => {
     },
   });
 };
+
+export const onRequestHead: PagesFunction = async (ctx) => withoutBody(await onRequestGet(ctx));
+
+function withoutBody(response: Response): Response {
+  return new Response(null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}

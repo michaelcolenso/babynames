@@ -12,7 +12,9 @@ const STATIC_PATHS = [
   "/rising",
   "/year",
   "/about",
-  "/viz",
+  "/viz/",
+  "/viz/explore",
+  "/viz/nobody-named-2025",
   "/comebacks",
   "/millennial-names",
   "/gen-z-names",
@@ -38,6 +40,10 @@ function decadeUrls(origin: string, ym: number, yM: number): string[] {
   return out;
 }
 
+function initialUrls(origin: string): string[] {
+  return "abcdefghijklmnopqrstuvwxyz".split("").map((letter) => absoluteUrl(origin, `/names/${letter}/`));
+}
+
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
   const [names, dataVersion, ymStr, yMStr] = await Promise.all([
@@ -51,13 +57,15 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const yM = Number(yMStr ?? 2024);
   const years = yearUrls(url.origin, ym, yM);
   const decades = decadeUrls(url.origin, ym, yM);
-  const reserved = STATIC_PATHS.length + years.length + decades.length;
+  const initials = initialUrls(url.origin);
+  const reserved = STATIC_PATHS.length + years.length + decades.length + initials.length;
   const nameLimit = Math.max(0, MAX_SITEMAP_URLS - reserved);
 
   const urls = [
     ...STATIC_PATHS.map((path) => absoluteUrl(url.origin, path)),
     ...years,
     ...decades,
+    ...initials,
     ...names.slice(0, nameLimit).map((name) => absoluteUrl(url.origin, `/name/${encodeURIComponent(name.name)}/`)),
   ];
 
@@ -77,6 +85,16 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     },
   });
 };
+
+export const onRequestHead: PagesFunction<Env> = async (ctx) => withoutBody(await onRequestGet(ctx));
+
+function withoutBody(response: Response): Response {
+  return new Response(null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
 
 function absoluteUrl(origin: string, path: string): string {
   return new URL(path, origin).toString();

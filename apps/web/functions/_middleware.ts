@@ -16,6 +16,14 @@ export const onRequest: PagesFunction = async (ctx) => {
     return Response.redirect(target.toString(), 301);
   }
 
+  if (url.pathname === "/sitemap.xml") {
+    return ctx.next();
+  }
+
+  if (ctx.request.method !== "GET") {
+    return ctx.next();
+  }
+
   const cache = caches.default;
   const cacheKeyHeader = ctx.request.headers.get("X-Cache-Key");
   const baseKey = cacheKeyHeader ? new Request(ctx.request.url, { headers: { "X-Cache-Key": cacheKeyHeader } }) : ctx.request;

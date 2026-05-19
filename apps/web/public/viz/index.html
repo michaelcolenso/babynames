@@ -5,22 +5,36 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Visualizations — NobodyNamed</title>
   <meta name="description" content="Thirteen ways of looking at 135 years of American and British baby names.">
-  <link rel="canonical" href="https://nobodynamed.com/viz">
+  <link rel="canonical" href="https://nobodynamed.com/viz/">
   <meta property="og:title" content="Visualizations — NobodyNamed">
   <meta property="og:description" content="Thirteen ways of looking at 135 years of names.">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://nobodynamed.com/viz">
+  <meta property="og:url" content="https://nobodynamed.com/viz/">
+  <meta property="og:image" content="https://nobodynamed.com/api/og/default">
+  <meta property="og:image:type" content="image/svg+xml">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://nobodynamed.com/api/og/default">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/style.css?v=12">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    "name": "Visualizations — NobodyNamed",
-    "url": "https://nobodynamed.com/viz",
-    "description": "Thirteen ways of looking at 135 years of American baby names.",
-    "isPartOf": { "@type": "WebSite", "name": "NobodyNamed", "url": "https://nobodynamed.com/" }
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "name": "Visualizations — NobodyNamed",
+        "url": "https://nobodynamed.com/viz/",
+        "description": "Thirteen ways of looking at 135 years of American baby names.",
+        "isPartOf": { "@type": "WebSite", "name": "NobodyNamed", "url": "https://nobodynamed.com/" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://nobodynamed.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Visualizations", "item": "https://nobodynamed.com/viz/" }
+        ]
+      }
+    ]
   }
   </script>
   <style>
@@ -154,6 +168,13 @@
 
       <div class="viz-section">
         <div class="viz-grid">
+          <a class="viz-card" href="/viz/nobody-named-2025">
+            <div class="number">2025 / New Data</div>
+            <h3>Nobody Named in 2025</h3>
+            <p>Names moving below the SSA reporting threshold in 2025, shown beside the arrivals rising quickly.</p>
+            <span class="tag">US · 1880–2025</span>
+          </a>
+
           <a class="viz-card" href="/viz/explore.html#birth-pulse">
             <div class="number">01 / The Big Picture</div>
             <h3>The Pulse of a Nation</h3>
