@@ -32,7 +32,7 @@ declare global {
 export default {
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(
-      runIngest(env, /*force*/ false).catch((err) => {
+      runIngest(env, /*force*/ false, /*r2Key*/ null).catch((err) => {
         console.error(
           JSON.stringify({
             message: "scheduled ingest failed",
@@ -54,8 +54,9 @@ export default {
         return new Response("unauthorized\n", { status: 401 });
       }
       const force = url.searchParams.get("force") === "1";
+      const r2Key = url.searchParams.get("r2key");
       ctx.waitUntil(
-        runIngest(env, force).catch((err) => {
+        runIngest(env, force, r2Key).catch((err) => {
           console.error(
             JSON.stringify({
               message: "manual ingest failed",
@@ -108,22 +109,37 @@ export default {
   },
 };
 
-async function runIngest(env: Env, force: boolean): Promise<void> {
-  const lastEtag = await getMeta(env.DB, META_KEYS.lastSsaEtag);
-  const head = await headEtag(env.SSA_URL);
-  if (!force && head && lastEtag && head === lastEtag) {
-    console.log(JSON.stringify({ message: "ingest skipped", reason: "etag_unchanged", etag: head }));
-    return;
+async function runIngest(env: Env, force: boolean, r2Key: string | null): Promise<void> {
+  // When an R2 key is provided, skip ETag check and read the zip directly from R2.
+  if (!r2Key) {
+    const lastEtag = await getMeta(env.DB, META_KEYS.lastSsaEtag);
+    const head = await headEtag(env.SSA_URL);
+    if (!force && head && lastEtag && head === lastEtag) {
+      console.log(JSON.stringify({ message: "ingest skipped", reason: "etag_unchanged", etag: head }));
+      return;
+    }
   }
 
   const runId = crypto.randomUUID();
   console.log(
-    JSON.stringify({ message: "ingest starting", runId, headEtag: head, lastEtag }),
+    JSON.stringify({ message: "ingest starting", runId, r2Key }),
   );
 
   try {
-    const { etag, bytes } = await fetchNamesZip(env.SSA_URL);
-    await env.INGEST_CACHE.put(`names-${new Date().toISOString().slice(0, 10)}.zip`, bytes);
+    let bytes: Uint8Array;
+    let etag: string | null;
+
+    if (r2Key) {
+      const obj = await env.INGEST_CACHE.get(r2Key);
+      if (!obj) throw new Error(`R2 object not found: ${r2Key}`);
+      bytes = new Uint8Array(await obj.arrayBuffer());
+      etag = obj.httpEtag ?? null;
+    } else {
+      const result = await fetchNamesZip(env.SSA_URL);
+      bytes = result.bytes;
+      etag = result.etag;
+      await env.INGEST_CACHE.put(`names-${new Date().toISOString().slice(0, 10)}.zip`, bytes);
+    }
 
     const yobs = unpackYobFiles(bytes);
     if (!yobs.length) throw new Error("no yob*.txt files in SSA zip");
