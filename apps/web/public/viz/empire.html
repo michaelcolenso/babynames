@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mary's Empire — NobodyNamed</title>
+<meta name="description" content="For 80 years, Mary was #1. Watch the naming monoculture shatter into fragments over 140 years of American history.">
+<link rel="canonical" href="https://nobodynamed.com/viz/empire">
+<meta property="og:title" content="Mary's Empire — NobodyNamed">
+<meta property="og:description" content="For 80 years, Mary was #1. Watch the naming monoculture collapse.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #12121a;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --rule: rgba(255,255,255,0.06);
+    --accent: #818cf8;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.85rem;
+  }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+  nav .brand { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--accent); letter-spacing: 0.1em; margin-right: auto; }
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 600px;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  #chart-wrap {
+    padding: 0 1.5rem;
+    overflow-x: auto;
+  }
+  #chart-inner {
+    min-width: 800px;
+    position: relative;
+  }
+  svg { display: block; }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10,10,15,0.97);
+    border: 1px solid rgba(129,140,248,0.4);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    z-index: 1000;
+    max-width: 240px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .tooltip .yr { font-family: 'Space Mono', monospace; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+  .tooltip .name-row { font-size: 0.95rem; color: var(--text); margin-bottom: 2px; font-weight: 600; }
+  .tooltip .pct { font-family: 'Space Mono', monospace; color: var(--accent); font-size: 0.85rem; }
+
+  .annotation {
+    pointer-events: none;
+  }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.6rem 1.5rem;
+  }
+
+  .legend-row {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    padding: 0.75rem 1.5rem 2.5rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 2px; }
+
+  #loading {
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+  }
+
+  @media (max-width: 640px) {
+    .hero { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">NOBODYNAMED</span>
+  <a href="/viz/">← Visualizations</a>
+  <a href="/">Home</a>
+</nav>
+
+<div class="hero">
+  <div class="kicker">16 / The Hegemony</div>
+  <h1>Mary's Empire</h1>
+  <p class="lede">The #1 name's share of all births, 1880–2024. Each stripe is a year of dominance. Watch an 80-year empire collapse into a thousand fragments.</p>
+</div>
+
+<div class="section-label">GIRLS · #1 name's market share</div>
+<div id="chart-female"></div>
+<div class="section-label">BOYS · #1 name's market share</div>
+<div id="chart-male"></div>
+
+<div class="legend-row">
+  <span>Width of stripe = % of all same-sex babies given that name · Hover for details · Stripes labeled when wide enough</span>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<div id="loading" style="display:none">LOADING…</div>
+
+<script>
+// Stable color hash for name → hue
+function nameToHue(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) {
+    h = (h * 31 + name.charCodeAt(i)) % 360;
+  }
+  return h;
+}
+
+function nameColor(name, sex, alpha = 1) {
+  const hue = nameToHue(name);
+  const s = sex === 'F' ? 55 : 45;
+  const l = sex === 'F' ? 58 : 50;
+  return `hsla(${hue},${s}%,${l}%,${alpha})`;
+}
+
+function drawStrip(containerId, years, sex, totalsByYear, top10PerYear) {
+  const container = document.getElementById(containerId);
+  const w = container.clientWidth || window.innerWidth - 40;
+  const h = 90;
+  const barH = 60;
+  const marginTop = 15;
+
+  const svg = d3.select(`#${containerId}`).append('svg')
+    .attr('width', w)
+    .attr('height', h)
+    .attr('viewBox', `0 0 ${w} ${h}`);
+
+  const yearW = w / years.length;
+
+  years.forEach((year, i) => {
+    const top = top10PerYear[year] || [];
+    const topSex = top.filter(d => d[1] === sex);
+    if (!topSex.length) return;
+
+    const [name, , count] = topSex[0];
+    const totals = totalsByYear[year] || {};
+    const total = sex === 'F' ? (totals.F || 1) : (totals.M || 1);
+    const pct = Math.min(count / total, 1);
+
+    const barHeight = pct * barH;
+    const x = i * yearW;
+    const y = marginTop + (barH - barHeight);
+
+    const color = nameColor(name, sex);
+
+    svg.append('rect')
+      .attr('x', x)
+      .attr('y', y)
+      .attr('width', Math.max(yearW - 0.3, 0.5))
+      .attr('height', barHeight)
+      .attr('fill', color)
+      .attr('opacity', 0.82)
+      .on('mousemove', (event) => {
+        d3.select('#tooltip')
+          .style('opacity', 1)
+          .style('left', `${Math.min(event.clientX + 14, window.innerWidth - 260)}px`)
+          .style('top', `${event.clientY - 75}px`)
+          .html(`
+            <div class="yr">${year}</div>
+            <div class="name-row">${name}</div>
+            <div class="pct">${(pct * 100).toFixed(1)}% of ${sex === 'F' ? 'girls' : 'boys'}</div>
+          `);
+      })
+      .on('mouseleave', () => d3.select('#tooltip').style('opacity', 0))
+      .on('click', () => window.open(`/name/${name.toLowerCase()}`, '_blank'));
+
+    // Label when stripe is wide enough (consecutive same-name runs)
+    if (yearW > 10 || (i > 0 && (top10PerYear[years[i-1]] || []).filter(d => d[1] === sex)[0]?.[0] !== name)) {
+      // Label at start of a run
+      if (i === 0 || (top10PerYear[years[i-1]] || []).filter(d => d[1] === sex)[0]?.[0] !== name) {
+        // Find run length
+        let runLen = 0;
+        for (let j = i; j < years.length; j++) {
+          const n2 = (top10PerYear[years[j]] || []).filter(d => d[1] === sex)[0]?.[0];
+          if (n2 === name) runLen++;
+          else break;
+        }
+        const runPx = runLen * yearW;
+        if (runPx > 28) {
+          const labelX = x + runPx / 2;
+          const labelY = y + barHeight / 2 + 4;
+          svg.append('text')
+            .attr('x', labelX)
+            .attr('y', labelY)
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'rgba(0,0,0,0.7)')
+            .attr('font-family', 'Space Grotesk, sans-serif')
+            .attr('font-size', Math.min(runPx / name.length * 1.2, 11))
+            .attr('font-weight', 600)
+            .attr('pointer-events', 'none')
+            .text(name);
+        }
+      }
+    }
+  });
+
+  // Year tick labels
+  const tickYears = d3.range(1880, 2030, 20);
+  tickYears.forEach(yr => {
+    const idx = years.indexOf(String(yr));
+    if (idx === -1) return;
+    svg.append('text')
+      .attr('x', idx * yearW + yearW / 2)
+      .attr('y', h - 3)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#6b7280')
+      .attr('font-family', 'Space Mono, monospace')
+      .attr('font-size', 9)
+      .text(yr);
+  });
+
+  // Baseline
+  svg.append('line')
+    .attr('x1', 0).attr('y1', marginTop + barH)
+    .attr('x2', w).attr('y2', marginTop + barH)
+    .attr('stroke', 'rgba(255,255,255,0.08)');
+}
+
+fetch('/api/meta')
+  .then(r => r.json())
+  .then(data => {
+    const years = Object.keys(data.top10PerYear).sort();
+    const { totalsByYear, top10PerYear } = data;
+
+    drawStrip('chart-female', years, 'F', totalsByYear, top10PerYear);
+    drawStrip('chart-male', years, 'M', totalsByYear, top10PerYear);
+
+    // Key annotations overlay
+    const allYears = years.map(Number);
+    const ym = Math.min(...allYears);
+    const yM = Math.max(...allYears);
+    const w = document.getElementById('chart-female').clientWidth || window.innerWidth - 40;
+
+    const annotations = [
+      { year: 1900, label: 'Mary's reign begins', offset: -10 },
+      { year: 1962, label: 'Mary dethrones', offset: 10 },
+      { year: 1984, label: 'Fragmentation era', offset: -10 },
+      { year: 2010, label: 'Long tail', offset: 10 },
+    ];
+
+    // Vertical event lines on female chart
+    const svg = d3.select('#chart-female svg');
+    annotations.forEach(a => {
+      const idx = years.indexOf(String(a.year));
+      if (idx === -1) return;
+      const x = idx * (w / years.length) + (w / years.length) / 2;
+      svg.append('line')
+        .attr('x1', x).attr('y1', 15)
+        .attr('x2', x).attr('y2', 75)
+        .attr('stroke', 'rgba(129,140,248,0.4)')
+        .attr('stroke-dasharray', '3,3')
+        .attr('pointer-events', 'none');
+
+      svg.append('text')
+        .attr('x', x + 3)
+        .attr('y', a.offset < 0 ? 26 : 68)
+        .attr('fill', 'rgba(129,140,248,0.7)')
+        .attr('font-family', 'Space Mono, monospace')
+        .attr('font-size', 8)
+        .attr('pointer-events', 'none')
+        .text(a.label);
+    });
+  })
+  .catch(() => {
+    document.getElementById('loading').textContent = 'Could not load data.';
+    document.getElementById('loading').style.display = 'block';
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Fossil Record — NobodyNamed</title>
+<meta name="description" content="Baby naming history as geological strata. Each layer is a decade, names embedded like fossils from deep time.">
+<link rel="canonical" href="https://nobodynamed.com/viz/fossil">
+<meta property="og:title" content="The Fossil Record — NobodyNamed">
+<meta property="og:description" content="140 years of naming history as geological strata. What layer are you from?">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0a06;
+    --text: #d4c9b8;
+    --muted: #5a5246;
+    --rule: rgba(200,180,140,0.08);
+    --accent: #c4995a;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.85rem;
+  }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+  nav .brand { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--accent); letter-spacing: 0.1em; margin-right: auto; }
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 600px;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  #chart-wrap {
+    padding: 0 2rem;
+    max-width: 1000px;
+    margin: 0 auto 4rem;
+    position: relative;
+  }
+
+  .strata-container {
+    display: flex;
+    flex-direction: column-reverse; /* oldest at bottom */
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .stratum {
+    position: relative;
+    cursor: pointer;
+    transition: filter 0.15s;
+    border-top: 1px solid rgba(0,0,0,0.4);
+    overflow: hidden;
+  }
+  .stratum:hover { filter: brightness(1.15); }
+  .stratum.expanded { filter: brightness(1.2); }
+
+  .stratum-inner {
+    display: flex;
+    align-items: center;
+    padding: 0 1.25rem;
+    min-height: 52px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .decade-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: rgba(0,0,0,0.5);
+    min-width: 52px;
+    z-index: 2;
+    position: relative;
+  }
+
+  .fossil-names {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.4rem 0;
+    z-index: 2;
+    position: relative;
+  }
+
+  .fossil-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .fossil-name:hover { opacity: 0.7; }
+  .fossil-name .f-text {
+    font-family: 'Space Grotesk', sans-serif;
+    color: rgba(0,0,0,0.65);
+    font-weight: 600;
+    line-height: 1;
+  }
+  .fossil-name .f-sex {
+    font-size: 0.55em;
+    opacity: 0.5;
+    font-family: 'Space Mono', monospace;
+    color: rgba(0,0,0,0.5);
+  }
+
+  /* Sediment texture overlay */
+  .stratum::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='4'%3E%3Cpath d='M0 2 Q25 0 50 2 Q75 4 100 2' fill='none' stroke='rgba(0,0,0,0.08)' stroke-width='1'/%3E%3C/svg%3E");
+    background-size: 100px 4px;
+    pointer-events: none;
+  }
+
+  .expand-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease;
+    background: rgba(0,0,0,0.3);
+    padding: 0 1.25rem;
+  }
+  .expand-panel.open {
+    max-height: 200px;
+    padding: 0.75rem 1.25rem;
+  }
+  .expand-panel .all-names {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .expand-panel .name-chip {
+    padding: 0.15rem 0.5rem;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.06);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .expand-panel .name-chip:hover { background: rgba(255,255,255,0.12); }
+  .expand-panel .name-chip .chip-sex { font-size: 0.7em; opacity: 0.5; }
+
+  .depth-indicator {
+    position: fixed;
+    right: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+  .depth-indicator .di-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    writing-mode: vertical-rl;
+    color: var(--muted);
+  }
+  .depth-indicator .di-line {
+    width: 1px;
+    height: 100px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+  }
+
+  #loading {
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+  }
+
+  @media (max-width: 640px) {
+    .hero, #chart-wrap { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 1.8rem; }
+    .depth-indicator { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">NOBODYNAMED</span>
+  <a href="/viz/">← Visualizations</a>
+  <a href="/">Home</a>
+</nav>
+
+<div class="hero">
+  <div class="kicker">20 / The Strata</div>
+  <h1>The Fossil Record</h1>
+  <p class="lede">140 years of naming history as geological strata. Each layer is a decade. Names are embedded like fossils — sized by their dominance, colored by the era's hue. Oldest layers at the bottom.</p>
+</div>
+
+<div id="chart-wrap">
+  <div id="loading">EXCAVATING RECORDS…</div>
+</div>
+
+<script>
+// Geological color palette — oldest = deep amber/brown, newest = pale stone
+const STRATA_COLORS = [
+  '#3d2e1a', // 1880s - deep sepia
+  '#4a3520', // 1890s
+  '#533d24', // 1900s
+  '#5e4528', // 1910s
+  '#6b4f2d', // 1920s
+  '#7a5a33', // 1930s
+  '#89673a', // 1940s
+  '#987641', // 1950s
+  '#a78449', // 1960s - warm caramel
+  '#b39252', // 1970s
+  '#bda05e', // 1980s
+  '#c9ae6c', // 1990s
+  '#d4bc7c', // 2000s - pale amber
+  '#ddc98a', // 2010s
+  '#e8d89a', // 2020s - almost sandy
+];
+
+function decadeLabel(start) {
+  return start < 2000 ? `'${String(start).slice(2)}s` : `${start}s`;
+}
+
+function fontSizeForCount(count, maxCount) {
+  const ratio = count / maxCount;
+  return 9 + ratio * 16;
+}
+
+fetch('/api/meta')
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('loading').remove();
+    const { top10PerYear, ym: ymVal, yM: yMVal } = data;
+
+    // Aggregate per decade
+    const decadeStart = Math.floor(ymVal / 10) * 10;
+    const decades = [];
+    for (let d = decadeStart; d <= yMVal; d += 10) {
+      const decadeYears = Object.keys(top10PerYear).filter(y => +y >= d && +y < d + 10);
+      if (!decadeYears.length) continue;
+
+      // Aggregate: accumulate counts per (name, sex)
+      const counts = {};
+      decadeYears.forEach(y => {
+        (top10PerYear[y] || []).forEach(([name, sex, count]) => {
+          const key = `${name}|${sex}`;
+          counts[key] = (counts[key] || { name, sex, total: 0 });
+          counts[key].total += count;
+        });
+      });
+      const sorted = Object.values(counts).sort((a, b) => b.total - a.total);
+      decades.push({ start: d, names: sorted });
+    }
+
+    const container = document.getElementById('chart-wrap');
+    const strataWrap = document.createElement('div');
+    strataWrap.className = 'strata-container';
+    container.appendChild(strataWrap);
+
+    decades.forEach((decade, idx) => {
+      const colorIdx = Math.min(idx, STRATA_COLORS.length - 1);
+      const bgColor = STRATA_COLORS[colorIdx];
+
+      const maxCount = decade.names[0]?.total || 1;
+      const topNames = decade.names.slice(0, 12);
+
+      const el = document.createElement('div');
+      el.className = 'stratum';
+      el.style.background = bgColor;
+
+      const inner = document.createElement('div');
+      inner.className = 'stratum-inner';
+
+      const label = document.createElement('div');
+      label.className = 'decade-label';
+      label.textContent = decadeLabel(decade.start);
+      inner.appendChild(label);
+
+      const namesDiv = document.createElement('div');
+      namesDiv.className = 'fossil-names';
+
+      topNames.forEach(n => {
+        const span = document.createElement('span');
+        span.className = 'fossil-name';
+        span.innerHTML = `
+          <span class="f-text" style="font-size:${fontSizeForCount(n.total, maxCount)}px">${n.name}</span>
+          <span class="f-sex">${n.sex}</span>
+        `;
+        span.addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.open(`/name/${n.name.toLowerCase()}`, '_blank');
+        });
+        namesDiv.appendChild(span);
+      });
+      inner.appendChild(namesDiv);
+      el.appendChild(inner);
+
+      // Expand panel with all names
+      const expandPanel = document.createElement('div');
+      expandPanel.className = 'expand-panel';
+      const allNamesDiv = document.createElement('div');
+      allNamesDiv.className = 'all-names';
+      decade.names.slice(0, 50).forEach(n => {
+        const chip = document.createElement('span');
+        chip.className = 'name-chip';
+        chip.innerHTML = `${n.name}<span class="chip-sex"> ${n.sex}</span>`;
+        chip.addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.open(`/name/${n.name.toLowerCase()}`, '_blank');
+        });
+        allNamesDiv.appendChild(chip);
+      });
+      expandPanel.appendChild(allNamesDiv);
+      el.appendChild(expandPanel);
+
+      el.addEventListener('click', () => {
+        const isOpen = expandPanel.classList.contains('open');
+        document.querySelectorAll('.expand-panel.open').forEach(p => {
+          p.classList.remove('open');
+          p.closest('.stratum')?.classList.remove('expanded');
+        });
+        if (!isOpen) {
+          expandPanel.classList.add('open');
+          el.classList.add('expanded');
+        }
+      });
+
+      strataWrap.appendChild(el);
+    });
+
+    // Depth indicator
+    const di = document.createElement('div');
+    di.className = 'depth-indicator';
+    di.innerHTML = `
+      <div class="di-label">RECENT</div>
+      <div class="di-line"></div>
+      <div class="di-label">ANCIENT</div>
+    `;
+    document.body.appendChild(di);
+  })
+  .catch(() => {
+    document.getElementById('loading').textContent = 'Could not load data.';
+  });
+</script>
+</body>
+</html>
