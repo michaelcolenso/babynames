@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Name Constellations — NobodyNamed</title>
+<meta name="description" content="A star map of American naming culture. Names with similar popularity trajectories cluster together like constellations.">
+<link rel="canonical" href="https://nobodynamed.com/viz/constellations">
+<meta property="og:title" content="Name Constellations — NobodyNamed">
+<meta property="og:description" content="A star map where names that rose and fell together orbit each other.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #02040d;
+    --bg2: #060915;
+    --text: #cdd5f0;
+    --muted: #4a5272;
+    --rule: rgba(100,120,200,0.08);
+    --accent: #818cf8;
+    --female: #f472b6;
+    --male: #60a5fa;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.82rem;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(2,4,13,0.9);
+    backdrop-filter: blur(8px);
+  }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+  nav .brand { font-family: 'Space Mono', monospace; font-size: 0.72rem; color: var(--accent); letter-spacing: 0.1em; margin-right: auto; }
+
+  .info-panel {
+    position: fixed;
+    top: 52px;
+    left: 0;
+    padding: 1.25rem 1.5rem;
+    z-index: 50;
+    pointer-events: none;
+    max-width: 300px;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .controls {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.4rem;
+    z-index: 100;
+    background: rgba(2,4,13,0.85);
+    padding: 0.5rem 0.75rem;
+    border-radius: 24px;
+    border: 1px solid var(--rule);
+    backdrop-filter: blur(8px);
+  }
+  .btn {
+    padding: 0.28rem 0.75rem;
+    border-radius: 16px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+
+  #canvas-wrap {
+    position: fixed;
+    inset: 0;
+    top: 44px;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+
+  .star { cursor: pointer; }
+  .star:hover circle { filter: brightness(2); }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(2,4,13,0.97);
+    border: 1px solid rgba(129,140,248,0.4);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    z-index: 200;
+    max-width: 220px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .tooltip .name { font-weight: 700; font-size: 1rem; color: var(--text); margin-bottom: 4px; }
+  .tooltip .detail { color: var(--muted); font-size: 0.8rem; line-height: 1.5; }
+  .tooltip .detail span { color: var(--accent); font-family: 'Space Mono', monospace; }
+
+  #loading {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    flex-direction: column;
+    gap: 1rem;
+    z-index: 300;
+  }
+  .star-spinner {
+    font-size: 2rem;
+    animation: spin 3s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 640px) {
+    h1 { font-size: 1.2rem; }
+    .lede { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">NOBODYNAMED</span>
+  <a href="/viz/">← Visualizations</a>
+  <a href="/">Home</a>
+</nav>
+
+<div class="info-panel">
+  <div class="kicker">19 / The Star Map</div>
+  <h1>Name Constellations</h1>
+  <p class="lede">Names that shared similar popularity arcs pull toward each other. Drag to explore. Hover for details. Click to view a name.</p>
+</div>
+
+<div class="controls">
+  <button class="btn active" data-sex="all">All</button>
+  <button class="btn" data-sex="F">Girls</button>
+  <button class="btn" data-sex="M">Boys</button>
+</div>
+
+<div id="canvas-wrap">
+  <div id="loading">
+    <span class="star-spinner">✦</span>
+    <span>CHARTING THE COSMOS…</span>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+let allNames = [], activeSex = 'all', simulation = null;
+
+const BUCKETS = 30;
+
+function computeSparkBuckets(series, ym, yM) {
+  const span = yY - ym || 1;
+  const buckets = new Float32Array(BUCKETS);
+  const counts = new Uint16Array(BUCKETS);
+  for (const [y, c] of Object.entries(series)) {
+    const idx = Math.min(Math.floor(((+y - ym) / span) * (BUCKETS - 1)), BUCKETS - 1);
+    buckets[idx] += c;
+    counts[idx]++;
+  }
+  const maxV = Math.max(...buckets, 1);
+  return Array.from(buckets).map(v => v / maxV);
+}
+
+let ym = 1880, yY = 2024;
+
+function cosineSim(a, b) {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  return (na > 0 && nb > 0) ? dot / (Math.sqrt(na) * Math.sqrt(nb)) : 0;
+}
+
+function buildGraph(names) {
+  // Take top 120 names by peakCount
+  const top = [...names].sort((a,b) => b.peakCount - a.peakCount).slice(0, 120);
+
+  // Pre-compute sparks
+  top.forEach(n => {
+    n._spark = computeSparkBuckets(n.series, ym, yY);
+  });
+
+  // Build edges above similarity threshold
+  const THRESH = 0.82;
+  const edges = [];
+  for (let i = 0; i < top.length; i++) {
+    for (let j = i + 1; j < top.length; j++) {
+      const sim = cosineSim(top[i]._spark, top[j]._spark);
+      if (sim > THRESH) {
+        edges.push({ source: i, target: j, sim });
+      }
+    }
+  }
+  return { nodes: top, edges };
+}
+
+function drawConstellation(names) {
+  if (simulation) simulation.stop();
+  d3.select('#canvas-wrap svg').remove();
+
+  const W = window.innerWidth;
+  const H = window.innerHeight - 44;
+
+  const { nodes, edges } = buildGraph(names);
+
+  const rScale = d3.scaleSqrt()
+    .domain([0, d3.max(nodes, n => n.peakCount)])
+    .range([3, 14]);
+
+  const svg = d3.select('#canvas-wrap').append('svg')
+    .attr('width', W).attr('height', H);
+
+  // Star field background
+  const defs = svg.append('defs');
+  const bgStars = d3.range(200).map(() => ({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    r: Math.random() * 1.2 + 0.2,
+    op: Math.random() * 0.4 + 0.05
+  }));
+  svg.selectAll('.bg-star')
+    .data(bgStars)
+    .join('circle')
+    .attr('cx', d => d.x).attr('cy', d => d.y).attr('r', d => d.r)
+    .attr('fill', 'white').attr('opacity', d => d.op);
+
+  // Glow filter
+  const filter = defs.append('filter').attr('id', 'glow');
+  filter.append('feGaussianBlur').attr('stdDeviation', 2.5).attr('result', 'coloredBlur');
+  const feMerge = filter.append('feMerge');
+  feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+  feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  const g = svg.append('g');
+
+  // Zoom
+  const zoom = d3.zoom()
+    .scaleExtent([0.3, 4])
+    .on('zoom', (event) => g.attr('transform', event.transform));
+  svg.call(zoom);
+
+  // Initialize positions
+  nodes.forEach(n => {
+    n.x = W / 2 + (Math.random() - 0.5) * W * 0.6;
+    n.y = H / 2 + (Math.random() - 0.5) * H * 0.6;
+  });
+
+  // Edge lines
+  const edgeLines = g.selectAll('.edge')
+    .data(edges)
+    .join('line')
+    .attr('class', 'edge')
+    .attr('stroke', 'rgba(129,140,248,0.12)')
+    .attr('stroke-width', d => (d.sim - 0.82) * 4);
+
+  // Force simulation
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(edges).id((d, i) => i).distance(d => (1 - d.sim) * 180 + 30).strength(0.4))
+    .force('charge', d3.forceManyBody().strength(-60))
+    .force('center', d3.forceCenter(W / 2, H / 2))
+    .force('collision', d3.forceCollide().radius(d => rScale(d.peakCount) + 6))
+    .on('tick', ticked);
+
+  // Stars
+  const stars = g.selectAll('.star')
+    .data(nodes)
+    .join('g')
+    .attr('class', 'star')
+    .call(d3.drag()
+      .on('start', (event, d) => { if (!event.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag', (event, d) => { d.fx = event.x; d.fy = event.y; })
+      .on('end', (event, d) => { if (!event.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }));
+
+  // Glow halo
+  stars.append('circle')
+    .attr('r', d => rScale(d.peakCount) * 2.2)
+    .attr('fill', d => d.sex === 'F' ? 'rgba(244,114,182,0.08)' : 'rgba(96,165,250,0.08)');
+
+  // Main star
+  stars.append('circle')
+    .attr('r', d => rScale(d.peakCount))
+    .attr('fill', d => d.sex === 'F' ? 'var(--female)' : 'var(--male)')
+    .attr('opacity', d => {
+      // Brighter if peakYear is recent
+      return 0.5 + Math.min((d.peakYear - 1880) / 140, 1) * 0.4;
+    })
+    .attr('filter', 'url(#glow)');
+
+  // Labels for large stars
+  stars.filter(d => d.peakCount > 40000)
+    .append('text')
+    .attr('y', d => rScale(d.peakCount) + 11)
+    .attr('text-anchor', 'middle')
+    .attr('fill', d => d.sex === 'F' ? 'rgba(244,114,182,0.7)' : 'rgba(96,165,250,0.7)')
+    .attr('font-family', 'Space Grotesk, sans-serif')
+    .attr('font-size', 9)
+    .attr('pointer-events', 'none')
+    .text(d => d.name);
+
+  const tip = d3.select('#tooltip');
+  stars
+    .on('mousemove', (event, d) => {
+      const sexLabel = d.sex === 'F' ? 'girl' : 'boy';
+      tip.style('opacity', 1)
+        .style('left', `${Math.min(event.clientX + 16, window.innerWidth - 240)}px`)
+        .style('top', `${event.clientY - 60}px`)
+        .html(`
+          <div class="name">${d.name} (${sexLabel})</div>
+          <div class="detail">
+            Peak: <span>${d.peakCount.toLocaleString()}</span> in <span>${d.peakYear}</span>
+          </div>
+        `);
+    })
+    .on('mouseleave', () => tip.style('opacity', 0))
+    .on('click', (e, d) => window.open(`/name/${d.name.toLowerCase()}`, '_blank'));
+
+  function ticked() {
+    edgeLines
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+    stars.attr('transform', d => `translate(${d.x},${d.y})`);
+  }
+}
+
+function filterAndDraw() {
+  const names = activeSex === 'all' ? allNames : allNames.filter(n => n.sex === activeSex);
+  drawConstellation(names);
+}
+
+document.querySelectorAll('.btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeSex = btn.dataset.sex;
+    filterAndDraw();
+  });
+});
+
+Promise.all([
+  fetch('/api/river').then(r => r.json()),
+  fetch('/api/meta').then(r => r.json())
+]).then(([riverData, metaData]) => {
+  ym = metaData.ym || 1880;
+  yY = metaData.yM || 2024;
+  allNames = riverData.names;
+  document.getElementById('loading').remove();
+  filterAndDraw();
+}).catch(() => {
+  document.getElementById('loading').innerHTML = '<span>Could not load data.</span>';
+});
+</script>
+</body>
+</html>

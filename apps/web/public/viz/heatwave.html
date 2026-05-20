@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Heatwave — NobodyNamed</title>
+<meta name="description" content="140 years of baby name popularity as a thermal heatmap. Names that burned hot glow bright; names that faded cool to blue.">
+<link rel="canonical" href="https://nobodynamed.com/viz/heatwave">
+<meta property="og:title" content="The Heatwave — NobodyNamed">
+<meta property="og:description" content="A thermal camera pointed at 140 years of naming history.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #12121a;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --rule: rgba(255,255,255,0.06);
+    --accent: #f97316;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.85rem;
+  }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+  nav .brand { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--accent); letter-spacing: 0.1em; margin-right: auto; }
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 640px;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0 2rem;
+    max-width: 980px;
+    margin: 0 auto 1.5rem;
+    align-items: center;
+  }
+  .btn {
+    padding: 0.3rem 0.85rem;
+    border-radius: 20px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+  .sort-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-left: 0.75rem;
+  }
+
+  #chart-wrap {
+    padding: 0 1rem;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  svg { display: block; }
+
+  .heat-cell { cursor: pointer; }
+  .heat-cell:hover { opacity: 1 !important; outline: 1px solid rgba(255,255,255,0.4); }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10,10,15,0.97);
+    border: 1px solid rgba(249,115,22,0.4);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    z-index: 1000;
+    max-width: 220px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .tooltip .name { font-weight: 700; font-size: 1rem; color: var(--text); margin-bottom: 4px; }
+  .tooltip .detail { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
+  .tooltip .detail span { color: var(--accent); font-family: 'Space Mono', monospace; }
+
+  .legend-wrap {
+    padding: 1rem 2rem 0.5rem;
+    max-width: 980px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  #color-legend { display: flex; height: 10px; width: 180px; border-radius: 5px; }
+  .legend-labels { display: flex; justify-content: space-between; width: 180px; font-size: 0.65rem; }
+
+  #loading {
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+  }
+
+  @media (max-width: 640px) {
+    .hero, .controls { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">NOBODYNAMED</span>
+  <a href="/viz/">← Visualizations</a>
+  <a href="/">Home</a>
+</nav>
+
+<div class="hero">
+  <div class="kicker">21 / The Thermal Scan</div>
+  <h1>The Heatwave</h1>
+  <p class="lede">Every name that ever ranked top-30, plotted as a thermal heat signature across 140 years. Hot colors = peak popularity. Cool colors = quiet years. Watch the baby boom light up like a wildfire.</p>
+</div>
+
+<div class="controls">
+  <button class="btn active" data-sex="all">All names</button>
+  <button class="btn" data-sex="F">Girls</button>
+  <button class="btn" data-sex="M">Boys</button>
+  <span class="sort-label">Sort:</span>
+  <button class="btn active" data-sort="peak">By peak year</button>
+  <button class="btn" data-sort="name">Alphabetical</button>
+  <button class="btn" data-sort="count">By peak count</button>
+</div>
+
+<div class="legend-wrap">
+  <div>
+    <canvas id="color-legend" width="180" height="10"></canvas>
+    <div class="legend-labels"><span>rare</span><span>common</span><span>dominant</span></div>
+  </div>
+  <span>· Hover cells for details · Click name label to open</span>
+</div>
+
+<div id="chart-wrap">
+  <div id="loading">SCANNING THERMAL SIGNATURES…</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+let allNames = [], activeSex = 'all', activeSort = 'peak';
+let ym = 1880, yM = 2024;
+
+// Thermal colorscale: dark blue → cyan → white → orange → red
+const colorScale = d3.scaleSequential()
+  .interpolator(d3.interpolateRgbBasis(['#0d1b2a', '#1e3a5f', '#2196f3', '#00e5ff', '#ffffff', '#ff9800', '#ff3d00', '#b71c1c']))
+  .domain([0, 1]);
+
+function drawLegend() {
+  const canvas = document.getElementById('color-legend');
+  const ctx = canvas.getContext('2d');
+  for (let i = 0; i < 180; i++) {
+    ctx.fillStyle = colorScale(i / 179);
+    ctx.fillRect(i, 0, 1, 10);
+  }
+}
+drawLegend();
+
+function getRows(names) {
+  let rows = activeSex === 'all' ? names : names.filter(n => n.sex === activeSex);
+  if (activeSort === 'peak') rows = [...rows].sort((a, b) => a.peakYear - b.peakYear);
+  else if (activeSort === 'name') rows = [...rows].sort((a, b) => a.name.localeCompare(b.name));
+  else rows = [...rows].sort((a, b) => b.peakCount - a.peakCount);
+  return rows;
+}
+
+function drawHeatmap(names) {
+  d3.select('#chart-wrap svg').remove();
+
+  const rows = getRows(names);
+  if (!rows.length) return;
+
+  const years = d3.range(ym, yM + 1);
+  const nameW = 80;
+  const cellW = Math.max(2, Math.min(6, (window.innerWidth - nameW - 60) / years.length));
+  const cellH = 18;
+  const marginTop = 30;
+  const marginBottom = 20;
+  const totalW = nameW + years.length * cellW;
+  const totalH = rows.length * cellH + marginTop + marginBottom;
+
+  // Compute per-row max for normalization
+  rows.forEach(row => {
+    row._maxCount = d3.max(Object.values(row.series)) || 1;
+  });
+
+  const svg = d3.select('#chart-wrap').append('svg')
+    .attr('width', totalW)
+    .attr('height', totalH)
+    .attr('viewBox', `0 0 ${totalW} ${totalH}`);
+
+  const tip = d3.select('#tooltip');
+
+  // Year axis
+  const decadeYears = years.filter(y => y % 10 === 0);
+  decadeYears.forEach(yr => {
+    const x = nameW + (yr - ym) * cellW;
+    svg.append('text')
+      .attr('x', x + cellW / 2)
+      .attr('y', marginTop - 6)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#4a5568')
+      .attr('font-family', 'Space Mono, monospace')
+      .attr('font-size', 9)
+      .text(yr);
+
+    svg.append('line')
+      .attr('x1', x).attr('y1', marginTop - 3)
+      .attr('x2', x).attr('y2', marginTop)
+      .attr('stroke', '#4a5568');
+  });
+
+  // Heat cells and name labels
+  rows.forEach((row, ri) => {
+    const rowY = marginTop + ri * cellH;
+
+    // Name label
+    svg.append('text')
+      .attr('x', nameW - 5)
+      .attr('y', rowY + cellH * 0.65)
+      .attr('text-anchor', 'end')
+      .attr('fill', row.sex === 'F' ? '#c084a8' : '#5a8ab5')
+      .attr('font-family', 'Space Grotesk, sans-serif')
+      .attr('font-size', Math.max(8, cellH * 0.65))
+      .attr('font-weight', 500)
+      .style('cursor', 'pointer')
+      .text(row.name)
+      .on('click', () => window.open(`/name/${row.name.toLowerCase()}`, '_blank'));
+
+    // Cells (one per year)
+    years.forEach(yr => {
+      const count = row.series[yr] || 0;
+      if (count === 0 && Math.abs(yr - row.peakYear) > 25) return;
+      const norm = count / row._maxCount;
+
+      const x = nameW + (yr - ym) * cellW;
+
+      svg.append('rect')
+        .attr('class', 'heat-cell')
+        .attr('x', x)
+        .attr('y', rowY + 1)
+        .attr('width', cellW - 0.5)
+        .attr('height', cellH - 2)
+        .attr('fill', norm > 0 ? colorScale(norm) : '#0d1b2a')
+        .attr('opacity', norm > 0 ? 0.9 : 0.15)
+        .on('mousemove', (event) => {
+          tip.style('opacity', 1)
+            .style('left', `${Math.min(event.clientX + 16, window.innerWidth - 240)}px`)
+            .style('top', `${event.clientY - 70}px`)
+            .html(`
+              <div class="name">${row.name} (${yr})</div>
+              <div class="detail">
+                Babies: <span>${count.toLocaleString()}</span><br>
+                Heat: <span>${(norm * 100).toFixed(0)}%</span> of ${row.name}'s peak<br>
+                Peak: <span>${row.peakCount.toLocaleString()}</span> in <span>${row.peakYear}</span>
+              </div>
+            `);
+        })
+        .on('mouseleave', () => tip.style('opacity', 0))
+        .on('click', () => window.open(`/name/${row.name.toLowerCase()}`, '_blank'));
+    });
+  });
+
+  // Baby boom annotation
+  const boomX = nameW + (1946 - ym) * cellW;
+  const boomW = (1964 - 1946) * cellW;
+  svg.append('rect')
+    .attr('x', boomX).attr('y', marginTop - 2)
+    .attr('width', boomW).attr('height', 3)
+    .attr('fill', '#fbbf24').attr('opacity', 0.6);
+  svg.append('text')
+    .attr('x', boomX + boomW / 2).attr('y', marginTop - 8)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#fbbf24')
+    .attr('font-family', 'Space Mono, monospace')
+    .attr('font-size', 8)
+    .attr('opacity', 0.7)
+    .text('BABY BOOM');
+}
+
+// Controls
+document.querySelectorAll('[data-sex]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-sex]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeSex = btn.dataset.sex;
+    drawHeatmap(allNames);
+  });
+});
+
+document.querySelectorAll('[data-sort]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-sort]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeSort = btn.dataset.sort;
+    drawHeatmap(allNames);
+  });
+});
+
+Promise.all([
+  fetch('/api/river').then(r => r.json()),
+  fetch('/api/meta').then(r => r.json())
+]).then(([riverData, metaData]) => {
+  ym = metaData.ym || 1880;
+  yM = metaData.yM || 2024;
+  allNames = riverData.names;
+  document.getElementById('loading').remove();
+  drawHeatmap(allNames);
+}).catch(() => {
+  document.getElementById('loading').textContent = 'Could not load data.';
+});
+</script>
+</body>
+</html>

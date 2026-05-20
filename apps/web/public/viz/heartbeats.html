@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comeback Heartbeats — NobodyNamed</title>
+<meta name="description" content="Names that came back from the dead. Each line is a heartbeat — two pulses separated by a long flatline.">
+<link rel="canonical" href="https://nobodynamed.com/viz/heartbeats">
+<meta property="og:title" content="Comeback Heartbeats — NobodyNamed">
+<meta property="og:description" content="Names that flatlined — then came roaring back.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #020d06;
+    --bg2: #041208;
+    --text: #c8dfd0;
+    --muted: #3a5444;
+    --rule: rgba(0,255,120,0.08);
+    --green: #00e676;
+    --green-dim: #00b359;
+    --female: #f472b6;
+    --male: #60a5fa;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.85rem;
+  }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+  nav .brand { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--green); letter-spacing: 0.1em; margin-right: auto; }
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 600px;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  .controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0 2rem;
+    max-width: 900px;
+    margin: 0 auto 1rem;
+  }
+  .btn {
+    padding: 0.3rem 0.85rem;
+    border-radius: 20px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--green); color: var(--green); }
+  .btn.active { background: var(--green); border-color: var(--green); color: #000; }
+
+  #chart-wrap {
+    padding: 0 2rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .monitor-frame {
+    background: var(--bg2);
+    border: 1px solid rgba(0,230,118,0.12);
+    border-radius: 12px;
+    padding: 1.5rem 1.5rem 0.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .monitor-frame::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,230,118,0.3), transparent);
+  }
+
+  .scan-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,230,118,0.4), transparent);
+    pointer-events: none;
+    animation: scan 4s linear infinite;
+    opacity: 0.4;
+  }
+  @keyframes scan {
+    0% { top: 0%; }
+    100% { top: 100%; }
+  }
+
+  svg { display: block; width: 100%; }
+
+  .trace { cursor: pointer; }
+  .trace:hover .ekg-line { filter: drop-shadow(0 0 6px var(--green)); }
+  .trace.female .ekg-line { stroke: var(--female); filter: none; }
+  .trace.female:hover .ekg-line { filter: drop-shadow(0 0 6px var(--female)); }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(2,13,6,0.97);
+    border: 1px solid rgba(0,230,118,0.4);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    z-index: 1000;
+    max-width: 260px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .tooltip .name { font-weight: 700; font-size: 1.1rem; color: var(--text); margin-bottom: 5px; }
+  .tooltip .stat { color: var(--muted); font-size: 0.82rem; line-height: 1.6; }
+  .tooltip .stat span { color: var(--green); font-family: 'Space Mono', monospace; }
+  .tooltip .stat .fem { color: var(--female); }
+  .tooltip .stat .masc { color: var(--male); }
+
+  #loading {
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    animation: pulse 1.5s ease infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .time-axis {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0 0.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    border-top: 1px solid var(--rule);
+    margin-top: 0.25rem;
+  }
+
+  .footer-note {
+    padding: 1.5rem 2rem 3rem;
+    max-width: 900px;
+    margin: 0 auto;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  @media (max-width: 640px) {
+    .hero, .controls, #chart-wrap { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">NOBODYNAMED</span>
+  <a href="/viz/">← Visualizations</a>
+  <a href="/">Home</a>
+</nav>
+
+<div class="hero">
+  <div class="kicker">15 / The Revival</div>
+  <h1>Comeback Heartbeats</h1>
+  <p class="lede">Names that flatlined — then came back. Each trace is a 140-year EKG: the original surge, the long quiet, and the second pulse. Sorted by gap between peaks.</p>
+</div>
+
+<div class="controls">
+  <button class="btn active" data-sex="all">All names</button>
+  <button class="btn" data-sex="F">Girls</button>
+  <button class="btn" data-sex="M">Boys</button>
+</div>
+
+<div id="chart-wrap">
+  <div id="loading">MONITORING VITAL SIGNS…</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+let allRows = [], activeSex = 'all', meta = {};
+
+const SPARK_BUCKETS = 60;
+
+function drawChart(rows) {
+  d3.select('#chart-wrap .monitor-frame').remove();
+  if (!rows.length) return;
+
+  // Sort by growthX descending (biggest comeback first)
+  rows = [...rows].sort((a, b) => (b.growthX || 0) - (a.growthX || 0)).slice(0, 60);
+
+  const rowH = 36;
+  const nameW = 90;
+  const sparkW_total = document.getElementById('chart-wrap').clientWidth - nameW - 80;
+  const totalH = rows.length * rowH + 40;
+
+  const wrap = d3.select('#chart-wrap').append('div').attr('class', 'monitor-frame');
+  wrap.append('div').attr('class', 'scan-line');
+
+  const svg = wrap.append('svg')
+    .attr('width', '100%')
+    .attr('height', totalH)
+    .attr('viewBox', `0 0 ${sparkW_total + nameW + 20} ${totalH}`);
+
+  const ym = meta.ym || 1880;
+  const yM = meta.yM || 2024;
+
+  rows.forEach((row, i) => {
+    const y = i * rowH + 4;
+    const spark = row.spark || new Array(60).fill(0);
+    const peakVal = Math.max(...spark);
+    if (peakVal === 0) return;
+
+    const normSpark = spark.map(v => v / peakVal);
+    const pts = normSpark.map((v, idx) => {
+      const x = nameW + (idx / (SPARK_BUCKETS - 1)) * sparkW_total;
+      const yPt = y + rowH * 0.85 - v * (rowH * 0.72);
+      return [x, yPt];
+    });
+
+    const lineGen = d3.line().x(d => d[0]).y(d => d[1]).curve(d3.curveCatmullRom.alpha(0.5));
+    const color = row.sex === 'F' ? '#f472b6' : '#00e676';
+    const isFemale = row.sex === 'F';
+
+    const g = svg.append('g').attr('class', `trace ${isFemale ? 'female' : ''}`);
+
+    // Name label
+    g.append('text')
+      .attr('x', nameW - 8)
+      .attr('y', y + rowH * 0.6)
+      .attr('text-anchor', 'end')
+      .attr('fill', isFemale ? '#c084a8' : '#3aaf6f')
+      .attr('font-family', 'Space Grotesk, sans-serif')
+      .attr('font-size', 11)
+      .attr('font-weight', 500)
+      .text(row.name);
+
+    // Glow duplicate line
+    g.append('path')
+      .attr('class', 'ekg-glow')
+      .attr('d', lineGen(pts))
+      .attr('fill', 'none')
+      .attr('stroke', color)
+      .attr('stroke-width', 3)
+      .attr('stroke-opacity', 0.12);
+
+    // Main trace
+    g.append('path')
+      .attr('class', 'ekg-line')
+      .attr('d', lineGen(pts))
+      .attr('fill', 'none')
+      .attr('stroke', color)
+      .attr('stroke-width', 1.4)
+      .attr('stroke-opacity', 0.85);
+
+    // Baseline (flatline zone indicator)
+    const minBucket = spark.indexOf(Math.max(...spark));
+    const endBucket = normSpark.findLastIndex((v, idx) => idx > minBucket && v > 0.05);
+    const startRevival = normSpark.findIndex((v, idx) => {
+      return idx > minBucket + 5 && v > 0.08;
+    });
+
+    if (startRevival > minBucket + 5) {
+      const flatY = y + rowH * 0.85;
+      const x1 = nameW + (endBucket / (SPARK_BUCKETS - 1)) * sparkW_total;
+      const x2 = nameW + (startRevival / (SPARK_BUCKETS - 1)) * sparkW_total;
+      g.append('line')
+        .attr('x1', x1).attr('y1', flatY)
+        .attr('x2', x2).attr('y2', flatY)
+        .attr('stroke', color)
+        .attr('stroke-width', 0.8)
+        .attr('stroke-opacity', 0.25)
+        .attr('stroke-dasharray', '2,4');
+    }
+
+    // Hover region
+    g.append('rect')
+      .attr('x', nameW)
+      .attr('y', y)
+      .attr('width', sparkW_total)
+      .attr('height', rowH)
+      .attr('fill', 'transparent')
+      .on('mousemove', (event) => {
+        const gxStr = row.growthX != null ? `×${row.growthX.toFixed(1)}` : 'n/a';
+        const sexLabel = row.sex === 'F' ? '<span class="fem">girl</span>' : '<span class="masc">boy</span>';
+        d3.select('#tooltip')
+          .style('opacity', 1)
+          .style('left', `${Math.min(event.clientX + 16, window.innerWidth - 280)}px`)
+          .style('top', `${event.clientY - 60}px`)
+          .html(`
+            <div class="name">${row.name} (${sexLabel})</div>
+            <div class="stat">
+              Peak: <span>${row.peakCount.toLocaleString()}</span> in <span>${row.peakYear}</span><br>
+              Revival growth: <span>${gxStr}</span><br>
+              Previous decade: <span>${(row.prevDecadeTotal || 0).toLocaleString()}</span><br>
+              Current decade: <span>${(row.currDecadeTotal || 0).toLocaleString()}</span>
+            </div>
+          `);
+      })
+      .on('mouseleave', () => d3.select('#tooltip').style('opacity', 0))
+      .on('click', () => window.open(`/name/${row.name.toLowerCase()}`, '_blank'));
+
+    // Separator line
+    svg.append('line')
+      .attr('x1', 0).attr('y1', y + rowH - 1)
+      .attr('x2', sparkW_total + nameW + 20).attr('y2', y + rowH - 1)
+      .attr('stroke', 'rgba(0,230,118,0.05)');
+  });
+
+  // Time axis labels
+  const axisY = rows.length * rowH + 16;
+  [ym, Math.round((ym + yM) / 2), yM].forEach((yr, i) => {
+    svg.append('text')
+      .attr('x', nameW + (i * 0.5) * sparkW_total)
+      .attr('y', axisY)
+      .attr('text-anchor', i === 0 ? 'start' : i === 2 ? 'end' : 'middle')
+      .attr('fill', '#3a5444')
+      .attr('font-family', 'Space Mono, monospace')
+      .attr('font-size', 10)
+      .text(yr);
+  });
+
+  // Animate traces in
+  svg.selectAll('.ekg-line, .ekg-glow')
+    .each(function(d, i) {
+      const len = this.getTotalLength ? this.getTotalLength() : 200;
+      d3.select(this)
+        .attr('stroke-dasharray', `${len} ${len}`)
+        .attr('stroke-dashoffset', len)
+        .transition().duration(900)
+        .delay(i * 15)
+        .ease(d3.easeLinear)
+        .attr('stroke-dashoffset', 0);
+    });
+}
+
+function filterAndDraw() {
+  const rows = activeSex === 'all' ? allRows : allRows.filter(r => r.sex === activeSex);
+  drawChart(rows);
+}
+
+document.querySelectorAll('.btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeSex = btn.dataset.sex;
+    filterAndDraw();
+  });
+});
+
+Promise.all([
+  fetch('/api/landing/comeback').then(r => r.json()),
+  fetch('/api/meta').then(r => r.json())
+]).then(([comebackData, metaData]) => {
+  allRows = comebackData.rows;
+  meta = metaData;
+  d3.select('#loading').remove();
+  filterAndDraw();
+}).catch(() => {
+  document.getElementById('loading').textContent = 'Could not load data.';
+});
+
+window.addEventListener('resize', () => {
+  if (allRows.length) filterAndDraw();
+});
+</script>
+</body>
+</html>
