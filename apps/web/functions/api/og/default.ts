@@ -1,7 +1,8 @@
-// GET /api/og/default  — branded SVG for static pages with no name-specific data.
+// GET /api/og/default  — branded PNG for static pages with no name-specific data.
 // Used as og:image on the homepage, /extinct, /endangered, /rising, /comeback, /year.
 
 import type { PagesFunction } from "@cloudflare/workers-types";
+import { svgToPng } from "./_wasm";
 
 const SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
 <defs>
@@ -18,10 +19,11 @@ const SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" v
 <text x="80" y="580" font-family="monospace" font-size="22" fill="rgba(217,165,111,0.75)">nobodynamed.com</text>
 </svg>`;
 
-export const onRequestGet: PagesFunction = () => {
-  return new Response(SVG, {
+export const onRequestGet: PagesFunction = async () => {
+  const png = await svgToPng(SVG);
+  return new Response(png, {
     headers: {
-      "Content-Type": "image/svg+xml",
+      "Content-Type": "image/png",
       "Cache-Control": "public, s-maxage=2592000, stale-while-revalidate=86400",
     },
   });

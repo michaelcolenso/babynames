@@ -1,6 +1,11 @@
 // Generated Env interface from wrangler types (copied without runtime types
 // to avoid duplicate declarations against @cloudflare/workers-types).
 
+declare module "*.wasm" {
+  const module: WebAssembly.Module;
+  export default module;
+}
+
 declare namespace Cloudflare {
   interface Env {
     DB: D1Database;

@@ -300,7 +300,7 @@ export function renderFullPage(
 <meta property="og:type" content="article">
 <meta property="og:url" content="${escape(opts.canonical)}">
 <meta property="og:image" content="${escape(ogImageUrl)}">
-<meta property="og:image:type" content="image/svg+xml">
+<meta property="og:image:type" content="image/png">
 <meta property="og:image:alt" content="${escape(record.name)} — ${statusLabel}, peak ${classifyResult.peakYear}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${escape(ogImageUrl)}">
