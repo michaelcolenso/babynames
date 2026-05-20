@@ -98,7 +98,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
 <meta property="og:type" content="article">
 <meta property="og:url" content="${pageCanonical}">
 <meta property="og:image" content="${ogImageUrl}">
-<meta property="og:image:type" content="image/svg+xml">
+<meta property="og:image:type" content="image/png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${ogImageUrl}">
 <link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
