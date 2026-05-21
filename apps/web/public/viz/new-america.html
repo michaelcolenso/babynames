@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Two Americas, One Baby Name Book — nobodynamed.com</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #07070f;
+  --surface: #0d0d1a;
+  --border: #1a1a2e;
+  --amber: #f59e0b;
+  --cyan: #22d3ee;
+  --rose: #f43f5e;
+  --violet: #a78bfa;
+  --green: #4ade80;
+  --muted: #6b7280;
+  --text: #d1d5db;
+  --heading: #f3f4f6;
+}
+html { background: var(--bg); color: var(--text); font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.75; font-size: 18px; }
+body { max-width: 720px; margin: 0 auto; padding: 0 1.5rem 6rem; }
+
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); color: var(--heading); line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 1.35rem; color: var(--amber); font-weight: 700; margin: 3rem 0 0.6rem; letter-spacing: -0.01em; font-family: sans-serif; }
+h3 { font-size: 1rem; color: var(--muted); font-weight: 400; font-family: sans-serif; text-transform: uppercase; letter-spacing: 0.12em; margin: 2.5rem 0 0.5rem; }
+p { margin: 1rem 0; }
+strong { color: var(--heading); }
+em { color: var(--amber); font-style: normal; }
+a { color: var(--cyan); text-decoration: none; }
+
+header { padding: 5rem 0 3rem; border-bottom: 1px solid var(--border); margin-bottom: 3rem; }
+.kicker { font-family: sans-serif; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--amber); margin-bottom: 1.2rem; }
+.byline { font-family: sans-serif; font-size: 0.82rem; color: var(--muted); margin-top: 1.5rem; }
+.lede { font-size: 1.18rem; color: var(--heading); line-height: 1.65; margin-top: 1.4rem; }
+
+blockquote {
+  border-left: 3px solid var(--amber);
+  margin: 2.5rem 0;
+  padding: 0.2rem 0 0.2rem 1.5rem;
+  font-size: 1.25rem;
+  color: var(--heading);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.chart-wrap {
+  margin: 2.2rem 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.5rem 1.2rem 1rem;
+}
+.chart-title {
+  font-family: sans-serif;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.8rem;
+}
+.chart-title strong { color: var(--heading); font-size: 0.92rem; letter-spacing: 0; text-transform: none; }
+svg { display: block; overflow: visible; }
+svg text { font-family: sans-serif; }
+
+.stat-row { display: flex; gap: 1.5rem; margin: 2rem 0; flex-wrap: wrap; }
+.stat-box {
+  flex: 1; min-width: 140px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 1rem 1.2rem;
+  font-family: sans-serif;
+}
+.stat-box .num { font-size: 2rem; font-weight: 700; color: var(--amber); line-height: 1; }
+.stat-box .num.green { color: var(--green); }
+.stat-box .num.cyan { color: var(--cyan); }
+.stat-box .label { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; text-transform: uppercase; letter-spacing: 0.08em; }
+
+.divider {
+  margin: 4rem 0;
+  border: none;
+  border-top: 1px solid var(--border);
+  position: relative;
+}
+.divider::after {
+  content: '✦';
+  position: absolute;
+  top: -0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg);
+  padding: 0 1rem;
+  color: var(--amber);
+  font-size: 0.75rem;
+}
+
+.tip {
+  position: fixed; pointer-events: none;
+  background: #111827; border: 1px solid var(--border);
+  color: var(--text); padding: 0.5rem 0.8rem;
+  border-radius: 4px; font-family: sans-serif; font-size: 0.75rem;
+  z-index: 999; opacity: 0; transition: opacity 0.1s; line-height: 1.5;
+}
+.tip.show { opacity: 1; }
+
+footer { margin-top: 5rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: sans-serif; font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="tip" id="tip"></div>
+
+<header>
+  <p class="kicker">nobodynamed.com · 2025 SSA Data</p>
+  <h1>Two Americas, One Baby Name Book</h1>
+  <p class="lede">Mateo is now one of the most common boys' names in America. Thiago has grown 130-fold in 20 years. At the same time, Maverick, Waylon, and Weston have each quintupled. The 2025 SSA data captures two distinct cultural movements — and both are winning simultaneously.</p>
+  <p class="byline">May 2026 · Based on SSA name data 1880–2025 · 117,820 name/sex pairs</p>
+</header>
+
+<h2>Mateo: The New Classic</h2>
+
+<p>In 2005, <strong>Mateo</strong> was a niche choice — 1,089 babies, solidly present but nowhere near the top. By 2025, <em>11,045 babies were named Mateo</em>. That puts him roughly level with Joseph and ahead of Nathan. He is no longer a rising name. He is simply a common one.</p>
+
+<p>The trajectory is clean and uninterrupted — no spike, no crash, just a steady 20-year climb driven by the growth of the Latino population and the broadening of what "classic American name" means.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Mateo</strong> — boys named per year · 2005–2025</p>
+  <svg id="c-mateo"></svg>
+</div>
+
+<div class="stat-row">
+  <div class="stat-box"><div class="num">1,089</div><div class="label">Mateo in 2005</div></div>
+  <div class="stat-box"><div class="num">11,045</div><div class="label">Mateo in 2025</div></div>
+  <div class="stat-box"><div class="num cyan">10×</div><div class="label">increase in 20 years</div></div>
+</div>
+
+<h2>Santiago and Thiago: The Surge Continues</h2>
+
+<p><strong>Santiago</strong> has been climbing for 20 years, but the pace has accelerated sharply: 3,000 babies in 2010, 5,000 in 2019, and <em>7,554 in 2025</em>. He is now in the top 30 boys' names nationally — a position unimaginable even ten years ago.</p>
+
+<p>But the most striking number belongs to <strong>Thiago</strong>. In 2005: 44 babies. In 2025: <em>5,835 babies</em>. A 130-fold increase in a single generation. The Brazilian-Portuguese variant of Diego has become one of the fastest-growing names in the dataset, with no sign of slowing.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Santiago · Thiago</strong> — boys named per year · 2005–2025</p>
+  <svg id="c-latin-boys"></svg>
+</div>
+
+<p>Thiago's curve has a distinctive shape — gradual until around 2013, then sharply accelerating. That inflection point lines up with increased South American immigration and the rising visibility of Brazilian culture globally. Once it crossed a critical mass of familiarity, it snowballed.</p>
+
+<h2>Luna, Valentina, Aurora</h2>
+
+<p>On the girls' side, the same story is playing out. <strong>Luna</strong> peaked in 2022 at 8,977 and has settled to a very solid 6,076 in 2025 — still one of the most common girls' names in America. <strong>Valentina</strong> has been on a steady upward march and hit <em>5,354 in 2025</em>, her highest ever. <strong>Aurora</strong> just keeps climbing: 7,065 in 2025 and still rising.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Luna · Valentina · Aurora</strong> — girls named per year · 2005–2025</p>
+  <svg id="c-latin-girls"></svg>
+</div>
+
+<p>These three names share a quality beyond their Latin roots: they feel both ancient and modern. Luna and Aurora are mythology. Valentina is history and romance. None of them feel like a trend — they feel like names that were always going to be important and are only now getting their due.</p>
+
+<blockquote>"The fastest-growing names in America aren't celebrity-driven spikes. They're names that have been climbing steadily for twenty years without stopping."</blockquote>
+
+<hr class="divider">
+
+<h2>Maverick: The New Frontier</h2>
+
+<p>While Latin and mythological names were ascending in one part of the country, a completely different cultural movement was producing completely different names. In 2017, <em>Top Gun: Maverick</em> was announced. By 2018 — before the film even released — <strong>Maverick</strong> was already at 5,041 babies. He'd been climbing since 2013.</p>
+
+<p>The film's release in 2022 didn't cause a spike; the name was already large enough that the movie felt like confirmation rather than cause. In 2025: <em>5,894 boys named Maverick</em>. He is firmly established.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Maverick</strong> — boys named per year · 2005–2025</p>
+  <svg id="c-maverick"></svg>
+</div>
+
+<p>Maverick is the flagship of a broader category: names that signal a certain kind of American identity. Bold, frontier-adjacent, confident. Names that sound like they belong to a person who will grow up to do something interesting.</p>
+
+<h2>Waylon, Weston, Brooks</h2>
+
+<p>The names surrounding Maverick tell the same story in different registers. <strong>Waylon</strong> — the country legend's legacy — went from 365 babies in 2005 to <em>5,408 in 2025</em>. <strong>Weston</strong> went from 742 to <em>5,482</em>. <strong>Brooks</strong> went from 339 to <em>4,877</em>.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Waylon · Weston · Brooks</strong> — boys named per year · 2005–2025</p>
+  <svg id="c-frontier"></svg>
+</div>
+
+<p>These names cluster around a coherent aesthetic: the American South and West, country music, wide spaces. <strong>Waylon</strong> carries Jennings. <strong>Weston</strong> has a topographic quality — it sounds like a place you'd want to be. <strong>Brooks</strong> is clean and outdoorsy. Together they read as a naming manifesto for a certain kind of parenthood — not vintage, not global, but rooted in a specific American grain.</p>
+
+<h2>Willow, Ivy, Violet</h2>
+
+<p>The female counterpart to this movement is the nature names. <strong>Violet</strong> has been climbing for 20 years and hit <em>7,546 in 2025</em> — her all-time record. <strong>Ivy</strong> reached 5,117. <strong>Willow</strong> is at 4,763 and still rising.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Willow · Ivy · Violet</strong> — girls named per year · 2005–2025</p>
+  <svg id="c-nature"></svg>
+</div>
+
+<p>Nature names share a philosophy with the vintage revival names (Eleanor, Hazel, Nora) — both feel like rejections of the mid-century naming monoculture, a turn toward names that feel connected to something older and more permanent than pop culture. But where the vintage names connect to <em>history</em>, nature names connect to <em>place</em>. A Violet or a Willow sounds like someone who grew up near woods, not a suburb.</p>
+
+<h2>Two Trends, One Dataset</h2>
+
+<p>If you had to predict a culture war in baby name data, this is where you'd expect it. Two demographic movements, two aesthetic philosophies, one naming book.</p>
+
+<p>But the data doesn't show a conflict. Both trends are growing. The same years that saw Mateo and Valentina rise also saw Maverick and Waylon rise. There's no zero-sum game here — the names aren't competing, they're coexisting in the same data alongside each other.</p>
+
+<p>What the 2025 SSA data actually shows is a country that is simultaneously becoming more diverse and more nostalgic. More global-facing and more frontier-facing. Both impulses are producing real children with real names, right now, in the same year.</p>
+
+<p>The baby name record is a mirror. In 2025, it shows two Americas — both alive, both naming themselves, both showing up in the same federal database.</p>
+
+<footer>
+  <p>Data: U.S. Social Security Administration, 1880–2025. Analysis via <a href="https://nobodynamed.com">nobodynamed.com</a>. SSA suppresses names with fewer than 5 births in a given year. All data shown is for the dominant-sex spelling (M for boys' names, F for girls' names).</p>
+</footer>
+
+<script>
+const tip = document.getElementById('tip');
+function showTip(html, e) {
+  tip.innerHTML = html; tip.classList.add('show');
+  const x = e.clientX + 12, y = e.clientY - 8;
+  tip.style.left = Math.min(x, window.innerWidth - 200) + 'px';
+  tip.style.top = Math.max(y, 10) + 'px';
+}
+function hideTip() { tip.classList.remove('show'); }
+
+function sparkChart(selector, data, opts = {}) {
+  const el = document.querySelector(selector).closest('.chart-wrap');
+  const W = el ? (el.clientWidth - 48) : 640;
+  const H = opts.H || 160;
+  const mg = { top: opts.annotate ? 36 : 18, right: 20, bottom: 28, left: 52 };
+  const iw = W - mg.left - mg.right;
+  const ih = H - mg.top - mg.bottom;
+
+  const series = opts.series || [{ data, color: opts.color || '#f59e0b', label: opts.label || '' }];
+  const allData = series.flatMap(s => s.data);
+
+  const xS = d3.scaleLinear().domain(d3.extent(allData, d => d.y)).range([0, iw]);
+  const yS = d3.scaleLinear().domain([0, d3.max(allData, d => d.v) * 1.12]).range([ih, 0]);
+
+  const svg = d3.select(selector).attr('width', W).attr('height', H)
+    .attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${mg.left},${mg.top})`);
+
+  yS.ticks(4).forEach(t => {
+    g.append('line').attr('x1', 0).attr('x2', iw).attr('y1', yS(t)).attr('y2', yS(t))
+      .attr('stroke', '#1a1a2e').attr('stroke-width', 1);
+  });
+
+  series.forEach(s => {
+    const area = d3.area().x(d => xS(d.y)).y0(ih).y1(d => yS(d.v)).curve(d3.curveMonotoneX);
+    const line = d3.line().x(d => xS(d.y)).y(d => yS(d.v)).curve(d3.curveMonotoneX);
+    g.append('path').datum(s.data).attr('d', area).attr('fill', s.color).attr('opacity', 0.12);
+    g.append('path').datum(s.data).attr('d', line).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2);
+    if (s.label) {
+      const last = s.data[s.data.length - 1];
+      g.append('text').attr('x', xS(last.y) + 4).attr('y', yS(last.v) + 4)
+        .attr('fill', s.color).attr('font-size', '10').attr('font-weight', '600').text(s.label);
+    }
+  });
+
+  g.append('g').attr('transform', `translate(0,${ih})`)
+    .call(d3.axisBottom(xS).tickFormat(d3.format('d')).ticks(8))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#6b7280').attr('font-size', '10'); });
+
+  g.append('g')
+    .call(d3.axisLeft(yS).ticks(4).tickFormat(d => d >= 1000 ? (d / 1000).toFixed(1) + 'k' : d))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#6b7280').attr('font-size', '10'); });
+
+  if (opts.annotate) {
+    opts.annotate.forEach(a => {
+      const ax = xS(a.year);
+      g.append('line').attr('x1', ax).attr('x2', ax).attr('y1', -mg.top + 6).attr('y2', ih)
+        .attr('stroke', '#4b5563').attr('stroke-width', 1).attr('stroke-dasharray', '3,3');
+      g.append('text').attr('x', ax).attr('y', -mg.top + 4)
+        .attr('text-anchor', 'middle').attr('fill', '#9ca3af').attr('font-size', '9').text(a.label);
+    });
+  }
+
+  g.append('rect').attr('width', iw).attr('height', ih).attr('fill', 'none')
+    .attr('pointer-events', 'all')
+    .on('mousemove', function(e) {
+      const [mx] = d3.pointer(e, g.node());
+      const yr = Math.round(xS.invert(mx));
+      const rows = series.map(s => {
+        const pt = s.data.find(d => d.y === yr);
+        return pt ? `<span style="color:${s.color}">${s.label || ''}${s.label ? ': ' : ''}${pt.v.toLocaleString()}</span>` : null;
+      }).filter(Boolean).join('<br>');
+      if (rows) showTip(`<strong>${yr}</strong><br>${rows}`, e);
+    })
+    .on('mouseleave', () => hideTip());
+}
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
+// Latino / global names (M)
+const mateo = [
+  {y:2005,v:1089},{y:2006,v:1270},{y:2007,v:1227},{y:2008,v:1408},{y:2009,v:1594},
+  {y:2010,v:1624},{y:2011,v:2204},{y:2012,v:2840},{y:2013,v:3588},{y:2014,v:3743},
+  {y:2015,v:5029},{y:2016,v:6559},{y:2017,v:7774},{y:2018,v:8221},{y:2019,v:9022},
+  {y:2020,v:9007},{y:2021,v:9181},{y:2022,v:10397},{y:2023,v:11293},{y:2024,v:11349},
+  {y:2025,v:11045}
+];
+const santiago = [
+  {y:2005,v:1205},{y:2006,v:1552},{y:2007,v:1968},{y:2008,v:2340},{y:2009,v:3126},
+  {y:2010,v:3012},{y:2011,v:3070},{y:2012,v:3050},{y:2013,v:3032},{y:2014,v:3426},
+  {y:2015,v:3219},{y:2016,v:3719},{y:2017,v:4204},{y:2018,v:4670},{y:2019,v:5047},
+  {y:2020,v:4687},{y:2021,v:5076},{y:2022,v:6036},{y:2023,v:6358},{y:2024,v:7434},
+  {y:2025,v:7554}
+];
+const thiago = [
+  {y:2005,v:44},{y:2006,v:61},{y:2007,v:73},{y:2008,v:112},{y:2009,v:160},
+  {y:2010,v:181},{y:2011,v:188},{y:2012,v:246},{y:2013,v:561},{y:2014,v:797},
+  {y:2015,v:1032},{y:2016,v:1370},{y:2017,v:1766},{y:2018,v:2023},{y:2019,v:2133},
+  {y:2020,v:2305},{y:2021,v:2714},{y:2022,v:3467},{y:2023,v:4515},{y:2024,v:5304},
+  {y:2025,v:5835}
+];
+
+// Latino / global names (F)
+const luna = [
+  {y:2005,v:477},{y:2006,v:592},{y:2007,v:713},{y:2008,v:808},{y:2009,v:1015},
+  {y:2010,v:942},{y:2011,v:1145},{y:2012,v:1414},{y:2013,v:1747},{y:2014,v:2341},
+  {y:2015,v:2809},{y:2016,v:3688},{y:2017,v:5356},{y:2018,v:6937},{y:2019,v:7800},
+  {y:2020,v:7850},{y:2021,v:8241},{y:2022,v:8977},{y:2023,v:7853},{y:2024,v:7164},
+  {y:2025,v:6076}
+];
+const valentina = [
+  {y:2005,v:657},{y:2006,v:725},{y:2007,v:829},{y:2008,v:1292},{y:2009,v:1585},
+  {y:2010,v:2005},{y:2011,v:2018},{y:2012,v:1904},{y:2013,v:2565},{y:2014,v:2783},
+  {y:2015,v:2751},{y:2016,v:2920},{y:2017,v:3042},{y:2018,v:3436},{y:2019,v:3797},
+  {y:2020,v:3352},{y:2021,v:3467},{y:2022,v:3901},{y:2023,v:4090},{y:2024,v:4456},
+  {y:2025,v:5354}
+];
+const aurora = [
+  {y:2005,v:953},{y:2006,v:1069},{y:2007,v:1069},{y:2008,v:1174},{y:2009,v:1489},
+  {y:2010,v:1530},{y:2011,v:1729},{y:2012,v:1905},{y:2013,v:2133},{y:2014,v:2752},
+  {y:2015,v:3654},{y:2016,v:4006},{y:2017,v:4615},{y:2018,v:4830},{y:2019,v:5006},
+  {y:2020,v:5256},{y:2021,v:5528},{y:2022,v:6003},{y:2023,v:6081},{y:2024,v:6955},
+  {y:2025,v:7065}
+];
+
+// Frontier / country names (M)
+const maverick = [
+  {y:2005,v:331},{y:2006,v:395},{y:2007,v:455},{y:2008,v:535},{y:2009,v:484},
+  {y:2010,v:509},{y:2011,v:640},{y:2012,v:857},{y:2013,v:1304},{y:2014,v:1879},
+  {y:2015,v:2277},{y:2016,v:2961},{y:2017,v:4731},{y:2018,v:5041},{y:2019,v:5765},
+  {y:2020,v:6139},{y:2021,v:6610},{y:2022,v:7049},{y:2023,v:6990},{y:2024,v:6635},
+  {y:2025,v:5894}
+];
+const waylon = [
+  {y:2005,v:365},{y:2006,v:466},{y:2007,v:502},{y:2008,v:480},{y:2009,v:571},
+  {y:2010,v:657},{y:2011,v:802},{y:2012,v:972},{y:2013,v:1201},{y:2014,v:1501},
+  {y:2015,v:1761},{y:2016,v:2060},{y:2017,v:2427},{y:2018,v:2790},{y:2019,v:3441},
+  {y:2020,v:3588},{y:2021,v:4660},{y:2022,v:4923},{y:2023,v:4895},{y:2024,v:4892},
+  {y:2025,v:5408}
+];
+const weston = [
+  {y:2005,v:742},{y:2006,v:794},{y:2007,v:852},{y:2008,v:1027},{y:2009,v:1282},
+  {y:2010,v:1584},{y:2011,v:1749},{y:2012,v:2284},{y:2013,v:2488},{y:2014,v:2965},
+  {y:2015,v:3327},{y:2016,v:3403},{y:2017,v:3656},{y:2018,v:3782},{y:2019,v:3574},
+  {y:2020,v:3423},{y:2021,v:3793},{y:2022,v:4112},{y:2023,v:4373},{y:2024,v:4672},
+  {y:2025,v:5482}
+];
+const brooks = [
+  {y:2005,v:339},{y:2006,v:412},{y:2007,v:479},{y:2008,v:419},{y:2009,v:558},
+  {y:2010,v:700},{y:2011,v:878},{y:2012,v:849},{y:2013,v:1163},{y:2014,v:1520},
+  {y:2015,v:1652},{y:2016,v:1671},{y:2017,v:1934},{y:2018,v:2379},{y:2019,v:3508},
+  {y:2020,v:3870},{y:2021,v:4444},{y:2022,v:4349},{y:2023,v:4484},{y:2024,v:4811},
+  {y:2025,v:4877}
+];
+
+// Nature names (F)
+const willow = [
+  {y:2005,v:542},{y:2006,v:578},{y:2007,v:771},{y:2008,v:797},{y:2009,v:1054},
+  {y:2010,v:1122},{y:2011,v:1575},{y:2012,v:1839},{y:2013,v:2079},{y:2014,v:2410},
+  {y:2015,v:2811},{y:2016,v:3125},{y:2017,v:3569},{y:2018,v:3933},{y:2019,v:4609},
+  {y:2020,v:4401},{y:2021,v:5195},{y:2022,v:5072},{y:2023,v:4765},{y:2024,v:4672},
+  {y:2025,v:4763}
+];
+const ivy = [
+  {y:2005,v:1045},{y:2006,v:985},{y:2007,v:1128},{y:2008,v:1122},{y:2009,v:1021},
+  {y:2010,v:1090},{y:2011,v:1217},{y:2012,v:1699},{y:2013,v:2101},{y:2014,v:2292},
+  {y:2015,v:2507},{y:2016,v:2824},{y:2017,v:2783},{y:2018,v:3287},{y:2019,v:3692},
+  {y:2020,v:3842},{y:2021,v:4396},{y:2022,v:4814},{y:2023,v:5060},{y:2024,v:5343},
+  {y:2025,v:5117}
+];
+const violet = [
+  {y:2005,v:846},{y:2006,v:1268},{y:2007,v:1538},{y:2008,v:1830},{y:2009,v:2262},
+  {y:2010,v:2571},{y:2011,v:2902},{y:2012,v:3283},{y:2013,v:3935},{y:2014,v:4193},
+  {y:2015,v:4822},{y:2016,v:4882},{y:2017,v:4741},{y:2018,v:4834},{y:2019,v:5418},
+  {y:2020,v:5128},{y:2021,v:5524},{y:2022,v:6477},{y:2023,v:6370},{y:2024,v:6986},
+  {y:2025,v:7546}
+];
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+
+sparkChart('#c-mateo', mateo, {
+  color: '#f59e0b', label: 'Mateo', H: 180,
+});
+
+sparkChart('#c-latin-boys', null, {
+  H: 200,
+  series: [
+    { data: santiago, color: '#22d3ee', label: 'Santiago' },
+    { data: thiago,   color: '#4ade80', label: 'Thiago' },
+  ],
+  annotate: [{ year: 2013, label: 'Thiago accelerates' }]
+});
+
+sparkChart('#c-latin-girls', null, {
+  H: 200,
+  series: [
+    { data: luna,      color: '#a78bfa', label: 'Luna' },
+    { data: valentina, color: '#f43f5e', label: 'Valentina' },
+    { data: aurora,    color: '#22d3ee', label: 'Aurora' },
+  ],
+});
+
+sparkChart('#c-maverick', maverick, {
+  color: '#f43f5e', label: 'Maverick', H: 180,
+  annotate: [{ year: 2022, label: 'Top Gun: Maverick' }]
+});
+
+sparkChart('#c-frontier', null, {
+  H: 200,
+  series: [
+    { data: waylon, color: '#f59e0b', label: 'Waylon' },
+    { data: weston, color: '#22d3ee', label: 'Weston' },
+    { data: brooks, color: '#4ade80', label: 'Brooks' },
+  ],
+});
+
+sparkChart('#c-nature', null, {
+  H: 200,
+  series: [
+    { data: violet, color: '#a78bfa', label: 'Violet' },
+    { data: ivy,    color: '#22d3ee', label: 'Ivy' },
+    { data: willow, color: '#4ade80', label: 'Willow' },
+  ],
+});
+</script>
+</body>
+</html>
