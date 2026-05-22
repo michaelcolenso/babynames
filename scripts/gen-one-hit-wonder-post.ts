@@ -65,6 +65,7 @@ const names: NameData[] = [
 function chartPanel(nd: NameData): string {
   const svg = buildSparkline(nd.series, YM, YR, { status: nd.status });
   return `<div class="chart-panel">
+  <div style="font-family:var(--sans);font-size:1.25rem;font-weight:800;color:#f7efe1;margin:0 0 0.2rem;letter-spacing:-0.01em">${nd.name}</div>
   <div class="chart-caption"><span>${nd.firstYear}</span><span>Peak ${nd.peakYear}</span><span>${YR}</span></div>
   ${svg}
 </div>`;
