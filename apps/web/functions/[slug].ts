@@ -50,7 +50,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   // asset serving from within route functions.
   if (slug.includes(".")) return ctx.env.ASSETS.fetch(ctx.request);
   // Serve static HTML pages directly — avoids redirect loops with Cloudflare Pages Pretty URLs.
-  const staticPages = new Set(["extinct", "rising", "endangered", "comeback", "year", "about"]);
+  const staticPages = new Set(["extinct", "rising", "endangered", "comeback", "year", "about", "press"]);
   if (staticPages.has(slug)) return ctx.env.ASSETS.fetch(new URL(`/${slug}.html`, ctx.request.url));
 
   const page = PAGES[slug];

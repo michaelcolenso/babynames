@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>2025 SSA Baby Name Data — Press &amp; Journalist Tools · NobodyNamed</title>
+  <meta name="description" content="The 2025 SSA baby name data is out. Six story starters, live rankings, year-over-year movers, and embed tools for journalists.">
+  <link rel="canonical" href="https://nobodynamed.com/press">
+  <meta property="og:title" content="2025 Baby Name Data — For Journalists">
+  <meta property="og:description" content="Story starters, live rankings, biggest rank changes, and embed tools. Everything a journalist needs from the 2025 SSA data release.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nobodynamed.com/press">
+  <meta property="og:image" content="https://nobodynamed.com/api/og/default">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="https://nobodynamed.com/api/og/default">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
+  <style>
+    .press-hero {
+      padding: clamp(2rem, 6vw, 5rem) 0 clamp(2rem, 4vw, 3.5rem);
+      border-bottom: 1px solid var(--rule);
+      margin-bottom: clamp(2rem, 5vw, 4rem);
+    }
+    .press-year {
+      font-family: var(--serif);
+      font-size: clamp(6rem, 22vw, 18rem);
+      font-weight: 500;
+      line-height: 0.88;
+      color: var(--ink);
+      letter-spacing: -0.02em;
+      margin: 0 0 clamp(1rem, 2.5vw, 2rem);
+      opacity: 0.08;
+      pointer-events: none;
+      user-select: none;
+      position: absolute;
+      right: 0;
+      top: 0;
+    }
+    .press-hero-inner {
+      position: relative;
+      overflow: hidden;
+    }
+    .press-hero-copy { position: relative; z-index: 1; max-width: 680px; }
+    .stat-shelf {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+      margin-top: clamp(1.5rem, 3vw, 2.5rem);
+    }
+    .press-stat {
+      padding: 1rem 1.1rem;
+      background: rgba(251, 248, 241, 0.72);
+      border: 1px solid rgba(23, 21, 17, 0.16);
+      border-radius: var(--radius);
+    }
+    .press-stat .label {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      margin-bottom: 0.3rem;
+    }
+    .press-stat .value {
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: clamp(1.3rem, 2.6vw, 1.9rem);
+      font-weight: 800;
+      line-height: 1.1;
+    }
+    .press-stat .sub {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      margin-top: 0.15rem;
+    }
+
+    .angle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      margin-top: 1.25rem;
+    }
+    .angle-card {
+      display: flex;
+      flex-direction: column;
+      padding: 1.4rem 1.4rem 1.2rem;
+      background: rgba(251, 248, 241, 0.72);
+      border: 1px solid rgba(23, 21, 17, 0.16);
+      border-radius: var(--radius);
+      text-decoration: none;
+      color: var(--ink);
+      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+    .angle-card:hover { transform: translateY(-3px); border-color: rgba(23, 21, 17, 0.32); background: var(--surface); text-decoration: none; }
+    .angle-type {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+    .angle-hed {
+      font-family: var(--serif);
+      font-size: clamp(1.2rem, 2vw, 1.55rem);
+      font-weight: 500;
+      line-height: 1.1;
+      margin-bottom: 0.75rem;
+      color: var(--ink);
+    }
+    .angle-nut {
+      font-family: var(--sans);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--ink-soft);
+      flex: 1;
+      margin-bottom: 1.1rem;
+    }
+    .angle-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-family: var(--sans);
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: var(--accent-dark);
+      text-decoration: none;
+      margin-top: auto;
+    }
+    .angle-card:hover .angle-cta { color: var(--accent); }
+
+    .top10-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(1rem, 4vw, 3rem);
+      margin-top: 1.25rem;
+    }
+    .top10-col h3 {
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: 0.5rem;
+    }
+    .top10-list { list-style: none; margin: 0; padding: 0; }
+    .top10-row {
+      display: grid;
+      grid-template-columns: 2rem 1fr auto auto;
+      gap: 0.5rem 0.75rem;
+      align-items: center;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid rgba(23, 21, 17, 0.07);
+      font-family: var(--sans);
+    }
+    .top10-rank {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-align: right;
+    }
+    .top10-name { font-weight: 700; font-size: 0.98rem; color: var(--ink); text-decoration: none; }
+    .top10-name:hover { color: var(--accent); }
+    .top10-count { font-family: var(--mono); font-size: 0.74rem; color: var(--muted); text-align: right; }
+    .ch-up { color: var(--emerald); font-family: var(--mono); font-size: 0.68rem; font-weight: 800; white-space: nowrap; }
+    .ch-down { color: var(--red); font-family: var(--mono); font-size: 0.68rem; font-weight: 800; white-space: nowrap; }
+    .ch-new { color: var(--violet); font-family: var(--mono); font-size: 0.65rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+    .ch-flat { color: var(--muted); font-family: var(--mono); font-size: 0.68rem; }
+
+    .movers-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid var(--rule);
+    }
+    .movers-tab {
+      padding: 0.6rem 1.1rem;
+      font-family: var(--sans);
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: var(--muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      cursor: pointer;
+      transition: color 140ms, border-color 140ms;
+    }
+    .movers-tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+    .movers-tab:hover { color: var(--ink-soft); }
+
+    .toolkit-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1.25rem;
+    }
+    .toolkit-card {
+      padding: 1.25rem 1.3rem;
+      background: rgba(251, 248, 241, 0.72);
+      border: 1px solid rgba(23, 21, 17, 0.16);
+      border-radius: var(--radius);
+    }
+    .toolkit-card h3 {
+      font-family: var(--sans);
+      font-size: 0.88rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+    .toolkit-card p {
+      font-family: var(--sans);
+      font-size: 0.86rem;
+      color: var(--ink-soft);
+      line-height: 1.45;
+      margin: 0 0 0.85rem;
+    }
+    .embed-snippet {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      line-height: 1.55;
+      color: var(--ink-soft);
+      background: var(--paper-deep);
+      border: 1px solid var(--rule);
+      border-radius: 5px;
+      padding: 0.75rem 0.9rem;
+      margin: 0.5rem 0 0.75rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .copy-btn {
+      display: inline-block;
+      padding: 0.42rem 0.85rem;
+      font-family: var(--sans);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--ink);
+      background: var(--surface-2);
+      border: 1px solid rgba(23, 21, 17, 0.2);
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 140ms;
+    }
+    .copy-btn:hover { background: var(--paper-deep); }
+    .copy-btn.copied { color: var(--emerald); }
+
+    .attribution-block {
+      margin-top: clamp(2rem, 4vw, 3rem);
+      padding: 1.25rem 1.4rem;
+      background: rgba(251, 248, 241, 0.5);
+      border: 1px solid rgba(23, 21, 17, 0.12);
+      border-radius: var(--radius);
+      font-family: var(--sans);
+      font-size: 0.88rem;
+      color: var(--ink-soft);
+      line-height: 1.55;
+    }
+    .attribution-block strong { color: var(--ink); }
+
+    @media (max-width: 640px) {
+      .top10-grid { grid-template-columns: 1fr; }
+      .angle-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="site">
+      <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
+      <nav>
+        <a href="/extinct">Extinct</a>
+        <a href="/endangered">Endangered</a>
+        <a href="/comeback">Comebacks</a>
+        <a href="/year">Birth year</a>
+        <a href="/rising">Rising</a>
+        <a href="/viz">Visualizations</a>
+        <a href="/blog/">Namecalling</a>
+        <a href="/about">About</a>
+      </nav>
+    </header>
+
+    <section class="press-hero">
+      <div class="press-hero-inner">
+        <div class="press-year" aria-hidden="true" id="hero-year">2025</div>
+        <div class="press-hero-copy">
+          <p class="eyebrow">Data release &mdash; SSA annual report</p>
+          <h1 id="hero-h1">The 2025 Baby Names</h1>
+          <p class="lede">The Social Security Administration released its annual baby name report this week &mdash; the first complete picture of how America named its children in 2025. 145 years of name data, updated.</p>
+          <div class="stat-shelf" id="stat-shelf">
+            <div class="press-stat">
+              <div class="label">#1 girl name</div>
+              <div class="value" id="stat-girl">—</div>
+              <div class="sub" id="stat-girl-sub">&nbsp;</div>
+            </div>
+            <div class="press-stat">
+              <div class="label">#1 boy name</div>
+              <div class="value" id="stat-boy">—</div>
+              <div class="sub" id="stat-boy-sub">&nbsp;</div>
+            </div>
+            <div class="press-stat">
+              <div class="label">Biggest climber</div>
+              <div class="value" id="stat-gainer">—</div>
+              <div class="sub" id="stat-gainer-sub">&nbsp;</div>
+            </div>
+            <div class="press-stat">
+              <div class="label">New to top 100</div>
+              <div class="value" id="stat-new">—</div>
+              <div class="sub" id="stat-new-sub">&nbsp;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="story-starters">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">For journalists</p>
+          <h2>Six story starters</h2>
+        </div>
+        <p class="lede">Pre-researched angles built from live SSA data. Copy the nut graf, link to the source, and file.</p>
+      </div>
+
+      <div class="angle-grid">
+
+        <div class="angle-card">
+          <div class="angle-type">Annual rundown</div>
+          <div class="angle-hed" id="angle-top-hed">America&rsquo;s Most Popular Baby Names of 2025</div>
+          <p class="angle-nut">The SSA&rsquo;s annual rankings are in. <span id="angle-top-body">America&rsquo;s most popular names offer a snapshot of cultural taste, celebrity influence, and generational naming patterns — updated for 2025.</span></p>
+          <a class="angle-cta" href="/year/2025/" id="angle-top-link">See the 2025 top 100 &rarr;</a>
+        </div>
+
+        <div class="angle-card">
+          <div class="angle-type">Trend story</div>
+          <div class="angle-hed">The Fastest-Rising Names Right Now</div>
+          <p class="angle-nut">These names have grown five times faster this decade than the decade before. Not viral moments &mdash; sustained momentum. The data shows which names are genuinely reshaping the playground.</p>
+          <a class="angle-cta" href="/rising">Explore rising names &rarr;</a>
+        </div>
+
+        <div class="angle-card">
+          <div class="angle-type">Cultural piece</div>
+          <div class="angle-hed">The Baby Names Nobody Uses Anymore</div>
+          <p class="angle-nut">Bertha, Mildred, Elmer, Gertrude &mdash; once dominant names that have gone officially dormant. Each one marks a cultural era that closed. The SSA confirms some names don&rsquo;t come back.</p>
+          <a class="angle-cta" href="/extinct">Browse extinct names &rarr;</a>
+        </div>
+
+        <div class="angle-card">
+          <div class="angle-type">Nostalgia angle</div>
+          <div class="angle-hed">Grandma Names Are Back. Here&rsquo;s the Data.</div>
+          <p class="angle-nut">Hazel, Theodore, Eleanor, Walter &mdash; names that peaked in the 1940s and &lsquo;50s are quietly returning to delivery rooms. Names become fashionable again roughly 80 years after their peak. These are on the schedule.</p>
+          <a class="angle-cta" href="/comeback">Browse comeback names &rarr;</a>
+        </div>
+
+        <div class="angle-card">
+          <div class="angle-type">Data analysis</div>
+          <div class="angle-hed" id="angle-movers-hed">The Biggest Winners and Losers in 2025&rsquo;s Name Race</div>
+          <p class="angle-nut">Some names climbed dozens of spots in the <span id="angle-movers-year">2025</span> rankings; others fell off a cliff. Year-over-year rank changes reveal which names are riding cultural waves &mdash; and which are quietly leaving the mainstream.</p>
+          <a class="angle-cta" href="#movers">See the movers &rarr;</a>
+        </div>
+
+        <div class="angle-card">
+          <div class="angle-type">Interactive</div>
+          <div class="angle-hed">What Happened to Your Name?</div>
+          <p class="angle-nut">Every name in the SSA archive since 1880 has a story: a peak era, a cultural moment, a decline curve. Search any name to generate a dossier &mdash; whether it belongs to a newborn, a grandparent, or nobody at all.</p>
+          <a class="angle-cta" href="/">Search any name &rarr;</a>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="section" id="top10">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" id="top10-eyebrow">2025 rankings</p>
+          <h2 id="top10-h2">Top names of 2025</h2>
+        </div>
+        <p class="lede">Ranked by SSA-recorded births. Change shown versus prior year.</p>
+      </div>
+      <div class="top10-grid" id="top10-grid">
+        <div class="top10-col">
+          <h3>Girls</h3>
+          <ul class="top10-list" id="top10-girls"><li style="color:var(--muted);font-family:var(--sans);font-size:0.9rem;padding:0.5rem 0">Loading…</li></ul>
+        </div>
+        <div class="top10-col">
+          <h3>Boys</h3>
+          <ul class="top10-list" id="top10-boys"></ul>
+        </div>
+      </div>
+      <p style="margin-top:1.25rem"><a href="/year/2025/" id="top100-link" style="font-family:var(--sans);font-size:0.88rem;font-weight:700">See the full top 100 for 2025 &rarr;</a></p>
+    </section>
+
+    <section class="section" id="movers">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow" id="movers-eyebrow">Year-over-year</p>
+          <h2 id="movers-h2">Biggest rank changes, 2024 &rarr; 2025</h2>
+        </div>
+        <p class="lede">Names with the sharpest rank movement between the two most recent data years.</p>
+      </div>
+
+      <div class="movers-tabs">
+        <button class="movers-tab active" id="tab-gainers" onclick="switchMoversTab('gainers')">Biggest climbers</button>
+        <button class="movers-tab" id="tab-losers" onclick="switchMoversTab('losers')">Biggest fallers</button>
+        <button class="movers-tab" id="tab-new" onclick="switchMoversTab('new')">New to top 100</button>
+      </div>
+
+      <div id="movers-gainers">
+        <table class="table">
+          <thead><tr>
+            <th>Name</th><th class="num">Sex</th>
+            <th class="num">2025 rank</th><th class="num">2024 rank</th>
+            <th class="num">Change</th><th class="num">2025 births</th>
+          </tr></thead>
+          <tbody id="gainers-body"><tr><td colspan="6" style="color:var(--muted);font-size:0.9rem;padding:1rem 0">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div id="movers-losers" style="display:none">
+        <table class="table">
+          <thead><tr>
+            <th>Name</th><th class="num">Sex</th>
+            <th class="num">2025 rank</th><th class="num">2024 rank</th>
+            <th class="num">Change</th><th class="num">2025 births</th>
+          </tr></thead>
+          <tbody id="losers-body"></tbody>
+        </table>
+      </div>
+
+      <div id="movers-new" style="display:none">
+        <table class="table">
+          <thead><tr>
+            <th>Name</th><th class="num">Sex</th>
+            <th class="num">2025 rank</th><th class="num">Previous rank</th>
+            <th class="num">2025 births</th>
+          </tr></thead>
+          <tbody id="new-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section" id="toolkit">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Journalist toolkit</p>
+          <h2>Explore &amp; embed</h2>
+        </div>
+        <p class="lede">Tools for building interactives, linking to source data, and attributing correctly.</p>
+      </div>
+
+      <div class="toolkit-grid">
+
+        <div class="toolkit-card">
+          <h3>Embed the 2025 rankings</h3>
+          <p>Drop this iframe into any CMS to give readers an interactive top-100 table, fully hosted.</p>
+          <div class="embed-snippet" id="embed-iframe">&lt;iframe
+  src="https://nobodynamed.com/year/2025/"
+  width="100%" height="640"
+  style="border:1px solid #d8cdbb;border-radius:7px"
+  title="2025 Baby Name Rankings — NobodyNamed"
+&gt;&lt;/iframe&gt;</div>
+          <button class="copy-btn" onclick="copySnippet('embed-iframe', this)">Copy iframe</button>
+        </div>
+
+        <div class="toolkit-card">
+          <h3>Embed a name dossier</h3>
+          <p>Any individual name page embeds cleanly. Replace <code style="font-family:var(--mono);font-size:0.8em">Olivia</code> with any name.</p>
+          <div class="embed-snippet" id="embed-name">&lt;iframe
+  src="https://nobodynamed.com/name/Olivia/"
+  width="100%" height="640"
+  style="border:1px solid #d8cdbb;border-radius:7px"
+  title="Olivia name history — NobodyNamed"
+&gt;&lt;/iframe&gt;</div>
+          <button class="copy-btn" onclick="copySnippet('embed-name', this)">Copy iframe</button>
+        </div>
+
+        <div class="toolkit-card">
+          <h3>Link attribution</h3>
+          <p>Suggested line for in-story attribution:</p>
+          <div class="embed-snippet" id="embed-attribution">Analysis: &lt;a href="https://nobodynamed.com"&gt;NobodyNamed&lt;/a&gt;,
+using SSA records 1880–2025 (public domain).</div>
+          <button class="copy-btn" onclick="copySnippet('embed-attribution', this)">Copy text</button>
+        </div>
+
+        <div class="toolkit-card">
+          <h3>Data API</h3>
+          <p>Machine-readable JSON for data journalists. All endpoints are GET, no auth required, CC0 data.</p>
+          <div class="embed-snippet" id="embed-api">GET /api/year/2025
+GET /api/movers/2025
+GET /api/name/:name
+GET /api/landing/rising
+GET /api/landing/extinct</div>
+          <button class="copy-btn" onclick="copySnippet('embed-api', this)">Copy endpoints</button>
+        </div>
+
+      </div>
+
+      <div class="attribution-block">
+        <strong>Data source:</strong> U.S. Social Security Administration, baby names by state and nation, 1880–2025. Public domain (CC0). Names with fewer than 5 births in a given year are omitted from SSA records.<br>
+        <strong>Methodology:</strong> NobodyNamed classifies each name as rising, stable, declining, endangered, or extinct based on decade-over-decade birth counts. <a href="/about">Full methodology &rarr;</a><br>
+        <strong>Coverage:</strong> ~100,000 unique name/sex combinations across ~2 million annual records.
+      </div>
+    </section>
+
+    <footer class="site">
+      <div>Based on SSA records, 1880–2025.</div>
+      <div>
+        <a href="/about">Methodology</a> &middot;
+        <a href="/">NobodyNamed</a>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    const fmt = (n) => n == null ? "—" : Number(n).toLocaleString("en-US");
+
+    function changeTag(rankChange, prevRank) {
+      if (prevRank == null || prevRank > 100) return '<span class="ch-new">NEW</span>';
+      if (rankChange == null) return '<span class="ch-flat">—</span>';
+      if (rankChange > 0) return `<span class="ch-up">↑${rankChange}</span>`;
+      if (rankChange < 0) return `<span class="ch-down">↓${Math.abs(rankChange)}</span>`;
+      return '<span class="ch-flat">—</span>';
+    }
+
+    function buildTop10List(rows, sex) {
+      const top = rows.filter(r => r.sex === sex).slice(0, 10);
+      return top.map(r => `
+        <li class="top10-row">
+          <span class="top10-rank">#${r.rank}</span>
+          <a class="top10-name" href="/name/${encodeURIComponent(r.name)}/">${r.name}</a>
+          <span class="top10-count">${fmt(r.count)}</span>
+          <span>${changeTag(r.rankChange, r.prevRank)}</span>
+        </li>`).join("");
+    }
+
+    function moverRow(r, includeOldRank = true) {
+      const change = r.rankChange != null
+        ? (r.rankChange > 0
+          ? `<td class="num ch-up">+${r.rankChange}</td>`
+          : `<td class="num ch-down">${r.rankChange}</td>`)
+        : `<td class="num ch-flat">—</td>`;
+      if (!includeOldRank) {
+        const prevRankCell = r.prevRank != null && r.prevRank <= 100
+          ? `<td class="num">#${r.prevRank}</td>`
+          : `<td class="num ch-new">Outside top 100</td>`;
+        return `<tr>
+          <td><a href="/name/${encodeURIComponent(r.name)}/" style="color:var(--ink);font-weight:700">${r.name}</a></td>
+          <td class="num" style="color:var(--muted)">${r.sex}</td>
+          <td class="num">#${r.rank}</td>
+          ${prevRankCell}
+          <td class="num">${fmt(r.count)}</td>
+        </tr>`;
+      }
+      return `<tr>
+        <td><a href="/name/${encodeURIComponent(r.name)}/" style="color:var(--ink);font-weight:700">${r.name}</a></td>
+        <td class="num" style="color:var(--muted)">${r.sex}</td>
+        <td class="num">#${r.rank}</td>
+        <td class="num">#${r.prevRank ?? "—"}</td>
+        ${change}
+        <td class="num">${fmt(r.count)}</td>
+      </tr>`;
+    }
+
+    let currentMoversData = null;
+
+    function switchMoversTab(tab) {
+      document.querySelectorAll(".movers-tab").forEach(t => t.classList.remove("active"));
+      document.getElementById("tab-" + tab).classList.add("active");
+      ["gainers", "losers", "new"].forEach(t => {
+        document.getElementById("movers-" + t).style.display = t === tab ? "" : "none";
+      });
+    }
+
+    async function loadPressPage() {
+      try {
+        const metaRes = await fetch("/api/meta");
+        const meta = await metaRes.json();
+        const year = meta.yM;
+        const prevYear = year - 1;
+
+        // Update year references throughout the page
+        document.getElementById("hero-year").textContent = year;
+        document.getElementById("hero-h1").textContent = `The ${year} Baby Names`;
+        document.getElementById("top10-eyebrow").textContent = `${year} rankings`;
+        document.getElementById("top10-h2").textContent = `Top names of ${year}`;
+        document.getElementById("movers-eyebrow").textContent = "Year-over-year";
+        document.getElementById("movers-h2").textContent = `Biggest rank changes, ${prevYear} → ${year}`;
+        document.getElementById("angle-movers-hed").textContent = `The Biggest Winners and Losers in ${year}'s Name Race`;
+        document.getElementById("angle-movers-year").textContent = year;
+        document.getElementById("angle-top-hed").textContent = `America's Most Popular Baby Names of ${year}`;
+        document.getElementById("angle-top-link").href = `/year/${year}/`;
+        document.getElementById("top100-link").textContent = `See the full top 100 for ${year} →`;
+        document.getElementById("top100-link").href = `/year/${year}/`;
+
+        const [yearRes, moversRes] = await Promise.all([
+          fetch(`/api/year/${year}`),
+          fetch(`/api/movers/${year}`),
+        ]);
+
+        const yearData = await yearRes.json();
+        const moversData = await moversRes.json();
+
+        // Enrich year data with rank-change info from movers
+        const rankMap = new Map(moversData.all.map(r => [`${r.name}|${r.sex}`, r]));
+        const enriched = (yearData.rows || []).map(r => {
+          const m = rankMap.get(`${r.name}|${r.sex}`);
+          return { ...r, rankChange: m?.rankChange ?? null, prevRank: m?.prevRank ?? null };
+        });
+
+        // Stat shelf
+        const top1F = enriched.find(r => r.sex === "F" && r.rank === 1);
+        const top1M = enriched.find(r => r.sex === "M" && r.rank === 1);
+        const topGainer = moversData.gainers[0];
+        const newCount = moversData.newEntrants.length;
+
+        if (top1F) {
+          document.getElementById("stat-girl").textContent = top1F.name;
+          document.getElementById("stat-girl-sub").textContent = `${fmt(top1F.count)} births`;
+        }
+        if (top1M) {
+          document.getElementById("stat-boy").textContent = top1M.name;
+          document.getElementById("stat-boy-sub").textContent = `${fmt(top1M.count)} births`;
+        }
+        if (topGainer) {
+          document.getElementById("stat-gainer").textContent = topGainer.name;
+          document.getElementById("stat-gainer-sub").textContent =
+            `+${topGainer.rankChange} spots (${topGainer.sex === "F" ? "girl" : "boy"})`;
+        }
+        document.getElementById("stat-new").textContent = newCount;
+        document.getElementById("stat-new-sub").textContent = `names entered top 100`;
+
+        // Top 10 tables
+        document.getElementById("top10-girls").innerHTML = buildTop10List(enriched, "F");
+        document.getElementById("top10-boys").innerHTML = buildTop10List(enriched, "M");
+
+        // Movers tables
+        document.getElementById("gainers-body").innerHTML =
+          moversData.gainers.map(r => moverRow(r)).join("") || "<tr><td colspan='6' style='color:var(--muted)'>No data</td></tr>";
+        document.getElementById("losers-body").innerHTML =
+          moversData.losers.map(r => moverRow(r)).join("") || "<tr><td colspan='6' style='color:var(--muted)'>No data</td></tr>";
+        document.getElementById("new-body").innerHTML =
+          moversData.newEntrants.map(r => moverRow(r, false)).join("") || "<tr><td colspan='5' style='color:var(--muted)'>No data</td></tr>";
+
+        // Update embed snippets with correct year
+        const iframeSnippet = document.getElementById("embed-iframe");
+        iframeSnippet.textContent = iframeSnippet.textContent.replace(/2025/g, year);
+        document.getElementById("top100-link").href = `/year/${year}/`;
+
+        // Update angle card body
+        if (top1F && top1M) {
+          document.getElementById("angle-top-body").textContent =
+            `${top1F.name} topped the girls' list; ${top1M.name} led the boys'. The rankings reflect Gen Alpha's distinctive taste: old-feeling names with new energy.`;
+        }
+
+      } catch (e) {
+        console.error("Press page load error:", e);
+      }
+    }
+
+    function copySnippet(id, btn) {
+      const text = document.getElementById(id).textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(() => { btn.textContent = btn.dataset.orig || "Copy"; btn.classList.remove("copied"); }, 1800);
+      });
+    }
+
+    document.querySelectorAll(".copy-btn").forEach(btn => {
+      btn.dataset.orig = btn.textContent;
+    });
+
+    loadPressPage();
+    if (window.NameVitals?.setupSearch) {
+      NameVitals.setupSearch(null, null, null);
+    }
+  </script>
+</body>
+</html>
