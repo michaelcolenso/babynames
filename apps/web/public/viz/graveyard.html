@@ -209,7 +209,7 @@ const W = Math.min(window.innerWidth, 1200);
 const margin = { top: 40, right: 40, bottom: 70, left: 90 };
 const height = Math.min(580, window.innerHeight * 0.65);
 
-let allRows = [], activeSex = 'all';
+let allRows = [], activeSex = 'all', dataYM = 2024;
 
 const colorInterp = d3.interpolateRgb('#4a5568', '#c4995a');
 
@@ -383,7 +383,7 @@ function drawChart(rows) {
   const tip = d3.select('#tooltip');
   graves
     .on('mousemove', (event, d) => {
-      const gap = (new Date().getFullYear()) - d.lastYearSeen;
+      const gap = dataYM - d.lastYearSeen;
       tip.style('opacity', 1)
         .style('left', `${Math.min(event.clientX + 16, window.innerWidth - 280)}px`)
         .style('top', `${event.clientY - 60}px`)
@@ -428,6 +428,7 @@ fetch('/api/landing/extinct')
   .then(r => r.json())
   .then(data => {
     allRows = data.rows;
+    if (data.yM) dataYM = data.yM;
     filterAndDraw();
   })
   .catch(() => {
