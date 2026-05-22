@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Great Vintage Revival — nobodynamed.com</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #07070f;
+  --surface: #0d0d1a;
+  --border: #1a1a2e;
+  --amber: #f59e0b;
+  --cyan: #22d3ee;
+  --rose: #f43f5e;
+  --violet: #a78bfa;
+  --green: #4ade80;
+  --muted: #6b7280;
+  --text: #d1d5db;
+  --heading: #f3f4f6;
+}
+html { background: var(--bg); color: var(--text); font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.75; font-size: 18px; }
+body { max-width: 720px; margin: 0 auto; padding: 0 1.5rem 6rem; }
+
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); color: var(--heading); line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 1.35rem; color: var(--amber); font-weight: 700; margin: 3rem 0 0.6rem; letter-spacing: -0.01em; font-family: sans-serif; }
+h3 { font-size: 1rem; color: var(--muted); font-weight: 400; font-family: sans-serif; text-transform: uppercase; letter-spacing: 0.12em; margin: 2.5rem 0 0.5rem; }
+p { margin: 1rem 0; }
+strong { color: var(--heading); }
+em { color: var(--amber); font-style: normal; }
+a { color: var(--cyan); text-decoration: none; }
+
+header { padding: 5rem 0 3rem; border-bottom: 1px solid var(--border); margin-bottom: 3rem; }
+.kicker { font-family: sans-serif; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--amber); margin-bottom: 1.2rem; }
+.byline { font-family: sans-serif; font-size: 0.82rem; color: var(--muted); margin-top: 1.5rem; }
+.lede { font-size: 1.18rem; color: var(--heading); line-height: 1.65; margin-top: 1.4rem; }
+
+blockquote {
+  border-left: 3px solid var(--amber);
+  margin: 2.5rem 0;
+  padding: 0.2rem 0 0.2rem 1.5rem;
+  font-size: 1.25rem;
+  color: var(--heading);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.chart-wrap {
+  margin: 2.2rem 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.5rem 1.2rem 1rem;
+}
+.chart-title {
+  font-family: sans-serif;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.8rem;
+}
+.chart-title strong { color: var(--heading); font-size: 0.92rem; letter-spacing: 0; text-transform: none; }
+svg { display: block; overflow: visible; }
+svg text { font-family: sans-serif; }
+
+.stat-row { display: flex; gap: 1.5rem; margin: 2rem 0; flex-wrap: wrap; }
+.stat-box {
+  flex: 1; min-width: 140px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 1rem 1.2rem;
+  font-family: sans-serif;
+}
+.stat-box .num { font-size: 2rem; font-weight: 700; color: var(--amber); line-height: 1; }
+.stat-box .label { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; text-transform: uppercase; letter-spacing: 0.08em; }
+
+.revival-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+.revival-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem 1.2rem;
+  font-family: sans-serif;
+}
+.revival-card .rname { font-size: 1.1rem; font-weight: 700; color: var(--heading); }
+.revival-card .rold { font-size: 0.78rem; color: var(--muted); margin-top: 0.2rem; }
+.revival-card .rnew { font-size: 0.85rem; color: var(--amber); font-weight: 600; margin-top: 0.15rem; }
+
+.tip {
+  position: fixed; pointer-events: none;
+  background: #111827; border: 1px solid var(--border);
+  color: var(--text); padding: 0.5rem 0.8rem;
+  border-radius: 4px; font-family: sans-serif; font-size: 0.75rem;
+  z-index: 999; opacity: 0; transition: opacity 0.1s; line-height: 1.5;
+}
+.tip.show { opacity: 1; }
+
+footer { margin-top: 5rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: sans-serif; font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+<nav class="post-nav" style="padding:0.6rem 1.5rem;font-family:sans-serif;font-size:0.78rem;border-bottom:1px solid #1a1a2e;display:flex;gap:0.5rem;align-items:center"><a href="/" style="color:#6b7280;text-decoration:none">nobodynamed.com</a><span style="color:#374151">/</span><a href="/blog" style="color:#f59e0b;text-decoration:none">Blog</a></nav>
+
+<div class="tip" id="tip"></div>
+
+<header>
+  <p class="kicker"><a href="/blog" style="color:inherit;text-decoration:none">nobodynamed.com · Blog</a> · 2025 SSA Data</p>
+  <h1>The Great Vintage Revival</h1>
+  <p class="lede">Theodore peaked in 1920 at 3,219 babies. In 2025, 13,355 babies were named Theodore — an all-time record, four times higher than anything the name has ever achieved. It's not a fluke. Across the data, a generation of century-old names is surging back.</p>
+  <p class="byline">May 2026 · Based on SSA name data 1880–2025 · 117,820 name/sex pairs</p>
+</header>
+
+<h2>Theodore: The All-Time Record</h2>
+
+<p>In the 1880s, <strong>Theodore</strong> was a solid, respectable name — the kind given to future presidents (Teddy Roosevelt was born in 1858). Through the early 1900s it was common but unremarkable. It peaked around 1920 at roughly 3,200 babies per year, then slowly faded as the century went on.</p>
+
+<p>By 2000, only 934 babies were named Theodore. By any measure, it was a declining name — old-fashioned, stuffy, definitely something your grandfather was named.</p>
+
+<p>Then something shifted. 1,333 in 2010. 4,155 in 2015. 7,088 in 2018. 11,093 in 2023. And in 2025: <em>13,355</em> — the highest count in 145 years of recorded data. Theodore has never been this popular. Not even close.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Theodore</strong> — boys named per year · 1900–2025 · the line at the right is an all-time high</p>
+  <svg id="c-theodore"></svg>
+</div>
+
+<div class="stat-row">
+  <div class="stat-box"><div class="num">3,219</div><div class="label">Theodore in 1920 (old peak)</div></div>
+  <div class="stat-box"><div class="num">934</div><div class="label">Theodore in 2000 (nadir)</div></div>
+  <div class="stat-box"><div class="num">13,355</div><div class="label">Theodore in 2025 (all-time high)</div></div>
+</div>
+
+<p>The shape of the Theodore chart is unlike almost anything else in the dataset. It's not a revival — revivals return to roughly their former levels. Theodore has <em>shattered</em> its former level. The name is having a moment that 1920 couldn't have imagined.</p>
+
+<h2>Leo: Same Story, Different Decade</h2>
+
+<p><strong>Leo</strong> peaked in 1920 at 4,054. By 1990, it was down to 431 — a name on the edge of irrelevance. Then the slow climb started. In 2022, Leo crossed 8,000 for the first time in its history. In 2025: <em>8,173</em>.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Leo</strong> — boys named per year · 1900–2025 · also an all-time high in 2025</p>
+  <svg id="c-leo"></svg>
+</div>
+
+<p>Leo's arc is gentler than Theodore's — less of a rocket, more of a steady climb that just kept going past the old ceiling. But the result is the same: a name that was already 40 years past its 1920s peak, now surpassing it by more than double.</p>
+
+<blockquote>"Both Theodore and Leo are now more popular than they have ever been in 145 years of recorded American naming."</blockquote>
+
+<h2>Eleanor's Return</h2>
+
+<p><strong>Eleanor</strong> peaked at 8,497 in 1920. Then the slow decline. 825 by 1960. 258 by 1980 — she was almost gone, a name surviving primarily in nursing homes and old novels.</p>
+
+<p>The recovery started quietly in the 1990s. By 2025, <strong>Eleanor hit 7,649</strong> — nearly matching her century-old peak. Not an all-time record, but close enough to be remarkable. She came all the way back.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Eleanor</strong> — girls named per year · 1900–2025 · nearly back to her 1920 peak</p>
+  <svg id="c-eleanor"></svg>
+</div>
+
+<p>The Eleanor chart is a perfect inverted arch spanning 100 years. From her 1920 high, she fell for sixty years until she was nearly forgotten, then she turned around and climbed back up almost exactly to where she started. It looks like a data visualization of historical memory.</p>
+
+<h2>Evelyn, Hazel — and the Class of 1920</h2>
+
+<p>Eleanor isn't isolated. She's part of a cohort of women's names from the 1910s–1920s that are all experiencing the same reversal simultaneously.</p>
+
+<p><strong>Evelyn</strong> had her old peak at 13,838 in 1920. She was down to 861 by 1980. In 2025: 9,123 — not quite her record, but the highest since 1937. <strong>Hazel</strong> peaked at 7,308 in 1920, fell to 132 by 1980, and is now at 6,318. Both names are surging.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Evelyn · Hazel</strong> — girls named per year · 1900–2025</p>
+  <svg id="c-trio1"></svg>
+</div>
+
+<p>Put Eleanor, Evelyn, and Hazel on the same timeline and the pattern is unmistakable. They all peaked together around 1920. They all hit their low points within a decade of each other (roughly 1975–1985). And they all began their recovery at roughly the same time — around 2005–2010. The synchronized revival suggests a shared cause, not coincidence.</p>
+
+<h2>Nora: Above Her All-Time High</h2>
+
+<p><strong>Nora</strong> is the most surprising story in this cohort. Her old peak was 1,477 babies in 1920 — modest by the standards of the era. She never had the dominance of Eleanor or Hazel. She just existed in the background, a few hundred to a few thousand babies a year, century after century.</p>
+
+<p>In 2025: <em>6,380 babies were named Nora</em>. That's more than four times her previous all-time high. Nora is not making a comeback. Nora is having the best year of her life.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Nora</strong> — girls named per year · 1900–2025 · 4× above her all-time high</p>
+  <svg id="c-nora"></svg>
+</div>
+
+<p>The same is true of <strong>Alice</strong> (old peak 11,596 in 1920, now 3,547 — a partial revival) and <strong>Ruby</strong> (old peak 8,336 in 1920, now 3,554 — holding steady after a strong recovery). Neither is at their old records, but both spent decades near extinction and are now solidly in the thousands again.</p>
+
+<h2>Arthur, Felix — The Men of the Revival</h2>
+
+<p>On the male side, <strong>Arthur</strong> has been on a remarkable climb. He peaked at 10,236 in 1920, spent the late 20th century in the 1,000–2,000 range, and is now at 3,847 — still well below his record, but showing a genuine acceleration: up 40% from 2022 to 2025 alone.</p>
+
+<p><strong>Felix</strong> tells a more unusual story. He never had a massive peak — just 668 in 1920 — and he stayed relatively stable for 80 years (never below 389, never above 700). Then something changed around 2010 and he started climbing. In 2025: 2,064 — his all-time record.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Arthur · Felix</strong> — boys named per year · 1900–2025</p>
+  <svg id="c-trio2"></svg>
+</div>
+
+<h2>Why Now?</h2>
+
+<p>The timing of this revival isn't random. Millennials — born 1981–1996 — are the peak baby-naming demographic right now. Their parents named them things like Jennifer, Jessica, Michael, and Christopher. Those names feel dated to them, too close to be nostalgic. But their grandparents' names — Eleanor, Theodore, Hazel, Leo — have cleared the "too old to be dated, too established to be weird" threshold.</p>
+
+<p>There's also an aesthetic shift at work. The past decade has seen a broad cultural drift toward the handmade, the vintage, the durable over the disposable. Baby names are no exception. A Theodore feels like a name that will age well. It has a nickname (Theo) that sounds contemporary and a full name that sounds substantial.</p>
+
+<p>The data doesn't explain motivation. But it captures the result: a cohort of 100-year-old names surging to heights that even 1920 never achieved.</p>
+
+<div class="revival-grid">
+  <div class="revival-card">
+    <div class="rname">Theodore</div>
+    <div class="rold">1920 peak: 3,219</div>
+    <div class="rnew">2025: 13,355 — all-time record</div>
+  </div>
+  <div class="revival-card">
+    <div class="rname">Leo</div>
+    <div class="rold">1920 peak: 4,054</div>
+    <div class="rnew">2025: 8,173 — all-time record</div>
+  </div>
+  <div class="revival-card">
+    <div class="rname">Eleanor</div>
+    <div class="rold">1920 peak: 8,497</div>
+    <div class="rnew">2025: 7,649 — near-record high</div>
+  </div>
+  <div class="revival-card">
+    <div class="rname">Evelyn</div>
+    <div class="rold">1920 peak: 13,838</div>
+    <div class="rnew">2025: 9,123 — highest since 1937</div>
+  </div>
+  <div class="revival-card">
+    <div class="rname">Hazel</div>
+    <div class="rold">1920 peak: 7,308</div>
+    <div class="rnew">2025: 6,318 — near-record high</div>
+  </div>
+  <div class="revival-card">
+    <div class="rname">Nora</div>
+    <div class="rold">1920 peak: 1,477</div>
+    <div class="rnew">2025: 6,380 — all-time record ×4</div>
+  </div>
+</div>
+
+<footer>
+  <p>Data: U.S. Social Security Administration, 1880–2025. Analysis via <a href="https://nobodynamed.com">nobodynamed.com</a>. SSA suppresses names with fewer than 5 births in a given year. "All-time record" means highest annual count in 145 years of SSA data.</p>
+</footer>
+
+<script>
+const tip = document.getElementById('tip');
+function showTip(html, e) {
+  tip.innerHTML = html; tip.classList.add('show');
+  const x = e.clientX + 12, y = e.clientY - 8;
+  tip.style.left = Math.min(x, window.innerWidth - 200) + 'px';
+  tip.style.top = Math.max(y, 10) + 'px';
+}
+function hideTip() { tip.classList.remove('show'); }
+
+function sparkChart(selector, data, opts = {}) {
+  const el = document.querySelector(selector).closest('.chart-wrap');
+  const W = el ? (el.clientWidth - 48) : 640;
+  const H = opts.H || 160;
+  const mg = { top: opts.annotate ? 36 : 18, right: 20, bottom: 28, left: 52 };
+  const iw = W - mg.left - mg.right;
+  const ih = H - mg.top - mg.bottom;
+
+  const series = opts.series || [{ data, color: opts.color || '#f59e0b', label: opts.label || '' }];
+  const allData = series.flatMap(s => s.data);
+
+  const xS = d3.scaleLinear().domain(d3.extent(allData, d => d.y)).range([0, iw]);
+  const yS = d3.scaleLinear().domain([0, d3.max(allData, d => d.v) * 1.12]).range([ih, 0]);
+
+  const svg = d3.select(selector).attr('width', W).attr('height', H)
+    .attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${mg.left},${mg.top})`);
+
+  yS.ticks(4).forEach(t => {
+    g.append('line').attr('x1', 0).attr('x2', iw).attr('y1', yS(t)).attr('y2', yS(t))
+      .attr('stroke', '#1a1a2e').attr('stroke-width', 1);
+  });
+
+  series.forEach(s => {
+    const area = d3.area().x(d => xS(d.y)).y0(ih).y1(d => yS(d.v)).curve(d3.curveMonotoneX);
+    const line = d3.line().x(d => xS(d.y)).y(d => yS(d.v)).curve(d3.curveMonotoneX);
+    g.append('path').datum(s.data).attr('d', area).attr('fill', s.color).attr('opacity', 0.12);
+    g.append('path').datum(s.data).attr('d', line).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2);
+    if (s.label) {
+      const last = s.data[s.data.length - 1];
+      g.append('text').attr('x', xS(last.y) + 4).attr('y', yS(last.v) + 4)
+        .attr('fill', s.color).attr('font-size', '10').attr('font-weight', '600').text(s.label);
+    }
+  });
+
+  g.append('g').attr('transform', `translate(0,${ih})`)
+    .call(d3.axisBottom(xS).tickFormat(d3.format('d')).ticks(8))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#6b7280').attr('font-size', '10'); });
+
+  g.append('g')
+    .call(d3.axisLeft(yS).ticks(4).tickFormat(d => d >= 1000 ? (d / 1000).toFixed(1) + 'k' : d))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#6b7280').attr('font-size', '10'); });
+
+  if (opts.annotate) {
+    opts.annotate.forEach(a => {
+      const ax = xS(a.year);
+      g.append('line').attr('x1', ax).attr('x2', ax).attr('y1', -mg.top + 6).attr('y2', ih)
+        .attr('stroke', '#4b5563').attr('stroke-width', 1).attr('stroke-dasharray', '3,3');
+      g.append('text').attr('x', ax).attr('y', -mg.top + 4)
+        .attr('text-anchor', 'middle').attr('fill', '#9ca3af').attr('font-size', '9').text(a.label);
+    });
+  }
+
+  g.append('rect').attr('width', iw).attr('height', ih).attr('fill', 'none')
+    .attr('pointer-events', 'all')
+    .on('mousemove', function(e) {
+      const [mx] = d3.pointer(e, g.node());
+      const yr = Math.round(xS.invert(mx));
+      const rows = series.map(s => {
+        const pt = s.data.find(d => d.y === yr);
+        return pt ? `<span style="color:${s.color}">${s.label || ''}${s.label ? ': ' : ''}${pt.v.toLocaleString()}</span>` : null;
+      }).filter(Boolean).join('<br>');
+      if (rows) showTip(`<strong>${yr}</strong><br>${rows}`, e);
+    })
+    .on('mouseleave', () => hideTip());
+}
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
+const theodore = [
+  {y:1900,v:429},{y:1910,v:692},{y:1915,v:2504},{y:1920,v:3219},
+  {y:1925,v:3226},{y:1930,v:2958},{y:1940,v:2306},{y:1950,v:2960},
+  {y:1960,v:2382},{y:1970,v:1829},{y:1980,v:1194},{y:1990,v:1231},
+  {y:2000,v:934},{y:2005,v:1095},{y:2010,v:1333},{y:2015,v:4155},
+  {y:2018,v:7088},{y:2020,v:8638},{y:2022,v:10824},{y:2023,v:11093},
+  {y:2024,v:12069},{y:2025,v:13355}
+];
+
+const leo = [
+  {y:1900,v:570},{y:1910,v:707},{y:1915,v:3527},{y:1920,v:4054},
+  {y:1925,v:3775},{y:1930,v:3035},{y:1940,v:1752},{y:1950,v:1554},
+  {y:1960,v:1204},{y:1970,v:701},{y:1980,v:473},{y:1990,v:431},
+  {y:2000,v:658},{y:2005,v:1275},{y:2010,v:1946},{y:2015,v:4603},
+  {y:2018,v:6773},{y:2020,v:7229},{y:2022,v:8293},{y:2023,v:8160},
+  {y:2024,v:7823},{y:2025,v:8173}
+];
+
+const eleanor = [
+  {y:1900,v:753},{y:1910,v:1798},{y:1915,v:7036},{y:1920,v:8497},
+  {y:1925,v:7724},{y:1930,v:5823},{y:1940,v:3584},{y:1950,v:1371},
+  {y:1960,v:825},{y:1970,v:366},{y:1980,v:258},{y:1990,v:378},
+  {y:2000,v:771},{y:2005,v:1237},{y:2010,v:1851},{y:2015,v:4442},
+  {y:2018,v:5728},{y:2020,v:6379},{y:2022,v:6927},{y:2023,v:6765},
+  {y:2024,v:7147},{y:2025,v:7649}
+];
+
+const evelyn = [
+  {y:1900,v:1116},{y:1910,v:3777},{y:1915,v:11595},{y:1920,v:13838},
+  {y:1925,v:12505},{y:1930,v:9536},{y:1940,v:4982},{y:1950,v:4275},
+  {y:1960,v:3219},{y:1970,v:1466},{y:1980,v:861},{y:1990,v:1302},
+  {y:2000,v:2223},{y:2005,v:4490},{y:2010,v:5843},{y:2015,v:9377},
+  {y:2018,v:10433},{y:2020,v:9517},{y:2022,v:9332},{y:2023,v:9121},
+  {y:2024,v:9146},{y:2025,v:9123}
+];
+
+const hazel = [
+  {y:1900,v:2425},{y:1910,v:3032},{y:1915,v:7092},{y:1920,v:7308},
+  {y:1925,v:5778},{y:1930,v:3888},{y:1940,v:2068},{y:1950,v:1182},
+  {y:1960,v:577},{y:1970,v:235},{y:1980,v:132},{y:1990,v:145},
+  {y:2000,v:246},{y:2005,v:578},{y:2010,v:1241},{y:2015,v:4302},
+  {y:2018,v:4951},{y:2020,v:5519},{y:2022,v:6161},{y:2023,v:6193},
+  {y:2024,v:6432},{y:2025,v:6318}
+];
+
+const nora = [
+  {y:1900,v:919},{y:1910,v:753},{y:1920,v:1477},{y:1930,v:1015},
+  {y:1940,v:843},{y:1950,v:1116},{y:1960,v:1345},{y:1970,v:676},
+  {y:1980,v:571},{y:1990,v:588},{y:2000,v:540},{y:2005,v:1197},
+  {y:2010,v:1939},{y:2015,v:5330},{y:2018,v:5837},{y:2020,v:5583},
+  {y:2022,v:6148},{y:2023,v:6027},{y:2024,v:6148},{y:2025,v:6380}
+];
+
+const arthur = [
+  {y:1900,v:1853},{y:1910,v:1942},{y:1915,v:8564},{y:1920,v:10236},
+  {y:1925,v:9986},{y:1930,v:8284},{y:1940,v:6510},{y:1950,v:7161},
+  {y:1960,v:5194},{y:1970,v:2981},{y:1980,v:1821},{y:1990,v:1542},
+  {y:2000,v:914},{y:2005,v:830},{y:2010,v:730},{y:2015,v:1247},
+  {y:2018,v:1653},{y:2020,v:2338},{y:2022,v:2691},{y:2023,v:2832},
+  {y:2024,v:3334},{y:2025,v:3847}
+];
+
+const felix = [
+  {y:1900,v:123},{y:1910,v:161},{y:1915,v:583},{y:1920,v:668},
+  {y:1925,v:621},{y:1930,v:515},{y:1940,v:390},{y:1950,v:498},
+  {y:1960,v:655},{y:1970,v:639},{y:1980,v:540},{y:1990,v:634},
+  {y:2000,v:696},{y:2005,v:770},{y:2010,v:951},{y:2015,v:1377},
+  {y:2018,v:1657},{y:2020,v:1668},{y:2022,v:1974},{y:2023,v:1899},
+  {y:2024,v:2090},{y:2025,v:2064}
+];
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+
+sparkChart('#c-theodore', theodore, {
+  color: '#f59e0b', label: 'Theodore', H: 200,
+  annotate: [
+    { year: 1920, label: 'Old peak: 3,219' },
+    { year: 2000, label: 'Nadir' },
+  ]
+});
+
+sparkChart('#c-leo', leo, {
+  color: '#22d3ee', label: 'Leo', H: 180,
+  annotate: [
+    { year: 1920, label: 'Old peak: 4,054' },
+    { year: 1990, label: 'Nadir' },
+  ]
+});
+
+sparkChart('#c-eleanor', eleanor, {
+  color: '#f43f5e', label: 'Eleanor', H: 180,
+  annotate: [
+    { year: 1920, label: 'Peak: 8,497' },
+    { year: 1980, label: 'Low: 258' },
+  ]
+});
+
+sparkChart('#c-trio1', null, {
+  H: 200,
+  series: [
+    { data: evelyn, color: '#a78bfa', label: 'Evelyn' },
+    { data: hazel,  color: '#4ade80', label: 'Hazel' },
+  ],
+  annotate: [
+    { year: 1920, label: '1920 peaks' },
+    { year: 1980, label: 'Nadir' },
+  ]
+});
+
+sparkChart('#c-nora', nora, {
+  color: '#22d3ee', label: 'Nora', H: 180,
+  annotate: [{ year: 1920, label: 'Old peak: 1,477' }]
+});
+
+sparkChart('#c-trio2', null, {
+  H: 180,
+  series: [
+    { data: arthur, color: '#f59e0b', label: 'Arthur' },
+    { data: felix,  color: '#e879f9', label: 'Felix' },
+  ],
+  annotate: [{ year: 1920, label: '1920 peaks' }]
+});
+</script>
+</body>
+</html>
