@@ -3,5 +3,15 @@
 /viz/2025-obituaries  /viz/nobody-named-2025  301
 /viz/2025-obituaries.html  /viz/nobody-named-2025  301
 
+# Blog posts moved from /viz/ to /blog/
+/viz/pop-culture-names  /blog/the-kehlani-effect  301
+/viz/pop-culture-names.html  /blog/the-kehlani-effect  301
+/viz/boomer-names  /blog/your-moms-name-is-endangered  301
+/viz/boomer-names.html  /blog/your-moms-name-is-endangered  301
+/viz/vintage-revival  /blog/the-great-vintage-revival  301
+/viz/vintage-revival.html  /blog/the-great-vintage-revival  301
+/viz/new-america  /blog/two-americas  301
+/viz/new-america.html  /blog/two-americas  301
+
 # Enforce trailing slash canonical name URLs.
 /name/:name  /name/:name/  301
