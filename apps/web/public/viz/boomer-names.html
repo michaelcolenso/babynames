@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Mom's Name Is Endangered — nobodynamed.com</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #07070f;
+  --surface: #0d0d1a;
+  --border: #1a1a2e;
+  --amber: #f59e0b;
+  --amber-dim: #78490a;
+  --cyan: #22d3ee;
+  --rose: #f43f5e;
+  --violet: #a78bfa;
+  --green: #4ade80;
+  --muted: #6b7280;
+  --text: #d1d5db;
+  --heading: #f3f4f6;
+}
+html { background: var(--bg); color: var(--text); font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.75; font-size: 18px; }
+body { max-width: 720px; margin: 0 auto; padding: 0 1.5rem 6rem; }
+
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); color: var(--heading); line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 1.35rem; color: var(--amber); font-weight: 700; margin: 3rem 0 0.6rem; letter-spacing: -0.01em; font-family: sans-serif; }
+h3 { font-size: 1rem; color: var(--muted); font-weight: 400; font-family: sans-serif; text-transform: uppercase; letter-spacing: 0.12em; margin: 2.5rem 0 0.5rem; }
+p { margin: 1rem 0; }
+strong { color: var(--heading); }
+em { color: var(--amber); font-style: normal; }
+a { color: var(--cyan); text-decoration: none; }
+
+header { padding: 5rem 0 3rem; border-bottom: 1px solid var(--border); margin-bottom: 3rem; }
+.kicker { font-family: sans-serif; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--amber); margin-bottom: 1.2rem; }
+.byline { font-family: sans-serif; font-size: 0.82rem; color: var(--muted); margin-top: 1.5rem; }
+.lede { font-size: 1.18rem; color: var(--heading); line-height: 1.65; margin-top: 1.4rem; }
+
+blockquote {
+  border-left: 3px solid var(--amber);
+  margin: 2.5rem 0;
+  padding: 0.2rem 0 0.2rem 1.5rem;
+  font-size: 1.25rem;
+  color: var(--heading);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.chart-wrap {
+  margin: 2.2rem 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.5rem 1.2rem 1rem;
+}
+.chart-title {
+  font-family: sans-serif;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.8rem;
+}
+.chart-title strong { color: var(--heading); font-size: 0.92rem; letter-spacing: 0; text-transform: none; }
+svg { display: block; overflow: visible; }
+svg text { font-family: sans-serif; }
+
+.stat-row { display: flex; gap: 1.5rem; margin: 2rem 0; flex-wrap: wrap; }
+.stat-box {
+  flex: 1; min-width: 140px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 1rem 1.2rem;
+  font-family: sans-serif;
+}
+.stat-box .num { font-size: 2rem; font-weight: 700; color: var(--rose); line-height: 1; }
+.stat-box .label { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; text-transform: uppercase; letter-spacing: 0.08em; }
+
+.name-table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-family: sans-serif; font-size: 0.88rem; }
+.name-table th { color: var(--muted); font-weight: 400; text-align: left; padding: 0.4rem 0.8rem; border-bottom: 1px solid var(--border); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.name-table td { padding: 0.45rem 0.8rem; border-bottom: 1px solid #111; color: var(--text); }
+.name-table td:first-child { color: var(--heading); font-weight: 600; }
+.name-table td.peak { color: var(--amber); }
+.name-table td.current { color: #ef4444; }
+
+.tip {
+  position: fixed; pointer-events: none;
+  background: #111827; border: 1px solid var(--border);
+  color: var(--text); padding: 0.5rem 0.8rem;
+  border-radius: 4px; font-family: sans-serif; font-size: 0.75rem;
+  z-index: 999; opacity: 0; transition: opacity 0.1s; line-height: 1.5;
+}
+.tip.show { opacity: 1; }
+
+footer { margin-top: 5rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: sans-serif; font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="tip" id="tip"></div>
+
+<header>
+  <p class="kicker">nobodynamed.com · 2025 SSA Data</p>
+  <h1>Your Mom's Name Is Endangered</h1>
+  <p class="lede">In 1947, nearly 100,000 babies were named Linda. In 2025: 294. The most dominant baby name in American history is now classified as declining. Linda is not alone — a generation of names is fading together.</p>
+  <p class="byline">May 2026 · Based on SSA name data 1880–2025 · 117,820 name/sex pairs</p>
+</header>
+
+<h2>The Linda Cliff</h2>
+
+<p>Between 1947 and 1952, <strong>Linda</strong> was the most popular girl's name in America. Not just popular — dominant. In 1947, the SSA recorded <em>99,692 babies named Linda</em>. To put that in context: in all the years from 2000 to 2025 combined, roughly 16,000 babies have been named Linda. Her single peak year produced six times that many.</p>
+
+<p>That peak was the Baby Boom. The generation named itself in a short, wild burst, and Linda was the flag-bearer.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Linda</strong> — girls named per year · 1940–2025</p>
+  <svg id="c-linda"></svg>
+</div>
+
+<div class="stat-row">
+  <div class="stat-box"><div class="num">99,692</div><div class="label">Linda in 1947 (peak)</div></div>
+  <div class="stat-box"><div class="num">294</div><div class="label">Linda in 2025</div></div>
+  <div class="stat-box"><div class="num">–99.7%</div><div class="label">collapse from peak</div></div>
+</div>
+
+<p>The fall is almost perfectly linear. No crash, no revival — just a slow, relentless draining. The SSA classifies Linda as <em>declining</em>, which is the polite way of saying: this name belongs to a generation that is aging out of the birth announcement.</p>
+
+<h2>The Class of 1955</h2>
+
+<p>Linda was extreme, but she wasn't alone. Four other names hit similar altitudes during roughly the same decade — all cresting in the late 1940s to mid-1950s, all riding the exact same wave of Boomer births, all now under 400 babies a year.</p>
+
+<p><strong>Patricia</strong> peaked at 51,278 in 1947. <strong>Deborah</strong> peaked at 52,318 in 1955. <strong>Susan</strong> hit 47,418 the same year. <strong>Karen</strong> reached 40,591 in 1957. Together, these four names accounted for something like 200,000 newborn girls in a single year at peak.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Patricia · Susan · Deborah · Karen</strong> — girls named per year</p>
+  <svg id="c-sisters1"></svg>
+</div>
+
+<p>The convergence is striking. Four different names, four separate cultural trajectories, and they all climb and fall on almost identical timelines. This wasn't coincidence — it was the demographic gravity of the Baby Boom pulling every trend in the same direction at once.</p>
+
+<p>Today, <strong>Patricia</strong> has 167 babies. <strong>Susan</strong> has 222. <strong>Deborah</strong> — revived slightly by parents of the current generation — is at 313. <strong>Karen</strong>, carrying the weight of a decade of memes, has 175.</p>
+
+<blockquote>"Four names that together named ~200,000 babies in a single year. In 2025, they collectively named 877."</blockquote>
+
+<h2>Sharon, Nancy, Donna</h2>
+
+<p>The second tier told the same story at slightly lower altitude. <strong>Nancy</strong> peaked at 32,445 in 1947. <strong>Donna</strong> hit 34,138 in 1960. <strong>Sharon</strong> reached 28,533 in 1947.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Sharon · Nancy · Donna</strong> — girls named per year</p>
+  <svg id="c-sisters2"></svg>
+</div>
+
+<p>These names show something the first tier doesn't quite capture: how gradual the decline really is. Nancy held above 2,000 babies per year through 1990. Sharon held above 1,000. Donna above 800. They weren't crashing — they were just slowly being replaced by every new generation's choices.</p>
+
+<p>Now: <strong>Sharon</strong> has 179 babies. <strong>Nancy</strong> has 265. <strong>Donna</strong> has 98.</p>
+
+<p>Donna may be the first in this cohort to go extinct. At 98 births, she's one bad year from crossing below the SSA's 5-birth reporting threshold. That would end a name that once carried 34,000 babies in a single year.</p>
+
+<h2>The Guys</h2>
+
+<p>The male equivalent of Linda is probably <strong>Gary</strong> — a name that surged from relative obscurity to 36,967 boys in 1953, then spent the next 70 years in steady retreat. <strong>Dennis</strong> hit its peak at 23,686 the same year and traces the same arc.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Gary · Dennis</strong> — boys named per year</p>
+  <svg id="c-guys"></svg>
+</div>
+
+<p>Neither Gary nor Dennis was ever as dominant as Linda — there was more diversity in male naming even at the height of the Boom. But both show the same unmistakable shape: a sharp postwar climb, a high plateau through the 1950s, and then a long uninterrupted slide toward extinction.</p>
+
+<p>Gary: 201 boys in 2025. Dennis: 381.</p>
+
+<h2>What Actually Happened</h2>
+
+<p>The Boomer naming monoculture has a simple explanation: it was created by sheer numbers. Between 1946 and 1964, roughly 76 million babies were born in the United States. The top names of that era had never seen volume like that, and they never would again.</p>
+
+<p>As that generation ages — the youngest Boomers are now in their 60s — their names age with them. Every year, a few thousand more Lindas and Karens and Garys pass through retirement age. Few new ones are being created to replace them. The names are concentrating in an older and older cohort.</p>
+
+<p>The SSA doesn't track mortality. But it doesn't need to. The birth data tells you everything. <em>A name that generates 300 births per year in a country of 330 million is a name on its way out.</em></p>
+
+<table class="name-table">
+  <thead><tr><th>Name</th><th>Peak year</th><th class="peak">Peak count</th><th class="current">2025 count</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>Linda</td><td>1947</td><td class="peak">99,692</td><td class="current">294</td><td>Declining</td></tr>
+    <tr><td>Patricia</td><td>1947</td><td class="peak">51,278</td><td class="current">167</td><td>Declining</td></tr>
+    <tr><td>Deborah</td><td>1955</td><td class="peak">52,318</td><td class="current">313</td><td>Declining</td></tr>
+    <tr><td>Susan</td><td>1955</td><td class="peak">47,418</td><td class="current">222</td><td>Declining</td></tr>
+    <tr><td>Karen</td><td>1957</td><td class="peak">40,591</td><td class="current">175</td><td>Declining</td></tr>
+    <tr><td>Donna</td><td>1960</td><td class="peak">34,138</td><td class="current">98</td><td>Endangered</td></tr>
+    <tr><td>Nancy</td><td>1947</td><td class="peak">32,445</td><td class="current">265</td><td>Declining</td></tr>
+    <tr><td>Sharon</td><td>1947</td><td class="peak">28,533</td><td class="current">179</td><td>Declining</td></tr>
+    <tr><td>Gary</td><td>1953</td><td class="peak">36,967</td><td class="current">201</td><td>Declining</td></tr>
+    <tr><td>Dennis</td><td>1947</td><td class="peak">23,686</td><td class="current">381</td><td>Declining</td></tr>
+  </tbody>
+</table>
+
+<p>These names will eventually disappear from birth records entirely. But they won't disappear from the population — not for decades. There are millions of Lindas and Patricias and Garys still very much alive. They just won't be making new ones.</p>
+
+<p>That's what the data actually shows: not extinction, but succession. A generation naming itself in full, and then quietly stepping back as the next generation names itself something completely different.</p>
+
+<footer>
+  <p>Data: U.S. Social Security Administration, 1880–2025. Analysis via <a href="https://nobodynamed.com">nobodynamed.com</a>. SSA suppresses names with fewer than 5 births in a given year. "Status" classifications (declining/endangered) are computed at ingest time based on trend metrics.</p>
+</footer>
+
+<script>
+const tip = document.getElementById('tip');
+function showTip(html, e) {
+  tip.innerHTML = html; tip.classList.add('show');
+  const x = e.clientX + 12, y = e.clientY - 8;
+  tip.style.left = Math.min(x, window.innerWidth - 200) + 'px';
+  tip.style.top = Math.max(y, 10) + 'px';
+}
+function hideTip() { tip.classList.remove('show'); }
+
+function sparkChart(selector, data, opts = {}) {
+  const el = document.querySelector(selector).closest('.chart-wrap');
+  const W = el ? (el.clientWidth - 48) : 640;
+  const H = opts.H || 160;
+  const mg = { top: opts.annotate ? 36 : 18, right: 20, bottom: 28, left: 52 };
+  const iw = W - mg.left - mg.right;
+  const ih = H - mg.top - mg.bottom;
+
+  const series = opts.series || [{ data, color: opts.color || '#f59e0b', label: opts.label || '' }];
+  const allData = series.flatMap(s => s.data);
+
+  const xS = d3.scaleLinear().domain(d3.extent(allData, d => d.y)).range([0, iw]);
+  const yS = d3.scaleLinear().domain([0, d3.max(allData, d => d.v) * 1.12]).range([ih, 0]);
+
+  const svg = d3.select(selector).attr('width', W).attr('height', H)
+    .attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${mg.left},${mg.top})`);
+
+  yS.ticks(4).forEach(t => {
+    g.append('line').attr('x1', 0).attr('x2', iw).attr('y1', yS(t)).attr('y2', yS(t))
+      .attr('stroke', '#1a1a2e').attr('stroke-width', 1);
+  });
+
+  series.forEach(s => {
+    const area = d3.area().x(d => xS(d.y)).y0(ih).y1(d => yS(d.v)).curve(d3.curveMonotoneX);
+    const line = d3.line().x(d => xS(d.y)).y(d => yS(d.v)).curve(d3.curveMonotoneX);
+    g.append('path').datum(s.data).attr('d', area).attr('fill', s.color).attr('opacity', 0.12);
+    g.append('path').datum(s.data).attr('d', line).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2);
+    if (s.label) {
+      const last = s.data[s.data.length - 1];
+      g.append('text').attr('x', xS(last.y) + 4).attr('y', yS(last.v) + 4)
+        .attr('fill', s.color).attr('font-size', '10').attr('font-weight', '600').text(s.label);
+    }
+  });
+
+  g.append('g').attr('transform', `translate(0,${ih})`)
+    .call(d3.axisBottom(xS).tickFormat(d3.format('d')).ticks(8))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#6b7280').attr('font-size', '10'); });
+
+  g.append('g')
+    .call(d3.axisLeft(yS).ticks(4).tickFormat(d => d >= 1000 ? (d / 1000).toFixed(d >= 10000 ? 0 : 0) + 'k' : d))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#6b7280').attr('font-size', '10'); });
+
+  if (opts.annotate) {
+    opts.annotate.forEach(a => {
+      const ax = xS(a.year);
+      g.append('line').attr('x1', ax).attr('x2', ax).attr('y1', -mg.top + 6).attr('y2', ih)
+        .attr('stroke', '#4b5563').attr('stroke-width', 1).attr('stroke-dasharray', '3,3');
+      g.append('text').attr('x', ax).attr('y', -mg.top + 4)
+        .attr('text-anchor', 'middle').attr('fill', '#9ca3af').attr('font-size', '9').text(a.label);
+    });
+  }
+
+  g.append('rect').attr('width', iw).attr('height', ih).attr('fill', 'none')
+    .attr('pointer-events', 'all')
+    .on('mousemove', function(e) {
+      const [mx] = d3.pointer(e, g.node());
+      const yr = Math.round(xS.invert(mx));
+      const rows = series.map(s => {
+        const pt = s.data.find(d => d.y === yr);
+        return pt ? `<span style="color:${s.color}">${s.label || ''}${s.label ? ': ' : ''}${pt.v.toLocaleString()}</span>` : null;
+      }).filter(Boolean).join('<br>');
+      if (rows) showTip(`<strong>${yr}</strong><br>${rows}`, e);
+    })
+    .on('mouseleave', () => hideTip());
+}
+
+// ── DATA ──────────────────────────────────────────────────────────────────────
+
+const linda = [
+  {y:1940,v:18370},{y:1945,v:41465},{y:1947,v:99692},{y:1950,v:80433},
+  {y:1955,v:51300},{y:1960,v:37316},{y:1965,v:19345},{y:1970,v:8731},
+  {y:1975,v:3522},{y:1980,v:2806},{y:1985,v:2114},{y:1990,v:1661},
+  {y:1995,v:1234},{y:2000,v:851},{y:2005,v:754},{y:2010,v:480},
+  {y:2015,v:429},{y:2020,v:334},{y:2025,v:294}
+];
+
+const patricia = [
+  {y:1940,v:32665},{y:1945,v:35844},{y:1947,v:51278},{y:1950,v:47944},
+  {y:1955,v:46226},{y:1960,v:32113},{y:1965,v:23552},{y:1970,v:13406},
+  {y:1975,v:7053},{y:1980,v:5310},{y:1985,v:4402},{y:1990,v:3579},
+  {y:1995,v:2161},{y:2000,v:1393},{y:2005,v:880},{y:2010,v:479},
+  {y:2015,v:351},{y:2020,v:217},{y:2025,v:167}
+];
+const susan = [
+  {y:1940,v:6756},{y:1945,v:19222},{y:1947,v:31952},{y:1950,v:38017},
+  {y:1953,v:44297},{y:1955,v:47418},{y:1957,v:45954},{y:1960,v:39208},
+  {y:1965,v:26321},{y:1970,v:15738},{y:1975,v:7488},{y:1980,v:4704},
+  {y:1985,v:2661},{y:1990,v:1687},{y:1995,v:894},{y:2000,v:693},
+  {y:2005,v:487},{y:2010,v:356},{y:2015,v:301},{y:2020,v:262},{y:2025,v:222}
+];
+const deborah = [
+  {y:1940,v:470},{y:1945,v:1462},{y:1947,v:5837},{y:1950,v:29063},
+  {y:1953,v:52199},{y:1955,v:52318},{y:1957,v:40096},{y:1960,v:25266},
+  {y:1965,v:17081},{y:1970,v:9845},{y:1975,v:3414},{y:1980,v:1937},
+  {y:1985,v:1400},{y:1990,v:1095},{y:1995,v:659},{y:2000,v:546},
+  {y:2005,v:425},{y:2010,v:355},{y:2015,v:350},{y:2020,v:291},{y:2025,v:313}
+];
+const karen = [
+  {y:1940,v:7283},{y:1945,v:15680},{y:1947,v:21648},{y:1950,v:24132},
+  {y:1953,v:29858},{y:1955,v:33217},{y:1957,v:40591},{y:1960,v:36378},
+  {y:1965,v:32869},{y:1970,v:16699},{y:1975,v:8168},{y:1980,v:5055},
+  {y:1985,v:3138},{y:1990,v:2716},{y:1995,v:2269},{y:2000,v:2174},
+  {y:2005,v:2065},{y:2010,v:1288},{y:2015,v:627},{y:2020,v:332},{y:2025,v:175}
+];
+
+const sharon = [
+  {y:1940,v:11121},{y:1945,v:20838},{y:1947,v:28533},{y:1950,v:24612},
+  {y:1953,v:23040},{y:1955,v:22044},{y:1957,v:24298},{y:1960,v:20414},
+  {y:1965,v:15129},{y:1970,v:9177},{y:1975,v:3732},{y:1980,v:2383},
+  {y:1985,v:1537},{y:1990,v:1008},{y:1995,v:810},{y:2000,v:671},
+  {y:2005,v:501},{y:2010,v:342},{y:2015,v:275},{y:2020,v:208},{y:2025,v:179}
+];
+const nancy = [
+  {y:1940,v:19737},{y:1945,v:21456},{y:1947,v:32445},{y:1950,v:29617},
+  {y:1953,v:30620},{y:1955,v:30023},{y:1957,v:27515},{y:1960,v:21891},
+  {y:1965,v:12255},{y:1970,v:7063},{y:1975,v:3510},{y:1980,v:2806},
+  {y:1985,v:2609},{y:1990,v:2385},{y:1995,v:2001},{y:2000,v:1378},
+  {y:2005,v:1017},{y:2010,v:574},{y:2015,v:345},{y:2020,v:295},{y:2025,v:265}
+];
+const donna = [
+  {y:1940,v:9232},{y:1945,v:15397},{y:1947,v:23517},{y:1950,v:21629},
+  {y:1953,v:24227},{y:1955,v:27940},{y:1957,v:28042},{y:1960,v:34138},
+  {y:1965,v:19700},{y:1970,v:9968},{y:1975,v:3422},{y:1980,v:2009},
+  {y:1985,v:1191},{y:1990,v:861},{y:1995,v:492},{y:2000,v:370},
+  {y:2005,v:305},{y:2010,v:258},{y:2015,v:160},{y:2020,v:137},{y:2025,v:98}
+];
+
+const gary = [
+  {y:1940,v:12573},{y:1945,v:21345},{y:1947,v:30029},{y:1950,v:33737},
+  {y:1953,v:36967},{y:1955,v:34433},{y:1957,v:29530},{y:1960,v:21693},
+  {y:1965,v:15259},{y:1970,v:10716},{y:1975,v:6114},{y:1980,v:5037},
+  {y:1985,v:3812},{y:1990,v:3069},{y:1995,v:1625},{y:2000,v:1168},
+  {y:2005,v:879},{y:2010,v:547},{y:2015,v:479},{y:2020,v:288},{y:2025,v:201}
+];
+const dennis = [
+  {y:1940,v:7845},{y:1945,v:14990},{y:1947,v:23686},{y:1950,v:22862},
+  {y:1953,v:23658},{y:1955,v:20436},{y:1957,v:16917},{y:1960,v:14303},
+  {y:1965,v:8215},{y:1970,v:7312},{y:1975,v:4730},{y:1980,v:3804},
+  {y:1985,v:2845},{y:1990,v:2494},{y:1995,v:1689},{y:2000,v:1343},
+  {y:2005,v:1040},{y:2010,v:726},{y:2015,v:592},{y:2020,v:414},{y:2025,v:381}
+];
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+
+sparkChart('#c-linda', linda, {
+  color: '#f43f5e', label: 'Linda', H: 180,
+  annotate: [{ year: 1947, label: 'Peak: 99,692' }, { year: 1964, label: 'Boom ends' }]
+});
+
+sparkChart('#c-sisters1', null, {
+  H: 200,
+  series: [
+    { data: patricia, color: '#a78bfa', label: 'Patricia' },
+    { data: susan,    color: '#f59e0b', label: 'Susan' },
+    { data: deborah,  color: '#22d3ee', label: 'Deborah' },
+    { data: karen,    color: '#4ade80', label: 'Karen' },
+  ],
+  annotate: [{ year: 1955, label: 'Peak era' }]
+});
+
+sparkChart('#c-sisters2', null, {
+  H: 180,
+  series: [
+    { data: nancy,  color: '#e879f9', label: 'Nancy' },
+    { data: donna,  color: '#60a5fa', label: 'Donna' },
+    { data: sharon, color: '#f97316', label: 'Sharon' },
+  ],
+  annotate: [{ year: 1947, label: 'Post-war peak' }]
+});
+
+sparkChart('#c-guys', null, {
+  H: 180,
+  series: [
+    { data: gary,   color: '#34d399', label: 'Gary' },
+    { data: dennis, color: '#fb7185', label: 'Dennis' },
+  ],
+  annotate: [{ year: 1953, label: 'Peak era' }]
+});
+</script>
+</body>
+</html>

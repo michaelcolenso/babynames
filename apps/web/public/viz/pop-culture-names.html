@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Name Has a Lifespan — nobodynamed.com</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #07070f;
+  --surface: #0d0d1a;
+  --border: #1a1a2e;
+  --amber: #f59e0b;
+  --amber-dim: #78490a;
+  --cyan: #22d3ee;
+  --rose: #f43f5e;
+  --violet: #a78bfa;
+  --green: #4ade80;
+  --muted: #6b7280;
+  --text: #d1d5db;
+  --heading: #f3f4f6;
+}
+html { background: var(--bg); color: var(--text); font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.75; font-size: 18px; }
+body { max-width: 720px; margin: 0 auto; padding: 0 1.5rem 6rem; }
+
+/* ── typography ── */
+h1 { font-size: clamp(2rem, 6vw, 3.2rem); color: var(--heading); line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; }
+h2 { font-size: 1.35rem; color: var(--amber); font-weight: 700; margin: 3rem 0 0.6rem; letter-spacing: -0.01em; font-family: sans-serif; }
+h3 { font-size: 1rem; color: var(--muted); font-weight: 400; font-family: sans-serif; text-transform: uppercase; letter-spacing: 0.12em; margin: 2.5rem 0 0.5rem; }
+p { margin: 1rem 0; }
+strong { color: var(--heading); }
+em { color: var(--amber); font-style: normal; }
+a { color: var(--cyan); text-decoration: none; }
+
+/* ── header ── */
+header { padding: 5rem 0 3rem; border-bottom: 1px solid var(--border); margin-bottom: 3rem; }
+.kicker { font-family: sans-serif; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--amber); margin-bottom: 1.2rem; }
+.byline { font-family: sans-serif; font-size: 0.82rem; color: var(--muted); margin-top: 1.5rem; }
+.lede { font-size: 1.18rem; color: var(--heading); line-height: 1.65; margin-top: 1.4rem; }
+
+/* ── pull quote ── */
+blockquote {
+  border-left: 3px solid var(--amber);
+  margin: 2.5rem 0;
+  padding: 0.2rem 0 0.2rem 1.5rem;
+  font-size: 1.25rem;
+  color: var(--heading);
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* ── chart containers ── */
+.chart-wrap {
+  margin: 2.2rem 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.5rem 1.2rem 1rem;
+}
+.chart-title {
+  font-family: sans-serif;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.8rem;
+}
+.chart-title strong { color: var(--heading); font-size: 0.92rem; letter-spacing: 0; text-transform: none; }
+svg { display: block; overflow: visible; }
+svg text { font-family: sans-serif; }
+
+/* multi-chart grid */
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin: 2rem 0; }
+.chart-grid .chart-wrap { margin: 0; }
+
+/* ── stat callouts ── */
+.stat-row { display: flex; gap: 1.5rem; margin: 2rem 0; flex-wrap: wrap; }
+.stat-box {
+  flex: 1; min-width: 140px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 1rem 1.2rem;
+  font-family: sans-serif;
+}
+.stat-box .num { font-size: 2rem; font-weight: 700; color: var(--amber); line-height: 1; }
+.stat-box .label { font-size: 0.75rem; color: var(--muted); margin-top: 0.3rem; text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* ── debut cards ── */
+.debut-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 0.75rem; margin: 1.5rem 0; }
+.debut-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 5px; padding: 0.75rem 1rem;
+  font-family: sans-serif;
+}
+.debut-card .dname { font-size: 1.05rem; font-weight: 700; color: var(--heading); }
+.debut-card .dcount { font-size: 0.8rem; color: var(--amber); margin-top: 0.15rem; }
+.debut-card .dnote { font-size: 0.72rem; color: var(--muted); margin-top: 0.2rem; line-height: 1.4; }
+
+/* ── extinction list ── */
+.extinct-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.2rem 0; }
+.extinct-pill {
+  background: #1a0a0e; border: 1px solid #3d1a22;
+  color: #f87171; font-family: sans-serif;
+  font-size: 0.8rem; padding: 0.3rem 0.7rem; border-radius: 100px;
+}
+
+/* ── tooltip ── */
+.tip {
+  position: fixed; pointer-events: none;
+  background: #111827; border: 1px solid var(--border);
+  color: var(--text); padding: 0.5rem 0.8rem;
+  border-radius: 4px; font-family: sans-serif; font-size: 0.75rem;
+  z-index: 999; opacity: 0; transition: opacity 0.1s; line-height: 1.5;
+}
+.tip.show { opacity: 1; }
+
+/* ── footer ── */
+footer { margin-top: 5rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: sans-serif; font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="tip" id="tip"></div>
+
+<header>
+  <p class="kicker">nobodynamed.com · 2025 SSA Data</p>
+  <h1>The Kehlani Effect</h1>
+  <p class="lede">Right now, in 2025, more babies are named Kehlani than ever before. The 2025 SSA data captured it happening in real time — and it's just one entry in a 145-year record of everything America loved enough to put on a birth certificate.</p>
+  <p class="byline">May 2026 · Based on SSA name data 1880–2025 · 117,820 name/sex pairs</p>
+</header>
+
+<h2>Kehlani: It's Happening Right Now</h2>
+
+<p>In 2015, the Oakland R&B artist Kehlani released her breakthrough mixtape <em>You Should Be Here</em>. That year, 50 babies were named Kehlani — the name's first appearance in 145 years of national records.</p>
+
+<p>The following year, 325. Then 598. Then 914. By 2019 it crossed a thousand. And in 2025, the number the Social Security Administration just published: <em>1,981 babies were named Kehlani.</em> Her all-time record. The name is still climbing.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Kehlani</strong> — girls named per year · 2025 is the peak so far</p>
+  <svg id="c-kehlani"></svg>
+</div>
+
+<p>We are watching the Kehlani Effect happen in real time. Whatever she does next will show up in the 2026 data. The name hasn't peaked yet.</p>
+
+<div class="stat-row">
+  <div class="stat-box"><div class="num">1,981</div><div class="label">babies named Kehlani in 2025</div></div>
+  <div class="stat-box"><div class="num">14,481</div><div class="label">total since debut in 2015</div></div>
+  <div class="stat-box"><div class="num">2025</div><div class="label">her peak year — so far</div></div>
+</div>
+
+<blockquote>"Whatever she does next will show up in the 2026 data."</blockquote>
+
+<p>Every year, the Social Security Administration quietly publishes one of the most fascinating datasets in existence: the names of every baby born in America. Not just a list — a full time series, year by year, going back to 1880.</p>
+
+<p>When you plot that data, something extraordinary emerges. Buried inside 145 years of naming trends is a complete record of American pop culture. Not what people said they loved — what they loved enough to make permanent.</p>
+
+<p>The 2025 data just dropped. Kehlani leads it. Here's what else it found.</p>
+
+<h2>The Pattern</h2>
+
+<p>Celebrity names follow a predictable arc. A star breaks through. Parents take notice. Within one to three years, the name appears in the data — first dozens, then hundreds of babies. It peaks somewhere between two and seven years after the cultural moment. Then it fades, roughly in proportion to how the star themselves fades.</p>
+
+<p>The shape is almost always the same: slow climb, sharp spike, long tail.</p>
+
+<p>But the details are where it gets interesting.</p>
+
+<h2>Rihanna: The Textbook Case</h2>
+
+<p><strong>Rihanna</strong> barely registered as a baby name before 2005. Then <em>Pon de Replay</em>, then <em>Umbrella</em>, then the most-played song of the year in 2008 — and that year, <em>1,075 baby girls were named Rihanna.</em></p>
+
+<p>That's the spike. But look at what comes after. Each year, a few hundred fewer. The music kept coming, but the <em>naming</em> moment had passed. By 2025, only 87 babies were named Rihanna. The SSA classifies her as endangered.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Rihanna</strong> — girls named per year</p>
+  <svg id="c-rihanna"></svg>
+  <p style="font-family:sans-serif;font-size:0.72rem;color:var(--muted);margin-top:0.5rem">Source: SSA 2025. Annotations mark major cultural moments.</p>
+</div>
+
+<p>The Rihanna curve is almost too clean. The 2023 Super Bowl halftime show — her first major performance in years — produced a small but visible uptick in 2023–24. Parents noticed. Then 2025 dropped back to 87.</p>
+
+<h2>Khloe: The Kardashian Spike</h2>
+
+<p>If Rihanna is the textbook case, <strong>Khloe</strong> is the case study in what happens when a reality TV show becomes a cultural institution overnight.</p>
+
+<p>In 2007 — the year before <em>Keeping Up with the Kardashians</em> premiered — 447 babies were named Khloe. By 2008, that number had nearly quadrupled to 1,715. By 2010, it peaked at <em>5,412</em> — a name that had never broken 300 in its entire history suddenly became one of the most common girls' names in America.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Khloe</strong> — girls named per year · KUWTK premiered Nov 2007</p>
+  <svg id="c-khloe"></svg>
+</div>
+
+<p>The spike is vertical. There's almost nothing like it in the dataset — a single television event creating a near-instant naming trend at scale. Khloe is still common today (1,149 in 2025), but the Kardashian effect has been slowly draining out of it for fifteen years.</p>
+
+<h2>The Frozen Timestamp</h2>
+
+<p><strong>Elsa</strong> is 140 years old as a baby name. It has never been especially popular — a few hundred girls a year, consistently, from the 1880s through 2013.</p>
+
+<p>Then <em>Frozen</em> came out in November 2013. And in 2014, <em>1,140 girls were named Elsa.</em></p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Elsa</strong> — 1990–2025 · <em>Frozen</em> released Nov 2013</p>
+  <svg id="c-elsa"></svg>
+</div>
+
+<p>The spike is a perfect timestamp. You could date the release of a Disney film from this data alone without knowing anything else about it. The name has since settled back to its pre-<em>Frozen</em> baseline — but that one-year spike is now permanently recorded in the national record.</p>
+
+<h2>Game of Thrones: Death Didn't Stop Them</h2>
+
+<p>In 2011, HBO premiered <em>Game of Thrones</em>. That same year, 28 babies were named <strong>Khaleesi</strong>. By 2018 — the final (and divisive) season — that number had reached 565.</p>
+
+<p>Here's the thing: the show had a famously terrible ending. Daenerys — the character Khaleesi refers to — burned an entire city of civilians and was killed by her own lover. Conventional wisdom said the names would collapse after 2019.</p>
+
+<p>They didn't.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Arya · Khaleesi · Daenerys</strong> — girls named per year</p>
+  <svg id="c-got"></svg>
+</div>
+
+<p><strong>Arya</strong> peaked at 3,051 in 2019 and still had 1,858 in 2025. <strong>Khaleesi</strong> is holding steady around 400. Even <strong>Daenerys</strong> — the villain at the end — had 115 babies in 2025. Name attachment, it turns out, doesn't follow the plot.</p>
+
+<h2>The Encanto Sweep</h2>
+
+<p>On November 24, 2021, Disney released <em>Encanto</em>. The film featured three prominent female characters: Mirabel, Luisa, and Isabela. Plus one Bruno, who we do not talk about.</p>
+
+<p>Except we clearly did talk about Bruno. The song "We Don't Talk About Bruno" became the first Disney song to hit #1 on the Billboard Hot 100 since "A Whole New World" in 1993. And in 2022, <em>Bruno, Luisa, and Mirabel all peaked simultaneously</em>.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Bruno · Luisa · Mirabel</strong> — <em>Encanto</em> released Nov 2021</p>
+  <svg id="c-encanto"></svg>
+</div>
+
+<p>The synchronized spike is extraordinary. Three different names, three different characters, all climbing the same hill at the same time because of one movie. Luisa — a name with a long Latin American history in the data — got a second life. Bruno became the rare male Disney character to move the needle on baby names.</p>
+
+<h2>The Dark Side Is Winning</h2>
+
+<p><strong>Anakin</strong> first appeared in the baby name data in 1995 — the year after the original Star Wars was rereleased and three years before <em>The Phantom Menace</em>. The villain origin story didn't slow parents down. It's been climbing ever since, hitting 541 in 2023 and holding at 427 in 2025.</p>
+
+<p>But the real story is <strong>Kylo Ren</strong>. The character debuted in <em>The Force Awakens</em> in 2015. By 2016, 238 boys were named Kylo. Unlike most celebrity-adjacent names, it never stopped climbing — 870 in 2024, 797 in 2025, still classified as rising.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Kylo · Anakin</strong> — boys named per year · both rising</p>
+  <svg id="c-darkside"></svg>
+</div>
+
+<p>For comparison: <strong>Leia</strong> peaked in 2023 at 1,424. <strong>Luke</strong> has been a standard name for 80 years and peaks at ~14,000. The dark side is not winning the numbers game — but it is winning the trend line.</p>
+
+<h2>Hermione's Second Act</h2>
+
+<p>The first Harry Potter book was published in 1997. By 2002, Hermione appeared in the SSA data. But it never took off — at most 74 babies in any given year through the 2000s and 2010s.</p>
+
+<p>Then something shifted. Starting around 2019, the numbers began climbing quietly. In 2024, Hermione hit a new all-time record of 122. In 2025: 95, still rising by trend.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Hermione</strong> — girls named per year · still rising 20 years later</p>
+  <svg id="c-hermione"></svg>
+</div>
+
+<p>The explanation: the kids who grew up with Harry Potter are now in their late 20s and early 30s — peak baby-naming years. Hermione isn't a celebrity effect. It's a generational inheritance. The books that shaped them are now shaping what they name their children.</p>
+
+<p>This is a different kind of cultural timestamp — not the spike of a hit song, but the slow bloom of a childhood.</p>
+
+<h2>Billie: The Resurrection</h2>
+
+<p><strong>Billie</strong> peaked as a girls' name in 1930 at 3,241. It spent the next 80 years in slow, steady decline — around 100–200 babies per year, occasionally less. By 2010, it was down to 73.</p>
+
+<p>Billie Eilish released "Ocean Eyes" in 2016. She was 14. By 2018, <strong>Billie</strong> had started climbing again. By 2025: 409 girls — the highest since the 1970s, classified as rising.</p>
+
+<div class="chart-wrap">
+  <p class="chart-title"><strong>Billie</strong> — girls named per year · a 90-year-old name revived</p>
+  <svg id="c-billie"></svg>
+</div>
+
+<p>The reversal is one of the cleanest in modern data. A name declared dead, resurrected by a single artist, now climbing toward levels it hasn't seen since the New Deal.</p>
+
+<h2>What Debuted in 2025</h2>
+
+<p>Every year, a handful of names appear for the very first time — names that never crossed the SSA's minimum threshold of 5 births in any previous year. In 2025, 100 such names debuted. They are a portrait of the moment.</p>
+
+<p><strong>Zohran</strong> (30 boys): Zohran Mamdani was elected mayor of New York City in 2025. Parents noticed within the year. This is how fast culture moves now.</p>
+
+<p><strong>Kaizo</strong> (11 boys): Named after the genre of brutally difficult ROM hacks, popularized by streamers. A video game difficulty setting became a baby name.</p>
+
+<p><strong>Jugaad</strong> (12 boys): A Hindi word meaning "improvised hack" or "ingenious workaround." The South Asian tech community uses it constantly. Now it's a name.</p>
+
+<p>And then there are the <strong>-vik</strong> names: Rudvik, Ishvik, Shanvik, Sharvik, Yashvik — all debuting simultaneously, all South Indian in origin, all crossing the threshold for the first time. A community large enough to show up in national data, naming their children in their own tradition.</p>
+
+<div class="debut-grid">
+  <div class="debut-card"><div class="dname">Elanith</div><div class="dcount">81 girls</div><div class="dnote">Fantasy-adjacent, origin unclear</div></div>
+  <div class="debut-card"><div class="dname">Akyris</div><div class="dcount">74 boys</div><div class="dnote">Sounds like a video game character</div></div>
+  <div class="debut-card"><div class="dname">Zohran</div><div class="dcount">30 boys</div><div class="dnote">NYC Mayor Zohran Mamdani</div></div>
+  <div class="debut-card"><div class="dname">Kaizo</div><div class="dcount">11 boys</div><div class="dnote">The hardest Mario ROM hack</div></div>
+  <div class="debut-card"><div class="dname">Jugaad</div><div class="dcount">12 boys</div><div class="dnote">Hindi: "ingenious workaround"</div></div>
+  <div class="debut-card"><div class="dname">Rudvik</div><div class="dcount">33 boys</div><div class="dnote">South Indian debut cluster</div></div>
+</div>
+
+<h2>What Went Extinct</h2>
+
+<p>While new names debuted, others crossed into silence. These are names that had count > 0 in 2024 and zero in 2025 — the last generation to carry them.</p>
+
+<p><strong>Jean</strong> had 458,350 total bearers over 145 years. It peaked at 12,512 in 1927. In 2024, a handful of parents still chose it. In 2025: none.</p>
+
+<p>Then there are the ones that capture a specific cultural moment — and then nothing:</p>
+
+<div class="extinct-list">
+  <span class="extinct-pill">Jean</span>
+  <span class="extinct-pill">Vicki</span>
+  <span class="extinct-pill">Vickie</span>
+  <span class="extinct-pill">Traci</span>
+  <span class="extinct-pill">Gayle</span>
+  <span class="extinct-pill">Myrna</span>
+  <span class="extinct-pill">Buffy</span>
+  <span class="extinct-pill">Cher</span>
+  <span class="extinct-pill">Coretta</span>
+  <span class="extinct-pill">Norbert</span>
+  <span class="extinct-pill">Infant (M)</span>
+  <span class="extinct-pill">Infant (F)</span>
+</div>
+
+<p>That last one: for at least four decades, some babies in America were officially named <em>Infant</em> — likely clerical accidents where hospitals submitted birth records before parents decided. In 2025, it happened for the last time.</p>
+
+<h2>What This All Means</h2>
+
+<p>The SSA data is often treated as a curiosity — a fun way to see what names are trending. But it's something more than that. It's a continuous, unbroken record of what Americans loved enough to make permanent.</p>
+
+<p>Every time a parent named their daughter Rihanna in 2008, they were doing something that would outlast the Billboard chart, the tour, the album cycle. The name would still exist in 2025 on an 18-year-old's driver's license, long after the song had faded to nostalgia.</p>
+
+<p>And in 2025, right now, 1,981 babies named Kehlani are out there — in hospitals, in nurseries, in car seats. Whatever Kehlani does next, these kids carry it forward.</p>
+
+<p>Names are the longest-lasting thing we make from the things we love.</p>
+
+<footer>
+  <p>Data: U.S. Social Security Administration, 1880–2025. Analysis via <a href="https://nobodynamed.com">nobodynamed.com</a>. All charts show raw SSA counts; names with fewer than 5 births in a year are suppressed by the SSA.</p>
+</footer>
+
+<script>
+// ── helpers ──────────────────────────────────────────────────────────────────
+const tip = document.getElementById('tip');
+function showTip(html, e) {
+  tip.innerHTML = html; tip.classList.add('show');
+  const x = e.clientX + 12, y = e.clientY - 8;
+  tip.style.left = Math.min(x, window.innerWidth - 200) + 'px';
+  tip.style.top = Math.max(y, 10) + 'px';
+}
+function hideTip() { tip.classList.remove('show'); }
+
+function sparkChart(selector, data, opts = {}) {
+  const el = document.querySelector(selector).closest('.chart-wrap');
+  const W = el ? (el.clientWidth - 48) : 640;
+  const H = opts.H || 160;
+  const mg = { top: opts.annotate ? 36 : 18, right: 20, bottom: 28, left: 44 };
+  const iw = W - mg.left - mg.right;
+  const ih = H - mg.top - mg.bottom;
+
+  const years = data.map(d => d.y);
+  const xS = d3.scaleLinear().domain(d3.extent(years)).range([0, iw]);
+  const yS = d3.scaleLinear().domain([0, d3.max(data, d => d.v) * 1.12]).range([ih, 0]);
+
+  const svg = d3.select(selector).attr('width', W).attr('height', H)
+    .attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${mg.left},${mg.top})`);
+
+  // grid lines
+  yS.ticks(4).forEach(t => {
+    g.append('line').attr('x1', 0).attr('x2', iw).attr('y1', yS(t)).attr('y2', yS(t))
+      .attr('stroke', '#1a1a2e').attr('stroke-width', 1);
+  });
+
+  // multiple series?
+  const series = opts.series || [{ data, color: opts.color || '#f59e0b', label: opts.label || '' }];
+
+  series.forEach(s => {
+    const area = d3.area().x(d => xS(d.y)).y0(ih).y1(d => yS(d.v)).curve(d3.curveMonotoneX);
+    const line = d3.line().x(d => xS(d.y)).y(d => yS(d.v)).curve(d3.curveMonotoneX);
+    g.append('path').datum(s.data).attr('d', area).attr('fill', s.color).attr('opacity', 0.12);
+    g.append('path').datum(s.data).attr('d', line).attr('fill', 'none').attr('stroke', s.color).attr('stroke-width', 2);
+
+    // series label at end
+    if (s.label) {
+      const last = s.data[s.data.length - 1];
+      g.append('text').attr('x', xS(last.y) + 4).attr('y', yS(last.v) + 4)
+        .attr('fill', s.color).attr('font-size', '10').attr('font-weight', '600').text(s.label);
+    }
+  });
+
+  // axes
+  g.append('g').attr('transform', `translate(0,${ih})`)
+    .call(d3.axisBottom(xS).tickFormat(d3.format('d')).ticks(Math.min(8, years.length)))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#6b7280').attr('font-size', '10'); });
+
+  g.append('g')
+    .call(d3.axisLeft(yS).ticks(4).tickFormat(d => d >= 1000 ? (d / 1000).toFixed(d >= 2000 ? 0 : 1) + 'k' : d))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#6b7280').attr('font-size', '10'); });
+
+  // annotations
+  if (opts.annotate) {
+    opts.annotate.forEach(a => {
+      const ax = xS(a.year);
+      g.append('line').attr('x1', ax).attr('x2', ax).attr('y1', -mg.top + 6).attr('y2', ih)
+        .attr('stroke', '#4b5563').attr('stroke-width', 1).attr('stroke-dasharray', '3,3');
+      g.append('text').attr('x', ax).attr('y', -mg.top + 4)
+        .attr('text-anchor', 'middle').attr('fill', '#9ca3af').attr('font-size', '9').text(a.label);
+    });
+  }
+
+  // hover
+  const bisect = d3.bisector(d => d.y).left;
+  const allData = series.flatMap(s => s.data);
+  const allYears = [...new Set(allData.map(d => d.y))].sort((a, b) => a - b);
+
+  const hoverLine = g.append('line').attr('y1', 0).attr('y2', ih)
+    .attr('stroke', '#fff').attr('stroke-width', 1).attr('opacity', 0).attr('pointer-events', 'none');
+  g.append('rect').attr('width', iw).attr('height', ih).attr('fill', 'none')
+    .attr('pointer-events', 'all')
+    .on('mousemove', function(e) {
+      const [mx] = d3.pointer(e, g.node());
+      const yr = Math.round(xS.invert(mx));
+      hoverLine.attr('x1', xS(yr)).attr('x2', xS(yr)).attr('opacity', 0.3);
+      const rows = series.map(s => {
+        const pt = s.data.find(d => d.y === yr);
+        return pt ? `<span style="color:${s.color}">${s.label || ''}${s.label ? ': ' : ''}${pt.v.toLocaleString()}</span>` : null;
+      }).filter(Boolean).join('<br>');
+      showTip(`<strong>${yr}</strong><br>${rows}`, e);
+    })
+    .on('mouseleave', () => { hoverLine.attr('opacity', 0); hideTip(); });
+}
+
+// ── DATA ─────────────────────────────────────────────────────────────────────
+
+const rihanna = [{y:2000,v:6},{y:2005,v:79},{y:2006,v:572},{y:2007,v:789},{y:2008,v:1075},{y:2009,v:825},{y:2010,v:500},{y:2011,v:381},{y:2012,v:323},{y:2013,v:269},{y:2014,v:209},{y:2015,v:178},{y:2016,v:178},{y:2017,v:162},{y:2018,v:166},{y:2019,v:129},{y:2020,v:144},{y:2021,v:133},{y:2022,v:127},{y:2023,v:165},{y:2024,v:115},{y:2025,v:87}];
+
+const khloe = [{y:2000,v:99},{y:2001,v:120},{y:2002,v:176},{y:2003,v:190},{y:2004,v:202},{y:2005,v:243},{y:2006,v:275},{y:2007,v:447},{y:2008,v:1715},{y:2009,v:3459},{y:2010,v:5412},{y:2011,v:4964},{y:2012,v:4320},{y:2013,v:3680},{y:2014,v:3553},{y:2015,v:3006},{y:2016,v:2555},{y:2017,v:2156},{y:2018,v:2155},{y:2019,v:2034},{y:2020,v:1751},{y:2021,v:1685},{y:2022,v:1583},{y:2023,v:1390},{y:2024,v:1336},{y:2025,v:1149}];
+
+const kehlani = [{y:2015,v:50},{y:2016,v:325},{y:2017,v:598},{y:2018,v:914},{y:2019,v:1311},{y:2020,v:1713},{y:2021,v:1877},{y:2022,v:1875},{y:2023,v:1864},{y:2024,v:1973},{y:2025,v:1981}];
+
+const elsa = [{y:1990,v:242},{y:1995,v:222},{y:2000,v:240},{y:2005,v:350},{y:2010,v:487},{y:2011,v:499},{y:2012,v:542},{y:2013,v:566},{y:2014,v:1140},{y:2015,v:658},{y:2016,v:477},{y:2017,v:425},{y:2018,v:305},{y:2019,v:350},{y:2020,v:284},{y:2021,v:276},{y:2022,v:264},{y:2023,v:247},{y:2024,v:281},{y:2025,v:216}];
+
+const arya = [{y:2008,v:205},{y:2009,v:237},{y:2010,v:273},{y:2011,v:387},{y:2012,v:759},{y:2013,v:1139},{y:2014,v:1556},{y:2015,v:1645},{y:2016,v:1898},{y:2017,v:2169},{y:2018,v:2556},{y:2019,v:3051},{y:2020,v:2374},{y:2021,v:2331},{y:2022,v:2343},{y:2023,v:2013},{y:2024,v:1867},{y:2025,v:1858}];
+const khaleesi = [{y:2011,v:28},{y:2012,v:147},{y:2013,v:243},{y:2014,v:369},{y:2015,v:342},{y:2016,v:378},{y:2017,v:470},{y:2018,v:565},{y:2019,v:524},{y:2020,v:373},{y:2021,v:411},{y:2022,v:444},{y:2023,v:399},{y:2024,v:434},{y:2025,v:410}];
+const daenerys = [{y:2012,v:21},{y:2013,v:68},{y:2014,v:86},{y:2015,v:82},{y:2016,v:102},{y:2017,v:111},{y:2018,v:166},{y:2019,v:144},{y:2020,v:85},{y:2021,v:108},{y:2022,v:123},{y:2023,v:125},{y:2024,v:136},{y:2025,v:115}];
+
+const bruno = [{y:2000,v:156},{y:2005,v:239},{y:2010,v:297},{y:2013,v:379},{y:2015,v:349},{y:2017,v:404},{y:2018,v:379},{y:2019,v:344},{y:2020,v:352},{y:2021,v:406},{y:2022,v:448},{y:2023,v:373},{y:2024,v:381},{y:2025,v:351}];
+const luisa = [{y:2000,v:218},{y:2005,v:226},{y:2010,v:209},{y:2015,v:224},{y:2018,v:222},{y:2019,v:262},{y:2020,v:256},{y:2021,v:262},{y:2022,v:319},{y:2023,v:276},{y:2024,v:313},{y:2025,v:294}];
+const mirabel = [{y:2007,v:33},{y:2010,v:20},{y:2015,v:44},{y:2018,v:47},{y:2019,v:45},{y:2020,v:37},{y:2021,v:34},{y:2022,v:153},{y:2023,v:92},{y:2024,v:77},{y:2025,v:68}];
+
+const kylo = [{y:2015,v:35},{y:2016,v:238},{y:2017,v:165},{y:2018,v:254},{y:2019,v:237},{y:2020,v:662},{y:2021,v:558},{y:2022,v:715},{y:2023,v:788},{y:2024,v:870},{y:2025,v:797}];
+const anakin = [{y:1999,v:114},{y:2000,v:96},{y:2005,v:133},{y:2010,v:100},{y:2014,v:220},{y:2015,v:237},{y:2016,v:308},{y:2017,v:323},{y:2018,v:270},{y:2019,v:222},{y:2020,v:361},{y:2021,v:431},{y:2022,v:464},{y:2023,v:541},{y:2024,v:485},{y:2025,v:427}];
+
+const hermione = [{y:2002,v:17},{y:2003,v:59},{y:2004,v:54},{y:2005,v:57},{y:2006,v:74},{y:2007,v:67},{y:2008,v:61},{y:2009,v:47},{y:2010,v:37},{y:2011,v:55},{y:2012,v:52},{y:2013,v:47},{y:2014,v:57},{y:2015,v:57},{y:2016,v:71},{y:2017,v:80},{y:2018,v:79},{y:2019,v:90},{y:2020,v:93},{y:2021,v:71},{y:2022,v:117},{y:2023,v:101},{y:2024,v:122},{y:2025,v:95}];
+
+const billie = [{y:1990,v:235},{y:1995,v:229},{y:2000,v:146},{y:2005,v:85},{y:2010,v:73},{y:2014,v:123},{y:2016,v:97},{y:2017,v:117},{y:2018,v:150},{y:2019,v:213},{y:2020,v:251},{y:2021,v:280},{y:2022,v:285},{y:2023,v:309},{y:2024,v:406},{y:2025,v:409}];
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+sparkChart('#c-rihanna', rihanna, {
+  color: '#f43f5e', label: 'Rihanna', H: 160,
+  annotate: [
+    { year: 2005, label: 'Pon de Replay' },
+    { year: 2008, label: 'Umbrella era' },
+    { year: 2023, label: 'Super Bowl' },
+  ]
+});
+
+sparkChart('#c-khloe', khloe, {
+  color: '#a78bfa', label: 'Khloe', H: 160,
+  annotate: [{ year: 2007, label: 'KUWTK premieres' }]
+});
+
+sparkChart('#c-kehlani', kehlani, {
+  color: '#22d3ee', label: 'Kehlani', H: 160,
+  annotate: [{ year: 2015, label: 'You Should Be Here' }]
+});
+
+sparkChart('#c-elsa', elsa, {
+  color: '#818cf8', label: 'Elsa', H: 160,
+  annotate: [{ year: 2013, label: 'Frozen release' }]
+});
+
+sparkChart('#c-got', null, {
+  H: 180,
+  series: [
+    { data: arya.filter(d => d.y >= 2011), color: '#4ade80', label: 'Arya' },
+    { data: khaleesi, color: '#f59e0b', label: 'Khaleesi' },
+    { data: daenerys, color: '#f43f5e', label: 'Daenerys' },
+  ],
+  annotate: [
+    { year: 2011, label: 'GoT S1' },
+    { year: 2018, label: 'Final season' },
+  ]
+});
+
+sparkChart('#c-encanto', null, {
+  H: 160,
+  series: [
+    { data: bruno, color: '#f59e0b', label: 'Bruno' },
+    { data: luisa, color: '#22d3ee', label: 'Luisa' },
+    { data: mirabel, color: '#a78bfa', label: 'Mirabel' },
+  ],
+  annotate: [{ year: 2021, label: 'Encanto release' }]
+});
+
+sparkChart('#c-darkside', null, {
+  H: 160,
+  series: [
+    { data: kylo, color: '#f43f5e', label: 'Kylo' },
+    { data: anakin.filter(d => d.y >= 2013), color: '#f59e0b', label: 'Anakin' },
+  ],
+  annotate: [{ year: 2015, label: 'Force Awakens' }]
+});
+
+sparkChart('#c-hermione', hermione, {
+  color: '#c084fc', label: 'Hermione', H: 160,
+  annotate: [
+    { year: 2003, label: 'HP films peak' },
+    { year: 2011, label: 'Final film' },
+  ]
+});
+
+sparkChart('#c-billie', billie, {
+  color: '#4ade80', label: 'Billie', H: 160,
+  annotate: [{ year: 2017, label: 'Billie Eilish breaks' }]
+});
+</script>
+</body>
+</html>
