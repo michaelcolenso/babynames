@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenure — Top 100 Entrances &amp; Exits, 1880–2025 · NobodyNamed</title>
+<meta name="description" content="Every name that has ever held a top-100 position in US births — when it entered, when it left, and the few that never did.">
+<link rel="canonical" href="https://nobodynamed.com/viz/tenure">
+<meta property="og:title" content="Tenure — Top 100 Entrances &amp; Exits, 1880–2025">
+<meta property="og:description" content="A barcode of naming history: every name that ever cracked the top 100, showing when it arrived and when it left.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --surface: #16161f;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --rule: rgba(255,255,255,0.07);
+    --amber: #c9922a;
+    --amber-glow: rgba(201,146,42,0.18);
+    --rose: #c4786e;
+    --blue: #6a8aaa;
+    --accent: #c9922a;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 0.9rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.82rem;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+  nav .brand {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    margin-right: auto;
+  }
+  nav a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+  nav a:hover { color: var(--text); }
+
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+    margin-bottom: 0.7rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 620px;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  .stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .stat-chip {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.76rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+  .stat-chip .n {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stat-chip .l { color: var(--muted); }
+  .stat-chip.gold .n { color: var(--amber); }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.75rem 2rem;
+    max-width: 1120px;
+    margin: 0 auto;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .controls-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    margin-right: 0.25rem;
+  }
+  .btn {
+    padding: 0.28rem 0.85rem;
+    border-radius: 20px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--text); color: var(--text); }
+  .btn.active { background: var(--amber); border-color: var(--amber); color: #1a0e00; font-weight: 700; }
+  .btn.blue.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .divider { width: 1px; height: 20px; background: var(--rule); margin: 0 0.25rem; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    padding: 0.6rem 2rem;
+    max-width: 1120px;
+    margin: 0 auto;
+    align-items: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+  }
+  .legend-swatch {
+    width: 28px;
+    height: 6px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .legend-swatch.iron { background: var(--amber); }
+  .legend-swatch.female { background: var(--rose); }
+  .legend-swatch.male { background: var(--blue); }
+  .legend-swatch.gap { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
+
+  #chart-wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    overflow-x: auto;
+    position: relative;
+  }
+  #chart-svg { display: block; }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    fill-opacity: 0.5;
+  }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10,10,15,0.97);
+    border: 1px solid rgba(201,146,42,0.35);
+    border-radius: 8px;
+    padding: 10px 14px;
+    z-index: 200;
+    max-width: 240px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+    opacity: 0;
+    transition: opacity 0.12s;
+    font-family: 'Space Grotesk', system-ui;
+  }
+  .tooltip .t-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 3px;
+    letter-spacing: -0.01em;
+  }
+  .tooltip .t-iron {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .tooltip .t-row {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .tooltip .t-row strong { color: var(--text); font-weight: 600; }
+  .tooltip .t-link {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--amber);
+    opacity: 0.8;
+  }
+
+  #loading {
+    text-align: center;
+    padding: 5rem 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  footer {
+    padding: 2rem;
+    max-width: 1120px;
+    margin: 0 auto;
+    border-top: 1px solid var(--rule);
+    font-size: 0.8rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 600px) {
+    .hero { padding: 2rem 1rem 1rem; }
+    .controls, .legend, #chart-wrap, footer { padding-left: 1rem; padding-right: 1rem; }
+    nav { padding: 0.75rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="/">NOBODYNAMED</a>
+  <a href="/viz/">Visualizations</a>
+  <a href="/rising">Rising</a>
+  <a href="/extinct">Extinct</a>
+  <a href="/about">About</a>
+</nav>
+
+<div class="hero">
+  <p class="kicker">Visualization · Top 100 · 1880–2025</p>
+  <h1>Tenure</h1>
+  <p class="lede">Every name that has ever held a top-100 position in US births. Each bar shows the years it held that rank — entrances, exits, gaps, and the few that never left.</p>
+  <div class="stats-row" id="stats-row">
+    <div class="stat-chip gold">
+      <span class="n" id="stat-iron">—</span>
+      <span class="l">names never left</span>
+    </div>
+    <div class="stat-chip">
+      <span class="n" id="stat-total">—</span>
+      <span class="l">unique names</span>
+    </div>
+    <div class="stat-chip">
+      <span class="n" id="stat-avg">—</span>
+      <span class="l">avg years held</span>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <span class="controls-label">SEX</span>
+  <button class="btn active" id="btn-f" onclick="setSex('F')">Girls</button>
+  <button class="btn blue" id="btn-m" onclick="setSex('M')">Boys</button>
+  <div class="divider"></div>
+  <span class="controls-label">SHOW</span>
+  <button class="btn active" id="btn-all" onclick="setFilter('all')">All names</button>
+  <button class="btn" id="btn-iron" onclick="setFilter('iron')">Continuous only</button>
+  <div class="divider"></div>
+  <span class="controls-label">SORT</span>
+  <button class="btn active" id="btn-duration" onclick="setSort('duration')">Duration</button>
+  <button class="btn" id="btn-era" onclick="setSort('era')">Era entered</button>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch iron"></div>Continuous (never left since debut)</div>
+  <div class="legend-item"><div class="legend-swatch female"></div>Girls (in top 100)</div>
+  <div class="legend-item"><div class="legend-swatch male"></div>Boys (in top 100)</div>
+  <div class="legend-item"><div class="legend-swatch gap"></div>Outside top 100</div>
+</div>
+
+<div id="chart-wrap">
+  <div id="loading">LOADING RECORD…</div>
+  <svg id="chart-svg"></svg>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<footer>
+  <span>NobodyNamed · SSA records 1880–2025 · Public domain</span>
+  <span><a href="/about">Methodology</a> · <a href="/viz/">More visualizations</a></span>
+</footer>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let allData = null;
+let currentSex = 'F';
+let currentFilter = 'all';
+let currentSort = 'duration';
+
+// ─── Dimensions ───────────────────────────────────────────────────────────────
+const LABEL_W = 88;
+const CHART_W = 920;
+const SVG_W = LABEL_W + CHART_W + 8;
+const ROW_H = 5;
+const ROW_GAP = 2.5;
+const ROW_STEP = ROW_H + ROW_GAP;
+const AXIS_H = 32;
+const IRON_SECTION_PAD = 18; // extra padding after iron section header
+const SECTION_GAP = 14;
+
+// ─── Colors ───────────────────────────────────────────────────────────────────
+const COLOR = {
+  iron: '#c9922a',
+  ironGlow: 'rgba(201,146,42,0.12)',
+  F: '#c4786e',
+  M: '#6a8aaa',
+  gap: 'rgba(255,255,255,0.05)',
+  axis: 'rgba(255,255,255,0.18)',
+  axisText: '#6b7280',
+  sectionLabel: 'rgba(255,255,255,0.3)',
+};
+
+// ─── Data fetch ───────────────────────────────────────────────────────────────
+async function loadData() {
+  const res = await fetch('/api/top100-history');
+  allData = await res.json();
+  document.getElementById('loading').style.display = 'none';
+  updateStats();
+  render();
+}
+
+function updateStats() {
+  if (!allData) return;
+  const names = allData.names.filter(d => d.sex === currentSex);
+  const iron = names.filter(d => d.iron);
+  const totalYrs = names.reduce((s, d) => s + d.totalYears, 0);
+  document.getElementById('stat-iron').textContent = iron.length;
+  document.getElementById('stat-total').textContent = names.length;
+  document.getElementById('stat-avg').textContent =
+    names.length ? Math.round(totalYrs / names.length) + ' yrs' : '—';
+}
+
+// ─── Controls ─────────────────────────────────────────────────────────────────
+function setSex(sex) {
+  currentSex = sex;
+  document.getElementById('btn-f').className = sex === 'F' ? 'btn active' : 'btn';
+  document.getElementById('btn-m').className = sex === 'M' ? 'btn blue active' : 'btn blue';
+  updateStats();
+  render();
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  document.getElementById('btn-all').className = f === 'all' ? 'btn active' : 'btn';
+  document.getElementById('btn-iron').className = f === 'iron' ? 'btn active' : 'btn';
+  render();
+}
+
+function setSort(s) {
+  currentSort = s;
+  document.getElementById('btn-duration').className = s === 'duration' ? 'btn active' : 'btn';
+  document.getElementById('btn-era').className = s === 'era' ? 'btn active' : 'btn';
+  render();
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  if (!allData) return;
+  const { ym, yM } = allData;
+
+  let names = allData.names.filter(d => d.sex === currentSex);
+  if (currentFilter === 'iron') names = names.filter(d => d.iron);
+
+  if (currentSort === 'era') {
+    names = [...names].sort((a, b) => {
+      if (a.iron !== b.iron) return a.iron ? -1 : 1;
+      return a.spans[0][0] - b.spans[0][0];
+    });
+  }
+
+  const ironNames = names.filter(d => d.iron);
+  const restNames = names.filter(d => !d.iron);
+
+  // ── Layout math ────────────────────────────────────────────────────────────
+  let y = AXIS_H;
+
+  const ironHeaderY = y;
+  y += IRON_SECTION_PAD;
+  const ironStartY = y;
+  y += ironNames.length * ROW_STEP + (ironNames.length > 0 ? SECTION_GAP : 0);
+
+  let restHeaderY = -1;
+  if (restNames.length > 0 && ironNames.length > 0) {
+    restHeaderY = y;
+    y += IRON_SECTION_PAD;
+  }
+  const restStartY = y;
+  y += restNames.length * ROW_STEP;
+
+  const totalH = y + 20;
+
+  const svg = d3.select('#chart-svg')
+    .attr('width', SVG_W)
+    .attr('height', totalH);
+  svg.selectAll('*').remove();
+
+  const xScale = d3.scaleLinear()
+    .domain([ym, yM + 1])
+    .range([0, CHART_W]);
+
+  // ── X axis ─────────────────────────────────────────────────────────────────
+  const decades = d3.range(Math.ceil(ym / 10) * 10, yM + 2, 10);
+  const axisG = svg.append('g')
+    .attr('transform', `translate(${LABEL_W}, 0)`);
+
+  // faint vertical grid lines across full height
+  axisG.selectAll('.grid-line')
+    .data(decades)
+    .join('line')
+    .attr('class', 'grid-line')
+    .attr('x1', d => xScale(d))
+    .attr('x2', d => xScale(d))
+    .attr('y1', AXIS_H)
+    .attr('y2', totalH)
+    .attr('stroke', COLOR.axis)
+    .attr('stroke-width', 0.5)
+    .attr('opacity', 0.4);
+
+  axisG.selectAll('.decade-label')
+    .data(decades)
+    .join('text')
+    .attr('class', 'decade-label')
+    .attr('x', d => xScale(d))
+    .attr('y', AXIS_H - 10)
+    .attr('text-anchor', 'middle')
+    .attr('fill', COLOR.axisText)
+    .attr('font-family', "'Space Mono', monospace")
+    .attr('font-size', 10)
+    .text(d => d);
+
+  // ── Section labels ──────────────────────────────────────────────────────────
+  if (ironNames.length > 0) {
+    svg.append('text')
+      .attr('class', 'section-label')
+      .attr('x', LABEL_W)
+      .attr('y', ironHeaderY + 11)
+      .attr('fill', COLOR.iron)
+      .attr('font-family', "'Space Mono', monospace")
+      .attr('font-size', 9)
+      .attr('letter-spacing', 2)
+      .text('★ CONTINUOUS — NEVER LEFT');
+  }
+
+  if (restHeaderY >= 0) {
+    svg.append('text')
+      .attr('class', 'section-label')
+      .attr('x', LABEL_W)
+      .attr('y', restHeaderY + 11)
+      .attr('fill', COLOR.sectionLabel)
+      .attr('font-family', "'Space Mono', monospace")
+      .attr('font-size', 9)
+      .attr('letter-spacing', 2)
+      .text('ENTERED & EXITED');
+
+    svg.append('line')
+      .attr('x1', 0).attr('x2', SVG_W)
+      .attr('y1', restHeaderY - 2).attr('y2', restHeaderY - 2)
+      .attr('stroke', 'rgba(255,255,255,0.07)')
+      .attr('stroke-width', 1);
+  }
+
+  // ── Draw rows ───────────────────────────────────────────────────────────────
+  function drawRows(rowNames, baseY) {
+    const tooltip = document.getElementById('tooltip');
+
+    rowNames.forEach((d, i) => {
+      const y0 = baseY + i * ROW_STEP;
+      const g = svg.append('g').attr('transform', `translate(0, ${y0})`);
+
+      // subtle iron background glow
+      if (d.iron) {
+        g.append('rect')
+          .attr('x', 0).attr('y', -1)
+          .attr('width', SVG_W).attr('height', ROW_H + 2)
+          .attr('fill', COLOR.ironGlow);
+      }
+
+      // name label
+      g.append('text')
+        .attr('x', LABEL_W - 7)
+        .attr('y', ROW_H / 2)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', 'end')
+        .attr('fill', d.iron ? COLOR.iron : (currentSex === 'F' ? COLOR.F : COLOR.M))
+        .attr('fill-opacity', d.iron ? 1 : 0.75)
+        .attr('font-family', "'Space Grotesk', system-ui")
+        .attr('font-size', 9.5)
+        .attr('font-weight', d.iron ? 700 : 400)
+        .text(d.name);
+
+      // gap bar (full year range, barely visible)
+      g.append('rect')
+        .attr('x', LABEL_W)
+        .attr('y', 0)
+        .attr('width', CHART_W)
+        .attr('height', ROW_H)
+        .attr('fill', COLOR.gap);
+
+      // span bars
+      d.spans.forEach(([start, end]) => {
+        const barX = LABEL_W + xScale(start);
+        const barW = Math.max(1, xScale(end + 1) - xScale(start));
+        g.append('rect')
+          .attr('x', barX)
+          .attr('y', 0)
+          .attr('width', barW)
+          .attr('height', ROW_H)
+          .attr('fill', d.iron ? COLOR.iron : (currentSex === 'F' ? COLOR.F : COLOR.M))
+          .attr('fill-opacity', d.iron ? 0.9 : 0.72)
+          .attr('rx', 1);
+      });
+
+      // invisible hit area for interaction
+      g.append('rect')
+        .attr('x', 0).attr('y', -ROW_GAP / 2)
+        .attr('width', SVG_W).attr('height', ROW_STEP)
+        .attr('fill', 'transparent')
+        .style('cursor', 'pointer')
+        .on('mousemove', function(event) {
+          const spanSummary = d.spans.map(([s, e]) =>
+            s === e ? `${s}` : `${s}–${e}`
+          ).join(', ');
+          const gaps = d.spans.length - 1;
+          const firstYear = d.spans[0][0];
+          const lastYear = d.spans[d.spans.length - 1][1];
+
+          tooltip.innerHTML = `
+            <div class="t-name">${d.name}</div>
+            ${d.iron ? '<div class="t-iron">★ Continuous</div>' : ''}
+            <div class="t-row"><strong>${d.totalYears}</strong> years in top 100</div>
+            <div class="t-row">First: <strong>${firstYear}</strong> · Last: <strong>${lastYear}</strong></div>
+            ${gaps > 0 ? `<div class="t-row">Gaps: <strong>${gaps}</strong> (${d.spans.length} spans)</div>` : ''}
+            <div class="t-row" style="margin-top:3px">${spanSummary}</div>
+            <div class="t-link">Click to open dossier →</div>`;
+          tooltip.style.opacity = 1;
+          tooltip.style.left = (event.clientX + 14) + 'px';
+          tooltip.style.top = (event.clientY - 28) + 'px';
+        })
+        .on('mouseleave', function() {
+          tooltip.style.opacity = 0;
+        })
+        .on('click', function() {
+          window.location.href = `/name/${encodeURIComponent(d.name)}/`;
+        });
+    });
+  }
+
+  drawRows(ironNames, ironStartY);
+  drawRows(restNames, restStartY);
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
