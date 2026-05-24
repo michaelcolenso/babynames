@@ -19,7 +19,7 @@ function resolveOgImage(ogImage: string | null, origin: string): string {
 /**
  * Extract capitalized words from HTML text content, check which ones exist
  * as names in D1, and wrap them in links to their dossier pages.
- * Skips words already inside anchor tags by only matching between `>` and `<`.
+ * Existing anchors are left alone so imported Markdown links do not nest.
  */
 const STOPWORDS = new Set([
   "a","about","above","across","after","against","along","among","an","and","are","around","as","at","be","been","being","beneath","beside","between","beyond","both","but","by","can","cannot","could","did","do","does","doing","done","down","during","each","every","few","for","from","further","had","has","have","he","her","here","hers","him","his","how","i","if","in","inside","into","is","it","its","just","many","may","me","might","more","most","much","must","my","near","no","nor","not","now","of","off","on","once","only","onto","or","other","our","ours","out","outside","over","own","same","shall","she","should","since","so","some","such","than","that","the","their","theirs","them","then","there","these","they","this","those","through","throughout","till","to","too","toward","under","until","up","upon","us","very","was","we","were","what","when","where","which","while","who","whom","whose","why","will","with","within","without","would",
@@ -27,7 +27,7 @@ const STOPWORDS = new Set([
 
 export async function linkifyBlogBody(html: string, db: D1Database): Promise<string> {
   const candidates = new Set<string>();
-  html.replace(/>([^<]*?)</g, (_match, text: string) => {
+  transformTextOutsideAnchors(html, (text) => {
     const words = text.match(/\b[A-Z][a-zA-Z]+\b/g);
     if (words) {
       for (const w of words) {
@@ -35,7 +35,7 @@ export async function linkifyBlogBody(html: string, db: D1Database): Promise<str
         if (w.length >= 2 && !STOPWORDS.has(lower)) candidates.add(lower);
       }
     }
-    return _match;
+    return text;
   });
 
   if (candidates.size === 0) return html;
@@ -56,15 +56,30 @@ export async function linkifyBlogBody(html: string, db: D1Database): Promise<str
 
   if (names.size === 0) return html;
 
-  return html.replace(/>([^<]*?)</g, (match, text: string) => {
-    const linked = text.replace(/\b([A-Z][a-zA-Z]+)\b/g, (wordMatch: string, word: string) => {
+  return transformTextOutsideAnchors(html, (text) =>
+    text.replace(/\b([A-Z][a-zA-Z]+)\b/g, (wordMatch: string, word: string) => {
       if (names.has(word.toLowerCase())) {
         return `<a href="/name/${encodeURIComponent(word)}/">${word}</a>`;
       }
       return wordMatch;
-    });
-    return `>${linked}<`;
-  });
+    }),
+  );
+}
+
+function transformTextOutsideAnchors(html: string, transform: (text: string) => string): string {
+  let anchorDepth = 0;
+  return html
+    .split(/(<[^>]+>)/g)
+    .map((part) => {
+      if (!part) return part;
+      if (part.startsWith("<")) {
+        if (/^<a\b/i.test(part)) anchorDepth += 1;
+        else if (/^<\/a\s*>/i.test(part)) anchorDepth = Math.max(0, anchorDepth - 1);
+        return part;
+      }
+      return anchorDepth > 0 ? part : transform(part);
+    })
+    .join("");
 }
 
 function fmtDate(iso: string | null): string {
