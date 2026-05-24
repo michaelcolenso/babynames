@@ -50,7 +50,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   // asset serving from within route functions.
   if (slug.includes(".")) return ctx.env.ASSETS.fetch(ctx.request);
   // Serve static HTML pages directly — avoids redirect loops with Cloudflare Pages Pretty URLs.
-  const staticPages = new Set(["extinct", "rising", "endangered", "comeback", "year", "about"]);
+  const staticPages = new Set(["extinct", "rising", "endangered", "comeback", "year", "about", "press"]);
   if (staticPages.has(slug)) {
     const assetRes = await ctx.env.ASSETS.fetch(new URL(`/${slug}.html`, ctx.request.url));
     const headers = new Headers(assetRes.headers);
@@ -107,7 +107,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
 <meta property="og:type" content="article">
 <meta property="og:url" content="${pageCanonical}">
 <meta property="og:image" content="${ogImageUrl}">
-<meta property="og:image:type" content="image/svg+xml">
+<meta property="og:image:type" content="image/png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${ogImageUrl}">
 <link rel="stylesheet" href="/assets/style.css">

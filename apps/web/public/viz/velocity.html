@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Name Velocity — NobodyNamed</title>
+<meta name="description" content="Every name plotted by how fast it rose to fame and how fast it fell. Fads, Legends, Rockets, and Slow Burners — four archetypes of naming culture.">
+<link rel="canonical" href="https://nobodynamed.com/viz/velocity">
+<meta property="og:title" content="Name Velocity — NobodyNamed">
+<meta property="og:description" content="Is Karen a fad? Is Mary a legend? Every name mapped by the speed of its rise and fall.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #12121a;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --rule: rgba(255,255,255,0.06);
+    --female: #f472b6;
+    --male: #60a5fa;
+    --accent: #34d399;
+    --fad: rgba(239,68,68,0.08);
+    --legend: rgba(99,102,241,0.08);
+    --rocket: rgba(251,191,36,0.08);
+    --sleeper: rgba(52,211,153,0.08);
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.85rem;
+  }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+  nav .brand { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--accent); letter-spacing: 0.1em; margin-right: auto; }
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 640px;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0 2rem;
+    max-width: 980px;
+    margin: 0 auto 1.5rem;
+  }
+  .btn {
+    padding: 0.3rem 0.85rem;
+    border-radius: 20px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+
+  #chart-wrap {
+    padding: 0 2rem;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  svg { display: block; width: 100%; }
+
+  .dot { cursor: pointer; }
+  .dot:hover { opacity: 1 !important; }
+
+  .quadrant-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    opacity: 0.5;
+  }
+  .quadrant-sub {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 10px;
+    opacity: 0.35;
+  }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10,10,15,0.97);
+    border: 1px solid rgba(52,211,153,0.35);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    z-index: 1000;
+    max-width: 250px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .tooltip .name { font-weight: 700; font-size: 1.05rem; color: var(--text); margin-bottom: 4px; }
+  .tooltip .detail { color: var(--muted); font-size: 0.82rem; line-height: 1.6; }
+  .tooltip .detail span { color: var(--accent); font-family: 'Space Mono', monospace; }
+  .tooltip .archetype { font-size: 0.75rem; font-family: 'Space Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 6px; padding: 2px 6px; border-radius: 3px; display: inline-block; }
+
+  .legend-row {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    padding: 1rem 2rem 3rem;
+    max-width: 980px;
+    margin: 0 auto;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 50%; }
+
+  #loading {
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+  }
+
+  @media (max-width: 640px) {
+    .hero, .controls, #chart-wrap { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">NOBODYNAMED</span>
+  <a href="/viz/">← Visualizations</a>
+  <a href="/">Home</a>
+</nav>
+
+<div class="hero">
+  <div class="kicker">18 / The Archetypes</div>
+  <h1>Name Velocity</h1>
+  <p class="lede">Every name plotted by two speeds: how fast it climbed to its peak, and how fast it fell to half. Four quadrants reveal the fundamental archetypes of naming culture.</p>
+</div>
+
+<div class="controls">
+  <button class="btn active" data-sex="all">All names</button>
+  <button class="btn" data-sex="F">Girls</button>
+  <button class="btn" data-sex="M">Boys</button>
+</div>
+
+<div id="chart-wrap">
+  <div id="loading">COMPUTING TRAJECTORIES…</div>
+</div>
+
+<div class="legend-row">
+  <div class="legend-item"><div class="legend-swatch" style="background:var(--female)"></div> Girls</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:var(--male)"></div> Boys</div>
+  <span>Dot size = peak count · Click a name to explore it · Drag to pan</span>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+let allPoints = [], activeSex = 'all';
+
+function computeVelocity(names) {
+  const points = [];
+  names.forEach(row => {
+    const series = row.series;
+    const years = Object.keys(series).map(Number).sort((a,b) => a-b);
+    if (years.length < 5) return;
+
+    const firstYear = years[0];
+    const peakYear = row.peakYear;
+    const peakCount = row.peakCount;
+    if (peakCount < 1000) return;
+
+    // Years to peak from first recorded year
+    const riseYears = peakYear - firstYear;
+    if (riseYears < 0) return;
+
+    // Years from peak to fall below 50% of peak
+    let fallYears = null;
+    const afterPeak = years.filter(y => y > peakYear);
+    for (const y of afterPeak) {
+      if ((series[y] || 0) <= peakCount * 0.5) {
+        fallYears = y - peakYear;
+        break;
+      }
+    }
+    if (fallYears === null) fallYears = (years[years.length - 1] - peakYear) + 5; // still declining or steady
+
+    if (riseYears > 120 || fallYears > 120) return;
+
+    const archetype = getArchetype(riseYears, fallYears);
+    points.push({
+      name: row.name,
+      sex: row.sex,
+      riseYears,
+      fallYears,
+      peakYear,
+      peakCount,
+      firstYear,
+      archetype
+    });
+  });
+  return points;
+}
+
+function getArchetype(rise, fall) {
+  if (rise <= 20 && fall <= 20) return 'fad';
+  if (rise <= 20 && fall > 20) return 'rocket';
+  if (rise > 20 && fall <= 20) return 'flash';
+  return 'legend';
+}
+
+const archetypeColors = {
+  fad: '#ef4444',
+  rocket: '#fbbf24',
+  flash: '#a78bfa',
+  legend: '#818cf8'
+};
+
+const archetypeLabels = {
+  fad: 'FAD',
+  rocket: 'ROCKET',
+  flash: 'FLASH',
+  legend: 'LEGEND'
+};
+
+const archetypeDesc = {
+  fad: 'Fast rise, fast fall',
+  rocket: 'Fast rise, slow fall',
+  flash: 'Slow rise, fast fall',
+  legend: 'Slow rise, slow fall'
+};
+
+function drawChart(points) {
+  d3.select('#chart-wrap svg').remove();
+
+  if (!points.length) return;
+
+  const margin = { top: 40, right: 50, bottom: 70, left: 70 };
+  const w = (document.getElementById('chart-wrap').clientWidth || 800) - margin.left - margin.right;
+  const h = Math.min(580, window.innerHeight * 0.65) - margin.top - margin.bottom;
+
+  const xMax = Math.min(d3.quantile(points.map(p => p.riseYears).sort(d3.ascending), 0.97), 100);
+  const yMax = Math.min(d3.quantile(points.map(p => p.fallYears).sort(d3.ascending), 0.97), 100);
+
+  const xScale = d3.scaleLinear().domain([0, xMax]).range([0, w]).clamp(true);
+  const yScale = d3.scaleLinear().domain([0, yMax]).range([h, 0]).clamp(true);
+  const rScale = d3.scaleSqrt().domain([0, d3.max(points, p => p.peakCount)]).range([2, 16]);
+
+  const medRise = 20, medFall = 20; // quadrant dividers
+
+  const svg = d3.select('#chart-wrap').append('svg')
+    .attr('width', w + margin.left + margin.right)
+    .attr('height', h + margin.top + margin.bottom)
+    .attr('viewBox', `0 0 ${w + margin.left + margin.right} ${h + margin.top + margin.bottom}`);
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  const qx = xScale(medRise), qy = yScale(medFall);
+
+  // Quadrant backgrounds
+  const quadrants = [
+    { x: 0, y: 0, w: qx, h: qy, color: 'rgba(251,191,36,0.06)', label: 'ROCKET', sub: 'Fast rise · slow fall', lx: qx * 0.5, ly: qy * 0.5 },
+    { x: qx, y: 0, w: w - qx, h: qy, color: 'rgba(99,102,241,0.06)', label: 'LEGEND', sub: 'Slow rise · slow fall', lx: qx + (w - qx) * 0.5, ly: qy * 0.5 },
+    { x: 0, y: qy, w: qx, h: h - qy, color: 'rgba(239,68,68,0.07)', label: 'FAD', sub: 'Fast rise · fast fall', lx: qx * 0.5, ly: qy + (h - qy) * 0.5 },
+    { x: qx, y: qy, w: w - qx, h: h - qy, color: 'rgba(167,139,250,0.06)', label: 'FLASH', sub: 'Slow rise · fast fall', lx: qx + (w - qx) * 0.5, ly: qy + (h - qy) * 0.5 },
+  ];
+
+  quadrants.forEach(q => {
+    g.append('rect').attr('x', q.x).attr('y', q.y).attr('width', q.w).attr('height', q.h).attr('fill', q.color);
+    g.append('text').attr('class', 'quadrant-label').attr('x', q.lx).attr('y', q.ly - 10)
+      .attr('text-anchor', 'middle').attr('fill', '#9ca3af').text(q.label);
+    g.append('text').attr('class', 'quadrant-sub').attr('x', q.lx).attr('y', q.ly + 6)
+      .attr('text-anchor', 'middle').attr('fill', '#9ca3af').text(q.sub);
+  });
+
+  // Divider lines
+  g.append('line').attr('x1', qx).attr('x2', qx).attr('y1', 0).attr('y2', h)
+    .attr('stroke', 'rgba(255,255,255,0.1)').attr('stroke-dasharray', '4,4');
+  g.append('line').attr('x1', 0).attr('x2', w).attr('y1', qy).attr('y2', qy)
+    .attr('stroke', 'rgba(255,255,255,0.1)').attr('stroke-dasharray', '4,4');
+
+  // Grid
+  g.append('g').call(d3.axisLeft(yScale).tickSize(-w).ticks(6))
+    .call(ax => {
+      ax.select('.domain').remove();
+      ax.selectAll('.tick line').attr('stroke', 'rgba(255,255,255,0.04)').attr('stroke-dasharray', '2,5');
+      ax.selectAll('.tick text').remove();
+    });
+
+  // Dots
+  const tip = d3.select('#tooltip');
+  const dots = g.selectAll('.dot')
+    .data(points)
+    .join('circle')
+    .attr('class', 'dot')
+    .attr('cx', d => xScale(d.riseYears))
+    .attr('cy', d => yScale(d.fallYears))
+    .attr('r', 0)
+    .attr('fill', d => d.sex === 'F' ? 'var(--female)' : 'var(--male)')
+    .attr('opacity', 0.55)
+    .transition().duration(400).delay((d, i) => i * 1.5)
+    .attr('r', d => rScale(d.peakCount));
+
+  g.selectAll('.dot')
+    .on('mousemove', (event, d) => {
+      const aColor = archetypeColors[d.archetype];
+      tip.style('opacity', 1)
+        .style('left', `${Math.min(event.clientX + 16, window.innerWidth - 270)}px`)
+        .style('top', `${event.clientY - 60}px`)
+        .html(`
+          <div class="name">${d.name} (${d.sex === 'F' ? 'girl' : 'boy'})</div>
+          <div class="detail">
+            Peaked: <span>${d.peakCount.toLocaleString()}</span> in <span>${d.peakYear}</span><br>
+            Years to peak: <span>${d.riseYears} yrs</span><br>
+            Years to half: <span>${d.fallYears} yrs</span>
+          </div>
+          <div class="archetype" style="background:${aColor}22;color:${aColor}">${archetypeLabels[d.archetype]} · ${archetypeDesc[d.archetype]}</div>
+        `);
+    })
+    .on('mouseleave', () => tip.style('opacity', 0))
+    .on('click', (e, d) => window.open(`/name/${d.name.toLowerCase()}`, '_blank'));
+
+  // Axes
+  const xAxisG = g.append('g').attr('transform', `translate(0,${h})`).call(
+    d3.axisBottom(xScale).tickFormat(d => `${d}y`).ticks(6)
+  );
+  xAxisG.select('.domain').attr('stroke', 'rgba(255,255,255,0.1)');
+  xAxisG.selectAll('text').attr('fill', '#6b7280').attr('font-family', 'Space Mono, monospace').attr('font-size', 10);
+  xAxisG.selectAll('line').attr('stroke', 'rgba(255,255,255,0.1)');
+
+  const yAxisG = g.append('g').call(d3.axisLeft(yScale).tickFormat(d => `${d}y`).ticks(6));
+  yAxisG.select('.domain').attr('stroke', 'rgba(255,255,255,0.1)');
+  yAxisG.selectAll('text').attr('fill', '#6b7280').attr('font-family', 'Space Mono, monospace').attr('font-size', 10);
+  yAxisG.selectAll('line').attr('stroke', 'rgba(255,255,255,0.1)');
+
+  // Axis labels
+  g.append('text')
+    .attr('x', w / 2).attr('y', h + 52)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#6b7280')
+    .attr('font-family', 'Space Mono, monospace')
+    .attr('font-size', 10)
+    .attr('letter-spacing', '0.08em')
+    .text('YEARS FROM DEBUT TO PEAK  →  SLOW RISE');
+
+  g.append('text')
+    .attr('transform', 'rotate(-90)')
+    .attr('x', -h / 2).attr('y', -58)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#6b7280')
+    .attr('font-family', 'Space Mono, monospace')
+    .attr('font-size', 10)
+    .attr('letter-spacing', '0.08em')
+    .text('YEARS TO HALF PEAK  →  SLOW FALL');
+
+  // Notable name labels
+  const notable = points.filter(p => p.peakCount > 60000 || ['Mary', 'Jennifer', 'Jessica', 'Karen', 'Brittany', 'John', 'Robert', 'Michael', 'James', 'Ashley', 'Olivia'].includes(p.name));
+  g.selectAll('.dot-label')
+    .data(notable)
+    .join('text')
+    .attr('x', d => xScale(d.riseYears) + rScale(d.peakCount) + 3)
+    .attr('y', d => yScale(d.fallYears) + 4)
+    .attr('fill', '#9ca3af')
+    .attr('font-family', 'Space Grotesk, sans-serif')
+    .attr('font-size', 9)
+    .attr('pointer-events', 'none')
+    .text(d => d.name);
+}
+
+function filterAndDraw() {
+  const pts = activeSex === 'all' ? allPoints : allPoints.filter(p => p.sex === activeSex);
+  drawChart(pts);
+}
+
+document.querySelectorAll('.btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeSex = btn.dataset.sex;
+    filterAndDraw();
+  });
+});
+
+fetch('/api/river')
+  .then(r => r.json())
+  .then(data => {
+    d3.select('#loading').remove();
+    allPoints = computeVelocity(data.names);
+    filterAndDraw();
+  })
+  .catch(() => {
+    document.getElementById('loading').textContent = 'Could not load data.';
+  });
+
+window.addEventListener('resize', filterAndDraw);
+</script>
+</body>
+</html>

@@ -1,21 +1,10 @@
-// GET /api/og/:name  — SVG social card for og:image meta tags.
+// GET /api/og/:name  — PNG social card for og:image meta tags.
 // 1200×630 px editorial card, name + status pill + sparkline + stats.
-//
-// Platform support for SVG og:image is uneven:
-//   ✓ Slack, iMessage, Discord (renders if embedded as <img>)
-//   ✗ Twitter/X, Facebook, LinkedIn, WhatsApp, most chat clients
-//
-// To unbreak previews on the platforms that reject SVG, rasterize this
-// output to PNG. Two viable paths:
-//   1. workers-og (Vercel Satori-based, JSX input) — full template rewrite
-//   2. @resvg/resvg-wasm (SVG -> PNG, ~2.5 MB wasm) — keeps this code intact
-// Until then, the corresponding HTML meta declares image/svg+xml so crawlers
-// don't assume PNG dimensions, and we accept that ~50% of social previews
-// will show no image rather than a broken one.
 
 import { getMeta, getNameSpark, META_KEYS, decodeSpark } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 import type { Status, Sex } from "@nv/shared";
+import { svgToPng } from "./_wasm";
 
 const STATUS_COLOR: Record<Status, string> = {
   rising: "#067d4a",
@@ -153,9 +142,10 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     spark,
   );
 
-  return new Response(svg, {
+  const png = await svgToPng(svg);
+  return new Response(png, {
     headers: {
-      "Content-Type": "image/svg+xml",
+      "Content-Type": "image/png",
       "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
     },
   });

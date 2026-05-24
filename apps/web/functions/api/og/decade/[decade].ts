@@ -1,7 +1,8 @@
-// GET /api/og/decade/:decade  — SVG social card for decade pages.
+// GET /api/og/decade/:decade  — PNG social card for decade pages.
 
 import { getMeta, topByDecade, META_KEYS } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
+import { svgToPng } from "../_wasm";
 
 function escape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -61,9 +62,10 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
   const boys = rows.filter((r) => r.sex === "M").map((r) => r.name);
 
   const svg = buildDecadeOgSvg(decade.label, girls, boys);
-  return new Response(svg, {
+  const png = await svgToPng(svg);
+  return new Response(png, {
     headers: {
-      "Content-Type": "image/svg+xml",
+      "Content-Type": "image/png",
       "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
     },
   });

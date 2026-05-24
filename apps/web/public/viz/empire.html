@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mary's Empire — NobodyNamed</title>
+<meta name="description" content="For 80 years, Mary was #1. Watch the naming monoculture shatter into fragments over 140 years of American history.">
+<link rel="canonical" href="https://nobodynamed.com/viz/empire">
+<meta property="og:title" content="Mary's Empire — NobodyNamed">
+<meta property="og:description" content="For 80 years, Mary was #1. Watch the naming monoculture collapse.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #12121a;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --rule: rgba(255,255,255,0.06);
+    --accent: #818cf8;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.85rem;
+  }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+  nav .brand { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--accent); letter-spacing: 0.1em; margin-right: auto; }
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 600px;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-block {
+    margin: 0 0 0.25rem;
+    overflow-x: auto;
+  }
+  .chart-section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.9rem 2rem 0.4rem;
+  }
+
+  svg { display: block; }
+
+  .bar-rect { cursor: pointer; transition: opacity 0.1s; }
+  .bar-rect:hover { opacity: 1 !important; }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10,10,15,0.97);
+    border: 1px solid rgba(129,140,248,0.4);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    z-index: 1000;
+    max-width: 240px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .tooltip .yr { font-family: 'Space Mono', monospace; font-size: 0.78rem; color: var(--muted); margin-bottom: 3px; }
+  .tooltip .name-row { font-size: 0.98rem; color: var(--text); margin-bottom: 2px; font-weight: 600; }
+  .tooltip .pct { font-family: 'Space Mono', monospace; color: var(--accent); font-size: 0.85rem; }
+
+  .legend-row {
+    padding: 0.75rem 2rem 2.5rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    line-height: 1.6;
+  }
+  .key-events {
+    margin-top: 0.35rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.2rem;
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  .key-events .ev { display: flex; align-items: center; gap: 0.3rem; }
+  .ev-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(129,140,248,0.6); flex-shrink: 0; }
+
+  #loading {
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+  }
+
+  @media (max-width: 640px) {
+    .hero { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">NOBODYNAMED</span>
+  <a href="/viz/">← Visualizations</a>
+  <a href="/">Home</a>
+</nav>
+
+<div class="hero">
+  <div class="kicker">16 / The Hegemony</div>
+  <h1>Mary's Empire</h1>
+  <p class="lede">The #1 name's share of all same-sex births, 1880–2024. Bar height shows how dominant that name was. Watch an 80-year empire collapse into a thousand fragments.</p>
+</div>
+
+<div id="loading">LOADING EMPIRE DATA…</div>
+
+<div id="charts"></div>
+
+<div class="legend-row" id="legend" style="display:none">
+  Bar height = % of all same-sex babies with the #1 name that year · Hover for exact figures · Click to open name page
+  <div class="key-events" id="key-events"></div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// Stable color hash for name → hue
+function nameToHue(name) {
+  let h = 5381;
+  for (let i = 0; i < name.length; i++) h = (h * 33 ^ name.charCodeAt(i)) >>> 0;
+  return h % 360;
+}
+
+function nameColor(name, sex) {
+  const hue = nameToHue(name);
+  if (sex === 'F') return `hsl(${hue},60%,62%)`;
+  return `hsl(${(hue + 180) % 360},50%,55%)`;
+}
+
+const STRIP_H = 160;        // px height of each bar strip
+const LABEL_H = 22;         // px for year tick row at bottom
+const TOTAL_H = STRIP_H + LABEL_H;
+const ANNO_H = 36;          // header area above strip for name labels
+const SVG_H = ANNO_H + TOTAL_H;
+
+const ANNOTATIONS = [
+  { year: 1880, label: 'Mary reigns', sex: 'F' },
+  { year: 1960, label: 'Mary dethroned (Lisa)', sex: 'F' },
+  { year: 1985, label: 'Fragmentation begins', sex: 'F' },
+  { year: 1954, label: 'Robert peak', sex: 'M' },
+  { year: 1985, label: 'Fragmentation begins', sex: 'M' },
+];
+
+const KEY_EVENTS = [
+  { year: 1946, label: 'Baby Boom starts' },
+  { year: 1964, label: 'Baby Boom ends' },
+  { year: 1984, label: 'Fragmentation era' },
+];
+
+function drawStrip(container, years, sex, totalsByYear, top10PerYear, maxPct) {
+  const W = container.clientWidth || (window.innerWidth - 4);
+  const yearW = W / years.length;
+
+  const label = document.createElement('div');
+  label.className = 'chart-section-label';
+  label.textContent = sex === 'F' ? 'GIRLS — #1 name share of all female births' : 'BOYS — #1 name share of all male births';
+  container.appendChild(label);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'chart-block';
+  container.appendChild(wrap);
+
+  const svg = d3.select(wrap).append('svg')
+    .attr('width', W)
+    .attr('height', SVG_H)
+    .style('display', 'block');
+
+  // Background
+  svg.append('rect').attr('width', W).attr('height', SVG_H)
+    .attr('fill', '#0d0d14');
+
+  const g = svg.append('g').attr('transform', `translate(0,${ANNO_H})`);
+
+  // Build data rows
+  const rows = years.map(year => {
+    const top = top10PerYear[year] || [];
+    const entry = top.find(d => d[1] === sex);
+    if (!entry) return null;
+    const [name, , count] = entry;
+    const totals = totalsByYear[year] || {};
+    const total = sex === 'F' ? (totals.F || 1) : (totals.M || 1);
+    const pct = total > 0 ? count / total : 0;
+    return { year, name, count, total, pct };
+  }).filter(Boolean);
+
+  if (!rows.length) return;
+
+  // Scale relative to global max so bars are always readable
+  const yScale = d3.scaleLinear()
+    .domain([0, maxPct])
+    .range([0, STRIP_H]);
+
+  // Draw bars
+  const tip = d3.select('#tooltip');
+
+  rows.forEach((row, i) => {
+    const barH = yScale(row.pct);
+    const x = i * yearW;
+    const y = STRIP_H - barH;
+
+    g.append('rect')
+      .attr('class', 'bar-rect')
+      .attr('x', x)
+      .attr('y', y)
+      .attr('width', Math.max(yearW - 0.4, 0.8))
+      .attr('height', Math.max(barH, 0.5))
+      .attr('fill', nameColor(row.name, sex))
+      .attr('opacity', 0.78)
+      .on('mousemove', (event) => {
+        tip.style('opacity', 1)
+          .style('left', `${Math.min(event.clientX + 14, window.innerWidth - 235)}px`)
+          .style('top', `${event.clientY - 80}px`)
+          .html(`
+            <div class="yr">${row.year}</div>
+            <div class="name-row">${row.name}</div>
+            <div class="pct">${(row.pct * 100).toFixed(2)}% of ${sex === 'F' ? 'girls' : 'boys'}</div>
+          `);
+      })
+      .on('mouseleave', () => tip.style('opacity', 0))
+      .on('click', () => window.open(`/name/${row.name.toLowerCase()}`, '_blank'));
+  });
+
+  // Name run labels above bars
+  let runStart = 0;
+  for (let i = 0; i <= rows.length; i++) {
+    if (i === rows.length || rows[i].name !== rows[runStart].name) {
+      const runLen = i - runStart;
+      const runPx = runLen * yearW;
+      if (runPx > 30) {
+        const cx = (runStart + runLen / 2) * yearW;
+        svg.append('text')
+          .attr('x', cx)
+          .attr('y', ANNO_H - 6)
+          .attr('text-anchor', 'middle')
+          .attr('fill', nameColor(rows[runStart].name, sex))
+          .attr('fill-opacity', 0.85)
+          .attr('font-family', 'Space Grotesk, sans-serif')
+          .attr('font-size', Math.min(runPx / rows[runStart].name.length * 0.9, 13))
+          .attr('font-weight', 600)
+          .attr('pointer-events', 'none')
+          .text(rows[runStart].name);
+      }
+      runStart = i;
+    }
+  }
+
+  // Baseline
+  g.append('line')
+    .attr('x1', 0).attr('x2', W)
+    .attr('y1', STRIP_H).attr('y2', STRIP_H)
+    .attr('stroke', 'rgba(255,255,255,0.1)');
+
+  // Y-axis pct labels
+  [0.25, 0.5, 0.75, 1].forEach(t => {
+    const yy = STRIP_H - yScale(maxPct * t);
+    g.append('line')
+      .attr('x1', 0).attr('x2', W)
+      .attr('y1', yy).attr('y2', yy)
+      .attr('stroke', 'rgba(255,255,255,0.04)');
+    g.append('text')
+      .attr('x', 4).attr('y', yy - 3)
+      .attr('fill', '#4a5568')
+      .attr('font-family', 'Space Mono, monospace')
+      .attr('font-size', 8)
+      .text(`${(maxPct * t * 100).toFixed(0)}%`);
+  });
+
+  // Year ticks
+  const tickYears = d3.range(1880, 2030, 10);
+  tickYears.forEach(yr => {
+    const idx = years.indexOf(String(yr));
+    if (idx < 0) return;
+    const x = idx * yearW + yearW / 2;
+    g.append('line')
+      .attr('x1', x).attr('x2', x)
+      .attr('y1', STRIP_H).attr('y2', STRIP_H + 4)
+      .attr('stroke', 'rgba(255,255,255,0.15)');
+    if (yr % 20 === 0) {
+      g.append('text')
+        .attr('x', x).attr('y', STRIP_H + 14)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#4a5568')
+        .attr('font-family', 'Space Mono, monospace')
+        .attr('font-size', 9)
+        .text(yr);
+    }
+  });
+
+  // Vertical event lines
+  KEY_EVENTS.forEach(ev => {
+    const idx = years.indexOf(String(ev.year));
+    if (idx < 0) return;
+    const x = idx * yearW;
+    g.append('line')
+      .attr('x1', x).attr('x2', x)
+      .attr('y1', 0).attr('y2', STRIP_H)
+      .attr('stroke', 'rgba(129,140,248,0.25)')
+      .attr('stroke-dasharray', '3,3')
+      .attr('pointer-events', 'none');
+  });
+}
+
+fetch('/api/meta')
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('loading').remove();
+
+    const { totalsByYear, top10PerYear } = data;
+    const years = Object.keys(top10PerYear).sort();
+
+    // Compute global max pct across both sexes for a shared scale
+    let maxPct = 0;
+    years.forEach(year => {
+      const top = top10PerYear[year] || [];
+      ['F', 'M'].forEach(sex => {
+        const entry = top.find(d => d[1] === sex);
+        if (!entry) return;
+        const totals = totalsByYear[year] || {};
+        const total = sex === 'F' ? (totals.F || 1) : (totals.M || 1);
+        const pct = total > 0 ? entry[2] / total : 0;
+        if (pct > maxPct) maxPct = pct;
+      });
+    });
+    // Add 10% headroom
+    maxPct = maxPct * 1.1;
+
+    const chartsEl = document.getElementById('charts');
+    drawStrip(chartsEl, years, 'F', totalsByYear, top10PerYear, maxPct);
+    drawStrip(chartsEl, years, 'M', totalsByYear, top10PerYear, maxPct);
+
+    // Key events legend
+    const evContainer = document.getElementById('key-events');
+    KEY_EVENTS.forEach(ev => {
+      const div = document.createElement('div');
+      div.className = 'ev';
+      div.innerHTML = `<div class="ev-dot"></div><span>${ev.year}: ${ev.label}</span>`;
+      evContainer.appendChild(div);
+    });
+    document.getElementById('legend').style.display = 'block';
+  })
+  .catch(err => {
+    document.getElementById('loading').textContent = `Could not load data: ${err.message}`;
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Name Surge — NobodyNamed</title>
+<meta name="description" content="The biggest single-decade explosions in naming history. Jennifer added 218,000 girls in the 1960s. Aiden added 90,000 boys in the 2000s.">
+<link rel="canonical" href="https://nobodynamed.com/viz/surge">
+<meta property="og:title" content="The Name Surge — NobodyNamed">
+<meta property="og:description" content="The decades when names exploded. Quantifying the contagion of name trends.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #12121a;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --rule: rgba(255,255,255,0.06);
+    --female: #f472b6;
+    --male: #60a5fa;
+    --accent: #fbbf24;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.85rem;
+  }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--text); }
+  nav .brand { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--accent); letter-spacing: 0.1em; margin-right: auto; }
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 600px;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  .controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0 2rem;
+    max-width: 900px;
+    margin: 0 auto 1.5rem;
+    align-items: center;
+  }
+  .decade-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-right: 0.5rem;
+  }
+  .btn {
+    padding: 0.3rem 0.85rem;
+    border-radius: 20px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+
+  #chart-wrap {
+    padding: 0 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .bar-chart-svg { display: block; width: 100%; }
+
+  .bar-row { cursor: pointer; }
+  .bar-row:hover .bar-fill { filter: brightness(1.25); }
+  .bar-row:hover .bar-label { fill: var(--text) !important; }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10,10,15,0.97);
+    border: 1px solid rgba(251,191,36,0.4);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    z-index: 1000;
+    max-width: 260px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .tooltip .name { font-weight: 700; font-size: 1.05rem; color: var(--text); margin-bottom: 5px; }
+  .tooltip .detail { color: var(--muted); font-size: 0.82rem; line-height: 1.6; }
+  .tooltip .detail span { color: var(--accent); font-family: 'Space Mono', monospace; }
+
+  #loading {
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+  }
+
+  .legend-row {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    padding: 1rem 2rem 3rem;
+    max-width: 900px;
+    margin: 0 auto;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 0.4rem; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 2px; }
+
+  @media (max-width: 640px) {
+    .hero, .controls, #chart-wrap { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="brand">NOBODYNAMED</span>
+  <a href="/viz/">← Visualizations</a>
+  <a href="/">Home</a>
+</nav>
+
+<div class="hero">
+  <div class="kicker">17 / The Contagion</div>
+  <h1>The Name Surge</h1>
+  <p class="lede">The biggest single-decade explosions in naming history. Bar length = how many more babies received that name compared to the previous decade.</p>
+</div>
+
+<div class="controls">
+  <span class="decade-label">DECADE:</span>
+  <button class="btn" data-decade="all">All</button>
+</div>
+
+<div id="chart-wrap">
+  <div id="loading">COMPUTING SURGE VECTORS…</div>
+</div>
+
+<div class="legend-row">
+  <div class="legend-item"><div class="legend-swatch" style="background:var(--female)"></div> Girls' names</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:var(--male)"></div> Boys' names</div>
+  <span>Bar = decade-over-decade gain in total births · Click a name to explore it</span>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+let cachedSurges = null;
+let selectedDecade = 'all';
+
+function computeSurges(names) {
+  const surges = [];
+  const decades = d3.range(1890, 2030, 10);
+
+  names.forEach(row => {
+    const series = row.series;
+    decades.forEach(decade => {
+      const prev = d3.sum(d3.range(decade - 10, decade).map(y => series[y] || 0));
+      const curr = d3.sum(d3.range(decade, decade + 10).map(y => series[y] || 0));
+      const gain = curr - prev;
+      if (gain > 2000 && prev > 0) {
+        surges.push({
+          name: row.name,
+          sex: row.sex,
+          decade,
+          gain,
+          prev,
+          curr,
+          peakYear: row.peakYear,
+          peakCount: row.peakCount
+        });
+      }
+    });
+  });
+
+  return surges.sort((a, b) => b.gain - a.gain);
+}
+
+function drawChart(surges, decade) {
+  d3.select('#chart-wrap svg').remove();
+
+  let filtered = decade === 'all' ? surges : surges.filter(s => s.decade === +decade);
+  // Take top 25 surges
+  filtered = filtered.slice(0, 25);
+
+  if (!filtered.length) {
+    d3.select('#chart-wrap').append('p')
+      .style('color', 'var(--muted)').style('padding', '2rem 0')
+      .text('No surges found for this selection.');
+    return;
+  }
+
+  const margin = { top: 10, right: 140, bottom: 40, left: 130 };
+  const w = (document.getElementById('chart-wrap').clientWidth || 700) - margin.left - margin.right;
+  const barH = 28;
+  const gap = 5;
+  const h = filtered.length * (barH + gap) + margin.top + margin.bottom;
+
+  const xMax = d3.max(filtered, d => d.gain);
+  const xScale = d3.scaleLinear().domain([0, xMax]).range([0, w]);
+
+  const svg = d3.select('#chart-wrap').append('svg')
+    .attr('class', 'bar-chart-svg')
+    .attr('width', w + margin.left + margin.right)
+    .attr('height', h)
+    .attr('viewBox', `0 0 ${w + margin.left + margin.right} ${h}`);
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  // Grid
+  const xTicks = xScale.ticks(5);
+  g.selectAll('.vgrid')
+    .data(xTicks)
+    .join('line')
+    .attr('x1', d => xScale(d)).attr('x2', d => xScale(d))
+    .attr('y1', 0).attr('y2', h - margin.top - margin.bottom)
+    .attr('stroke', 'rgba(255,255,255,0.05)').attr('stroke-dasharray', '3,4');
+
+  // Bars
+  const rows = g.selectAll('.bar-row')
+    .data(filtered)
+    .join('g')
+    .attr('class', 'bar-row')
+    .attr('transform', (d, i) => `translate(0,${i * (barH + gap)})`);
+
+  // Bar
+  rows.append('rect')
+    .attr('class', 'bar-fill')
+    .attr('x', 0).attr('y', 0)
+    .attr('height', barH)
+    .attr('width', 0)
+    .attr('rx', 3)
+    .attr('fill', d => d.sex === 'F' ? 'var(--female)' : 'var(--male)')
+    .attr('opacity', 0.75)
+    .transition().duration(500)
+    .delay((d, i) => i * 20)
+    .attr('width', d => xScale(d.gain));
+
+  // Name label
+  rows.append('text')
+    .attr('class', 'bar-label')
+    .attr('x', -8)
+    .attr('y', barH / 2 + 1)
+    .attr('text-anchor', 'end')
+    .attr('dominant-baseline', 'middle')
+    .attr('fill', '#9ca3af')
+    .attr('font-family', 'Space Grotesk, sans-serif')
+    .attr('font-size', 13)
+    .attr('font-weight', 500)
+    .text(d => d.name);
+
+  // Decade badge
+  rows.append('text')
+    .attr('x', d => xScale(d.gain) + 8)
+    .attr('y', barH / 2 + 1)
+    .attr('dominant-baseline', 'middle')
+    .attr('fill', '#6b7280')
+    .attr('font-family', 'Space Mono, monospace')
+    .attr('font-size', 10)
+    .text(d => `+${(d.gain / 1000).toFixed(0)}k in ${d.decade}s`);
+
+  // Hover
+  rows
+    .on('mousemove', (event, d) => {
+      d3.select('#tooltip')
+        .style('opacity', 1)
+        .style('left', `${Math.min(event.clientX + 16, window.innerWidth - 280)}px`)
+        .style('top', `${event.clientY - 60}px`)
+        .html(`
+          <div class="name">${d.name} (${d.sex === 'F' ? 'girl' : 'boy'})</div>
+          <div class="detail">
+            Decade: <span>${d.decade}s</span><br>
+            Gain: <span>+${d.gain.toLocaleString()} babies</span><br>
+            Previous decade: <span>${d.prev.toLocaleString()}</span><br>
+            This decade: <span>${d.curr.toLocaleString()}</span><br>
+            Peak: <span>${d.peakCount.toLocaleString()}</span> in <span>${d.peakYear}</span>
+          </div>
+        `);
+    })
+    .on('mouseleave', () => d3.select('#tooltip').style('opacity', 0))
+    .on('click', (e, d) => window.open(`/name/${d.name.toLowerCase()}`, '_blank'));
+
+  // X axis
+  g.append('g')
+    .attr('transform', `translate(0,${h - margin.top - margin.bottom})`)
+    .call(d3.axisBottom(xScale)
+      .tickFormat(d => `+${(d/1000).toFixed(0)}k`)
+      .tickSize(4))
+    .call(ax => {
+      ax.select('.domain').attr('stroke', 'rgba(255,255,255,0.1)');
+      ax.selectAll('text').attr('fill', '#6b7280').attr('font-family', 'Space Mono, monospace').attr('font-size', 10);
+      ax.selectAll('line').attr('stroke', 'rgba(255,255,255,0.1)');
+    });
+}
+
+function buildDecadeButtons(surges) {
+  const decades = [...new Set(surges.map(s => s.decade))].sort();
+  const controls = document.querySelector('.controls');
+
+  decades.forEach(decade => {
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.dataset.decade = decade;
+    btn.textContent = `${decade}s`;
+    controls.appendChild(btn);
+  });
+
+  controls.querySelectorAll('.btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      controls.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedDecade = btn.dataset.decade;
+      drawChart(surges, selectedDecade);
+    });
+  });
+
+  // Set 'All' active by default
+  controls.querySelector('[data-decade="all"]').classList.add('active');
+}
+
+fetch('/api/river')
+  .then(r => r.json())
+  .then(data => {
+    d3.select('#loading').remove();
+    cachedSurges = computeSurges(data.names);
+    buildDecadeButtons(cachedSurges);
+    drawChart(cachedSurges, 'all');
+  })
+  .catch(() => {
+    document.getElementById('loading').textContent = 'Could not load data.';
+  });
+
+window.addEventListener('resize', () => {
+  if (cachedSurges) drawChart(cachedSurges, selectedDecade);
+});
+</script>
+</body>
+</html>
