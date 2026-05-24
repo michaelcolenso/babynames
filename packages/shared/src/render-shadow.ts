@@ -36,7 +36,7 @@ function narrative(
   const sPeak = shadow.row.peak_year;
   const iGen = generationForYear(iPeak);
   const sGen = generationForYear(sPeak);
-  const gap = match.shadowYear;
+  const gap = match.birthYear - match.shadowYear;
 
   if (input.row.status === "extinct" && shadow.row.status === "extinct") {
     return `Both ${iName} and ${sName} have returned to the archive. They peaked a century apart — ${iName} in the ${iGen} world, ${sName} in the ${sGen} era — yet each was, for its moment, exactly as common as the other. Ghosts at the same frequency.`;
@@ -161,7 +161,7 @@ export function renderShadowPage(data: ShadowPageData): string {
   <main>
     <p class="eyebrow">Counterfactual</p>
     <h1>The Parallel Lives of <em>${escape(i.name)}</em> and <em>${escape(s.name)}</em></h1>
-    <p class="lede">In ${fmt(match.inputCount)} ${iSexLabel}, ${escape(i.name)} found its level. ${match.shadowYear} years earlier, ${escape(s.name)} occupied that same statistical address.</p>
+    <p class="lede">In ${fmt(match.inputCount)} ${iSexLabel}, ${escape(i.name)} found its level. ${match.birthYear - match.shadowYear} years earlier, ${escape(s.name)} occupied that same statistical address.</p>
 
     <div class="shadow-grid">
       <div class="shadow-card">

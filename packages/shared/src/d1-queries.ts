@@ -190,6 +190,7 @@ export interface ShadowMatch {
   shadowCount: number;
   shadowSex: Sex;
   diff: number;
+  birthYear: number;
   shadowYear: number;
 }
 
@@ -258,6 +259,7 @@ export async function getShadowName(
     shadowCount: shadowRow.shadow_count,
     shadowSex: shadowRow.shadow_sex,
     diff: shadowRow.diff,
+    birthYear,
     shadowYear,
   };
 }
