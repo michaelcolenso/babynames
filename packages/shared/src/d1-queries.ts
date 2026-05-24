@@ -180,6 +180,90 @@ export async function getNameWithSeries(
   return [...grouped.values()];
 }
 
+export interface ShadowMatch {
+  inputName: string;
+  inputNameLower: string;
+  inputSex: Sex;
+  inputCount: number;
+  shadowName: string;
+  shadowNameLower: string;
+  shadowCount: number;
+  shadowSex: Sex;
+  diff: number;
+  shadowYear: number;
+}
+
+/**
+ * Find the "shadow name" — the name in `shadowYear` whose birth count is
+ * closest to `nameLower`'s count in `birthYear`, restricted to the same sex.
+ * Returns null if the input name has no data for the birth year.
+ */
+export async function getShadowName(
+  db: D1Database,
+  nameLower: string,
+  birthYear: number,
+  shadowYear: number,
+): Promise<ShadowMatch | null> {
+  const r = await db
+    .prepare(
+      `WITH input AS (
+         SELECT n.id AS input_id,
+                n.name AS input_name,
+                n.name_lower AS input_lower,
+                n.sex,
+                ny.count AS input_count
+           FROM names n
+           JOIN name_years ny ON ny.name_id = n.id
+          WHERE n.name_lower = ?1
+            AND ny.year = ?2
+       )
+       SELECT n.name AS shadow_name,
+              n.name_lower AS shadow_lower,
+              n.sex AS shadow_sex,
+              ny.count AS shadow_count,
+              input.input_name,
+              input.input_lower,
+              input.sex AS input_sex,
+              input.input_count,
+              ABS(ny.count - input.input_count) AS diff
+         FROM names n
+         JOIN name_years ny ON ny.name_id = n.id
+         CROSS JOIN input
+        WHERE ny.year = ?3
+          AND n.sex = input.sex
+          AND n.name_lower <> input.input_lower
+        ORDER BY diff ASC, n.total_count DESC
+        LIMIT 1`,
+    )
+    .bind(nameLower, birthYear, shadowYear)
+    .first<{
+      shadow_name: string;
+      shadow_lower: string;
+      shadow_sex: Sex;
+      shadow_count: number;
+      input_name: string;
+      input_lower: string;
+      input_sex: Sex;
+      input_count: number;
+      diff: number;
+    }>();
+
+  if (!r) return null;
+
+  return {
+    inputName: r.input_name,
+    inputNameLower: r.input_lower,
+    inputSex: r.input_sex,
+    inputCount: r.input_count,
+    shadowName: r.shadow_name,
+    shadowNameLower: r.shadow_lower,
+    shadowCount: r.shadow_count,
+    shadowSex: r.shadow_sex,
+    diff: r.diff,
+    shadowYear,
+  };
+}
+
 export async function listRelatedNames(
   db: D1Database,
   currentNameLower: string,

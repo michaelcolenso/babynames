@@ -491,6 +491,7 @@ function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   links.push(`<a href="/names/${encodeURIComponent(record.name.charAt(0).toLowerCase())}/">Names starting with ${escape(record.name.charAt(0).toUpperCase())}</a>`);
   links.push(`<a href="/names/ending/${encodeURIComponent(record.name.charAt(record.name.length - 1).toLowerCase())}/">Names ending in ${escape(record.name.charAt(record.name.length - 1).toUpperCase())}</a>`);
   links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/">Names like ${escape(record.name)}</a>`);
+  links.push(`<a href="/shadow/${encodeURIComponent(record.name)}/${record.yM}/">Meet your shadow</a>`);
 
   return `<nav class="report-links" aria-label="Explore more name data">${links.join("")}</nav>`;
 }

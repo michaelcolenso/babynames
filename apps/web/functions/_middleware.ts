@@ -86,6 +86,8 @@ function canonicalizePath(pathname: string): string | null {
   if (/^\/name\/[^/]+$/.test(pathname)) return `${pathname}/`;
   if (/^\/name\/[^/]+\/twin$/.test(pathname)) return `${pathname}/`;
 
+  if (/^\/shadow\/[^/]+\/\d{4}$/.test(pathname)) return `${pathname}/`;
+
   if (/^\/names\/[A-Z]\/?$/.test(pathname)) {
     return ensureTrailingSlash(pathname.toLowerCase());
   }
