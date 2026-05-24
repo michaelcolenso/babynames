@@ -95,14 +95,17 @@ ${chartPanel(names[1]!)}
 
 ${chartPanel(names[2]!)}
 
-<h2>Jkwon (2004) and Bethzy (2006)</h2>
+<h2>Jkwon (2004): One Song, One Name</h2>
 
-<p>J-Kwon’s “Tipsy” was the breakout track of early 2004 — 100 baby boys were named Jkwon that year. By 2008, the count had fallen to 7. A similarly steep shape appears for Bethzy: 11 girls in 2005, then 301 in 2006, then 28 in 2007. No widely known cultural event explains the Bethzy spike. The name spread through some channel that left no obvious record. If you have a theory, <a href="/about">reach out</a>.</p>
+<p>J-Kwon’s “Tipsy” was the breakout track of early 2004 — an 18-year-old rapper from St. Louis who hit #2 on the Billboard Hot 100 before most people knew his name. That year, 100 baby boys were named Jkwon. By 2008, the count had fallen to 7. The career didn’t sustain itself, and neither did the name.</p>
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem">
 ${chartPanel(names[3]!)}
+
+<h2>Bethzy (2006): The Unsolved One</h2>
+
+<p>In 2005, 11 girls were named Bethzy. In 2006, 301 were. In 2007, 28. The spike is as sharp as any in this post — sharper than Jkwon, nearly as steep as Kunta — but there is no obvious cause. No film, no television show, no athlete or musician named Bethzy left a trace in any record that would explain 301 babies in a single year. The name has a phonetic structure common in Latin American communities, which may point to a regional or community-level spread that national media didn’t capture. But that’s speculation. The SSA data is unambiguous. The cause is not. If you know something, <a href=”/about”>reach out</a>.</p>
+
 ${chartPanel(names[4]!)}
-</div>
 
 <h2>Neymar: The Survivor</h2>
 
