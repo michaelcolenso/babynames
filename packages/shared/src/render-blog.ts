@@ -21,13 +21,18 @@ function resolveOgImage(ogImage: string | null, origin: string): string {
  * as names in D1, and wrap them in links to their dossier pages.
  * Skips words already inside anchor tags by only matching between `>` and `<`.
  */
+const STOPWORDS = new Set([
+  "a","about","above","across","after","against","along","among","an","and","are","around","as","at","be","been","being","beneath","beside","between","beyond","both","but","by","can","cannot","could","did","do","does","doing","done","down","during","each","every","few","for","from","further","had","has","have","he","her","here","hers","him","his","how","i","if","in","inside","into","is","it","its","just","many","may","me","might","more","most","much","must","my","near","no","nor","not","now","of","off","on","once","only","onto","or","other","our","ours","out","outside","over","own","same","shall","she","should","since","so","some","such","than","that","the","their","theirs","them","then","there","these","they","this","those","through","throughout","till","to","too","toward","under","until","up","upon","us","very","was","we","were","what","when","where","which","while","who","whom","whose","why","will","with","within","without","would",
+]);
+
 export async function linkifyBlogBody(html: string, db: D1Database): Promise<string> {
   const candidates = new Set<string>();
   html.replace(/>([^<]*?)</g, (_match, text: string) => {
     const words = text.match(/\b[A-Z][a-zA-Z]+\b/g);
     if (words) {
       for (const w of words) {
-        if (w.length >= 2) candidates.add(w.toLowerCase());
+        const lower = w.toLowerCase();
+        if (w.length >= 2 && !STOPWORDS.has(lower)) candidates.add(lower);
       }
     }
     return _match;
@@ -52,8 +57,6 @@ export async function linkifyBlogBody(html: string, db: D1Database): Promise<str
   if (names.size === 0) return html;
 
   return html.replace(/>([^<]*?)</g, (match, text: string) => {
-    // Build a regex that matches any of the valid names (case-insensitive,
-    // but preserves original casing in the replacement).
     const linked = text.replace(/\b([A-Z][a-zA-Z]+)\b/g, (wordMatch: string, word: string) => {
       if (names.has(word.toLowerCase())) {
         return `<a href="/name/${encodeURIComponent(word)}/">${word}</a>`;
