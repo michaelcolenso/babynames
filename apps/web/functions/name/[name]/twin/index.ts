@@ -19,7 +19,8 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   if (typeof raw !== "string" || !raw) {
     return new Response("missing name", { status: 400 });
   }
-  const nameLower = decodeURIComponent(raw).toLowerCase();
+  const decoded = decodeURIComponent(raw);
+  const nameLower = decoded.toLowerCase();
 
   const url = new URL(ctx.request.url);
   const sexParam = (url.searchParams.get("sex") ?? "").trim().toUpperCase();
@@ -35,6 +36,12 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   }
 
   const targetSex = sexParam === "M" || sexParam === "F" ? sexParam : targetRow.sex;
+  if (targetRow.name !== decoded) {
+    const redirectUrl = new URL(`/name/${encodeURIComponent(targetRow.name)}/twin/`, ctx.request.url);
+    if (sexParam === "M" || sexParam === "F") redirectUrl.searchParams.set("sex", targetSex);
+    return Response.redirect(redirectUrl.toString(), 301);
+  }
+
   const targetSpark = targetRow.spark_blob
     ? decodeSpark(targetRow.spark_blob)
     : new Array(60).fill(0);

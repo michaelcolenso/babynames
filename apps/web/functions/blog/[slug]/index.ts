@@ -54,8 +54,7 @@ function renderNotFound(slug: string): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Post not found — Namecalling</title>
-<link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
+<link rel="stylesheet" href="/assets/style.css">
 </head><body><div class="page">
 <header class="site"><a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a></header>
 <main>

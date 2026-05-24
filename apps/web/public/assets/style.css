@@ -88,6 +88,7 @@ header.site .brand {
 header.site .brand-logo {
   display: block;
   width: clamp(160px, 20vw, 210px);
+  aspect-ratio: 240 / 44;
   height: auto;
 }
 header.site nav {

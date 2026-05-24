@@ -6,6 +6,24 @@
 
 import type { PagesFunction } from "@cloudflare/workers-types";
 
+const CANONICAL_PAGES = new Set([
+  "/about",
+  "/classic-names",
+  "/comeback",
+  "/comebacks",
+  "/endangered",
+  "/extinct",
+  "/future-grandparent-names",
+  "/gen-z-names",
+  "/millennial-names",
+  "/rising",
+  "/viz/explore",
+  "/viz/gallery",
+  "/viz/kehlani-effect",
+  "/viz/nobody-named-2025",
+  "/year",
+]);
+
 export const onRequest: PagesFunction = async (ctx) => {
   const url = new URL(ctx.request.url);
   const legacyName = url.pathname === "/" ? url.searchParams.get("name")?.trim() : "";
@@ -14,6 +32,15 @@ export const onRequest: PagesFunction = async (ctx) => {
     const sex = url.searchParams.get("sex");
     if (sex) target.searchParams.set("sex", sex);
     return Response.redirect(target.toString(), 301);
+  }
+
+  if (ctx.request.method === "GET" || ctx.request.method === "HEAD") {
+    const canonicalPath = canonicalizePath(url.pathname);
+    if (canonicalPath && canonicalPath !== url.pathname) {
+      const target = new URL(canonicalPath, url.origin);
+      target.search = url.search;
+      return Response.redirect(target.toString(), 301);
+    }
   }
 
   if (url.pathname === "/sitemap.xml") {
@@ -39,3 +66,39 @@ export const onRequest: PagesFunction = async (ctx) => {
   }
   return res;
 };
+
+function canonicalizePath(pathname: string): string | null {
+  if (pathname === "/" || pathname === "/sitemap.xml") return null;
+  if (pathname === "/viz") return "/viz/";
+
+  const eraMatch = /^\/era\/(\d{4})\/?$/.exec(pathname);
+  if (eraMatch) return `/year/${eraMatch[1]}/`;
+
+  if (pathname.endsWith("/") && CANONICAL_PAGES.has(pathname.slice(0, -1))) {
+    return pathname.slice(0, -1);
+  }
+
+  if (pathname === "/blog") return "/blog/";
+  if (/^\/blog\/[^/]+$/.test(pathname)) return `${pathname}/`;
+
+  if (/^\/year\/\d{4}$/.test(pathname)) return `${pathname}/`;
+
+  if (/^\/name\/[^/]+$/.test(pathname)) return `${pathname}/`;
+  if (/^\/name\/[^/]+\/twin$/.test(pathname)) return `${pathname}/`;
+
+  if (/^\/names\/[A-Z]\/?$/.test(pathname)) {
+    return ensureTrailingSlash(pathname.toLowerCase());
+  }
+  if (/^\/names\/[a-z]$/.test(pathname)) return `${pathname}/`;
+  if (/^\/names\/(?:18|19|20)\d{2}s$/.test(pathname)) return `${pathname}/`;
+  if (/^\/names\/ending\/[A-Z]\/?$/.test(pathname)) {
+    return ensureTrailingSlash(pathname.toLowerCase());
+  }
+  if (/^\/names\/ending\/[a-z]$/.test(pathname)) return `${pathname}/`;
+
+  return null;
+}
+
+function ensureTrailingSlash(pathname: string): string {
+  return pathname.endsWith("/") ? pathname : `${pathname}/`;
+}

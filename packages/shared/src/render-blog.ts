@@ -144,8 +144,7 @@ export function renderBlogIndex(
 <meta name="twitter:image" content="${origin}/api/og/default">
 <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
+<link rel="stylesheet" href="/assets/style.css">
 <script type="application/ld+json">${structuredData}</script>
 </head>
 <body>
@@ -210,8 +209,7 @@ export function renderBlogPost(
 ${postMetaTags(post, opts.canonical, origin)}
 <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
+<link rel="stylesheet" href="/assets/style.css">
 <script type="application/ld+json">${structuredData}</script>
 </head>
 <body>

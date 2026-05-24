@@ -103,8 +103,7 @@ const adminFormHtml = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Namecalling Admin — NobodyNamed</title>
-<link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
+<link rel="stylesheet" href="/assets/style.css">
 <style>
   .admin-form { max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
   .admin-form label { display: block; margin: 1rem 0 0.25rem; font-family: var(--sans); font-size: 0.85rem; color: var(--muted); }
