@@ -204,62 +204,60 @@ export async function getShadowName(
   birthYear: number,
   shadowYear: number,
 ): Promise<ShadowMatch | null> {
-  const r = await db
+  // Step 1: get input name's count in the birth year.
+  const inputRow = await db
     .prepare(
-      `WITH input AS (
-         SELECT n.id AS input_id,
-                n.name AS input_name,
-                n.name_lower AS input_lower,
-                n.sex,
-                ny.count AS input_count
-           FROM names n
-           JOIN name_years ny ON ny.name_id = n.id
-          WHERE n.name_lower = ?1
-            AND ny.year = ?2
-       )
-       SELECT n.name AS shadow_name,
-              n.name_lower AS shadow_lower,
-              n.sex AS shadow_sex,
-              ny.count AS shadow_count,
-              input.input_name,
-              input.input_lower,
-              input.sex AS input_sex,
-              input.input_count,
-              ABS(ny.count - input.input_count) AS diff
+      `SELECT n.name AS input_name, n.name_lower AS input_lower, n.sex AS input_sex, ny.count AS input_count
          FROM names n
          JOIN name_years ny ON ny.name_id = n.id
-         CROSS JOIN input
-        WHERE ny.year = ?3
-          AND n.sex = input.sex
-          AND n.name_lower <> input.input_lower
+        WHERE n.name_lower = ?1
+          AND ny.year = ?2
+        LIMIT 1`,
+    )
+    .bind(nameLower, birthYear)
+    .first<{
+      input_name: string;
+      input_lower: string;
+      input_sex: Sex;
+      input_count: number;
+    }>();
+
+  if (!inputRow) return null;
+
+  // Step 2: find the name in shadowYear with the closest count, same sex.
+  const shadowRow = await db
+    .prepare(
+      `SELECT n.name AS shadow_name, n.name_lower AS shadow_lower, n.sex AS shadow_sex, ny.count AS shadow_count,
+              ABS(ny.count - ?1) AS diff
+         FROM names n
+         JOIN name_years ny ON ny.name_id = n.id
+        WHERE ny.year = ?2
+          AND n.sex = ?3
+          AND n.name_lower <> ?4
         ORDER BY diff ASC, n.total_count DESC
         LIMIT 1`,
     )
-    .bind(nameLower, birthYear, shadowYear)
+    .bind(inputRow.input_count, shadowYear, inputRow.input_sex, inputRow.input_lower)
     .first<{
       shadow_name: string;
       shadow_lower: string;
       shadow_sex: Sex;
       shadow_count: number;
-      input_name: string;
-      input_lower: string;
-      input_sex: Sex;
-      input_count: number;
       diff: number;
     }>();
 
-  if (!r) return null;
+  if (!shadowRow) return null;
 
   return {
-    inputName: r.input_name,
-    inputNameLower: r.input_lower,
-    inputSex: r.input_sex,
-    inputCount: r.input_count,
-    shadowName: r.shadow_name,
-    shadowNameLower: r.shadow_lower,
-    shadowCount: r.shadow_count,
-    shadowSex: r.shadow_sex,
-    diff: r.diff,
+    inputName: inputRow.input_name,
+    inputNameLower: inputRow.input_lower,
+    inputSex: inputRow.input_sex,
+    inputCount: inputRow.input_count,
+    shadowName: shadowRow.shadow_name,
+    shadowNameLower: shadowRow.shadow_lower,
+    shadowCount: shadowRow.shadow_count,
+    shadowSex: shadowRow.shadow_sex,
+    diff: shadowRow.diff,
     shadowYear,
   };
 }
