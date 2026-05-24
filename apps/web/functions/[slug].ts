@@ -4,7 +4,7 @@ import type { PagesFunction } from "@cloudflare/workers-types";
 
 const PAGES: Record<string, { title: string; eyebrow: string; lede: string; names: string[]; body: string; table?: string }> = {
   comebacks: {
-    title: "Comeback names — NobodyNamed",
+    title: "Comeback Baby Names | NobodyNamed",
     eyebrow: "Recovered names",
     lede: "Names that fell out of daily use, waited in the archive, and returned as taste, nostalgia, or status.",
     names: ["Theodore", "Hazel", "Eleanor", "Violet", "Oliver", "Emma"],
@@ -12,28 +12,28 @@ const PAGES: Record<string, { title: string; eyebrow: string; lede: string; name
     table: "comeback",
   },
   "millennial-names": {
-    title: "Millennial names — NobodyNamed",
+    title: "Millennial Baby Names | NobodyNamed",
     eyebrow: "Generation dossier",
     lede: "The classroom names of the 1980s and 1990s: high-volume, unmistakable, and now aging into cultural memory.",
     names: ["Michael", "Jessica", "Ashley", "Christopher", "Amanda", "Matthew"],
     body: "Millennial names are defined by saturation. Many were not merely popular; they were ambient facts of school rosters and suburban life.",
   },
   "gen-z-names": {
-    title: "Gen Z names — NobodyNamed",
+    title: "Gen Z Baby Names | NobodyNamed",
     eyebrow: "Generation dossier",
     lede: "The names that rose through the late 1990s and 2000s as naming culture became faster, more fragmented, and more image-conscious.",
     names: ["Madison", "Ethan", "Ava", "Aiden", "Isabella", "Jayden"],
     body: "Gen Z naming patterns show sharper fashion cycles, more spelling variation, and a faster path from novelty to overexposure.",
   },
   "classic-names": {
-    title: "Classic names — NobodyNamed",
+    title: "Classic Baby Names | NobodyNamed",
     eyebrow: "Durability file",
     lede: "Names that resisted the sharpest boom-and-bust cycles and remained legible across American generations.",
     names: ["James", "Elizabeth", "William", "Anna", "John", "Mary"],
     body: "Classic names derive power from repetition. They do not need a single peak moment because they carry institutional memory across eras.",
   },
   "future-grandparent-names": {
-    title: "Future grandparent names — NobodyNamed",
+    title: "Future Grandparent Names | NobodyNamed",
     eyebrow: "Forecast by memory",
     lede: "The names that may sound young now, then ordinary, then old, then charmingly available again.",
     names: ["Harper", "Luna", "Mason", "Ava", "Liam", "Olivia"],
@@ -51,7 +51,16 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   if (slug.includes(".")) return ctx.env.ASSETS.fetch(ctx.request);
   // Serve static HTML pages directly — avoids redirect loops with Cloudflare Pages Pretty URLs.
   const staticPages = new Set(["extinct", "rising", "endangered", "comeback", "year", "about"]);
-  if (staticPages.has(slug)) return ctx.env.ASSETS.fetch(new URL(`/${slug}.html`, ctx.request.url));
+  if (staticPages.has(slug)) {
+    const assetRes = await ctx.env.ASSETS.fetch(new URL(`/${slug}.html`, ctx.request.url));
+    const headers = new Headers(assetRes.headers);
+    headers.set("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=604800");
+    return new Response(assetRes.body, {
+      status: assetRes.status,
+      statusText: assetRes.statusText,
+      headers,
+    });
+  }
 
   const page = PAGES[slug];
   if (!page) return new Response("not found", { status: 404 });
@@ -64,7 +73,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
 
   const reqUrl = new URL(ctx.request.url);
   const pageCanonical = `${reqUrl.origin}/${slug}`;
-  const pageTitle = page.title.replace(" — NobodyNamed", "");
+  const pageTitle = page.title.replace(" — NobodyNamed", "").replace(" | NobodyNamed", "");
   const ogImageUrl = `${reqUrl.origin}/api/og/default`;
   const structuredData = JSON.stringify([
     {

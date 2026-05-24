@@ -2,7 +2,7 @@
 //
 // Single blog post page. Hits D1 by slug, renders full HTML.
 
-import { getBlogPost, renderBlogPost } from "@nv/shared";
+import { getBlogPost, linkifyBlogBody, renderBlogPost } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
@@ -26,7 +26,8 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   const url = new URL(ctx.request.url);
   const canonical = `${url.origin}/blog/${encodeURIComponent(slug)}/`;
 
-  const html = renderBlogPost(post, { canonical });
+  const linkedBody = await linkifyBlogBody(post.bodyHtml, ctx.env.DB);
+  const html = renderBlogPost({ ...post, bodyHtml: linkedBody }, { canonical });
 
   return new Response(html, {
     headers: {

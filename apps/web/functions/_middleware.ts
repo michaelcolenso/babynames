@@ -10,7 +10,6 @@ const CANONICAL_PAGES = new Set([
   "/about",
   "/classic-names",
   "/comeback",
-  "/comebacks",
   "/endangered",
   "/extinct",
   "/future-grandparent-names",
@@ -70,6 +69,7 @@ export const onRequest: PagesFunction = async (ctx) => {
 function canonicalizePath(pathname: string): string | null {
   if (pathname === "/" || pathname === "/sitemap.xml") return null;
   if (pathname === "/viz") return "/viz/";
+  if (pathname === "/comebacks" || pathname === "/comebacks/") return "/comeback";
 
   const eraMatch = /^\/era\/(\d{4})\/?$/.exec(pathname);
   if (eraMatch) return `/year/${eraMatch[1]}/`;

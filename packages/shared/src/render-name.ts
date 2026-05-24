@@ -349,8 +349,7 @@ export function renderFullPage(
   <footer class="site">
     <div>
       <div>nobodynamed is a small data project about American first names.</div>
-      <!-- TODO: compute footer counts from D1 once. -->
-      <div class="footer-note">Built on public-domain Social Security Administration data: about 100,000 name/sex records and 2 million yearly observations.</div>
+      <div class="footer-note">Data sourced from Social Security Administration birth records (1880–${record.yM}). About 100,000 name/sex records and 2 million yearly observations.</div>
     </div>
     <div><a href="/about">About</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
   </footer>
@@ -580,11 +579,14 @@ function displayStatus(a: ClassifyResult, yM: number): string {
 
 function buildMetaDescription(record: NameRecord, a: ClassifyResult): string {
   const sexLabel = record.sex === "M" ? "boys" : "girls";
-  const latest = a.latestCount
-    ? `${fmt(a.latestCount)} ${sexLabel} were named ${record.name} in ${record.yM}`
-    : `no ${sexLabel} were recorded with the name ${record.name} in ${record.yM}`;
   const trendDescriptor = a.status === "endangered" && a.latestCount >= STILL_COMMON_THRESHOLD ? "past-peak" : a.status;
-  return `${record.name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} ${sexLabel}; ${latest}. See SSA baby-name popularity, trend, ${trendDescriptor} status, and nearby names from the same era.`;
+  if (a.status === "extinct") {
+    return `${record.name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} ${sexLabel} and has since disappeared from SSA records. Explore its full popularity curve, historical context, and similar names from the same era.`;
+  }
+  if (a.status === "rising" || a.status === "stable") {
+    return `${record.name} is ${trendDescriptor === "rising" ? "gaining popularity" : "maintaining steady usage"} in the latest SSA data, with ${fmt(a.latestCount)} ${sexLabel} in ${record.yM}. Explore its full popularity curve, peak year ${a.peakYear}, and names from the same era.`;
+  }
+  return `${record.name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} ${sexLabel}. See its full SSA popularity curve, ${trendDescriptor} trend, and nearby names from the same era.`;
 }
 
 function buildStructuredData(
