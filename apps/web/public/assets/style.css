@@ -1373,3 +1373,117 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   .blog-visual .mini-grid { grid-template-columns: 1fr; }
   .blog-visual .metric-grid { grid-template-columns: 1fr; }
 }
+
+/* Enrichment System — precomputed dossier panel in the name-page sidebar. */
+.enrichment-panel {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+}
+.enrichment-card {
+  border: 1px solid rgba(23, 21, 17, 0.15);
+  border-radius: var(--radius);
+  padding: 1rem;
+  background: rgba(251, 248, 241, 0.68);
+}
+.enrichment-card .label,
+.density-badge span {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.enrichment-card .value {
+  font-size: 1.5rem;
+  line-height: 1.1;
+  font-weight: 700;
+  margin-top: 0.2rem;
+}
+.enrichment-card p {
+  margin: 0.5rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+.actuarial-card .mini-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.actuarial-card .mini-grid span {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.actuarial-card .mini-grid strong {
+  font-size: 1.15rem;
+}
+.density-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid rgba(23, 21, 17, 0.15);
+  border-radius: 999px;
+  padding: 0.65rem 0.9rem;
+}
+.density-badge strong {
+  font-size: 1.05rem;
+}
+.catalyst-list,
+.regional-list {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+.catalyst-item,
+.regional-list > div {
+  border-top: 1px solid var(--rule);
+  padding-top: 0.65rem;
+}
+.catalyst-item strong {
+  display: block;
+  font-size: 0.95rem;
+}
+.catalyst-item span {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.regional-list > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.legacy-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.occupation-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.15rem;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+.enrichment-panel--legacy .enrichment-card {
+  border-style: double;
+  border-width: 3px;
+}
+.sparkline .spark-marker {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 2;
+}

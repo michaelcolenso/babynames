@@ -10,3 +10,4 @@ export * from "./cf-access";
 export * from "./d1-queries";
 export * from "./spark-blob";
 export * from "./enrich";
+export * from "./enrichment-compute";

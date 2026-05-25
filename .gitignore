@@ -18,8 +18,12 @@ migrations/seed/
 data_src/
 names.zip
 
+# Enrichment pipeline: curated inputs in data/manual/ are tracked; the
+# generated SQL (data/dist) and downloaded SSA zips (data/raw) are not.
+data/dist/
+data/raw/
+
 # Legacy data dirs (pre-Cloudflare; kept ignored for any local checkout)
-data/
 flat/
 extra/states/
 scripts/cache/
