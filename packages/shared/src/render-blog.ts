@@ -9,11 +9,15 @@ function escape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function resolveOgImage(ogImage: string | null, origin: string): string {
-  if (!ogImage) return `${origin}/api/og/default`;
+// Resolve a post's og:image: honor an explicit og_image (absolute or
+// root-relative), otherwise fall back to the per-post generated card.
+function resolveOgImage(post: BlogPost, origin: string): string {
+  const fallback = `${origin}/api/og/blog/${encodeURIComponent(post.slug)}`;
+  const ogImage = post.ogImage;
+  if (!ogImage) return fallback;
   if (ogImage.startsWith("http://") || ogImage.startsWith("https://")) return ogImage;
   if (ogImage.startsWith("/")) return `${origin}${ogImage}`;
-  return `${origin}/api/og/default`;
+  return fallback;
 }
 
 /**
@@ -136,7 +140,7 @@ function siteFooter(): string {
 function postMetaTags(post: BlogPost, canonical: string, origin: string): string {
   const title = `${escape(post.title)} | NobodyNamed`;
   const desc = escape(post.description);
-  const ogImage = resolveOgImage(post.ogImage, origin);
+  const ogImage = resolveOgImage(post, origin);
   return `<title>${title}</title>
 <meta name="description" content="${desc}">
 <link rel="canonical" href="${escape(canonical)}">
@@ -244,7 +248,7 @@ export function renderBlogPost(
   opts: { canonical: string; origin?: string },
 ): string {
   const origin = opts.origin || new URL(opts.canonical).origin;
-  const ogImage = resolveOgImage(post.ogImage, origin);
+  const ogImage = resolveOgImage(post, origin);
 
   const structuredData = JSON.stringify([
     {
