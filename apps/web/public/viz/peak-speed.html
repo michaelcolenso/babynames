@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Fast Names Peak — NobodyNamed</title>
+<meta name="description" content="In 1920, a popular name might take 40 years to reach its peak. Today's viral names peak in 3–5 years. The naming fashion cycle has accelerated by a factor of 8.">
+<link rel="canonical" href="https://nobodynamed.com/viz/peak-speed">
+<meta property="og:title" content="How Fast Names Peak — NobodyNamed">
+<meta property="og:description" content="The acceleration of naming fashion: from 40-year climbs to viral 3-year peaks.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --surface: #16161f;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --rule: rgba(255,255,255,0.07);
+    --amber: #c9922a;
+    --amber-glow: rgba(201,146,42,0.15);
+    --rose: #c4786e;
+    --blue: #6a8aaa;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Nav ── */
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 0.9rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.82rem;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+  nav .brand {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    margin-right: auto;
+  }
+  nav a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+  nav a:hover { color: var(--text); }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+    margin-bottom: 0.7rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 620px;
+    line-height: 1.6;
+    margin-bottom: 1.75rem;
+  }
+
+  /* ── Stats row ── */
+  .stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    padding: 1.25rem 2rem;
+    max-width: 960px;
+    margin: 0 auto;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    background: var(--bg2);
+  }
+  .stat-block { display: flex; flex-direction: column; gap: 0.2rem; }
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .stat-value.amber { color: var(--amber); }
+  .stat-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 0.1rem;
+  }
+
+  /* ── Controls ── */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    align-items: center;
+    padding: 0.75rem 2rem;
+    max-width: 960px;
+    margin: 0 auto;
+    border-bottom: 1px solid var(--rule);
+  }
+  .ctrl-group {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .ctrl-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.63rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .btn {
+    padding: 0.28rem 0.85rem;
+    border-radius: 20px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--text); color: var(--text); }
+  .btn.active { background: var(--amber); border-color: var(--amber); color: #1a0e00; font-weight: 700; }
+
+  /* ── Chart area ── */
+  #chart-wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem 0.5rem;
+    position: relative;
+  }
+  #chart-svg { display: block; width: 100%; overflow: visible; }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    padding: 0.5rem 2rem 1.5rem;
+    max-width: 960px;
+    margin: 0 auto;
+    align-items: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-line {
+    width: 28px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .legend-line.dashed {
+    background: repeating-linear-gradient(
+      to right,
+      var(--amber) 0, var(--amber) 5px,
+      transparent 5px, transparent 8px
+    );
+    height: 2.5px;
+  }
+
+  /* ── Tooltip ── */
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10,10,15,0.97);
+    border: 1px solid rgba(201,146,42,0.35);
+    border-radius: 8px;
+    padding: 10px 14px;
+    z-index: 300;
+    max-width: 240px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+    opacity: 0;
+    transition: opacity 0.1s;
+    font-family: 'Space Grotesk', system-ui;
+  }
+  .tooltip .t-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+    letter-spacing: -0.01em;
+  }
+  .tooltip .t-sex {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .tooltip .t-sex.f { color: var(--rose); }
+  .tooltip .t-sex.m { color: var(--blue); }
+  .tooltip .t-row {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .tooltip .t-row strong { color: var(--text); font-weight: 600; }
+  .tooltip .t-link {
+    display: block;
+    margin-top: 7px;
+    font-size: 0.75rem;
+    color: var(--amber);
+    opacity: 0.85;
+  }
+
+  /* ── Loading / error ── */
+  #loading {
+    text-align: center;
+    padding: 6rem 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+  #error-msg {
+    display: none;
+    text-align: center;
+    padding: 4rem 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: #e57373;
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 2rem;
+    max-width: 960px;
+    margin: 2rem auto 0;
+    border-top: 1px solid var(--rule);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 600px) {
+    nav { padding: 0.75rem 1rem; gap: 1rem; }
+    .hero, .controls, #chart-wrap, .legend, .stats-row, footer { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 2rem; }
+    .stats-row { gap: 1.25rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="/">NOBODYNAMED</a>
+  <a href="/viz/">Visualizations</a>
+  <a href="/extinct">Extinct</a>
+  <a href="/endangered">Endangered</a>
+  <a href="/blog">Blog</a>
+</nav>
+
+<div class="hero">
+  <p class="kicker">27 / The Acceleration</p>
+  <h1>How Fast Names Peak</h1>
+  <p class="lede">In 1920, a popular name might take 40 years to reach its peak. Today's viral names peak in 3–5 years. The naming fashion cycle has accelerated by a factor of 8.</p>
+</div>
+
+<!-- Stats row injected here after load -->
+<div class="stats-row" id="stats-row" style="display:none">
+  <div class="stat-block">
+    <span class="stat-label">Fastest-ever peak</span>
+    <span class="stat-value amber" id="stat-fastest-name">—</span>
+    <span class="stat-sub" id="stat-fastest-detail">— yrs</span>
+  </div>
+  <div class="stat-block">
+    <span class="stat-label">Slowest-ever peak</span>
+    <span class="stat-value" id="stat-slowest-name">—</span>
+    <span class="stat-sub" id="stat-slowest-detail">— yrs</span>
+  </div>
+  <div class="stat-block">
+    <span class="stat-label">Current decade median</span>
+    <span class="stat-value amber" id="stat-decade-val">—</span>
+    <span class="stat-sub" id="stat-decade-label">years to peak</span>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="ctrl-group">
+    <span class="ctrl-label">SEX</span>
+    <button class="btn active" id="btn-both" onclick="setSex('both')">Both</button>
+    <button class="btn" id="btn-girls" onclick="setSex('F')">Girls</button>
+    <button class="btn" id="btn-boys" onclick="setSex('M')">Boys</button>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">SIZE BY</span>
+    <button class="btn active" id="btn-peak" onclick="setSizeBy('peak')">Peak count</button>
+    <button class="btn" id="btn-total" onclick="setSizeBy('total')">Total count</button>
+    <button class="btn" id="btn-uniform" onclick="setSizeBy('uniform')">Uniform</button>
+  </div>
+</div>
+
+<div id="chart-wrap">
+  <div id="loading">COMPUTING PEAK TRAJECTORIES…</div>
+  <div id="error-msg">Could not load data. Please try again.</div>
+  <svg id="chart-svg"></svg>
+</div>
+
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-dot" style="background:var(--rose);opacity:0.75"></div>
+    Girls
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:var(--blue);opacity:0.75"></div>
+    Boys
+  </div>
+  <div class="legend-item">
+    <div class="legend-line" style="background:var(--amber)"></div>
+    Boys trend (median)
+  </div>
+  <div class="legend-item">
+    <div class="legend-line dashed"></div>
+    Girls trend (median)
+  </div>
+  <span style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted)">
+    Dot size = peak count · Click any dot to open name dossier
+  </span>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<footer>
+  <span>Built on public-domain SSA data.</span>
+  <span><a href="/viz/">More visualizations</a> · <a href="/about">About</a></span>
+</footer>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let apiData = null;
+let currentSex = 'both';
+let currentSizeBy = 'peak';
+
+// ─── Margins & sizing ─────────────────────────────────────────────────────────
+const margin = { top: 30, right: 30, bottom: 55, left: 60 };
+
+// ─── Colors ───────────────────────────────────────────────────────────────────
+const ROSE  = '#c4786e';
+const BLUE  = '#6a8aaa';
+const AMBER = '#c9922a';
+
+// ─── Controls ─────────────────────────────────────────────────────────────────
+function setSex(sex) {
+  currentSex = sex;
+  document.getElementById('btn-both').className  = sex === 'both' ? 'btn active' : 'btn';
+  document.getElementById('btn-girls').className = sex === 'F'    ? 'btn active' : 'btn';
+  document.getElementById('btn-boys').className  = sex === 'M'    ? 'btn active' : 'btn';
+  if (apiData) render();
+}
+
+function setSizeBy(s) {
+  currentSizeBy = s;
+  document.getElementById('btn-peak').className    = s === 'peak'    ? 'btn active' : 'btn';
+  document.getElementById('btn-total').className   = s === 'total'   ? 'btn active' : 'btn';
+  document.getElementById('btn-uniform').className = s === 'uniform' ? 'btn active' : 'btn';
+  if (apiData) render();
+}
+
+// ─── Stats row ────────────────────────────────────────────────────────────────
+function updateStats(names, decades) {
+  const withYears = names.filter(d => d.yearsToPeak > 0);
+  if (!withYears.length) return;
+
+  const fastest = withYears.reduce((a, b) => a.yearsToPeak < b.yearsToPeak ? a : b);
+  const slowest = withYears.reduce((a, b) => a.yearsToPeak > b.yearsToPeak ? a : b);
+
+  document.getElementById('stat-fastest-name').textContent = fastest.name;
+  document.getElementById('stat-fastest-detail').textContent =
+    `debuted ${fastest.firstYear}, peaked ${fastest.peakYear} · ${fastest.yearsToPeak} yr${fastest.yearsToPeak === 1 ? '' : 's'}`;
+
+  document.getElementById('stat-slowest-name').textContent = slowest.name;
+  document.getElementById('stat-slowest-detail').textContent =
+    `debuted ${slowest.firstYear}, peaked ${slowest.peakYear} · ${slowest.yearsToPeak} yrs`;
+
+  // Current decade (most recent in decades data)
+  const currentDecade = Math.floor(new Date().getFullYear() / 10) * 10;
+  const bothSexes = decades.filter(d => d.decade >= currentDecade - 10);
+  if (bothSexes.length) {
+    const medians = bothSexes.map(d => d.medianYearsToPeak).filter(v => v != null);
+    const avg = medians.length ? Math.round(medians.reduce((a, b) => a + b, 0) / medians.length) : null;
+    if (avg != null) {
+      document.getElementById('stat-decade-val').textContent = avg;
+      document.getElementById('stat-decade-label').textContent = `yrs median, ${currentDecade}s`;
+    }
+  }
+
+  document.getElementById('stats-row').style.display = 'flex';
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  if (!apiData) return;
+
+  const wrap = document.getElementById('chart-wrap');
+  const totalW = wrap.clientWidth || 860;
+  const W = totalW - margin.left - margin.right;
+  const H = Math.max(340, Math.min(560, window.innerHeight * 0.55));
+
+  // Filter names
+  let names = apiData.names;
+  if (currentSex !== 'both') names = names.filter(d => d.sex === currentSex);
+
+  // Filter decades for trend lines
+  let decades = apiData.decades;
+  if (currentSex !== 'both') decades = decades.filter(d => d.sex === currentSex);
+
+  // Scales
+  const xExtent = d3.extent(apiData.names, d => d.firstYear);
+  const xScale = d3.scaleLinear()
+    .domain([xExtent[0] - 2, Math.max(xExtent[1], 2025)])
+    .range([0, W]);
+
+  const yScale = d3.scaleLinear()
+    .domain([0, 82])
+    .range([H, 0]);
+
+  // Size scale
+  let rScale;
+  if (currentSizeBy === 'uniform') {
+    rScale = () => 3.5;
+  } else {
+    const accessor = currentSizeBy === 'total'
+      ? d => d.totalCount
+      : d => d.peakCount;
+    const [minV, maxV] = d3.extent(apiData.names, accessor);
+    rScale = d => {
+      const logV = Math.log1p(accessor(d));
+      const logMin = Math.log1p(minV);
+      const logMax = Math.log1p(maxV);
+      return 2 + 6 * (logV - logMin) / (logMax - logMin);
+    };
+  }
+
+  // Build decade trend line generator
+  // Group decades by sex
+  const decadesByM = decades.filter(d => d.sex === 'M').sort((a, b) => a.decade - b.decade);
+  const decadesByF = decades.filter(d => d.sex === 'F').sort((a, b) => a.decade - b.decade);
+
+  // Decade midpoint → median yearsToPeak
+  const trendLine = d3.line()
+    .x(d => xScale(d.decade + 5))
+    .y(d => yScale(d.medianYearsToPeak))
+    .curve(d3.curveCatmullRom.alpha(0.5));
+
+  // ── Draw ──────────────────────────────────────────────────────────────────
+  const svg = d3.select('#chart-svg')
+    .attr('width', totalW)
+    .attr('height', H + margin.top + margin.bottom)
+    .attr('viewBox', `0 0 ${totalW} ${H + margin.top + margin.bottom}`);
+  svg.selectAll('*').remove();
+
+  const g = svg.append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+  // Background rect for chart area
+  g.append('rect')
+    .attr('x', 0).attr('y', 0)
+    .attr('width', W).attr('height', H)
+    .attr('fill', 'rgba(255,255,255,0.015)')
+    .attr('rx', 4);
+
+  // ── Grid lines ───────────────────────────────────────────────────────────
+  // X grid (decades)
+  const xTicks = d3.range(1880, 2031, 20);
+  g.selectAll('.xgrid')
+    .data(xTicks)
+    .join('line')
+    .attr('x1', d => xScale(d)).attr('x2', d => xScale(d))
+    .attr('y1', 0).attr('y2', H)
+    .attr('stroke', 'rgba(255,255,255,0.05)')
+    .attr('stroke-width', 1);
+
+  // Y grid (0, 20, 40, 60, 80)
+  const yTicks = [0, 20, 40, 60, 80];
+  g.selectAll('.ygrid')
+    .data(yTicks)
+    .join('line')
+    .attr('x1', 0).attr('x2', W)
+    .attr('y1', d => yScale(d)).attr('y2', d => yScale(d))
+    .attr('stroke', 'rgba(255,255,255,0.05)')
+    .attr('stroke-width', 1);
+
+  // ── Axes ─────────────────────────────────────────────────────────────────
+  // X axis
+  g.append('g')
+    .attr('transform', `translate(0,${H})`)
+    .call(d3.axisBottom(xScale)
+      .tickValues(xTicks)
+      .tickFormat(d => d)
+      .tickSize(4))
+    .call(ax => {
+      ax.select('.domain').attr('stroke', 'rgba(255,255,255,0.12)');
+      ax.selectAll('text')
+        .attr('fill', '#6b7280')
+        .attr('font-family', "'Space Mono', monospace")
+        .attr('font-size', 10);
+      ax.selectAll('line').attr('stroke', 'rgba(255,255,255,0.12)');
+    });
+
+  // X axis label
+  g.append('text')
+    .attr('x', W / 2).attr('y', H + 46)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#6b7280')
+    .attr('font-family', "'Space Mono', monospace")
+    .attr('font-size', 10)
+    .attr('letter-spacing', '0.08em')
+    .text('DEBUT YEAR');
+
+  // Y axis
+  g.append('g')
+    .call(d3.axisLeft(yScale)
+      .tickValues(yTicks)
+      .tickFormat(d => d)
+      .tickSize(4))
+    .call(ax => {
+      ax.select('.domain').attr('stroke', 'rgba(255,255,255,0.12)');
+      ax.selectAll('text')
+        .attr('fill', '#6b7280')
+        .attr('font-family', "'Space Mono', monospace")
+        .attr('font-size', 10);
+      ax.selectAll('line').attr('stroke', 'rgba(255,255,255,0.12)');
+    });
+
+  // Y axis label
+  g.append('text')
+    .attr('transform', 'rotate(-90)')
+    .attr('x', -H / 2).attr('y', -46)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#6b7280')
+    .attr('font-family', "'Space Mono', monospace")
+    .attr('font-size', 10)
+    .attr('letter-spacing', '0.08em')
+    .text('YEARS TO PEAK');
+
+  // ── Scatter dots ─────────────────────────────────────────────────────────
+  const tooltip = document.getElementById('tooltip');
+
+  // Shuffle so no single sex dominates the top layer
+  const shuffled = [...names].sort(() => Math.random() - 0.5);
+
+  g.selectAll('.dot')
+    .data(shuffled)
+    .join('circle')
+    .attr('class', 'dot')
+    .attr('cx', d => xScale(d.firstYear))
+    .attr('cy', d => yScale(Math.min(d.yearsToPeak, 80)))
+    .attr('r', d => rScale(d))
+    .attr('fill', d => d.sex === 'F' ? ROSE : BLUE)
+    .attr('fill-opacity', 0.4)
+    .attr('stroke', 'none')
+    .style('cursor', 'pointer')
+    .on('mousemove', function(event, d) {
+      const r = rScale(d);
+      d3.select(this)
+        .raise()
+        .attr('fill-opacity', 0.9)
+        .attr('stroke', d.sex === 'F' ? ROSE : BLUE)
+        .attr('stroke-width', 1.5);
+
+      tooltip.innerHTML = `
+        <div class="t-name">${d.name}</div>
+        <div class="t-sex ${d.sex === 'F' ? 'f' : 'm'}">${d.sex === 'F' ? 'Girl' : 'Boy'}</div>
+        <div class="t-row">Debut year: <strong>${d.firstYear}</strong></div>
+        <div class="t-row">Peak year: <strong>${d.peakYear}</strong></div>
+        <div class="t-row">Years to peak: <strong>${d.yearsToPeak}</strong></div>
+        <div class="t-row">Peak count: <strong>${d.peakCount.toLocaleString()}</strong></div>
+        <div class="t-link">Click to open dossier →</div>`;
+      tooltip.style.opacity = 1;
+
+      const tx = Math.min(event.clientX + 16, window.innerWidth - 260);
+      const ty = Math.max(event.clientY - 80, 10);
+      tooltip.style.left = tx + 'px';
+      tooltip.style.top  = ty + 'px';
+    })
+    .on('mouseleave', function(event, d) {
+      d3.select(this)
+        .attr('fill-opacity', 0.4)
+        .attr('stroke', 'none');
+      tooltip.style.opacity = 0;
+    })
+    .on('click', (e, d) => {
+      window.open(`/name/${encodeURIComponent(d.name.toLowerCase())}/`, '_blank');
+    });
+
+  // ── Trend lines ───────────────────────────────────────────────────────────
+  // Male trend (solid)
+  if ((currentSex === 'both' || currentSex === 'M') && decadesByM.length > 1) {
+    g.append('path')
+      .datum(decadesByM.filter(d => d.medianYearsToPeak != null))
+      .attr('fill', 'none')
+      .attr('stroke', AMBER)
+      .attr('stroke-width', 2.5)
+      .attr('stroke-linejoin', 'round')
+      .attr('stroke-linecap', 'round')
+      .attr('d', trendLine);
+  }
+
+  // Female trend (dashed)
+  if ((currentSex === 'both' || currentSex === 'F') && decadesByF.length > 1) {
+    g.append('path')
+      .datum(decadesByF.filter(d => d.medianYearsToPeak != null))
+      .attr('fill', 'none')
+      .attr('stroke', AMBER)
+      .attr('stroke-width', 2.5)
+      .attr('stroke-dasharray', '6,4')
+      .attr('stroke-linejoin', 'round')
+      .attr('stroke-linecap', 'round')
+      .attr('d', trendLine);
+  }
+
+  // ── Annotations ───────────────────────────────────────────────────────────
+  // Annotation: modern fast peakers (post-2000 cluster near y=5)
+  const ann1X = xScale(2005);
+  const ann1Y = yScale(5);
+  // Only draw if within bounds
+  if (ann1X > 0 && ann1X < W && ann1Y > 0 && ann1Y < H) {
+    drawAnnotation(g, {
+      ax: ann1X - 10,
+      ay: ann1Y + 18,
+      tx: ann1X - 90,
+      ty: ann1Y + 55,
+      text: 'Modern names peak\nin 3–5 years',
+    });
+  }
+
+  // Annotation: pre-war slow peakers (pre-1940, y=35–55)
+  const ann2X = xScale(1920);
+  const ann2Y = yScale(42);
+  if (ann2X > 0 && ann2X < W && ann2Y > 0 && ann2Y < H) {
+    drawAnnotation(g, {
+      ax: ann2X + 10,
+      ay: ann2Y - 14,
+      tx: ann2X + 18,
+      ty: ann2Y - 50,
+      text: 'Pre-war names took\n20–50 years',
+    });
+  }
+}
+
+function drawAnnotation(g, { ax, ay, tx, ty, text }) {
+  // Arrow line
+  g.append('line')
+    .attr('x1', tx + (text.length * 3.5)).attr('y1', ty + 12)
+    .attr('x2', ax).attr('y2', ay)
+    .attr('stroke', AMBER)
+    .attr('stroke-width', 1.2)
+    .attr('stroke-opacity', 0.65)
+    .attr('marker-end', 'url(#arrow)');
+
+  // Label background
+  const lines = text.split('\n');
+  const bw = Math.max(...lines.map(l => l.length)) * 5.6 + 12;
+  const bh = lines.length * 14 + 8;
+
+  g.append('rect')
+    .attr('x', tx - 4)
+    .attr('y', ty - 2)
+    .attr('width', bw)
+    .attr('height', bh)
+    .attr('fill', 'rgba(10,10,15,0.85)')
+    .attr('rx', 3);
+
+  lines.forEach((line, i) => {
+    g.append('text')
+      .attr('x', tx + bw / 2 - 4)
+      .attr('y', ty + 10 + i * 14)
+      .attr('text-anchor', 'middle')
+      .attr('fill', AMBER)
+      .attr('fill-opacity', 0.85)
+      .attr('font-family', "'Space Mono', monospace")
+      .attr('font-size', 10)
+      .text(line);
+  });
+}
+
+// Define arrow marker once
+function addArrowDef(svg) {
+  const defs = svg.append('defs');
+  defs.append('marker')
+    .attr('id', 'arrow')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 8)
+    .attr('refY', 0)
+    .attr('markerWidth', 5)
+    .attr('markerHeight', 5)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-5L10,0L0,5')
+    .attr('fill', AMBER)
+    .attr('fill-opacity', 0.65);
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+async function init() {
+  // Add arrow marker to SVG defs
+  addArrowDef(d3.select('#chart-svg'));
+
+  try {
+    const res = await fetch('/api/peak-speed');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    apiData = await res.json();
+
+    document.getElementById('loading').style.display = 'none';
+
+    updateStats(apiData.names, apiData.decades);
+    render();
+  } catch (err) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error-msg').style.display = 'block';
+    console.error('peak-speed load error:', err);
+  }
+}
+
+// Redraw on resize (debounced)
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    if (apiData) {
+      d3.select('#chart-svg').selectAll('*').remove();
+      addArrowDef(d3.select('#chart-svg'));
+      render();
+    }
+  }, 160);
+});
+
+init();
+</script>
+</body>
+</html>

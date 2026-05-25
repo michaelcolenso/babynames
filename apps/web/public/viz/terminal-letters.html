@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How Names End — NobodyNamed</title>
+<meta name="description" content="The final letter of a name is the sound that lingers. The -N wave overtook boys in the 1960s and never left. The -A dominance of girls' names has held for a century.">
+<link rel="canonical" href="https://nobodynamed.com/viz/terminal-letters">
+<meta property="og:title" content="How Names End — NobodyNamed">
+<meta property="og:description" content="The final letter of a name is the sound that lingers. The -N wave overtook boys in the 1960s and never left.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #12121a;
+    --bg3: #16161f;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --rule: rgba(255,255,255,0.07);
+    --amber: #c9922a;
+    --rose: #c4786e;
+    --blue: #6a8aaa;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.85rem;
+  }
+  nav a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+  nav a:hover { color: var(--text); }
+  nav .brand {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    margin-right: auto;
+    text-decoration: none;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 980px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 640px;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  /* ── CONTROLS ── */
+  .controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0 2rem;
+    max-width: 980px;
+    margin: 0 auto 1.25rem;
+    align-items: center;
+  }
+  .controls-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    margin-right: 0.25rem;
+  }
+  .btn {
+    padding: 0.28rem 0.85rem;
+    border-radius: 20px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--amber); color: var(--amber); }
+  .btn.active-f { background: var(--rose); border-color: var(--rose); color: #fff; }
+  .btn.active-m { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .btn.active-both { background: var(--amber); border-color: var(--amber); color: #000; font-weight: 700; }
+
+  #letter-select {
+    background: var(--bg2);
+    color: var(--muted);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  #letter-select:hover, #letter-select:focus { border-color: var(--amber); color: var(--text); }
+
+  /* ── LEGEND ── */
+  .legend-wrap {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    padding: 0 2rem 1rem;
+    max-width: 980px;
+    margin: 0 auto;
+    align-items: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  .legend-swatch {
+    width: 80px;
+    height: 8px;
+    border-radius: 4px;
+    display: block;
+  }
+  .legend-hint {
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    opacity: 0.7;
+  }
+
+  /* ── CHART WRAP ── */
+  #chart-wrap {
+    padding: 0 1rem;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  #chart-wrap svg { display: block; }
+
+  /* ── HEAT CELLS ── */
+  .heat-cell {
+    cursor: crosshair;
+  }
+
+  /* ── TOOLTIP ── */
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10,10,15,0.97);
+    border: 1px solid rgba(201,146,42,0.35);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    z-index: 1000;
+    max-width: 250px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    opacity: 0;
+    transition: opacity 0.08s;
+  }
+  .tooltip .tt-header {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text);
+    margin-bottom: 5px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+  .tooltip .tt-stat {
+    color: var(--muted);
+    font-size: 0.77rem;
+    line-height: 1.7;
+  }
+  .tooltip .tt-stat b {
+    font-family: 'Space Mono', monospace;
+    font-weight: 400;
+  }
+  .tooltip .tt-names {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--rule);
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-style: italic;
+    line-height: 1.5;
+  }
+
+  /* ── RANKINGS PANEL ── */
+  #rankings {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem 0.5rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+  }
+  .rank-section h3 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 0.85rem;
+  }
+  .rank-section.girls h3 { color: var(--rose); }
+  .rank-section.boys  h3 { color: var(--blue); }
+  .rank-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    margin-bottom: 0.45rem;
+  }
+  .rank-letter {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    width: 1.1rem;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .rank-bar-bg {
+    flex: 1;
+    height: 5px;
+    background: var(--rule);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .rank-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.45s cubic-bezier(0.16,1,0.3,1);
+  }
+  .rank-pct {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    width: 3.2rem;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* ── LOADING / ERROR ── */
+  #loading {
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+  }
+  #error-state {
+    display: none;
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--rose);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    margin-top: 2rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+  footer a { color: var(--amber); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    nav { padding: 0.75rem 1rem; gap: 1rem; }
+    .hero, .controls, .legend-wrap { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 1.8rem; }
+    #rankings { grid-template-columns: 1fr; gap: 1.5rem; padding: 1rem; }
+    .legend-wrap { gap: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="/">NOBODYNAMED</a>
+  <a href="/viz/">Visualizations</a>
+  <a href="/extinct">Extinct</a>
+  <a href="/endangered">Endangered</a>
+  <a href="/blog">Blog</a>
+</nav>
+
+<div class="hero">
+  <div class="kicker">25 / THE LAST SOUND</div>
+  <h1>How Names End</h1>
+  <p class="lede">The final letter of a name is the sound that lingers. The -N wave overtook boys in the 1960s and never left. The -A dominance of girls' names has held for a century.</p>
+</div>
+
+<div class="controls">
+  <span class="controls-label">Show:</span>
+  <button class="btn active-both" id="btn-both"  onclick="setView('both')">Girls + Boys</button>
+  <button class="btn"             id="btn-f"     onclick="setView('F')">Girls only</button>
+  <button class="btn"             id="btn-m"     onclick="setView('M')">Boys only</button>
+  <span class="controls-label" style="margin-left:1rem;">Highlight:</span>
+  <select id="letter-select" aria-label="Highlight a terminal letter">
+    <option value="">— all letters —</option>
+  </select>
+</div>
+
+<div class="legend-wrap">
+  <div class="legend-item">
+    <canvas class="legend-swatch" id="legend-f" width="80" height="8"></canvas>
+    <span>Girls share of births ending in —</span>
+  </div>
+  <div class="legend-item">
+    <canvas class="legend-swatch" id="legend-m" width="80" height="8"></canvas>
+    <span>Boys share of births ending in —</span>
+  </div>
+  <span class="legend-hint">· Hover for details · Click a row to highlight</span>
+</div>
+
+<div id="chart-wrap">
+  <div id="loading">LOADING TERMINAL LETTER DATA…</div>
+  <div id="error-state">Could not load data — please try again.</div>
+</div>
+
+<div id="rankings" style="display:none;">
+  <div class="rank-section girls">
+    <h3 id="rank-f-title">Girls — top letters this year</h3>
+    <div id="rank-f-list"></div>
+  </div>
+  <div class="rank-section boys">
+    <h3 id="rank-m-title">Boys — top letters this year</h3>
+    <div id="rank-m-list"></div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<footer>
+  Built on public-domain SSA data. &nbsp;·&nbsp; <a href="/viz/">← All visualizations</a>
+</footer>
+
+<script>
+// ─── Example names by terminal letter ──────────────────────────────────────
+const EXAMPLES = {
+  F: {
+    A: ['Emma','Olivia','Sophia','Ava','Isabella','Aurora','Luna'],
+    B: ['Barb','Blythe','Blanche'],
+    C: ['Lilac','Dominic'],
+    D: ['Mildred','Astrid','Ingrid','Hildred','Sigrid'],
+    E: ['Grace','Claire','Eloise','Jade','Rose','Brooke','Renée'],
+    F: ['Blythe Cliff'],
+    G: ['Meg','Peg'],
+    H: ['Sarah','Leah','Hannah','Norah','Lilah','Selah'],
+    I: ['Lori','Toni','Naomi','Nikki','Ali','Brandi'],
+    J: ['Maj'],
+    K: ['Bex'],
+    L: ['Hazel','Carol','April','Laurel','Ethel','Jewel','Opal'],
+    M: ['Miriam','Autumn','Blossom','Salem'],
+    N: ['Helen','Karen','Susan','Lauren','Evelyn','Vivian','Raven'],
+    O: ['Cleo','Cleo'],
+    P: ['Hope', 'Felicitas'],
+    Q: [],
+    R: ['Jennifer','Eleanor','Blair','Harper','Heather','Amber','Ginger'],
+    S: ['Frances','Agnes','Iris','Alexis','Paris','Lotus','Bless'],
+    T: ['Violet','Harriet','Charlotte','Scarlett','Juliet','Margot'],
+    U: [],
+    V: ['Bev'],
+    W: [],
+    X: ['Bex'],
+    Y: ['Mary','Emily','Ruby','Lily','Daisy','Destiny','Harmony','Ivy'],
+    Z: ['Topaz','Suze'],
+  },
+  M: {
+    A: ['Joshua','Elijah','Noah','Ezra','Luca','Ezra','Asa'],
+    B: ['Caleb','Jacob','Rob'],
+    C: ['Eric','Patrick','Derek','Nick','Isaac','Dominic'],
+    D: ['Richard','Alfred','Harold','Edward','Howard','Brad','Chad'],
+    E: ['George','Charlie','Willie','Archie','Bruce','Steve','Duke'],
+    F: ['Cliff','Rolf'],
+    G: ['Doug','Craig'],
+    H: ['Joseph','Keith','Ralph','Seth','Josh','Elijah','Hugh'],
+    I: ['Eli','Levi','Ari','Mordecai'],
+    J: ['Raj'],
+    K: ['Jack','Frank','Derek','Nick','Patrick','Chuck','Mark'],
+    L: ['Carl','Earl','Wendell','Marshall','Cornell','Phil','Will'],
+    M: ['William','Adam','Graham','Abraham','Callum','Sam','Jim'],
+    N: ['Jason','Kevin','Ryan','Ethan','Aiden','Grayson','Mason'],
+    O: ['Leo','Otto','Hugo','Arlo','Mario','Theo','Romeo'],
+    P: ['Philip','Phillip'],
+    Q: [],
+    R: ['Walter','Victor','Christopher','Alexander','Hunter','Tyler','Tucker'],
+    S: ['James','Thomas','Charles','Marcus','Dennis','Douglas','Travis'],
+    T: ['Robert','Albert','Emmett','Garrett','Bennett','Scott','Brett'],
+    U: [],
+    V: ['Gustave'],
+    W: ['Matthew','Andrew'],
+    X: ['Alex','Max','Lennox','Knox'],
+    Y: ['Henry','Anthony','Wesley','Bradley','Timothy','Cody','Coby'],
+    Z: ['Cruz','Alvarez'],
+  }
+};
+
+function getExamples(sex, letter) {
+  const arr = EXAMPLES[sex]?.[letter];
+  if (!arr || !arr.length) return [];
+  return arr.slice(0, 3);
+}
+
+// ─── Color scales ─────────────────────────────────────────────────────────
+// Girls: dark maroon → rose → light pink
+const colorF = d3.scaleSequential()
+  .interpolator(d3.interpolateRgbBasis(['#1a0a0a','#3d1a17','#7a3830','#c4786e','#ffb8b0']))
+  .domain([0, 1]);
+
+// Boys: dark navy → steel blue → light blue
+const colorM = d3.scaleSequential()
+  .interpolator(d3.interpolateRgbBasis(['#0a0f1a','#0f1e30','#2d4a6a','#6a8aaa','#adc8e8']))
+  .domain([0, 1]);
+
+// ─── Draw gradient legends ────────────────────────────────────────────────
+function drawLegend(canvasId, colorFn) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  for (let i = 0; i < W; i++) {
+    ctx.fillStyle = colorFn(i / (W - 1));
+    ctx.fillRect(i, 0, 1, canvas.height);
+  }
+}
+drawLegend('legend-f', colorF);
+drawLegend('legend-m', colorM);
+
+// ─── State ────────────────────────────────────────────────────────────────
+const state = {
+  view: 'both',           // 'both' | 'F' | 'M'
+  highlightLetter: null,  // null | 'A'–'Z'
+  data: null,
+};
+
+// ─── Controls ─────────────────────────────────────────────────────────────
+function setView(v) {
+  state.view = v;
+  document.getElementById('btn-both').className = 'btn' + (v === 'both' ? ' active-both' : '');
+  document.getElementById('btn-f').className    = 'btn' + (v === 'F'    ? ' active-f'    : '');
+  document.getElementById('btn-m').className    = 'btn' + (v === 'M'    ? ' active-m'    : '');
+  if (state.data) render(state.data);
+}
+
+document.getElementById('letter-select').addEventListener('change', function () {
+  state.highlightLetter = this.value || null;
+  if (state.data) render(state.data);
+});
+
+function populateLetterSelect(letters) {
+  const sel = document.getElementById('letter-select');
+  // Clear everything except the first "— all —" option
+  while (sel.options.length > 1) sel.remove(1);
+  letters.forEach(l => {
+    const opt = document.createElement('option');
+    opt.value = l;
+    opt.textContent = l;
+    sel.appendChild(opt);
+  });
+}
+
+// ─── Normalise cell value for color mapping ───────────────────────────────
+// We map share → [0,1] for the color scale.
+// A pure linear scale from 0→max would wash out common letters.
+// We use a mild power transform: sqrt-like, clamped.
+function toColorT(share, domainMax) {
+  if (!domainMax) return 0;
+  // sqrt of relative share gives more mid-range contrast
+  return Math.sqrt(Math.min(share / domainMax, 1));
+}
+
+// ─── MAIN RENDER ─────────────────────────────────────────────────────────
+function render(data) {
+  const { years, letters, F, M, Fraw, Mraw, yM } = data;
+  const wrap = document.getElementById('chart-wrap');
+
+  // Remove old SVG
+  d3.select('#chart-wrap svg').remove();
+
+  const nYears   = years.length;
+  const nLetters = letters.length; // 26
+
+  // Layout
+  const labelW     = 26;
+  const marginLeft  = labelW + 6;
+  const marginRight = 16;
+  const marginTop   = 28;
+  const cellH       = 18;
+  const sectionGap  = 38;   // vertical gap between F and M grids
+  const sectionLabelH = 16; // height of section label above grid
+
+  const availW = Math.max(560, (wrap.clientWidth || 960) - 32);
+  const cellW  = Math.max(1.4, (availW - marginLeft - marginRight) / nYears);
+  const totalW = marginLeft + nYears * cellW + marginRight;
+
+  const showF = state.view === 'both' || state.view === 'F';
+  const showM = state.view === 'both' || state.view === 'M';
+
+  // Y positions of each section's grid (below its label)
+  let curY = marginTop;
+  const fGridTop = curY + (showF ? sectionLabelH : 0);
+  if (showF) curY = fGridTop + nLetters * cellH;
+  if (showF && showM) curY += sectionGap;
+  const mGridTop = curY + (showM ? sectionLabelH : 0);
+  if (showM) curY = mGridTop + nLetters * cellH;
+  const totalH = curY + 20;
+
+  const svg = d3.select('#chart-wrap').append('svg')
+    .attr('width', totalW)
+    .attr('height', totalH)
+    .attr('viewBox', `0 0 ${totalW} ${totalH}`);
+
+  const tip = d3.select('#tooltip');
+
+  // ── Decade tick marks and year labels ──────────────────────────────────
+  svg.append('g').attr('class', 'year-axis').selectAll('text')
+    .data(years.filter(y => y % 10 === 0))
+    .join('text')
+      .attr('x', yr => marginLeft + years.indexOf(yr) * cellW + cellW / 2)
+      .attr('y', marginTop - 8)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#3d4452')
+      .attr('font-family', 'Space Mono, monospace')
+      .attr('font-size', 9)
+      .text(d => d);
+
+  svg.append('g').attr('class', 'year-ticks').selectAll('line')
+    .data(years.filter(y => y % 10 === 0))
+    .join('line')
+      .attr('x1', yr => marginLeft + years.indexOf(yr) * cellW)
+      .attr('x2', yr => marginLeft + years.indexOf(yr) * cellW)
+      .attr('y1', marginTop - 3)
+      .attr('y2', marginTop)
+      .attr('stroke', '#3d4452')
+      .attr('stroke-width', 1);
+
+  // ── Compute per-letter domain max for adaptive normalisation ──────────
+  // For each letter, find the 95th percentile share across all years (both sexes)
+  // so extreme outliers don't dominate the color scale.
+  const letterMax = letters.map((l, li) => {
+    const allShares = [];
+    years.forEach((_, yi) => {
+      if (F[yi]) allShares.push(F[yi][li] || 0);
+      if (M[yi]) allShares.push(M[yi][li] || 0);
+    });
+    allShares.sort((a, b) => a - b);
+    const p95idx = Math.floor(allShares.length * 0.95);
+    return allShares[p95idx] || 0.001;
+  });
+
+  // ── Helper: draw one heatmap section ───────────────────────────────────
+  function drawSection(matrixShare, matrixRaw, sex, gridTopY, colorFn, sectionLabel) {
+    const accentColor  = sex === 'F' ? '#c4786e' : '#6a8aaa';
+    const dimBg        = sex === 'F' ? '#1a0a0a'  : '#0a0f1a';
+    const highlitBg    = sex === 'F' ? 'rgba(196,120,110,0.09)' : 'rgba(106,138,170,0.09)';
+    const labelBright  = sex === 'F' ? '#ffb8b0' : '#adc8e8';
+    const labelNormal  = sex === 'F' ? '#7a3830' : '#2d4a6a';
+    const labelDimmed  = '#2a2a2a';
+
+    // Section label line
+    svg.append('text')
+      .attr('x', marginLeft)
+      .attr('y', gridTopY - 4)
+      .attr('fill', accentColor)
+      .attr('font-family', 'Space Mono, monospace')
+      .attr('font-size', 9)
+      .attr('letter-spacing', '0.15em')
+      .text(sectionLabel.toUpperCase());
+
+    letters.forEach((letter, li) => {
+      const rowY    = gridTopY + li * cellH;
+      const isHlt   = state.highlightLetter === letter;
+      const hasSel  = !!state.highlightLetter;
+
+      // Invisible full-row click target
+      svg.append('rect')
+        .attr('x', 0)
+        .attr('y', rowY)
+        .attr('width', totalW)
+        .attr('height', cellH)
+        .attr('fill', 'transparent')
+        .attr('cursor', 'pointer')
+        .on('click', () => {
+          const next = state.highlightLetter === letter ? null : letter;
+          state.highlightLetter = next;
+          document.getElementById('letter-select').value = next || '';
+          render(state.data);
+        });
+
+      // Highlight row bg
+      if (isHlt) {
+        svg.append('rect')
+          .attr('x', 0)
+          .attr('y', rowY)
+          .attr('width', totalW)
+          .attr('height', cellH)
+          .attr('fill', highlitBg)
+          .attr('pointer-events', 'none');
+      }
+
+      // Letter label
+      svg.append('text')
+        .attr('x', labelW - 2)
+        .attr('y', rowY + cellH * 0.69)
+        .attr('text-anchor', 'end')
+        .attr('fill', isHlt ? labelBright : (hasSel ? labelDimmed : labelNormal))
+        .attr('font-family', 'Space Mono, monospace')
+        .attr('font-size', Math.min(11, cellH * 0.68))
+        .attr('font-weight', isHlt ? '700' : '400')
+        .attr('pointer-events', 'none')
+        .text(letter);
+
+      // Heat cells
+      years.forEach((yr, yi) => {
+        const share = (matrixShare[yi] && matrixShare[yi][li]) || 0;
+        const raw   = (matrixRaw[yi]   && matrixRaw[yi][li])   || 0;
+        const cellX = marginLeft + yi * cellW;
+        const t     = toColorT(share, letterMax[li]);
+        const dimmed = hasSel && !isHlt;
+
+        svg.append('rect')
+          .attr('class', 'heat-cell')
+          .attr('x', cellX)
+          .attr('y', rowY + 1)
+          .attr('width', Math.max(1, cellW - 0.4))
+          .attr('height', cellH - 2)
+          .attr('fill', share > 0.0005 ? colorFn(t) : dimBg)
+          .attr('opacity', dimmed ? 0.15 : (share > 0.0005 ? 0.93 : 0.2))
+          .on('mousemove', (event) => {
+            const ex = getExamples(sex, letter);
+            tip
+              .style('opacity', 1)
+              .style('left', `${Math.min(event.clientX + 16, window.innerWidth - 268)}px`)
+              .style('top',  `${Math.max(event.clientY - 100, 8)}px`)
+              .html(`
+                <div class="tt-header">&#8211;${letter} &nbsp; ${yr}</div>
+                <div class="tt-stat">
+                  Share: <b style="color:${labelBright}">${(share * 100).toFixed(2)}%</b> of ${sex === 'F' ? 'girls' : 'boys'}<br>
+                  Births: <b>${raw.toLocaleString()}</b>
+                </div>
+                ${ex.length ? `<div class="tt-names">e.g. ${ex.join(', ')}</div>` : ''}
+              `);
+          })
+          .on('mouseleave', () => tip.style('opacity', 0));
+      });
+    });
+
+    // ── Annotations ──────────────────────────────────────────────────────
+    if (sex === 'M') {
+      const nIdx = letters.indexOf('N');
+      if (nIdx >= 0) {
+        const nRowY    = gridTopY + nIdx * cellH;
+        const yr1960   = years.find(y => y >= 1960);
+        const xi1960   = yr1960 !== undefined ? years.indexOf(yr1960) : -1;
+        if (xi1960 >= 0) {
+          const ax = marginLeft + xi1960 * cellW;
+          // vertical marker line on the N row
+          svg.append('line')
+            .attr('x1', ax).attr('y1', nRowY)
+            .attr('x2', ax).attr('y2', nRowY + cellH)
+            .attr('stroke', '#c9922a')
+            .attr('stroke-width', 1.5)
+            .attr('stroke-dasharray', '2,2')
+            .attr('opacity', 0.8)
+            .attr('pointer-events', 'none');
+
+          // label — try to fit it to the right; if near edge, flip
+          const labelX = ax + 5;
+          const labelMaxX = totalW - marginRight - 10;
+          const textContent = 'The -N wave: Jason → Kevin → Ryan → Ethan → Aiden';
+          const approxTextW = textContent.length * 5.2;
+          const finalX = (labelX + approxTextW > labelMaxX) ? ax - approxTextW - 5 : labelX;
+
+          svg.append('text')
+            .attr('x', finalX)
+            .attr('y', nRowY + cellH * 0.65)
+            .attr('fill', '#c9922a')
+            .attr('font-family', 'Space Mono, monospace')
+            .attr('font-size', 7.5)
+            .attr('opacity', 0.8)
+            .attr('pointer-events', 'none')
+            .text(textContent);
+        }
+      }
+    }
+
+    if (sex === 'F') {
+      const aIdx = letters.indexOf('A');
+      if (aIdx >= 0) {
+        const aRowY  = gridTopY + aIdx * cellH;
+        const yr2000 = years.find(y => y >= 2000);
+        const xi2000 = yr2000 !== undefined ? years.indexOf(yr2000) : -1;
+        if (xi2000 >= 0) {
+          const ax = marginLeft + xi2000 * cellW;
+          const textContent = 'The -A era: Emma, Olivia, Sophia, Isabella, Ava';
+          const approxTextW = textContent.length * 5.2;
+          const labelX = Math.max(marginLeft + 4, ax - approxTextW - 8);
+
+          svg.append('text')
+            .attr('x', labelX)
+            .attr('y', aRowY + cellH * 0.65)
+            .attr('fill', '#ffb8b0')
+            .attr('font-family', 'Space Mono, monospace')
+            .attr('font-size', 7.5)
+            .attr('opacity', 0.75)
+            .attr('pointer-events', 'none')
+            .text(textContent);
+        }
+      }
+    }
+  }
+
+  if (showF) drawSection(F, Fraw, 'F', fGridTop, colorF, 'Girls');
+  if (showM) drawSection(M, Mraw, 'M', mGridTop, colorM, 'Boys');
+
+  // ── Rankings panel ──────────────────────────────────────────────────────
+  const latestYi = years.length - 1;
+  buildRankings(F, Fraw, M, Mraw, letters, latestYi, yM);
+}
+
+// ─── Rankings panel ───────────────────────────────────────────────────────
+function buildRankings(F, Fraw, M, Mraw, letters, yi, year) {
+  document.getElementById('rankings').style.display = '';
+
+  function buildList(matrix, rawMatrix, sex, listId, titleId, color) {
+    const shares  = (matrix[yi]    || []).map((s, i) => ({ letter: letters[i], share: s   || 0, count: (rawMatrix[yi]||[])[i] || 0 }));
+    const sorted  = shares.slice().sort((a, b) => b.share - a.share);
+    const top5    = sorted.slice(0, 5);
+    const maxShare = top5[0]?.share || 1;
+
+    document.getElementById(titleId).textContent = `${sex === 'F' ? 'Girls' : 'Boys'} — top letters in ${year}`;
+
+    const el = document.getElementById(listId);
+    el.innerHTML = '';
+    top5.forEach(({ letter, share }) => {
+      const pct = (share * 100).toFixed(1);
+      const barW = ((share / maxShare) * 100).toFixed(1);
+      el.insertAdjacentHTML('beforeend', `
+        <div class="rank-bar-row">
+          <span class="rank-letter" style="color:${color}">${letter}</span>
+          <div class="rank-bar-bg">
+            <div class="rank-bar-fill" style="width:${barW}%;background:${color};"></div>
+          </div>
+          <span class="rank-pct">${pct}%</span>
+        </div>
+      `);
+    });
+  }
+
+  buildList(F, Fraw, 'F', 'rank-f-list', 'rank-f-title', '#c4786e');
+  buildList(M, Mraw, 'M', 'rank-m-list', 'rank-m-title', '#6a8aaa');
+}
+
+// ─── Fetch & init ──────────────────────────────────────────────────────────
+fetch('/api/terminal-letters')
+  .then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  })
+  .then(data => {
+    state.data = data;
+    document.getElementById('loading').remove();
+    populateLetterSelect(data.letters);
+    render(data);
+
+    // Debounced resize
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => { if (state.data) render(state.data); }, 120);
+    });
+  })
+  .catch(err => {
+    const loadEl = document.getElementById('loading');
+    if (loadEl) loadEl.remove();
+    const errEl = document.getElementById('error-state');
+    if (errEl) {
+      errEl.style.display = '';
+      errEl.textContent = 'Could not load terminal-letter data. (' + err.message + ')';
+    }
+  });
+</script>
+</body>
+</html>

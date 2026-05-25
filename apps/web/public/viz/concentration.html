@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Concentration Index — NobodyNamed</title>
+<meta name="description" content="The #1 name once claimed 1 in 14 American girls. Today's top name claims 1 in 100. The HHI shows exactly when the empire shattered.">
+<link rel="canonical" href="https://nobodynamed.com/viz/concentration">
+<meta property="og:title" content="The Concentration Index — NobodyNamed">
+<meta property="og:description" content="Mary's Empire, Measured. When did naming monoculture shatter?">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #12121a;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --rule: rgba(255,255,255,0.07);
+    --amber: #c9922a;
+    --rose: #c4786e;
+    --blue: #6a8aaa;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Nav ── */
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.85rem;
+  }
+  nav a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+  nav a:hover { color: var(--text); }
+  nav .brand {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    margin-right: auto;
+    text-decoration: none;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 620px;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+  }
+
+  /* ── Stats row ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 1080px;
+    margin: 0 auto 2rem;
+    padding: 0 2rem;
+  }
+  /* Override: stats-row is the outer wrapper, cells need proper bg */
+  .stats-row {
+    padding: 0;
+  }
+  .stats-outer {
+    max-width: 1080px;
+    margin: 0 auto 2rem;
+    padding: 0 2rem;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .stat-cell {
+    background: var(--bg2);
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.63rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+  .stat-value.female { color: var(--rose); }
+  .stat-value.male   { color: var(--blue); }
+  .stat-sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ── Controls ── */
+  .controls-wrap {
+    max-width: 1080px;
+    margin: 0 auto 1rem;
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .metric-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 3px;
+  }
+  .metric-btn {
+    padding: 0.3rem 0.85rem;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .metric-btn:hover { color: var(--text); }
+  .metric-btn.active {
+    background: var(--amber);
+    color: #0a0a0f;
+    font-weight: 700;
+  }
+  .sex-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    padding: 3px;
+  }
+  .sex-btn {
+    padding: 0.25rem 0.85rem;
+    border-radius: 16px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .sex-btn:hover:not(.active-both):not(.active-f):not(.active-m) { color: var(--text); }
+  .sex-btn.active-both { background: var(--amber); color: #0a0a0f; font-weight: 600; }
+  .sex-btn.active-f    { background: var(--rose);  color: #fff;    font-weight: 600; }
+  .sex-btn.active-m    { background: var(--blue);  color: #fff;    font-weight: 600; }
+
+  /* ── Chart ── */
+  .chart-wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 2rem 0.5rem;
+  }
+  .chart-container {
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+  svg { display: block; }
+
+  /* ── Legend ── */
+  .chart-legend {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.6rem 1rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.73rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .legend-swatch {
+    width: 20px;
+    height: 2px;
+    border-radius: 1px;
+  }
+
+  /* ── Tooltip ── */
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10,10,15,0.97);
+    border: 1px solid rgba(201,146,42,0.35);
+    border-radius: 8px;
+    padding: 11px 14px;
+    font-size: 13px;
+    z-index: 1000;
+    max-width: 230px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .tooltip .t-year {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .tooltip .t-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 3px;
+    font-size: 0.8rem;
+  }
+  .tooltip .t-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .tooltip .t-label { color: var(--muted); flex: 1; }
+  .tooltip .t-val {
+    font-family: 'Space Mono', monospace;
+    color: var(--text);
+    font-size: 0.76rem;
+  }
+
+  /* ── Loading / error ── */
+  #loading {
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+  }
+  #error-msg {
+    display: none;
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--rose);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+  }
+
+  /* ── Footer ── */
+  footer {
+    max-width: 1080px;
+    margin: 2.5rem auto 0;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  footer a { color: var(--amber); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  /* ── Responsive ── */
+  @media (max-width: 720px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 2rem; }
+    .controls-wrap { padding: 0 1rem; }
+    .chart-wrap { padding-left: 1rem; padding-right: 1rem; }
+    .stats-outer { padding: 0 1rem; }
+  }
+  @media (max-width: 480px) {
+    nav { gap: 1rem; padding: 0.85rem 1rem; }
+    .metric-tabs { flex-wrap: wrap; gap: 2px; }
+    .metric-btn { font-size: 0.63rem; padding: 0.25rem 0.65rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="brand">NOBODYNAMED</a>
+  <a href="/viz/">Visualizations</a>
+  <a href="/extinct">Extinct</a>
+  <a href="/endangered">Endangered</a>
+  <a href="/blog">Blog</a>
+</nav>
+
+<div class="hero">
+  <div class="kicker">24 / THE MONOPOLY</div>
+  <h1>Mary's Empire, Measured</h1>
+  <p class="lede">The #1 name once claimed 1 in 14 American girls. Today's top name claims 1 in 100. The HHI shows exactly when the empire shattered.</p>
+</div>
+
+<div id="loading">LOADING CONCENTRATION DATA…</div>
+<div id="error-msg">Failed to load data. Please try again later.</div>
+
+<div id="main-content" style="display:none">
+
+  <!-- Stats row -->
+  <div class="stats-outer">
+    <div class="stats-grid">
+      <div class="stat-cell">
+        <div class="stat-label">Peak HHI Year<br>Girls</div>
+        <div class="stat-value female" id="stat-peak-f">—</div>
+        <div class="stat-sub" id="stat-peak-f-sub"></div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Peak HHI Year<br>Boys</div>
+        <div class="stat-value male" id="stat-peak-m">—</div>
+        <div class="stat-sub" id="stat-peak-m-sub"></div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Current Top-1 Share<br>Girls</div>
+        <div class="stat-value female" id="stat-cur-f">—</div>
+        <div class="stat-sub" id="stat-cur-f-sub"></div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-label">Current Top-1 Share<br>Boys</div>
+        <div class="stat-value male" id="stat-cur-m">—</div>
+        <div class="stat-sub" id="stat-cur-m-sub"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls-wrap">
+    <div class="metric-tabs" id="metric-tabs">
+      <button class="metric-btn active" data-metric="hhi">HHI</button>
+      <button class="metric-btn" data-metric="top1Share">Top-1 Share</button>
+      <button class="metric-btn" data-metric="top10Share">Top-10 Share</button>
+      <button class="metric-btn" data-metric="uniqueNames">Unique Names</button>
+    </div>
+    <div class="sex-toggle" id="sex-toggle">
+      <button class="sex-btn active-both" data-sex="both">Both</button>
+      <button class="sex-btn" data-sex="F">Girls</button>
+      <button class="sex-btn" data-sex="M">Boys</button>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="chart-wrap">
+    <div class="chart-container">
+      <div id="chart-svg-wrap"></div>
+      <div class="chart-legend" id="chart-legend">
+        <div class="legend-item" id="legend-f">
+          <div class="legend-swatch" style="background:var(--rose)"></div>
+          <span>Girls</span>
+        </div>
+        <div class="legend-item" id="legend-m">
+          <div class="legend-swatch" style="background:var(--blue)"></div>
+          <span>Boys</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main-content -->
+
+<div class="tooltip" id="tooltip"></div>
+
+<footer>
+  <span>Built on public-domain SSA data.</span>
+  <a href="/viz/">← All visualizations</a>
+</footer>
+
+<script>
+// ─── Constants ───────────────────────────────────────────────────────────────
+const COLOR_F     = '#c4786e';
+const COLOR_M     = '#6a8aaa';
+const COLOR_AMBER = '#c9922a';
+const BG2         = '#12121a';
+
+const METRICS = {
+  hhi: {
+    label: 'Herfindahl-Hirschman Index (HHI)',
+    axisFmt: v => v.toFixed(4),
+    tipFmt:  v => v.toFixed(6),
+    area: false,
+  },
+  top1Share: {
+    label: 'Top-1 Name Share',
+    axisFmt: v => (v * 100).toFixed(1) + '%',
+    tipFmt:  v => (v * 100).toFixed(2) + '%',
+    area: false,
+  },
+  top10Share: {
+    label: 'Top-10 Names Share',
+    axisFmt: v => (v * 100).toFixed(0) + '%',
+    tipFmt:  v => (v * 100).toFixed(1) + '%',
+    area: false,
+  },
+  uniqueNames: {
+    label: 'Unique Names per Year',
+    axisFmt: v => v >= 1000 ? (v / 1000).toFixed(0) + 'k' : String(v),
+    tipFmt:  v => v.toLocaleString(),
+    area: true,
+  },
+};
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let rawData     = null;
+let activeMetric = 'hhi';
+let activeSex    = 'both';
+
+// ─── Data fetch ──────────────────────────────────────────────────────────────
+async function loadData() {
+  const res = await fetch('/api/concentration');
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ─── Stats row ───────────────────────────────────────────────────────────────
+function populateStats(data) {
+  const fData = data.filter(d => d.sex === 'F').sort((a, b) => a.year - b.year);
+  const mData = data.filter(d => d.sex === 'M').sort((a, b) => a.year - b.year);
+  if (!fData.length || !mData.length) return;
+
+  const peakF   = fData.reduce((a, b) => a.hhi > b.hhi ? a : b);
+  const peakM   = mData.reduce((a, b) => a.hhi > b.hhi ? a : b);
+  const latestF = fData[fData.length - 1];
+  const latestM = mData[mData.length - 1];
+
+  document.getElementById('stat-peak-f').textContent     = peakF.year;
+  document.getElementById('stat-peak-f-sub').textContent = `HHI ${peakF.hhi.toFixed(5)}`;
+  document.getElementById('stat-peak-m').textContent     = peakM.year;
+  document.getElementById('stat-peak-m-sub').textContent = `HHI ${peakM.hhi.toFixed(5)}`;
+
+  document.getElementById('stat-cur-f').textContent      = (latestF.top1Share * 100).toFixed(2) + '%';
+  document.getElementById('stat-cur-f-sub').textContent  = `year ${latestF.year}`;
+  document.getElementById('stat-cur-m').textContent      = (latestM.top1Share * 100).toFixed(2) + '%';
+  document.getElementById('stat-cur-m-sub').textContent  = `year ${latestM.year}`;
+}
+
+// ─── Chart ───────────────────────────────────────────────────────────────────
+function drawChart(data) {
+  const wrap = document.getElementById('chart-svg-wrap');
+  wrap.innerHTML = '';
+
+  const metaCfg = METRICS[activeMetric];
+  const isArea  = metaCfg.area;
+
+  const fSeries = data.filter(d => d.sex === 'F').sort((a, b) => a.year - b.year);
+  const mSeries = data.filter(d => d.sex === 'M').sort((a, b) => a.year - b.year);
+
+  const showF = activeSex === 'both' || activeSex === 'F';
+  const showM = activeSex === 'both' || activeSex === 'M';
+
+  // Dimensions
+  const containerW = wrap.closest('.chart-container').clientWidth || 1040;
+  const totalW = Math.min(containerW, 1040);
+  const margin = { top: 28, right: 28, bottom: 40, left: 62 };
+  const W = totalW - margin.left - margin.right;
+  const H = 320 - margin.top - margin.bottom;
+
+  // SVG
+  const svg = d3.select(wrap).append('svg')
+    .attr('width', totalW)
+    .attr('height', 320);
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  // Scales
+  const activeSeries = [
+    ...(showF ? fSeries : []),
+    ...(showM ? mSeries : []),
+  ];
+  if (!activeSeries.length) return;
+
+  const allYears = [...new Set(activeSeries.map(d => d.year))].sort((a, b) => a - b);
+  const xScale = d3.scaleLinear()
+    .domain([allYears[0], allYears[allYears.length - 1]])
+    .range([0, W]);
+
+  const allVals = activeSeries.map(d => d[activeMetric]).filter(v => v != null);
+  const rawMax  = d3.max(allVals);
+  const yScale  = d3.scaleLinear()
+    .domain([0, rawMax * 1.10])
+    .range([H, 0])
+    .nice();
+
+  // Grid lines
+  const yTicks = yScale.ticks(5);
+  g.selectAll('.grid-y')
+    .data(yTicks)
+    .enter().append('line')
+    .attr('class', 'grid-y')
+    .attr('x1', 0).attr('x2', W)
+    .attr('y1', d => yScale(d)).attr('y2', d => yScale(d))
+    .attr('stroke', 'rgba(255,255,255,0.07)')
+    .attr('stroke-width', 1);
+
+  // Y axis
+  g.append('g')
+    .call(d3.axisLeft(yScale)
+      .ticks(5)
+      .tickFormat(metaCfg.axisFmt)
+      .tickSize(0)
+      .tickPadding(8))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('text')
+      .attr('fill', '#6b7280')
+      .attr('font-family', "'Space Mono', monospace")
+      .attr('font-size', '0.62rem'));
+
+  // X axis
+  const xTickCount = W < 500 ? 6 : 12;
+  g.append('g')
+    .attr('transform', `translate(0,${H})`)
+    .call(d3.axisBottom(xScale)
+      .ticks(xTickCount)
+      .tickFormat(d3.format('d'))
+      .tickSize(4)
+      .tickPadding(5))
+    .call(ax => ax.select('.domain').attr('stroke', 'rgba(255,255,255,0.10)'))
+    .call(ax => ax.selectAll('text')
+      .attr('fill', '#6b7280')
+      .attr('font-family', "'Space Mono', monospace")
+      .attr('font-size', '0.62rem'))
+    .call(ax => ax.selectAll('.tick line').attr('stroke', 'rgba(255,255,255,0.07)'));
+
+  // Y axis label
+  g.append('text')
+    .attr('transform', 'rotate(-90)')
+    .attr('x', -(H / 2))
+    .attr('y', -54)
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#6b7280')
+    .attr('font-family', "'Space Mono', monospace")
+    .attr('font-size', '0.58rem')
+    .attr('letter-spacing', '0.06em')
+    .text(metaCfg.label.toUpperCase());
+
+  // Generators
+  const lineGen = d3.line()
+    .x(d => xScale(d.year))
+    .y(d => yScale(d[activeMetric]))
+    .curve(d3.curveMonotoneX)
+    .defined(d => d[activeMetric] != null);
+
+  const areaGen = d3.area()
+    .x(d => xScale(d.year))
+    .y0(H)
+    .y1(d => yScale(d[activeMetric]))
+    .curve(d3.curveMonotoneX)
+    .defined(d => d[activeMetric] != null);
+
+  function drawSeries(series, color) {
+    if (!series.length) return;
+    if (isArea) {
+      g.append('path')
+        .datum(series)
+        .attr('fill', COLOR_AMBER)
+        .attr('fill-opacity', 0.18)
+        .attr('stroke', 'none')
+        .attr('d', areaGen);
+    }
+    g.append('path')
+      .datum(series)
+      .attr('fill', 'none')
+      .attr('stroke', color)
+      .attr('stroke-width', 2)
+      .attr('stroke-opacity', 0.9)
+      .attr('d', lineGen);
+  }
+
+  if (showF) drawSeries(fSeries, COLOR_F);
+  if (showM) drawSeries(mSeries, COLOR_M);
+
+  // ─── HHI Annotation ───────────────────────────────────────────────────────
+  if (activeMetric === 'hhi' && showF && fSeries.length) {
+    const peakF = fSeries.reduce((a, b) => a.hhi > b.hhi ? a : b);
+
+    // Find a representative year in the ridge window (1910–1955)
+    const ridgeData = fSeries.filter(d => d.year >= 1910 && d.year <= 1955);
+    const ridgePeak = ridgeData.length
+      ? ridgeData.reduce((a, b) => a.hhi > b.hhi ? a : b)
+      : peakF;
+
+    const annoX = xScale(ridgePeak.year);
+    const annoY = yScale(ridgePeak.hhi);
+
+    // Dashed bracket line covering the ridge
+    const r1 = fSeries.find(d => d.year >= 1905);
+    const r2 = fSeries.filter(d => d.year <= 1960).pop();
+    if (r1 && r2) {
+      const rx1 = xScale(r1.year);
+      const rx2 = xScale(r2.year);
+      const ry  = Math.min(yScale(r1.hhi), yScale(r2.hhi)) - 10;
+
+      g.append('line')
+        .attr('x1', rx1).attr('x2', rx2)
+        .attr('y1', ry).attr('y2', ry)
+        .attr('stroke', COLOR_AMBER)
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '4,3')
+        .attr('opacity', 0.55);
+
+      // Small downward tick at each end
+      [rx1, rx2].forEach(rx => {
+        g.append('line')
+          .attr('x1', rx).attr('x2', rx)
+          .attr('y1', ry).attr('y2', ry + 5)
+          .attr('stroke', COLOR_AMBER)
+          .attr('stroke-width', 1)
+          .attr('opacity', 0.55);
+      });
+
+      // Annotation text above the bracket
+      const midX = (rx1 + rx2) / 2;
+      const textY = ry - 7;
+      const clampedX = Math.max(20, Math.min(midX, W - 20));
+
+      g.append('text')
+        .attr('x', clampedX)
+        .attr('y', textY)
+        .attr('text-anchor', 'middle')
+        .attr('fill', COLOR_AMBER)
+        .attr('font-family', "'Space Mono', monospace")
+        .attr('font-size', '0.6rem')
+        .attr('opacity', 0.85)
+        .text("Mary held 4–8% of all girls' births for 70 years");
+
+      // Arrow pointing down to the ridge line
+      const arrowX = clampedX;
+      const arrowTipY = ry + 2;
+      g.append('line')
+        .attr('x1', arrowX).attr('x2', arrowX)
+        .attr('y1', textY + 2).attr('y2', arrowTipY - 2)
+        .attr('stroke', COLOR_AMBER)
+        .attr('stroke-width', 0.8)
+        .attr('opacity', 0.4)
+        .attr('marker-end', 'url(#arrow-amber)');
+    }
+
+    // Arrow marker def
+    const defs = svg.append('defs');
+    defs.append('marker')
+      .attr('id', 'arrow-amber')
+      .attr('viewBox', '0 -4 8 8')
+      .attr('refX', 6)
+      .attr('refY', 0)
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
+      .attr('orient', 'auto')
+      .append('path')
+      .attr('d', 'M0,-4L8,0L0,4')
+      .attr('fill', 'none')
+      .attr('stroke', COLOR_AMBER)
+      .attr('stroke-width', 1.5)
+      .attr('opacity', 0.5);
+
+    // Low annotation (post-2000)
+    const recent = fSeries.filter(d => d.year >= 2000);
+    if (recent.length) {
+      const lowF = recent.reduce((a, b) => a.hhi < b.hhi ? a : b);
+      const lx = xScale(lowF.year);
+      const ly = yScale(lowF.hhi);
+
+      g.append('circle')
+        .attr('cx', lx).attr('cy', ly).attr('r', 3.5)
+        .attr('fill', '#6b7280')
+        .attr('fill-opacity', 0.75)
+        .attr('pointer-events', 'none');
+
+      const labelX = lx > W - 100 ? lx - 6 : lx + 6;
+      const anchor = lx > W - 100 ? 'end' : 'start';
+      g.append('text')
+        .attr('x', labelX)
+        .attr('y', ly - 7)
+        .attr('text-anchor', anchor)
+        .attr('fill', '#6b7280')
+        .attr('font-family', "'Space Mono', monospace")
+        .attr('font-size', '0.58rem')
+        .text(`low ${lowF.year}`);
+    }
+  }
+
+  // ─── Crosshair & tooltip ──────────────────────────────────────────────────
+  const tip = d3.select('#tooltip');
+
+  const overlay = g.append('rect')
+    .attr('width', W)
+    .attr('height', H)
+    .attr('fill', 'transparent')
+    .attr('cursor', 'crosshair');
+
+  const vLine = g.append('line')
+    .attr('y1', 0).attr('y2', H)
+    .attr('stroke', 'rgba(255,255,255,0.18)')
+    .attr('stroke-width', 1)
+    .attr('pointer-events', 'none')
+    .attr('opacity', 0);
+
+  const dotF = showF ? g.append('circle')
+    .attr('r', 4.5)
+    .attr('fill', COLOR_F)
+    .attr('stroke', BG2)
+    .attr('stroke-width', 1.5)
+    .attr('pointer-events', 'none')
+    .attr('opacity', 0) : null;
+
+  const dotM = showM ? g.append('circle')
+    .attr('r', 4.5)
+    .attr('fill', COLOR_M)
+    .attr('stroke', BG2)
+    .attr('stroke-width', 1.5)
+    .attr('pointer-events', 'none')
+    .attr('opacity', 0) : null;
+
+  const bisect = d3.bisector(d => d.year).left;
+
+  function findNearest(series, yr) {
+    if (!series.length) return null;
+    const i = bisect(series, yr, 1);
+    const a = series[i - 1];
+    const b = series[i];
+    if (!a) return b;
+    if (!b) return a;
+    return Math.abs(a.year - yr) <= Math.abs(b.year - yr) ? a : b;
+  }
+
+  overlay.on('mousemove', function(event) {
+    const [mx] = d3.pointer(event);
+    const yr   = Math.round(xScale.invert(mx));
+
+    vLine.attr('x1', mx).attr('x2', mx).attr('opacity', 1);
+
+    let rows = '';
+    let yearLabel = yr;
+
+    if (showF && fSeries.length) {
+      const d = findNearest(fSeries, yr);
+      if (d && d[activeMetric] != null) {
+        yearLabel = d.year;
+        dotF && dotF.attr('cx', xScale(d.year)).attr('cy', yScale(d[activeMetric])).attr('opacity', 1);
+        rows += `<div class="t-row">
+          <div class="t-dot" style="background:${COLOR_F}"></div>
+          <span class="t-label">Girls</span>
+          <span class="t-val">${metaCfg.tipFmt(d[activeMetric])}</span>
+        </div>`;
+        if (activeMetric === 'uniqueNames') {
+          rows += `<div class="t-row" style="padding-left:11px;margin-top:-2px">
+            <span class="t-label" style="font-size:0.7rem">total</span>
+            <span class="t-val" style="font-size:0.7rem">${d.total.toLocaleString()}</span>
+          </div>`;
+        }
+      }
+    }
+    if (showM && mSeries.length) {
+      const d = findNearest(mSeries, yr);
+      if (d && d[activeMetric] != null) {
+        dotM && dotM.attr('cx', xScale(d.year)).attr('cy', yScale(d[activeMetric])).attr('opacity', 1);
+        rows += `<div class="t-row">
+          <div class="t-dot" style="background:${COLOR_M}"></div>
+          <span class="t-label">Boys</span>
+          <span class="t-val">${metaCfg.tipFmt(d[activeMetric])}</span>
+        </div>`;
+        if (activeMetric === 'uniqueNames') {
+          const d2 = findNearest(mSeries, yr);
+          rows += `<div class="t-row" style="padding-left:11px;margin-top:-2px">
+            <span class="t-label" style="font-size:0.7rem">total</span>
+            <span class="t-val" style="font-size:0.7rem">${d2.total.toLocaleString()}</span>
+          </div>`;
+        }
+      }
+    }
+
+    const svgRect = svg.node().getBoundingClientRect();
+    const ex = svgRect.left + margin.left + mx;
+    const ey = event.clientY;
+
+    tip
+      .style('opacity', 1)
+      .style('left', `${Math.min(ex + 14, window.innerWidth - 240)}px`)
+      .style('top', `${Math.max(ey - 90, 10)}px`)
+      .html(`<div class="t-year">${yearLabel}</div>${rows}`);
+  });
+
+  overlay.on('mouseleave', () => {
+    vLine.attr('opacity', 0);
+    dotF && dotF.attr('opacity', 0);
+    dotM && dotM.attr('opacity', 0);
+    tip.style('opacity', 0);
+  });
+
+  // Update legend
+  document.getElementById('legend-f').style.display = showF ? '' : 'none';
+  document.getElementById('legend-m').style.display = showM ? '' : 'none';
+}
+
+// ─── Event wiring ─────────────────────────────────────────────────────────────
+function wireControls() {
+  document.getElementById('metric-tabs').addEventListener('click', e => {
+    const btn = e.target.closest('.metric-btn');
+    if (!btn) return;
+    document.querySelectorAll('.metric-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeMetric = btn.dataset.metric;
+    drawChart(rawData);
+  });
+
+  document.getElementById('sex-toggle').addEventListener('click', e => {
+    const btn = e.target.closest('.sex-btn');
+    if (!btn) return;
+    document.querySelectorAll('.sex-btn').forEach(b => {
+      b.classList.remove('active-both', 'active-f', 'active-m');
+    });
+    activeSex = btn.dataset.sex;
+    if (activeSex === 'both') btn.classList.add('active-both');
+    else if (activeSex === 'F') btn.classList.add('active-f');
+    else btn.classList.add('active-m');
+    drawChart(rawData);
+  });
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => drawChart(rawData), 140);
+  });
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const json = await loadData();
+    rawData = json.data;
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('main-content').style.display = '';
+
+    populateStats(rawData);
+    drawChart(rawData);
+    wireControls();
+
+  } catch (err) {
+    console.error('Concentration load error:', err);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error-msg').style.display = 'block';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
