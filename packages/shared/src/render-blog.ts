@@ -21,18 +21,26 @@ function resolveOgImage(ogImage: string | null, origin: string): string {
  * as names in D1, and wrap them in links to their dossier pages.
  * Existing anchors are left alone so imported Markdown links do not nest.
  */
-const STOPWORDS = new Set([
-  "a","about","above","across","after","against","along","among","an","and","are","around","as","at","be","been","being","beneath","beside","between","beyond","both","but","by","can","cannot","could","did","do","does","doing","done","down","during","each","every","few","for","from","further","had","has","have","he","her","here","hers","him","his","how","i","if","in","inside","into","is","it","its","just","many","may","me","might","more","most","much","must","my","near","no","nor","not","now","of","off","on","once","only","onto","or","other","our","ours","out","outside","over","own","same","shall","she","should","since","so","some","such","than","that","the","their","theirs","them","then","there","these","they","this","those","through","throughout","till","to","too","toward","under","until","up","upon","us","very","was","we","were","what","when","where","which","while","who","whom","whose","why","will","with","within","without","would",
+const AUTOLINK_BLOCKLIST = new Set([
+  "a","about","above","across","after","against","along","among","an","and","are","around","as","at","be","been","being","beneath","beside","between","beyond","both","but","by","can","cannot","could","did","do","does","doing","done","down","during","each","every","few","for","from","further","had","has","have","he","her","here","hers","him","his","how","i","if","in","inside","into","is","it","its","just","many","may","me","might","more","most","much","must","my","near","no","nor","not","now","of","off","on","once","only","onto","or","other","our","ours","out","outside","over","own","same","shall","she","should","since","so","some","such","than","that","the","their","theirs","them","then","there","these","they","this","those","through","throughout","till","to","too","toward","under","until","up","upon","us","very","was","we","were","what","when","where","which","while","who","whom","whose","why","will","with","within","without","would","you","your","yours","yourself","yourselves",
+  "america","american","americas","april","august","brazil","celebrity","data","december","february","gen","january","july","june","march","name","names","night","november","october","season","september","three","twilight","victorian","western","year","years",
+  "arsenios","brandy","chelsea","hall","jennings","kinte","kwon","silva","smith",
+]);
+
+const UNLINK_NAME_LINKS = new Set([
+  "america","american","americas","april","august","celebrity","data","december","february","january","july","june","march","name","names","night","november","october","season","september","three","twilight","victorian","western","year","years","you","your","yours",
 ]);
 
 export async function linkifyBlogBody(html: string, db: D1Database): Promise<string> {
+  html = sanitizeNameLinks(html);
+
   const candidates = new Set<string>();
   transformTextOutsideAnchors(html, (text) => {
     const words = text.match(/\b[A-Z][a-zA-Z]+\b/g);
     if (words) {
       for (const w of words) {
         const lower = w.toLowerCase();
-        if (w.length >= 2 && !STOPWORDS.has(lower)) candidates.add(lower);
+        if (w.length >= 2 && !AUTOLINK_BLOCKLIST.has(lower)) candidates.add(lower);
       }
     }
     return text;
@@ -56,14 +64,40 @@ export async function linkifyBlogBody(html: string, db: D1Database): Promise<str
 
   if (names.size === 0) return html;
 
+  const linkedNames = existingNameLinks(html);
   return transformTextOutsideAnchors(html, (text) =>
     text.replace(/\b([A-Z][a-zA-Z]+)\b/g, (wordMatch: string, word: string) => {
-      if (names.has(word.toLowerCase())) {
+      const lower = word.toLowerCase();
+      if (names.has(lower) && !linkedNames.has(lower)) {
+        linkedNames.add(lower);
         return `<a href="/name/${encodeURIComponent(word)}/">${word}</a>`;
       }
       return wordMatch;
     }),
   );
+}
+
+function sanitizeNameLinks(html: string): string {
+  const linked = new Set<string>();
+  return html.replace(
+    /<a\b([^>]*?)\bhref=(["'])(?:https?:\/\/[^/"']+)?\/name\/([^/"'?#]+)\/?\2([^>]*)>(.*?)<\/a>/gis,
+    (match: string, beforeHref: string, quote: string, slug: string, afterHref: string, label: string) => {
+      const lower = decodeURIComponent(slug).toLowerCase();
+      if (UNLINK_NAME_LINKS.has(lower) || linked.has(lower)) return label;
+      linked.add(lower);
+      return match;
+    },
+  );
+}
+
+function existingNameLinks(html: string): Set<string> {
+  const linked = new Set<string>();
+  const pattern = /\bhref=["'](?:https?:\/\/[^/"']+)?\/name\/([^/"'?#]+)\/?["']/gi;
+  for (const match of html.matchAll(pattern)) {
+    const raw = match[1];
+    if (raw) linked.add(decodeURIComponent(raw).toLowerCase());
+  }
+  return linked;
 }
 
 function transformTextOutsideAnchors(html: string, transform: (text: string) => string): string {
