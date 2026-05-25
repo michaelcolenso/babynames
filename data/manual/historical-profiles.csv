@@ -1,0 +1,8 @@
+name_lower,sex,era_year,top_occupations,primary_region,urban_vs_rural
+mildred,F,1900,"[""Homemaker"",""Teacher"",""Seamstress""]",Midwest,Mostly rural
+mabel,F,1900,"[""Homemaker"",""Domestic worker""]",Northeast,Mixed
+ethel,F,1900,"[""Homemaker"",""Teacher""]",Northeast,Mixed
+clarence,M,1900,"[""Farmer"",""Laborer"",""Clerk""]",Midwest,Mostly rural
+herbert,M,1900,"[""Farmer"",""Machinist""]",Midwest,Mixed
+florence,F,1900,"[""Homemaker"",""Nurse"",""Teacher""]",Northeast,Mostly urban
+walter,M,1900,"[""Farmer"",""Carpenter"",""Clerk""]",Midwest,Mixed

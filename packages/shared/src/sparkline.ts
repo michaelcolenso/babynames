@@ -2,10 +2,18 @@
 
 import type { Status } from "./schema";
 
+export interface SparklineMarker {
+  year: number;
+  label: string;
+  kind: string;
+}
+
 export interface SparklineOpts {
   width?: number;
   height?: number;
   status?: Status;
+  // Optional event pins (e.g. cultural catalysts) drawn on the curve.
+  markers?: SparklineMarker[];
 }
 
 export function buildSparkline(
@@ -75,6 +83,16 @@ export function buildSparkline(
   const peakLabelY = Math.max(12, peakY - 8);
   const latestLabelY = Math.max(12, latestY - 8);
 
+  let markerEls = "";
+  for (const m of opts.markers ?? []) {
+    if (m.year < ym || m.year > yM) continue;
+    const i = m.year - ym;
+    const mx = pad.left + i * xStep;
+    const my = yScale(vals[i] ?? 0);
+    const title = `${m.year}: ${escapeXml(m.label)}`;
+    markerEls += `<circle class="spark-marker" data-kind="${escapeXml(m.kind)}" cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="4"><title>${title}</title></circle>`;
+  }
+
   return `<svg class="sparkline sparkline-${status}" style="--line-color:${statusColor[status]};--fill-color:${fillColor[status]}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
   <line class="axis" x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}"/>
   <path class="fill" d="${fillPath}"/>
@@ -83,5 +101,14 @@ export function buildSparkline(
   <text x="${peakX.toFixed(1)}" y="${peakLabelY.toFixed(1)}" class="point-label" text-anchor="middle">peak ${years[peakIdx]}</text>
   <text x="${latestX.toFixed(1)}" y="${latestLabelY.toFixed(1)}" class="point-label" text-anchor="end">${yM}</text>
   ${ticks}
+  ${markerEls}
 </svg>`;
+}
+
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }

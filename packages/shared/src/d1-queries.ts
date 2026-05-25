@@ -8,10 +8,15 @@ import type {
   BlogPostSummary,
   IndexableName,
   LandingKind,
+  NameCatalyst,
   NameDiscoveryCard,
   NameDiscoveryCluster,
   NameDiscoveryClusterKind,
   NameDiscoveryModule,
+  NameEnrichmentBundle,
+  NameEnrichmentProfile,
+  NameHistoricalProfile,
+  NameRegionalAnomaly,
   NameRow,
   RelatedName,
   SearchHit,
@@ -910,4 +915,80 @@ export async function topByDecade(
     .bind(startYear, endYear, perSex)
     .all<DecadeTopRow>();
   return r.results ?? [];
+}
+
+// Enrichment System: read the four precomputed dossier layers for one
+// (name_lower, sex) in a single round of parallel queries. All heavy
+// computation happens offline in scripts/build-enrichment.ts — this only
+// reads rows.
+export async function getNameEnrichmentBundle(
+  db: D1Database,
+  nameLower: string,
+  sex: Sex,
+): Promise<NameEnrichmentBundle> {
+  const [profile, catalysts, historical, anomalies] = await Promise.all([
+    db
+      .prepare(
+        `SELECT name_lower, sex, total_living_est, median_age, age_range_low,
+                age_range_high, wave_topology, latest_pct, analysis_year, source_version
+           FROM name_enrichment_profiles
+          WHERE name_lower = ?1 AND sex = ?2`,
+      )
+      .bind(nameLower, sex)
+      .first<NameEnrichmentProfile>(),
+    db
+      .prepare(
+        `SELECT trigger_year, catalyst_title, catalyst_type, impact_score, description, source_url
+           FROM name_catalysts
+          WHERE name_lower = ?1 AND sex = ?2
+          ORDER BY trigger_year ASC`,
+      )
+      .bind(nameLower, sex)
+      .all<NameCatalyst>(),
+    db
+      .prepare(
+        `SELECT era_year, top_occupations, primary_region, urban_vs_rural
+           FROM name_historical_profiles
+          WHERE name_lower = ?1 AND sex = ?2
+          ORDER BY era_year ASC`,
+      )
+      .bind(nameLower, sex)
+      .all<{
+        era_year: number;
+        top_occupations: string;
+        primary_region: string;
+        urban_vs_rural: string;
+      }>(),
+    db
+      .prepare(
+        `SELECT state, era_start_year, location_quotient, name_births, historical_peak_year, anomaly_type
+           FROM name_regional_anomalies
+          WHERE name_lower = ?1 AND sex = ?2
+          ORDER BY location_quotient DESC
+          LIMIT 3`,
+      )
+      .bind(nameLower, sex)
+      .all<NameRegionalAnomaly>(),
+  ]);
+
+  return {
+    profile: profile ?? null,
+    catalysts: catalysts.results ?? [],
+    historicalProfiles: (historical.results ?? []).map((row) => ({
+      era_year: row.era_year,
+      primary_region: row.primary_region,
+      urban_vs_rural: row.urban_vs_rural,
+      top_occupations: parseOccupations(row.top_occupations),
+    })),
+    regionalAnomalies: anomalies.results ?? [],
+  };
+}
+
+function parseOccupations(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? parsed.map((v) => String(v)) : [];
+  } catch {
+    return [];
+  }
 }
