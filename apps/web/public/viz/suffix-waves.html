@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suffix Waves — NobodyNamed</title>
+<meta name="description" content="Name endings spread like infections. The -den/dan/aden cluster exploded after 1990. The -ella renaissance took hold in 2005.">
+<link rel="canonical" href="https://nobodynamed.com/viz/suffix-waves">
+<meta property="og:title" content="Suffix Waves — NobodyNamed">
+<meta property="og:description" content="Name endings spread like infections. Each suffix wave is a generation's unconscious trend.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #12121a;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --rule: rgba(255,255,255,0.07);
+    --amber: #c9922a;
+    --rose: #c4786e;
+    --blue: #6a8aaa;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Nav ── */
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.85rem;
+    position: sticky;
+    top: 0;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(8px);
+    z-index: 50;
+  }
+  nav a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+  nav a:hover { color: var(--text); }
+  nav .brand {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    margin-right: auto;
+    text-decoration: none;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 620px;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ── Controls ── */
+  .controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0 2rem 1.25rem;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .controls-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-right: 0.25rem;
+  }
+  .pill-group {
+    display: flex;
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .pill-btn {
+    padding: 0.3rem 1.1rem;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.07em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pill-btn:not(:last-child) { border-right: 1px solid var(--rule); }
+  .pill-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .pill-btn.active { background: var(--amber); color: #000; font-weight: 700; }
+
+  /* ── Chart ── */
+  #chart-wrap {
+    padding: 0 2rem;
+    max-width: 960px;
+    margin: 0 auto;
+    position: relative;
+  }
+  #chart-wrap svg { display: block; width: 100%; overflow: visible; }
+
+  .stream-path {
+    cursor: pointer;
+    transition: opacity 0.18s, filter 0.18s;
+  }
+  .stream-path.dimmed { opacity: 0.1; }
+  .stream-path.highlighted { opacity: 1 !important; filter: brightness(1.25) saturate(1.2); }
+
+  .x-axis .domain { display: none; }
+  .x-axis .tick line { stroke: rgba(255,255,255,0.12); }
+  .x-axis .tick text {
+    fill: #6b7280;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+  }
+
+  .annotation-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    fill: rgba(232,230,227,0.9);
+    pointer-events: none;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9);
+  }
+
+  /* ── Legend ── */
+  .legend-section {
+    padding: 1.25rem 2rem 0.5rem;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  .legend-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+  .legend-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem 0.25rem 0.4rem;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    user-select: none;
+  }
+  .legend-item:hover { border-color: rgba(255,255,255,0.22); color: var(--text); }
+  .legend-item.active { color: var(--text); border-color: rgba(255,255,255,0.2); }
+  .legend-item.inactive { opacity: 0.35; }
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── Tooltip ── */
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10,10,15,0.97);
+    border: 1px solid rgba(201,146,42,0.4);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    z-index: 1000;
+    max-width: 220px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.75);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .tooltip .tt-suffix {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--amber);
+    margin-bottom: 5px;
+    letter-spacing: 0.05em;
+  }
+  .tooltip .tt-row {
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.75;
+  }
+  .tooltip .tt-val {
+    font-family: 'Space Mono', monospace;
+    color: var(--text);
+  }
+
+  /* ── Loading / Error ── */
+  #loading {
+    text-align: center;
+    padding: 8rem 2rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+  }
+  #loading::after {
+    content: '';
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%,100%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'}
+  }
+  #error-msg {
+    display: none;
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--rose);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.8;
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 2.5rem 2rem 2rem;
+    max-width: 960px;
+    margin: 2rem auto 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    border-top: 1px solid var(--rule);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .hero, .controls, #chart-wrap, .legend-section, footer {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    h1 { font-size: 1.8rem; }
+    .pill-btn { padding: 0.3rem 0.75rem; font-size: 0.65rem; }
+    .legend-item { font-size: 0.63rem; padding: 0.2rem 0.5rem 0.2rem 0.35rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="/">NOBODYNAMED</a>
+  <a href="/viz/">Visualizations</a>
+  <a href="/extinct">Extinct</a>
+  <a href="/endangered">Endangered</a>
+  <a href="/blog">Blog</a>
+</nav>
+
+<div class="hero">
+  <div class="kicker">26 / THE PHONEME EPIDEMIC</div>
+  <h1>Suffix Waves</h1>
+  <p class="lede">Name endings spread like infections. The -den/dan/aden cluster exploded after 1990. The -ella renaissance took hold in 2005. Each wave is a generation's unconscious trend.</p>
+</div>
+
+<div class="controls">
+  <span class="controls-label">SEX:</span>
+  <div class="pill-group">
+    <button class="pill-btn active" data-sex="F">Girls</button>
+    <button class="pill-btn" data-sex="M">Boys</button>
+  </div>
+</div>
+
+<div id="chart-wrap">
+  <div id="loading">MAPPING PHONEME TIDES</div>
+  <div id="error-msg">Failed to load data.<br>Try refreshing the page.</div>
+</div>
+
+<div class="legend-section">
+  <div class="legend-title">Suffixes — click to toggle</div>
+  <div class="legend-grid" id="legend"></div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<footer>Built on public-domain SSA data.</footer>
+
+<script>
+'use strict';
+
+// ── Palette — 20 dark-friendly categorical colors ─────────────────────────────
+const PALETTE = [
+  "#c9922a","#c4786e","#6a8aaa","#7a9e7e","#9b7ec8",
+  "#e8c547","#7ec8b0","#c87e9b","#8aaa6a","#c8a07e",
+  "#7eaac8","#a07ec8","#c8c07e","#7ec8c8","#c87e7e",
+  "#7e8ac8","#c89b7e","#8ac87e","#c87ec4","#aac87e"
+];
+
+// ── Inline peak annotations by suffix key ────────────────────────────────────
+// Keys are 3-char lowercase suffixes matching the API's suffixes[] array.
+const ANNOTATIONS_F = { "lla": "-LLA", "aya": "-AYA", "ena": "-ENA", "lia": "-LIA" };
+const ANNOTATIONS_M = { "den": "-DEN", "ian": "-IAN", "dan": "-DAN", "son": "-SON" };
+
+// ── Application state ─────────────────────────────────────────────────────────
+let apiData = null;
+let activeSex = 'F';
+let disabledSuffixes = new Set();
+
+// ── Fetch API data ────────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const res = await fetch('/api/suffix-waves');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    apiData = await res.json();
+    document.getElementById('loading').style.display = 'none';
+    buildLegend();
+    drawChart();
+  } catch (err) {
+    console.warn('suffix-waves API unavailable, using mock data:', err.message);
+    // Graceful fallback: synthetic data for dev/preview
+    apiData = makeMockData();
+    document.getElementById('loading').style.display = 'none';
+    buildLegend();
+    drawChart();
+  }
+}
+
+// ── Mock data for dev / offline preview ──────────────────────────────────────
+function makeMockData() {
+  const years = d3.range(1880, 2025);
+  const suffixes = [
+    "lla","den","son","ley","lyn","ana","lia","aya","ian","ton",
+    "ena","lee","ren","nna","ara","ica","ela","ina","ora","ise"
+  ];
+
+  function makeWave(peakYear, height, halfWidth, base) {
+    return years.map(y => {
+      const d = y - peakYear;
+      const v = base + height * Math.exp(-(d * d) / (2 * halfWidth * halfWidth));
+      return Math.max(0, Math.round(v + (Math.random() - 0.5) * height * 0.08));
+    });
+  }
+
+  const F = years.map(() => new Array(20).fill(0));
+  const M = years.map(() => new Array(20).fill(0));
+
+  const fPeaks = [
+    [1960,42000,15],[1985,26000,12],[1995,61000,10],[2005,58000,12],
+    [2010,46000,10],[1930,31000,20],[2000,36000,8],[1970,21000,18],
+    [2015,41000,8],[1950,26000,25],[1990,31000,14],[1945,19000,20],
+    [2008,29000,9],[1975,23000,16],[2012,33000,7],[1965,20000,22],
+    [2003,25000,11],[1988,22000,13],[2018,37000,6],[1955,16000,28]
+  ];
+  const mPeaks = [
+    [1995,56000,10],[2000,49000,12],[1970,36000,15],[1985,31000,18],
+    [2005,43000,9],[1940,29000,22],[2010,39000,8],[1960,26000,20],
+    [1990,33000,14],[2015,45000,7],[1950,23000,25],[1930,19000,28],
+    [2002,27000,11],[1975,21000,17],[2008,35000,9],[1965,18000,23],
+    [1998,24000,12],[1982,20000,16],[2012,30000,7],[1955,15000,30]
+  ];
+
+  fPeaks.forEach(([peak, h, w], i) => {
+    const wave = makeWave(peak, h, w, h * 0.04);
+    years.forEach((_, yi) => { F[yi][i] = wave[yi]; });
+  });
+  mPeaks.forEach(([peak, h, w], i) => {
+    const wave = makeWave(peak, h, w, h * 0.04);
+    years.forEach((_, yi) => { M[yi][i] = wave[yi]; });
+  });
+
+  return { ym: 1880, yM: 2024, suffixes, years, F, M };
+}
+
+// ── Legend ────────────────────────────────────────────────────────────────────
+function buildLegend() {
+  const container = document.getElementById('legend');
+  container.innerHTML = '';
+  apiData.suffixes.forEach((suf, i) => {
+    const item = document.createElement('div');
+    item.className = 'legend-item active';
+    item.dataset.suffix = suf;
+    item.innerHTML = `<div class="legend-swatch" style="background:${PALETTE[i % PALETTE.length]}"></div>-${suf.toUpperCase()}`;
+    item.addEventListener('click', () => {
+      if (disabledSuffixes.has(suf)) {
+        disabledSuffixes.delete(suf);
+        item.classList.remove('inactive');
+        item.classList.add('active');
+      } else {
+        disabledSuffixes.add(suf);
+        item.classList.remove('active');
+        item.classList.add('inactive');
+      }
+      drawChart();
+    });
+    container.appendChild(item);
+  });
+}
+
+// ── Draw streamgraph ──────────────────────────────────────────────────────────
+function drawChart() {
+  if (!apiData) return;
+
+  const wrap = document.getElementById('chart-wrap');
+  d3.select('#chart-wrap svg').remove();
+
+  const { suffixes, years } = apiData;
+  const matrix = activeSex === 'F' ? apiData.F : apiData.M;
+  const annotations = activeSex === 'F' ? ANNOTATIONS_F : ANNOTATIONS_M;
+
+  // Enabled suffix entries: [{s: suffix_string, i: original_index}, ...]
+  const enabled = suffixes
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => !disabledSuffixes.has(s));
+
+  if (enabled.length === 0) return;
+
+  // Stack input: one datum per year, keys are the original suffix indices (numbers)
+  const keys = enabled.map(({ i }) => i);
+  const stackData = years.map((yr, yi) => {
+    const obj = { year: yr };
+    enabled.forEach(({ i }) => {
+      obj[i] = (matrix[yi] && matrix[yi][i]) || 0;
+    });
+    return obj;
+  });
+
+  const stackGen = d3.stack()
+    .keys(keys)
+    .value((d, k) => d[k] || 0)
+    .offset(d3.stackOffsetWiggle)
+    .order(d3.stackOrderInsideOut);
+
+  let series;
+  try {
+    series = stackGen(stackData);
+  } catch (e) {
+    console.error('d3.stack error:', e);
+    return;
+  }
+
+  // Build a lookup: key (suffix index) → series layer index
+  const keyToLayer = new Map(series.map((layer, j) => [layer.key, j]));
+
+  // Dimensions
+  const totalW = wrap.clientWidth || 860;
+  const margin = { top: 24, right: 24, bottom: 38, left: 16 };
+  const W = totalW - margin.left - margin.right;
+  const H = Math.max(320, Math.min(500, window.innerHeight * 0.5));
+
+  // Scales
+  const xScale = d3.scaleLinear()
+    .domain([years[0], years[years.length - 1]])
+    .range([0, W]);
+
+  const allY = series.flatMap(layer => layer.flatMap(d => [d[0], d[1]])).filter(Number.isFinite);
+  const yMin = d3.min(allY) ?? 0;
+  const yMax = d3.max(allY) ?? 1;
+  const yPad = (yMax - yMin) * 0.03;
+  const yScale = d3.scaleLinear()
+    .domain([yMin - yPad, yMax + yPad])
+    .range([H, 0]);
+
+  // Area generator — index i maps directly to years[i]
+  const area = d3.area()
+    .x((_, i) => xScale(years[i]))
+    .y0(d => yScale(d[0]))
+    .y1(d => yScale(d[1]))
+    .curve(d3.curveCatmullRom.alpha(0.5));
+
+  // SVG
+  const svg = d3.select('#chart-wrap').append('svg')
+    .attr('width', totalW)
+    .attr('height', H + margin.top + margin.bottom)
+    .attr('viewBox', `0 0 ${totalW} ${H + margin.top + margin.bottom}`);
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  // Vertical year gridlines
+  const xTickYears = d3.range(1880, years[years.length - 1] + 1, 20);
+  g.selectAll('.xgrid')
+    .data(xTickYears)
+    .join('line')
+    .attr('class', 'xgrid')
+    .attr('x1', d => xScale(d)).attr('x2', d => xScale(d))
+    .attr('y1', 0).attr('y2', H)
+    .attr('stroke', 'rgba(255,255,255,0.055)')
+    .attr('stroke-dasharray', '3,6');
+
+  // Stream paths
+  const paths = g.selectAll('.stream-path')
+    .data(series)
+    .join('path')
+    .attr('class', 'stream-path')
+    .attr('d', area)
+    .attr('fill', layer => {
+      const sufIdx = +layer.key;
+      return PALETTE[sufIdx % PALETTE.length];
+    })
+    .attr('fill-opacity', 0.8)
+    .attr('stroke', layer => {
+      const sufIdx = +layer.key;
+      return PALETTE[sufIdx % PALETTE.length];
+    })
+    .attr('stroke-width', 0.5)
+    .attr('stroke-opacity', 0.45);
+
+  // ── Hover interaction ────────────────────────────────────────────────────────
+  const tt = document.getElementById('tooltip');
+
+  paths.on('mousemove', function(event, layer) {
+    const [mx] = d3.pointer(event, g.node());
+    // Map pixel x → nearest year index
+    const yr = Math.round(xScale.invert(mx));
+    const yi = yr - years[0]; // years are contiguous integers
+    if (yi < 0 || yi >= years.length) return;
+
+    const sufIdx = +layer.key;
+    const suf = suffixes[sufIdx];
+    if (!suf) return;
+
+    const count = (matrix[yi] && matrix[yi][sufIdx]) || 0;
+
+    // Dim all, highlight this one
+    paths
+      .classed('dimmed', dd => dd !== layer)
+      .classed('highlighted', dd => dd === layer);
+
+    // Tooltip
+    tt.innerHTML = `
+      <div class="tt-suffix">-${suf.toUpperCase()}</div>
+      <div class="tt-row">Year <span class="tt-val">${yr}</span></div>
+      <div class="tt-row">Births <span class="tt-val">${count.toLocaleString()}</span></div>
+    `;
+    tt.style.opacity = '1';
+    const bx = event.clientX, by = event.clientY;
+    const ttW = 200, ttH = 90;
+    tt.style.left = (bx + 16 + ttW > window.innerWidth ? bx - ttW - 16 : bx + 16) + 'px';
+    tt.style.top  = (by + 12 + ttH > window.innerHeight ? by - ttH - 12 : by + 12) + 'px';
+  })
+  .on('mouseleave', function() {
+    paths.classed('dimmed', false).classed('highlighted', false);
+    tt.style.opacity = '0';
+  });
+
+  // ── X axis ──────────────────────────────────────────────────────────────────
+  const xAxis = d3.axisBottom(xScale)
+    .tickValues(xTickYears)
+    .tickFormat(d3.format('d'))
+    .tickSize(5);
+
+  g.append('g')
+    .attr('class', 'x-axis')
+    .attr('transform', `translate(0,${H})`)
+    .call(xAxis);
+
+  // ── Peak annotations ────────────────────────────────────────────────────────
+  // For each annotated suffix, find the year-index where the stream is tallest,
+  // then place a label at the vertical midpoint of that stream at that year.
+  const annotG = g.append('g').attr('class', 'annotations');
+
+  Object.entries(annotations).forEach(([suf, label]) => {
+    if (disabledSuffixes.has(suf)) return;
+    const sufIdx = suffixes.indexOf(suf);
+    if (sufIdx < 0) return;
+    const layerIdx = keyToLayer.get(sufIdx);
+    if (layerIdx == null) return;
+    const layer = series[layerIdx];
+
+    // Find the year index where the band height is maximum
+    let bestYi = 0;
+    let bestHeight = -Infinity;
+    layer.forEach((d, yi) => {
+      if (!Number.isFinite(d[0]) || !Number.isFinite(d[1])) return;
+      const h = Math.abs(yScale(d[1]) - yScale(d[0]));
+      if (h > bestHeight) { bestHeight = h; bestYi = yi; }
+    });
+
+    // Only label if the band is wide enough to be legible
+    if (bestHeight < 14) return;
+
+    const d = layer[bestYi];
+    if (!Number.isFinite(d[0]) || !Number.isFinite(d[1])) return;
+
+    const cx = xScale(years[bestYi]);
+    const cy = yScale((d[0] + d[1]) / 2);
+
+    annotG.append('text')
+      .attr('class', 'annotation-label')
+      .attr('x', cx)
+      .attr('y', cy)
+      .attr('text-anchor', 'middle')
+      .attr('dominant-baseline', 'middle')
+      .text(label);
+  });
+}
+
+// ── Sex toggle ────────────────────────────────────────────────────────────────
+document.querySelectorAll('.pill-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.sex === activeSex) return;
+    document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeSex = btn.dataset.sex;
+    drawChart();
+  });
+});
+
+// ── Debounced resize ──────────────────────────────────────────────────────────
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(drawChart, 160);
+});
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>

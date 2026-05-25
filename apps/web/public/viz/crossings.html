@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Gender Crossing — Names That Switched Sides · NobodyNamed</title>
+<meta name="description" content="Names that started as one sex, crossed the line, and never came back. The flow is almost always male → female.">
+<link rel="canonical" href="https://nobodynamed.com/viz/crossings">
+<meta property="og:title" content="The Gender Crossing — Names That Switched Sides">
+<meta property="og:description" content="Names that started as one sex, crossed the line, and never came back. The flow is almost always male → female.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --surface: #16161f;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --rule: rgba(255,255,255,0.07);
+    --amber: #c9922a;
+    --amber-glow: rgba(201,146,42,0.18);
+    --rose: #c4786e;
+    --blue: #6a8aaa;
+    --accent: #c9922a;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Nav ── */
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 0.9rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.82rem;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+  nav .brand {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    margin-right: auto;
+  }
+  nav a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+  nav a:hover { color: var(--text); }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+    margin-bottom: 0.7rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 620px;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ── Stats row ── */
+  .stats-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .stat-chip {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.76rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+  .stat-chip .n {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stat-chip .l { color: var(--muted); }
+  .stat-chip.gold .n  { color: var(--amber); }
+  .stat-chip.rose .n  { color: var(--rose); }
+  .stat-chip.blue .n  { color: var(--blue); }
+
+  /* ── Controls ── */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.75rem 2rem;
+    max-width: 1120px;
+    margin: 0 auto;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+  }
+  .controls-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    margin-right: 0.25rem;
+  }
+  .btn {
+    padding: 0.28rem 0.85rem;
+    border-radius: 20px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover  { border-color: var(--text); color: var(--text); }
+  .btn.active { background: var(--amber); border-color: var(--amber); color: #1a0e00; font-weight: 700; }
+  .divider    { width: 1px; height: 20px; background: var(--rule); margin: 0 0.25rem; }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    padding: 0.6rem 2rem;
+    max-width: 1120px;
+    margin: 0 auto;
+    align-items: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+  }
+  .legend-swatch {
+    width: 24px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .legend-swatch.male   { background: var(--blue); }
+  .legend-swatch.female { background: var(--rose); }
+  .legend-swatch.crossing {
+    width: 2px;
+    height: 14px;
+    background: var(--amber);
+    border-radius: 1px;
+    border: none;
+  }
+
+  /* ── Grid ── */
+  #grid-wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem 2rem;
+  }
+  #name-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  /* ── Cell ── */
+  .cell {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 0.75rem 0.75rem 0.6rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .cell:hover {
+    border-color: rgba(201,146,42,0.4);
+    background: #1a1a25;
+  }
+  .cell-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.35rem;
+  }
+  .cell-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .cell-dir {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .cell-dir.mf        { color: var(--rose); }
+  .cell-dir.fm        { color: var(--blue); }
+  .cell-dir.contested { color: var(--amber); }
+
+  /* SVG chart — fixed viewBox, CSS controls display size */
+  .cell-chart {
+    display: block;
+    width: 100%;
+    height: 90px;
+  }
+
+  .cell-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.35rem;
+  }
+  .cell-year {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--amber);
+  }
+  .cell-totals {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+    display: flex;
+    gap: 0.4rem;
+  }
+  .cell-totals .m { color: var(--blue); }
+  .cell-totals .f { color: var(--rose); }
+
+  /* ── Tooltip ── */
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10,10,15,0.97);
+    border: 1px solid rgba(201,146,42,0.35);
+    border-radius: 8px;
+    padding: 10px 14px;
+    z-index: 200;
+    max-width: 240px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+    opacity: 0;
+    transition: opacity 0.12s;
+    font-family: 'Space Grotesk', system-ui;
+  }
+  .tooltip .t-name {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 3px;
+    letter-spacing: -0.01em;
+  }
+  .tooltip .t-dir {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .tooltip .t-dir.mf        { color: var(--rose); }
+  .tooltip .t-dir.fm        { color: var(--blue); }
+  .tooltip .t-dir.contested { color: var(--amber); }
+  .tooltip .t-row {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .tooltip .t-row strong { color: var(--text); font-weight: 600; }
+  .tooltip .t-link {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--amber);
+    opacity: 0.8;
+  }
+
+  /* ── Loading / Error ── */
+  #loading {
+    text-align: center;
+    padding: 5rem 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+  #error-msg {
+    text-align: center;
+    padding: 3rem 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--rose);
+    letter-spacing: 0.05em;
+    display: none;
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 2rem;
+    max-width: 1120px;
+    margin: 0 auto;
+    border-top: 1px solid var(--rule);
+    font-size: 0.8rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--text); }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .hero { padding: 2rem 1rem 1rem; }
+    .controls, .legend, #grid-wrap, footer { padding-left: 1rem; padding-right: 1rem; }
+    nav { padding: 0.75rem 1rem; gap: 1rem; }
+    #name-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="/">NOBODYNAMED</a>
+  <a href="/viz/">Visualizations</a>
+  <a href="/extinct">Extinct</a>
+  <a href="/endangered">Endangered</a>
+  <a href="/blog">Blog</a>
+</nav>
+
+<div class="hero">
+  <p class="kicker">23 / THE CROSSING</p>
+  <h1>The Gender Crossing</h1>
+  <p class="lede">Names that started as one sex, crossed the line, and never came back. The flow is almost always male&thinsp;→&thinsp;female.</p>
+  <div class="stats-row" id="stats-row">
+    <div class="stat-chip gold">
+      <span class="n" id="stat-unisex">—</span>
+      <span class="l">unisex names</span>
+    </div>
+    <div class="stat-chip rose">
+      <span class="n" id="stat-mf">—</span>
+      <span class="l">M→F crossings</span>
+    </div>
+    <div class="stat-chip blue">
+      <span class="n" id="stat-fm">—</span>
+      <span class="l">F→M crossings</span>
+    </div>
+    <div class="stat-chip">
+      <span class="n" id="stat-recent">—</span>
+      <span class="l">most recent crossing</span>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <span class="controls-label">FILTER</span>
+  <button class="btn active" id="btn-all"       onclick="setFilter('all')">All</button>
+  <button class="btn"        id="btn-mf"        onclick="setFilter('M→F')">M→F</button>
+  <button class="btn"        id="btn-fm"        onclick="setFilter('F→M')">F→M</button>
+  <button class="btn"        id="btn-contested" onclick="setFilter('contested')">Contested</button>
+  <div class="divider"></div>
+  <span class="controls-label">SORT</span>
+  <button class="btn active" id="btn-sort-births" onclick="setSort('births')">Total births</button>
+  <button class="btn"        id="btn-sort-year"   onclick="setSort('year')">Crossing year</button>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-swatch male"></div>Male births</div>
+  <div class="legend-item"><div class="legend-swatch female"></div>Female births</div>
+  <div class="legend-item"><div class="legend-swatch crossing"></div>Crossing year</div>
+</div>
+
+<div id="grid-wrap">
+  <div id="loading">LOADING CROSSINGS…</div>
+  <div id="error-msg"></div>
+  <div id="name-grid"></div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<footer>
+  <span>Built on public-domain SSA data.</span>
+  <span><a href="/about">Methodology</a> · <a href="/viz/">More visualizations</a></span>
+</footer>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let allData    = null;
+let currentFilter = 'all';
+let currentSort   = 'births';
+
+// Fixed internal SVG coordinate space for mini charts (logical pixels)
+const CHART_VW = 200;
+const CHART_VH = 90;
+
+const COLORS = {
+  male:   '#6a8aaa',
+  female: '#c4786e',
+  amber:  '#c9922a',
+  muted:  '#6b7280',
+};
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n == null) return '—';
+  if (n >= 1e6)  return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3)  return (n / 1e3).toFixed(0) + 'k';
+  return n.toLocaleString();
+}
+
+function dirClass(dir) {
+  if (!dir)          return '';
+  if (dir === 'M→F') return 'mf';
+  if (dir === 'F→M') return 'fm';
+  return 'contested';
+}
+
+function dirLabel(dir) {
+  if (!dir) return '—';
+  return dir;
+}
+
+function positionTooltip(e) {
+  const tip = document.getElementById('tooltip');
+  const tw  = 240;
+  let tx = e.clientX + 16;
+  let ty = e.clientY - 20;
+  if (tx + tw > window.innerWidth  - 8) tx = e.clientX - tw - 16;
+  if (ty < 8)                           ty = 8;
+  if (ty + 160 > window.innerHeight)    ty = window.innerHeight - 168;
+  tip.style.left = tx + 'px';
+  tip.style.top  = ty + 'px';
+}
+
+// ─── Controls ─────────────────────────────────────────────────────────────────
+function setFilter(f) {
+  currentFilter = f;
+  const map = { 'all': 'btn-all', 'M→F': 'btn-mf', 'F→M': 'btn-fm', 'contested': 'btn-contested' };
+  Object.entries(map).forEach(([v, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.className = v === f ? 'btn active' : 'btn';
+  });
+  renderGrid();
+}
+
+function setSort(s) {
+  currentSort = s;
+  document.getElementById('btn-sort-births').className = s === 'births' ? 'btn active' : 'btn';
+  document.getElementById('btn-sort-year').className   = s === 'year'   ? 'btn active' : 'btn';
+  renderGrid();
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+function updateStats() {
+  if (!allData) return;
+  const names = allData.names;
+  const mf    = names.filter(d => d.direction === 'M→F');
+  const fm    = names.filter(d => d.direction === 'F→M');
+  const withCrossing = names.filter(d => d.crossingYear != null);
+  const recentYear   = withCrossing.length
+    ? Math.max(...withCrossing.map(d => d.crossingYear))
+    : null;
+
+  document.getElementById('stat-unisex').textContent = names.length.toLocaleString();
+  document.getElementById('stat-mf').textContent     = mf.length.toLocaleString();
+  document.getElementById('stat-fm').textContent     = fm.length.toLocaleString();
+  document.getElementById('stat-recent').textContent = recentYear != null ? recentYear : '—';
+}
+
+// ─── Mini chart renderer ──────────────────────────────────────────────────────
+// Uses a fixed internal viewBox (CHART_VW × CHART_VH) so all charts share the
+// same logical coordinate space regardless of CSS display size. The SVG element
+// is sized 100% wide × CHART_VH px via CSS; preserveAspectRatio handles scaling.
+function renderMiniChart(svgEl, d, globalYMin, globalYMax) {
+  const W = CHART_VW;
+  const H = CHART_VH;
+
+  // Use consistent x domain across all cells (full SSA range) when available,
+  // otherwise fall back to this name's own year range.
+  const ym = (allData && allData.ym) || (d.years.length ? d.years[0]  : 1880);
+  const yM = (allData && allData.yM) || (d.years.length ? d.years[d.years.length - 1] : 2024);
+
+  svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svgEl.setAttribute('preserveAspectRatio', 'none');
+  // Width is controlled by CSS (100%); height is set explicitly so the element
+  // has intrinsic dimensions before layout.
+  svgEl.setAttribute('height', H);
+
+  const years  = d.years;
+  const mVals  = d.m;
+  const fVals  = d.f;
+
+  if (!years || years.length === 0) return;
+
+  const allVals = [...mVals, ...fVals].filter(v => v > 0);
+  if (allVals.length === 0) return;
+
+  const pad    = { left: 2, right: 2, top: 5, bottom: 5 };
+  const innerW = W - pad.left - pad.right;
+  const innerH = H - pad.top  - pad.bottom;
+
+  // x: full SSA range so crossing-year dashes align across cells
+  const xScale = d3.scaleLinear()
+    .domain([ym, yM])
+    .range([pad.left, pad.left + innerW]);
+
+  // y: local max so each chart uses its full height
+  const yMax = Math.max(...allVals) * 1.08;
+  const yScale = d3.scaleLinear()
+    .domain([0, yMax])
+    .range([pad.top + innerH, pad.top]);
+
+  const svg = d3.select(svgEl);
+  svg.selectAll('*').remove();
+
+  // Subtle baseline
+  svg.append('line')
+    .attr('x1', pad.left).attr('x2', pad.left + innerW)
+    .attr('y1', pad.top + innerH).attr('y2', pad.top + innerH)
+    .attr('stroke', 'rgba(255,255,255,0.06)')
+    .attr('stroke-width', 1);
+
+  // Crossing-year vertical dashed line in amber
+  if (d.crossingYear != null) {
+    const cx = xScale(d.crossingYear);
+    if (cx >= pad.left && cx <= pad.left + innerW) {
+      svg.append('line')
+        .attr('x1', cx).attr('x2', cx)
+        .attr('y1', pad.top).attr('y2', pad.top + innerH)
+        .attr('stroke', COLORS.amber)
+        .attr('stroke-width', 1.5)
+        .attr('stroke-dasharray', '3,2')
+        .attr('opacity', 0.8);
+    }
+  }
+
+  // Line generator — gaps where value is 0 or null are left open
+  const lineGen = d3.line()
+    .x((_, i) => xScale(years[i]))
+    .y(v => yScale(v))
+    .curve(d3.curveMonotoneX)
+    .defined((v, i) => v != null && v > 0 && years[i] >= ym && years[i] <= yM);
+
+  // Male line (blue)
+  if (mVals.some(v => v > 0)) {
+    svg.append('path')
+      .datum(mVals)
+      .attr('d', lineGen)
+      .attr('fill', 'none')
+      .attr('stroke', COLORS.male)
+      .attr('stroke-width', 1.6)
+      .attr('stroke-linejoin', 'round')
+      .attr('stroke-linecap', 'round')
+      .attr('opacity', 0.9);
+  }
+
+  // Female line (rose)
+  if (fVals.some(v => v > 0)) {
+    svg.append('path')
+      .datum(fVals)
+      .attr('d', lineGen)
+      .attr('fill', 'none')
+      .attr('stroke', COLORS.female)
+      .attr('stroke-width', 1.6)
+      .attr('stroke-linejoin', 'round')
+      .attr('stroke-linecap', 'round')
+      .attr('opacity', 0.9);
+  }
+}
+
+// ─── Grid render ──────────────────────────────────────────────────────────────
+function renderGrid() {
+  if (!allData) return;
+
+  let names = [...allData.names];
+
+  // Filter by direction
+  if (currentFilter !== 'all') {
+    names = names.filter(d => d.direction === currentFilter);
+  }
+
+  // Sort
+  if (currentSort === 'births') {
+    names.sort((a, b) => (b.mTotal + b.fTotal) - (a.mTotal + a.fTotal));
+  } else {
+    // By crossing year — earliest first; null crossing years go to end
+    names.sort((a, b) => {
+      if (a.crossingYear == null && b.crossingYear == null) return 0;
+      if (a.crossingYear == null) return 1;
+      if (b.crossingYear == null) return -1;
+      return a.crossingYear - b.crossingYear;
+    });
+  }
+
+  // Top 40
+  const top = names.slice(0, 40);
+
+  const tooltip = document.getElementById('tooltip');
+  const grid    = document.getElementById('name-grid');
+  grid.innerHTML = '';
+
+  top.forEach(d => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+
+    const dc      = dirClass(d.direction);
+    const dirText = dirLabel(d.direction);
+    const yearStr = d.crossingYear != null
+      ? 'crossed ' + d.crossingYear
+      : 'no clear crossing';
+
+    cell.innerHTML = `
+      <div class="cell-header">
+        <span class="cell-name">${d.name}</span>
+        <span class="cell-dir ${dc}">${dirText}</span>
+      </div>
+      <svg class="cell-chart"></svg>
+      <div class="cell-footer">
+        <span class="cell-year">${yearStr}</span>
+        <span class="cell-totals">
+          <span class="m">♂&nbsp;${fmt(d.mTotal)}</span>
+          <span class="f">♀&nbsp;${fmt(d.fTotal)}</span>
+        </span>
+      </div>`;
+
+    // Tooltip: show on enter, move on mousemove, hide on leave
+    cell.addEventListener('mouseenter', function() {
+      const dc2 = dirClass(d.direction);
+      tooltip.innerHTML = `
+        <div class="t-name">${d.name}</div>
+        <div class="t-dir ${dc2}">${dirText}</div>
+        ${d.crossingYear != null
+          ? `<div class="t-row">Crossing year: <strong>${d.crossingYear}</strong></div>`
+          : `<div class="t-row">No clear crossing year</div>`}
+        <div class="t-row">Male total: <strong>${d.mTotal != null ? d.mTotal.toLocaleString() : '—'}</strong></div>
+        <div class="t-row">Female total: <strong>${d.fTotal != null ? d.fTotal.toLocaleString() : '—'}</strong></div>
+        <div class="t-link">Click to open dossier →</div>`;
+      tooltip.style.opacity = 1;
+    });
+
+    cell.addEventListener('mousemove', positionTooltip);
+
+    cell.addEventListener('mouseleave', function() {
+      tooltip.style.opacity = 0;
+    });
+
+    cell.addEventListener('click', function() {
+      window.open(`/name/${encodeURIComponent(d.name)}/`, '_blank');
+    });
+
+    grid.appendChild(cell);
+
+    // Render mini chart once in DOM so SVG element is attached
+    const svgEl = cell.querySelector('.cell-chart');
+    requestAnimationFrame(() => renderMiniChart(svgEl, d));
+  });
+}
+
+// ─── Data fetch ───────────────────────────────────────────────────────────────
+async function loadData() {
+  const loadingEl = document.getElementById('loading');
+  const errorEl   = document.getElementById('error-msg');
+  try {
+    const res = await fetch('/api/gender-crossings');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    allData = await res.json();
+    loadingEl.style.display = 'none';
+    updateStats();
+    renderGrid();
+  } catch (err) {
+    loadingEl.style.display  = 'none';
+    errorEl.style.display    = 'block';
+    errorEl.textContent      = `Failed to load data: ${err.message}`;
+    console.error('crossings fetch error:', err);
+  }
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
