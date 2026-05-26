@@ -9,6 +9,7 @@ import {
   classify,
   enrichName,
   getMeta,
+  getNameDiaspora,
   getNameDiscoveryClusters,
   getNameEnrichmentBundle,
   getNameWithSeries,
@@ -94,7 +95,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   };
   const cls = classify({ series: record.series, yM: record.yM })!;
   const primaryRow = rows.find((r) => r.row.sex === primary.sex) ?? rows[0]!;
-  const [relatedNames, discovery, peerNames, yearTotals, enrichment, enrichmentBundle] = await Promise.all([
+  const [relatedNames, discovery, peerNames, yearTotals, enrichment, enrichmentBundle, diaspora] = await Promise.all([
     listRelatedNames(ctx.env.DB, lower, primaryRow.row.sex, primaryRow.row.status, primaryRow.row.peak_year, 6),
     getNameDiscoveryClusters(ctx.env.DB, {
       currentNameLower: lower,
@@ -107,6 +108,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     getYearTotalsForYears(ctx.env.DB, primaryRow.row.sex, [cls.peakYear, record.yM]).catch(() => []),
     enrichName(ctx.env.DB, record.name, record.sex).catch(() => null),
     getNameEnrichmentBundle(ctx.env.DB, lower, primaryRow.row.sex).catch(() => null),
+    getNameDiaspora(ctx.env.DB, lower, primaryRow.row.sex).catch(() => null),
   ]);
   const url = new URL(ctx.request.url);
   const canonical = `${url.origin}/name/${encodeURIComponent(record.name)}/`;
@@ -119,6 +121,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     yearTotals,
     enrichmentSnippet: enrichment?.snippet,
     enrichment: enrichmentBundle ?? undefined,
+    diaspora: diaspora ?? undefined,
     affiliateTag: ctx.env.AMAZON_ASSOCIATES_TAG,
   });
   return new Response(html, {

@@ -1,5 +1,6 @@
 export * from "./schema";
 export * from "./classify";
+export * from "./us-states-map";
 export * from "./sparkline";
 export * from "./render-name";
 export * from "./render-twin";

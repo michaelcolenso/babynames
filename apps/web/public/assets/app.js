@@ -375,6 +375,117 @@ async function hydrateEnrichment(container, record) {
   }
 }
 
+function diasporaTier(state, originState, year, originYear) {
+  if (state === originState) return "origin";
+  if (year == null) return "never";
+  const diff = year - originYear;
+  if (diff <= 5) return "early";
+  if (diff <= 15) return "mid";
+  return "late";
+}
+
+// Progressive enhancement over the server-rendered diaspora choropleth: add
+// play/scrub controls that animate adoption year-by-year. The static SSR map
+// stands on its own if this never runs. Data comes from the embedded record
+// (#nv-data), so it works even if the /api/diaspora fetch is unavailable.
+function hydrateDiaspora(container, record) {
+  const d = record && record.diaspora;
+  const root =
+    (container && container.querySelector("#diaspora-map")) ||
+    document.getElementById("diaspora-map");
+  if (!d || !d.origin || !root) return;
+  if (root.dataset.hydrated === "1") return;
+
+  const originState = d.origin.state;
+  const originYear = d.origin.year;
+  const adopt = new Map((d.spread || []).map((s) => [s.state, s.year]));
+  const maxYear = (d.spread || []).reduce((m, s) => Math.max(m, s.year), originYear);
+  const tiles = [...root.querySelectorAll(".dz-tile")];
+  if (!tiles.length) return;
+
+  const controls = document.createElement("div");
+  controls.className = "diaspora-controls";
+  const playBtn = document.createElement("button");
+  playBtn.type = "button";
+  playBtn.className = "diaspora-play";
+  playBtn.textContent = "▶ Play diffusion";
+  const slider = document.createElement("input");
+  slider.type = "range";
+  slider.className = "diaspora-slider";
+  slider.min = String(originYear);
+  slider.max = String(maxYear);
+  slider.value = String(maxYear);
+  slider.setAttribute("aria-label", "Diffusion year");
+  const label = document.createElement("span");
+  label.className = "diaspora-year";
+  controls.appendChild(playBtn);
+  controls.appendChild(slider);
+  controls.appendChild(label);
+  const svg = root.querySelector(".diaspora-grid");
+  root.insertBefore(controls, svg);
+  root.dataset.hydrated = "1";
+
+  const apply = (T, revealing) => {
+    for (const g of tiles) {
+      const st = g.getAttribute("data-state");
+      const yr = adopt.has(st) ? adopt.get(st) : null;
+      let cls;
+      if (yr == null) cls = "never";
+      else if (revealing && yr > T) cls = "pending";
+      else cls = diasporaTier(st, originState, yr, originYear);
+      g.setAttribute("class", "dz-tile dz-" + cls);
+    }
+    label.textContent = revealing ? String(T) : originYear + "–" + maxYear;
+  };
+
+  let timer = null;
+  let playing = false;
+  const stop = () => {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    playing = false;
+    playBtn.textContent = "▶ Play diffusion";
+  };
+  const play = () => {
+    stop();
+    if (maxYear <= originYear) {
+      apply(maxYear, false);
+      return;
+    }
+    let T = originYear;
+    playing = true;
+    playBtn.textContent = "❚❚ Pause";
+    slider.value = String(T);
+    apply(T, true);
+    timer = window.setInterval(() => {
+      T += 1;
+      slider.value = String(T);
+      apply(T, true);
+      if (T >= maxYear) {
+        stop();
+        apply(maxYear, false);
+      }
+    }, 140);
+  };
+
+  playBtn.addEventListener("click", () => {
+    if (playing) {
+      stop();
+      apply(maxYear, false);
+    } else {
+      play();
+    }
+  });
+  slider.addEventListener("input", () => {
+    stop();
+    apply(Number(slider.value), true);
+  });
+
+  apply(maxYear, false);
+}
+
 async function setupSearch(input, suggestions, submit, sexSelect) {
   let currentSuggestions = [];
   let activeIdx = -1;
@@ -439,6 +550,7 @@ window.NameVitals = {
   renderReport,
   attachShareHandlers,
   hydrateEnrichment,
+  hydrateDiaspora,
   titleCase,
   fmt,
 };
