@@ -9,8 +9,10 @@ export type IngestMessage =
   | { type: "year-totals"; runId: string; totals: YearTotalRow[] }
   | { type: "finalize"; runId: string; ym: number; yM: number; etag: string | null }
   // State-level pipeline (diaspora map). state-rows lands raw rows into
-  // name_states; diaspora-finalize is the cursor-paged compute chain that
-  // self-re-enqueues until every (name, sex) is summarized, then swaps.
+  // name_states; state-file is a queue-side producer for one state file;
+  // diaspora-finalize is the cursor-paged compute chain that self-re-enqueues
+  // until every (name, sex) is summarized, then swaps.
+  | { type: "state-file"; runId: string; r2Key: string; state: string }
   | { type: "state-rows"; runId: string; rows: StateRow[] }
   | { type: "diaspora-finalize"; runId: string; cursor: { name: string; sex: Sex } | null };
 

@@ -10,6 +10,7 @@
 // consistent old data until the swap completes inside one transaction.
 
 import { META_KEYS, getMeta, setMeta, enrichName } from "@nv/shared";
+import { ALL_STATES } from "@nv/shared";
 import type {
   ExecutionContext,
   MessageBatch,
@@ -17,7 +18,7 @@ import type {
 } from "@cloudflare/workers-types";
 
 import { fetchNamesZip, headEtag, unpackYobFiles } from "./ssa";
-import { fetchStateZip, enqueueStateRows } from "./states-ingest";
+import { fetchStateZip, enqueueStateFile } from "./states-ingest";
 import { parseYob } from "./parse";
 import { CHUNK_ROWS, type IngestMessage, type ChunkRow, type YearTotalRow } from "./chunks";
 import { ensureStaging, clearStagingForRun, insertRowChunk, insertStateRows, upsertYearTotals } from "./upsert";
@@ -65,7 +66,8 @@ export default {
       const force = url.searchParams.get("force") === "1";
       const r2Key = url.searchParams.get("r2key");
       const source = url.searchParams.get("source");
-      const run = source === "state" ? runStateIngest(env, force, r2Key) : runIngest(env, force, r2Key);
+      const states = parseStateList(url.searchParams.get("states"));
+      const run = source === "state" ? runStateIngest(env, force, r2Key, states) : runIngest(env, force, r2Key);
       ctx.waitUntil(
         run.catch((err) => {
           console.error(
@@ -227,7 +229,15 @@ async function runIngest(env: Env, force: boolean, r2Key: string | null): Promis
 // State-level ingest for the diaspora map. Fetches namesbystate.zip, caches it
 // in R2, fans rows onto the queue, then schedules the diaspora compute to run
 // after the row chunks have drained.
-async function runStateIngest(env: Env, force: boolean, r2Key: string | null): Promise<void> {
+function parseStateList(value: string | null): string[] | null {
+  if (!value) return null;
+  return value
+    .split(",")
+    .map((state) => state.trim().toUpperCase())
+    .filter(Boolean);
+}
+
+async function runStateIngest(env: Env, force: boolean, r2Key: string | null, states: string[] | null): Promise<void> {
   if (!r2Key) {
     const lastEtag = await getMeta(env.DB, META_KEYS.lastStateSsaEtag);
     const head = await headEtag(env.STATE_SSA_URL);
@@ -239,31 +249,35 @@ async function runStateIngest(env: Env, force: boolean, r2Key: string | null): P
 
   const runId = crypto.randomUUID();
   console.log(JSON.stringify({ message: "state ingest starting", runId, r2Key }));
+  const stateList = states ? ALL_STATES.filter((state) => states.includes(state)) : [...ALL_STATES];
+  if (!stateList.length) throw new Error(`no valid state abbreviations: ${states?.join(",") ?? ""}`);
 
-  let bytes: Uint8Array;
   let etag: string | null;
+  let sourceKey = r2Key;
   if (r2Key) {
     const obj = await env.INGEST_CACHE.get(r2Key);
     if (!obj) throw new Error(`R2 object not found: ${r2Key}`);
-    bytes = new Uint8Array(await obj.arrayBuffer());
     etag = obj.httpEtag ?? null;
   } else {
     const result = await fetchStateZip(env.STATE_SSA_URL);
-    bytes = result.bytes;
     etag = result.etag;
-    await env.INGEST_CACHE.put(`names-by-state-${new Date().toISOString().slice(0, 10)}.zip`, bytes);
+    sourceKey = `names-by-state-${new Date().toISOString().slice(0, 10)}.zip`;
+    await env.INGEST_CACHE.put(sourceKey, result.bytes);
   }
+  if (!sourceKey) throw new Error("missing state ingest R2 key");
 
-  const { rows, files } = await enqueueStateRows(bytes, env.INGEST_QUEUE, runId);
+  for (const state of stateList) {
+    await env.INGEST_QUEUE.send({ type: "state-file", runId, r2Key: sourceKey, state });
+  }
   await setMeta(env.DB, META_KEYS.lastStateSsaEtag, etag ?? "");
 
-  // Defer the compute so the ~thousands of state-rows messages land first.
+  // Defer the compute so state-file producers and state-rows consumers can drain first.
   await env.INGEST_QUEUE.send(
     { type: "diaspora-finalize", runId, cursor: null },
-    { delaySeconds: 300 },
+    { delaySeconds: 1800 },
   );
 
-  console.log(JSON.stringify({ message: "state ingest enqueued", runId, rows, files }));
+  console.log(JSON.stringify({ message: "state ingest enqueued", runId, files: stateList.length, states: stateList }));
 }
 
 async function handleMessage(env: Env, msg: IngestMessage): Promise<void> {
@@ -275,6 +289,15 @@ async function handleMessage(env: Env, msg: IngestMessage): Promise<void> {
     case "year-totals":
       await upsertYearTotals(env.DB, msg.totals);
       return;
+
+    case "state-file": {
+      const obj = await env.INGEST_CACHE.get(msg.r2Key);
+      if (!obj) throw new Error(`R2 object not found: ${msg.r2Key}`);
+      const bytes = new Uint8Array(await obj.arrayBuffer());
+      const result = await enqueueStateFile(bytes, env.INGEST_QUEUE, msg.runId, msg.state);
+      console.log(JSON.stringify({ message: "state file enqueued", runId: msg.runId, state: msg.state, ...result }));
+      return;
+    }
 
     case "state-rows":
       await insertStateRows(env.DB, msg.rows);

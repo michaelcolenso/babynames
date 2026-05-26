@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "test:state-ingest": "tsx src/states-ingest.test.ts && tsx src/upsert.test.ts && tsx src/diaspora-compute.test.ts",
     "test:scheduled": "wrangler dev --test-scheduled",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

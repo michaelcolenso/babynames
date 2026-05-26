@@ -30,6 +30,7 @@ export async function clearStagingForRun(db: D1Database, runId: string): Promise
 // 100 rows per INSERT keeps each statement well under D1's bind cap and
 // yields ~10 statements per chunk, ~10 subrequests per consumer call.
 const STMT_ROWS = 100;
+const STATE_STMT_ROWS = 20;
 
 export async function insertRowChunk(
   db: D1Database,
@@ -57,8 +58,8 @@ export async function insertRowChunk(
 export async function insertStateRows(db: D1Database, rows: StateRow[]): Promise<void> {
   if (!rows.length) return;
   const stmts: D1PreparedStatement[] = [];
-  for (let i = 0; i < rows.length; i += STMT_ROWS) {
-    const slice = rows.slice(i, i + STMT_ROWS);
+  for (let i = 0; i < rows.length; i += STATE_STMT_ROWS) {
+    const slice = rows.slice(i, i + STATE_STMT_ROWS);
     const sql =
       `INSERT OR REPLACE INTO name_states(name, sex, year, state, count) VALUES ` +
       slice.map(() => "(?, ?, ?, ?, ?)").join(",");

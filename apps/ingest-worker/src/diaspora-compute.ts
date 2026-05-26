@@ -113,7 +113,7 @@ export function computeDiasporaForName(rows: StateCountRow[]): DiasporaComputeRe
   };
 }
 
-interface NameAgg {
+export interface NameAgg {
   name: string;
   sex: Sex;
   rows: StateCountRow[];
@@ -207,12 +207,12 @@ async function fetchPeakYears(db: D1Database, page: NameAgg[]): Promise<Map<stri
   return map;
 }
 
-function buildDiasporaStatements(
+export function buildDiasporaStatements(
   db: D1Database,
   page: NameAgg[],
   peakYears: Map<string, number>,
 ): D1PreparedStatement[] {
-  const ROWS_PER_STMT = 50;
+  const ROWS_PER_STMT = 10;
   const stmts: D1PreparedStatement[] = [];
   for (let i = 0; i < page.length; i += ROWS_PER_STMT) {
     const slice = page.slice(i, i + ROWS_PER_STMT);

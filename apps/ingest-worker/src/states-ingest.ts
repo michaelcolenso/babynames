@@ -2,12 +2,12 @@
 // for namesbystate.zip, which is far larger (~25MB zipped, ~330MB unzipped).
 // We never decompress the whole archive at once: fflate's `filter` extracts a
 // single state file per pass, so peak memory stays at one state (~6-10MB).
-// Rows are fanned out onto the queue in sendBatch batches.
+// Rows are fanned out onto the queue one chunk per message.
 
 import { unzipSync } from "fflate";
 import { ALL_STATES, type Sex } from "@nv/shared";
 import type { Queue } from "@cloudflare/workers-types";
-import { STATE_CHUNK_ROWS, type IngestMessage, type StateRow } from "./chunks";
+import { STATE_CHUNK_ROWS, type StateRow } from "./chunks";
 
 export interface StateFetchResult {
   etag: string | null;
@@ -65,50 +65,54 @@ export function* parseStateFile(text: string): Generator<StateRow> {
   }
 }
 
-// Decompress one state at a time and fan rows onto the queue. sendBatch keeps
-// the producer's subrequest count low (~1 per MSGS_PER_BATCH chunks).
+// Decompress one state at a time and fan rows onto the queue. Keep each queue
+// request to one state chunk so Cloudflare's 256KB sendBatch limit cannot be
+// exceeded by an array of otherwise-valid messages.
 export async function enqueueStateRows(
   zip: Uint8Array,
   queue: Queue,
   runId: string,
 ): Promise<{ rows: number; files: number }> {
-  const MSGS_PER_BATCH = 20;
+  let totalRows = 0;
+  let totalFiles = 0;
+  for (const st of ALL_STATES) {
+    const result = await enqueueStateFile(zip, queue, runId, st);
+    totalRows += result.rows;
+    totalFiles += result.files;
+  }
+  return { rows: totalRows, files: totalFiles };
+}
+
+export async function enqueueStateFile(
+  zip: Uint8Array,
+  queue: Queue,
+  runId: string,
+  state: string,
+): Promise<{ rows: number; files: number }> {
   const dec = new TextDecoder("utf-8");
 
   let rowBuf: StateRow[] = [];
-  let msgBuf: { body: IngestMessage }[] = [];
   let totalRows = 0;
-  let totalFiles = 0;
 
-  const flushMsgs = async () => {
-    if (!msgBuf.length) return;
-    await queue.sendBatch(msgBuf);
-    msgBuf = [];
-  };
   const flushRows = async () => {
     if (!rowBuf.length) return;
-    msgBuf.push({ body: { type: "state-rows", runId, rows: rowBuf } });
+    await queue.send({ type: "state-rows", runId, rows: rowBuf });
     rowBuf = [];
-    if (msgBuf.length >= MSGS_PER_BATCH) await flushMsgs();
   };
 
-  for (const st of ALL_STATES) {
-    const wanted = st.toUpperCase() + ".TXT";
-    const extracted = unzipSync(zip, {
-      filter: (f) => f.name.split("/").pop()?.toUpperCase() === wanted,
-    });
-    const keys = Object.keys(extracted);
-    if (!keys.length) continue;
-    const data = extracted[keys[0]!]!;
-    totalFiles++;
-    for (const row of parseStateFile(dec.decode(data))) {
-      rowBuf.push(row);
-      totalRows++;
-      if (rowBuf.length >= STATE_CHUNK_ROWS) await flushRows();
-    }
-    await flushRows();
+  const wanted = state.toUpperCase() + ".TXT";
+  const extracted = unzipSync(zip, {
+    filter: (f) => f.name.split("/").pop()?.toUpperCase() === wanted,
+  });
+  const keys = Object.keys(extracted);
+  if (!keys.length) return { rows: 0, files: 0 };
+  const data = extracted[keys[0]!]!;
+  for (const row of parseStateFile(dec.decode(data))) {
+    rowBuf.push(row);
+    totalRows++;
+    if (rowBuf.length >= STATE_CHUNK_ROWS) await flushRows();
   }
-  await flushMsgs();
+  await flushRows();
 
-  return { rows: totalRows, files: totalFiles };
+  return { rows: totalRows, files: 1 };
 }
