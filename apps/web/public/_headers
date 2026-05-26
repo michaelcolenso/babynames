@@ -1,2 +1,11 @@
 /index.html
   Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400
+
+/.well-known/api-catalog
+  Content-Type: application/linkset+json; charset=utf-8
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, s-maxage=86400, stale-while-revalidate=604800
+
+/.well-known/agent-skills/*
+  Access-Control-Allow-Origin: *
+  Cache-Control: public, s-maxage=86400, stale-while-revalidate=604800
