@@ -2,3 +2,6 @@ User-agent: *
 Allow: /
 
 Sitemap: https://nobodynamed.com/sitemap.xml
+
+# Content usage preferences (https://contentsignals.org/)
+Content-Signal: ai-train=no, search=yes, ai-input=yes
