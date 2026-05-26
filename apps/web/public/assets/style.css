@@ -1487,3 +1487,104 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   stroke: var(--surface);
   stroke-width: 2;
 }
+
+/* Diaspora map — geographic tile-grid choropleth of name diffusion. */
+.diaspora-map {
+  margin: 1.6rem 0 0.5rem;
+}
+.diaspora-narrative {
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  line-height: 1.45;
+  margin: 0.5rem 0 0.25rem;
+}
+.diaspora-subtitle {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin: 0 0 0.75rem;
+}
+.diaspora-grid {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  display: block;
+}
+.dz-tile rect {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+  transition: fill 0.25s ease;
+}
+.dz-tile text {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  fill: #fff;
+  pointer-events: none;
+}
+.dz-origin rect { fill: #c0392b; }
+.dz-early rect  { fill: #e67e22; }
+.dz-mid rect    { fill: #e8b021; }
+.dz-mid text    { fill: #2b2410; }
+.dz-late rect   { fill: #2f9e63; }
+.dz-never rect  { fill: var(--paper-deep); }
+.dz-never text  { fill: #b3a890; }
+.dz-pending rect { fill: #cfc6b4; }
+.dz-pending text { fill: #8c8369; }
+.dz-tile:hover rect { stroke: var(--ink); stroke-width: 2; }
+.diaspora-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  margin-top: 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+.diaspora-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.diaspora-legend span::before {
+  content: "";
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.diaspora-legend .dz-origin::before { background: #c0392b; }
+.diaspora-legend .dz-early::before  { background: #e67e22; }
+.diaspora-legend .dz-mid::before    { background: #e8b021; }
+.diaspora-legend .dz-late::before   { background: #2f9e63; }
+.diaspora-legend .dz-never::before  { background: var(--paper-deep); border: 1px solid var(--rule); }
+.diaspora-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0.4rem 0 0.9rem;
+}
+.diaspora-play {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  background: var(--ink);
+  color: var(--accent-fg);
+  border: 0;
+  border-radius: 4px;
+}
+.diaspora-slider {
+  flex: 1;
+  max-width: 320px;
+  accent-color: var(--accent);
+}
+.diaspora-year {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  min-width: 5em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dz-tile rect { transition: none; }
+}

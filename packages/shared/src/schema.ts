@@ -219,6 +219,38 @@ export const META_KEYS = {
   totalRows: "total_rows",
   lastIngestAt: "last_ingest_at",
   lastSsaEtag: "last_ssa_etag",
+  lastStateSsaEtag: "last_state_ssa_etag",
   schemaVersion: "schema_version",
   dataVersion: "data_version",
 } as const;
+
+// Diaspora — per-name geographic diffusion (see name_diaspora table).
+export interface NameDiasporaRow {
+  name: string;
+  name_lower: string;
+  sex: Sex;
+  origin_state: string | null;
+  origin_year: number | null;
+  peak_national_year: number | null;
+  spread_json: string;
+  never_adopted: string;
+  total_states: number;
+  diffusion_years: number;
+}
+
+export interface DiasporaSpreadPoint {
+  state: string;
+  year: number;
+  count: number;
+}
+
+export interface DiasporaResponse {
+  name: string;
+  sex: Sex;
+  origin: { state: string; year: number } | null;
+  peakNationalYear: number | null;
+  spread: DiasporaSpreadPoint[];
+  neverAdopted: string[];
+  totalStates: number;
+  diffusionYears: number;
+}

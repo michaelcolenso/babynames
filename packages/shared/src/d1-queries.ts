@@ -13,6 +13,9 @@ import type {
   NameDiscoveryCluster,
   NameDiscoveryClusterKind,
   NameDiscoveryModule,
+  DiasporaResponse,
+  DiasporaSpreadPoint,
+  NameDiasporaRow,
   NameEnrichmentBundle,
   NameEnrichmentProfile,
   NameHistoricalProfile,
@@ -988,6 +991,50 @@ function parseOccupations(raw: string): string[] {
   try {
     const parsed = JSON.parse(raw || "[]");
     return Array.isArray(parsed) ? parsed.map((v) => String(v)) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Reads the precomputed diaspora summary for one (name, sex) and parses its
+// JSON columns into the API/SSR contract. Returns null when not computed.
+export async function getNameDiaspora(
+  db: D1Database,
+  nameLower: string,
+  sex: Sex,
+): Promise<DiasporaResponse | null> {
+  const row = await db
+    .prepare(
+      `SELECT name, name_lower, sex, origin_state, origin_year, peak_national_year,
+              spread_json, never_adopted, total_states, diffusion_years
+         FROM name_diaspora
+        WHERE name_lower = ?1 AND sex = ?2`,
+    )
+    .bind(nameLower, sex)
+    .first<NameDiasporaRow>();
+  if (!row) return null;
+
+  const spread = parseJsonArray<DiasporaSpreadPoint>(row.spread_json);
+  const neverAdopted = parseJsonArray<string>(row.never_adopted);
+  return {
+    name: row.name,
+    sex: row.sex,
+    origin:
+      row.origin_state && row.origin_year !== null
+        ? { state: row.origin_state, year: row.origin_year }
+        : null,
+    peakNationalYear: row.peak_national_year,
+    spread,
+    neverAdopted,
+    totalStates: row.total_states,
+    diffusionYears: row.diffusion_years,
+  };
+}
+
+function parseJsonArray<T>(raw: string): T[] {
+  try {
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
   } catch {
     return [];
   }
