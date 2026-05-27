@@ -69,6 +69,11 @@ Top names for a given birth year (1880–2025).
 - API catalog: https://nobodynamed.com/.well-known/api-catalog
 - Agent skills: https://nobodynamed.com/.well-known/agent-skills/index.json
 - About & methodology: https://nobodynamed.com/about
+
+## Browser Tool Access (WebMCP)
+
+When visiting https://nobodynamed.com/ in a WebMCP-capable browser, five tools are exposed via \`navigator.modelContext\`:
+\`search_names\`, \`get_name_data\`, \`get_names_by_status\`, \`get_year_names\`, \`get_site_metadata\`.
 `;
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
