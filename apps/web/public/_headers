@@ -1,5 +1,7 @@
 /index.html
   Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400
+  Link: </.well-known/api-catalog>; rel="api-catalog", </about>; rel="service-doc", </.well-known/agent-skills/index.json>; rel="https://agentskills.io/rel/skills-index"
+  Vary: Accept
 
 /.well-known/api-catalog
   Content-Type: application/linkset+json; charset=utf-8
