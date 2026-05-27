@@ -1,0 +1,14 @@
+{
+  "serverInfo": {
+    "name": "nobodynamed",
+    "version": "1.0.0"
+  },
+  "transport": {
+    "endpoint": "https://nobodynamed.com/mcp"
+  },
+  "capabilities": {
+    "tools": true,
+    "resources": false,
+    "prompts": false
+  }
+}
