@@ -99,17 +99,40 @@ Not a direct ranking factor, but HSTS is a baseline best practice (and an SEO/"p
 
 > Reconstructed via web research in lieu of GSC/Ahrefs ranking data. Traffic/authority figures are SimilarWeb-derived estimates and qualitative SERP observations — directional, not exact.
 
-### 3.0 🔴 Indexation alert — the site appears effectively *unindexed*
-Across multiple searches, **`site:nobodynamed.com` returned no nobodynamed.com pages**, and brand/topic queries surfaced only competitors. As of this audit the site is **not visibly present in Google's index.**
+### 3.0 Indexation status — from real GSC data (corrected)
 
-This is the most consequential off-page finding, and it reframes everything else: there is no ranking data to retrieve because there is little/nothing indexed yet. Likely contributors, in order of suspicion:
-1. **Newness** — if the domain/site is recently launched, indexing simply lags (weeks). This alone could explain it.
-2. **The homepage Markdown bug (§2.1 / first report §1)** — the root URL, the page that anchors crawl discovery and accrues the most external links, intermittently serves link-less plain-text Markdown. That actively suppresses discovery of everything it should link to.
-3. **No verified Google Search Console property / no manual sitemap submission** (inferred from the GSC access failure).
+> **Correction.** An earlier draft of this pass claimed the site "appears effectively unindexed," based on `site:nobodynamed.com` returning nothing in web search. **That was wrong** — the `site:` operator is unreliable for a ~3-week-old, low-authority domain. Actual Google Search Console data (provided by the owner) shows the site **is indexing rapidly and already surfacing in search.** The real picture is below.
 
-The good news: the fundamentals that *enable* indexing are sound — `robots.txt` allows all, the sitemap is live with 16,961 healthy URLs, and per-name/per-year pages return **real server-rendered HTML** (verified in §2, not empty shells). So this is a discovery/freshness problem, not a "Google can't read the pages" problem.
+**Indexation & impressions trend (GSC):**
 
-**Do first:** (a) verify the property in Google Search Console; (b) submit `https://nobodynamed.com/sitemap.xml`; (c) fix the homepage Markdown variant so the root indexes as HTML; (d) URL-Inspect + Request Indexing for the homepage and a handful of priority hubs/name pages; (e) then watch the Pages/Coverage report. Until the site is indexed, all the on-page work in these reports can't earn traffic.
+| Date | Not indexed | Indexed | Discovered (total) | Indexed % | Impressions |
+|---|---:|---:|---:|---:|---:|
+| 2026-05-07 | 0 | 3 | 3 | 100% | 1 |
+| 2026-05-08 | 11,746 | 9 | 11,755 | 0.1% | 1 |
+| 2026-05-11 | 11,740 | 80 | 11,820 | 0.7% | 7 |
+| 2026-05-15 | 16,627 | 328 | 16,955 | 1.9% | 13 |
+| 2026-05-18 | 12,035 | 5,695 | 17,730 | 32.1% | 58 |
+| 2026-05-21 | 12,035 | 5,695 | 17,730 | 32.1% | 371 |
+| 2026-05-24 | 8,416 | 9,826 | 18,242 | 53.9% | 217 |
+
+**Reading it:**
+- **Healthy, accelerating indexation.** Indexed pages went **3 → 9,826 in 17 days**, with two big processing waves (May 15→18 and May 21→22). ~**54% of discovered URLs are now indexed** — strong for a brand-new programmatic site of this size.
+- **Sitemap fully discovered.** Discovered total (~18.2k) tracks the 16,961-URL sitemap plus a few thousand extra crawled URLs — Google has the full URL set.
+- **Impressions are real and climbing:** first-7-day average ~4/day → last-7-day average ~214/day, peaking at 371 (May 21). Low absolute numbers, exactly as expected for a young, low-authority site — but the direction is right.
+
+**Why ~8,416 pages aren't indexed (GSC "Page indexing" breakdown):**
+
+| Reason | Pages | Assessment & action |
+|---|---:|---|
+| **Discovered – currently not indexed** | **7,498** | 89% of the backlog. Google knows the URLs (sitemap) but hasn't prioritized crawling/indexing them — normal for a new, low-authority site with deep programmatic pages. **This is exactly what §2.2 (SSR hub links) + §4 (authority/backlinks, Request Indexing for priority pages) address.** Expect it to drain as authority and internal linking improve. |
+| **Crawled – currently not indexed** | **867** | Google crawled but judged not worth indexing — a **thin/duplicate-content signal**. Likely the sparsest name pages (very rare names with near-identical templated copy). Action: enrich or differentiate thin pages, or `noindex` the thinnest tail (ties to the §4 "gate coverage on quality" recommendation). |
+| **Discovered/Crawled subtotal** | 8,365 | The two above are ~99% of the not-indexed set — i.e. this is a **value/authority/crawl-budget story, not a technical blocker.** |
+| **Alternate page w/ proper canonical** | 20 | **Benign/expected** — correctly de-duplicated (e.g. `?sex=` params canonicalizing). No action. |
+| **Server error (5xx)** | 11 | **Real bug to fix.** Probing complex routes (twin, shadow, year/decade edges, unusual names) and a 60-URL sitemap sample reproduced **none** — so these are likely transient (D1 timeout / cold start) or a few specific URLs. Pull the example URLs from GSC and test them directly; check for D1 query timeouts or an enrichment edge case. |
+| **Not found (404)** | 10 | Probably external/old links (the live sitemap sample had zero 404s; accented/punctuated names like `Renée`, `O'Brien` correctly 404 since SSA data is ASCII-only). Reconcile against GSC's example URLs; fix any that should resolve. |
+| **Page with redirect** | 10 | URLs that 301 (e.g. `/era/1990/`, non-trailing-slash, `/comebacks`). Benign, but ensure the **sitemap and internal links reference final URLs**, not redirecting ones. |
+
+**Bottom line:** indexing is on a good trajectory; there's **no indexation emergency.** The highest-leverage levers to convert the 7,498 "Discovered – not indexed" and 867 "Crawled – not indexed" are precisely the on-page items already in these reports — **fix the homepage (§2.1), add SSR internal links to the hubs (§2.2), strengthen thin-page content/coverage gating (§4), and earn a few backlinks** — plus Request Indexing for priority pages and fixing the 11 5xx URLs.
 
 ### 3.1 Competitors — three tiers
 - **Tier 1 — authoritative source:** **ssa.gov/oact/babynames** owns the underlying data and a `.gov` domain; wins head terms and is cited by nearly every news story. Weakness: dated UX, no per-name narrative, no interpretation.
@@ -143,7 +166,7 @@ The good news: the fundamentals that *enable* indexing are sound — `robots.txt
 
 ## 4. Prioritized recommendations from this pass
 
-1. **(🔴 Do first) Get the site indexed** (§3.0). Verify the Google Search Console property, submit the sitemap, fix the homepage Markdown variant, and Request Indexing for the homepage + priority pages. Nothing else in either report can earn traffic until the site is in the index — and right now it appears not to be.
+1. **(Do first) Convert the not-indexed backlog** (§3.0). Indexing is already healthy (~54% and climbing), so this is about draining the **7,498 "Discovered – not indexed"** + **867 "Crawled – not indexed"** pages: strengthen internal linking (esp. SSR hub links, #3), improve thin-page value / gate coverage on quality (#4), earn a few backlinks, fix the homepage (#2), and Request Indexing for priority hubs/name pages. Also fix the **11 5xx URLs** (pull example URLs from GSC) and ensure the sitemap lists only final, non-redirecting 200 URLs.
 2. **(Carry-over, P1)** Ship the homepage cache-variant fix from the first report — still live, and a direct contributor to #1.
 3. **(P2) Server-render internal links on the five client-rendered hubs** (§2.2). Highest new-found on-page leverage: it strengthens crawl + topical relevance for the site's most differentiated head terms and exposes the year pages.
 4. **(P2) Expand indexable coverage into the extinct catalog** (§1, §3.3). With 59k+ extinct records and near-zero competition for "extinct/forgotten/disappeared names," gate on content quality (e.g. peak ≥ 100 → 8,326 names) and grow the sitemap via a **sitemap index** of ≤50k-URL child files. Pair with a citable, always-updated extinct/endangered data hub as a PR/link magnet (journalists currently cite BabyCenter).
