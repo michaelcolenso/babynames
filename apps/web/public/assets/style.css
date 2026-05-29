@@ -1588,3 +1588,11 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 @media (prefers-reduced-motion: reduce) {
   .dz-tile rect { transition: none; }
 }
+
+/* Year index: crawlable list of every birth-year page on the /year hub. */
+.year-index { margin-top: 2rem; }
+.year-index h2 { margin-bottom: 1rem; }
+.year-index-grid { display: flex; flex-direction: column; gap: 1.25rem; }
+.year-decade h3 { margin: 0 0 .4rem; font-size: .95rem; opacity: .7; }
+.year-links { display: flex; flex-wrap: wrap; gap: .4rem .6rem; }
+.year-links a { display: inline-block; padding: .15rem .35rem; }
