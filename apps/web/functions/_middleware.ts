@@ -43,7 +43,7 @@ export const onRequest: PagesFunction = async (ctx) => {
   }
 
   if (url.pathname === "/sitemap.xml") {
-    return ctx.next();
+    return withSecurityHeaders(await ctx.next());
   }
 
   if (ctx.request.method !== "GET") {
@@ -51,20 +51,43 @@ export const onRequest: PagesFunction = async (ctx) => {
   }
 
   const cache = caches.default;
-  const cacheKeyHeader = ctx.request.headers.get("X-Cache-Key");
-  const baseKey = cacheKeyHeader ? new Request(ctx.request.url, { headers: { "X-Cache-Key": cacheKeyHeader } }) : ctx.request;
-  const cached = await cache.match(baseKey);
+  // The Cloudflare Cache API keys on the request URL, not on arbitrary request
+  // headers. Content-negotiated routes (the homepage serves HTML to browsers
+  // and Markdown to `Accept: text/markdown`) therefore collide on a single key
+  // and serve whichever representation populated the cache first — the cause of
+  // the homepage intermittently returning raw Markdown. Fold the negotiated
+  // variant into a synthetic, internal-only cache-key URL so the two
+  // representations are cached separately. `__nv_variant` never reaches a
+  // client: we always return the cached/origin Response, never redirect to it.
+  const wantsMarkdown = (ctx.request.headers.get("Accept") ?? "").includes("text/markdown");
+  const keyUrl = new URL(ctx.request.url);
+  keyUrl.searchParams.set("__nv_variant", wantsMarkdown ? "md" : "html");
+  const cacheKey = new Request(keyUrl.toString(), { method: "GET" });
+
+  const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
-  const res = await ctx.next();
+  const res = withSecurityHeaders(await ctx.next());
   const cc = res.headers.get("Cache-Control");
-  const responseKey = res.headers.get("X-Cache-Key");
-  const cacheKey = responseKey ? new Request(ctx.request.url, { headers: { "X-Cache-Key": responseKey } }) : baseKey;
   if (cc && /s-maxage=\d+/.test(cc) && res.ok) {
     ctx.waitUntil(cache.put(cacheKey, res.clone()));
   }
   return res;
 };
+
+// Baseline security headers for every Pages Function response. The `_headers`
+// file only applies to static assets, so Function-rendered pages (homepage,
+// /name/:name, hubs, sitemap, …) would otherwise ship without these. Existing
+// header values are preserved.
+function withSecurityHeaders(res: Response): Response {
+  const h = new Headers(res.headers);
+  if (!h.has("Strict-Transport-Security")) {
+    h.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  if (!h.has("X-Content-Type-Options")) h.set("X-Content-Type-Options", "nosniff");
+  if (!h.has("Referrer-Policy")) h.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+}
 
 function canonicalizePath(pathname: string): string | null {
   if (pathname === "/" || pathname === "/sitemap.xml") return null;

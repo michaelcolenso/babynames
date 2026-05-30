@@ -1,6 +1,44 @@
 // Root-level editorial route aliases required for programmatic SEO.
 
+import {
+  decodeSpark,
+  getMeta,
+  listComeback,
+  listLandingWithSparks,
+  META_KEYS,
+  renderLandingTableHTML,
+  renderYearIndexHTML,
+  type LandingKind,
+  type LandingRow,
+  type LandingTableKind,
+  type NameRow,
+} from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
+
+// Hubs whose name tables are otherwise built client-side (renderLandingTable in
+// landing.js). We server-render the top rows so the page ships crawlable
+// /name/ links in its initial HTML; the client still re-renders the full table.
+const LANDING_KINDS = new Set<LandingTableKind>(["extinct", "endangered", "rising", "comeback"]);
+const SSR_HUB_ROWS = 100;
+
+function shapeLandingRows(
+  kind: LandingTableKind,
+  rows: (NameRow & { spark_blob: ArrayBuffer | null })[],
+): LandingRow[] {
+  return rows.map((r) => {
+    const spark = r.spark_blob ? decodeSpark(r.spark_blob) : [];
+    const base = { name: r.name, sex: r.sex, peakYear: r.peak_year, peakCount: r.peak_count, spark };
+    if (kind === "extinct") return { ...base, lastYearSeen: r.last_year };
+    if (kind === "endangered") return { ...base, latestCount: r.latest_count, declinePct: r.decline_pct ?? 0 };
+    return {
+      ...base,
+      latestCount: r.latest_count,
+      prevDecadeTotal: r.prev_decade ?? 0,
+      currDecadeTotal: r.curr_decade ?? 0,
+      growthX: r.growth_x ?? null,
+    };
+  });
+}
 
 const PAGES: Record<string, { title: string; eyebrow: string; lede: string; names: string[]; body: string; table?: string }> = {
   comebacks: {
@@ -53,9 +91,41 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   const staticPages = new Set(["extinct", "rising", "endangered", "comeback", "year", "about", "press"]);
   if (staticPages.has(slug)) {
     const assetRes = await ctx.env.ASSETS.fetch(new URL(`/${slug}.html`, ctx.request.url));
+    let html = await assetRes.text();
+    // Inject server-rendered, crawlable name/year links into the hubs that
+    // otherwise build their tables client-side. Best-effort: on any D1 error
+    // we fall back to the static shell, which the client JS still hydrates.
+    try {
+      if (LANDING_KINDS.has(slug as LandingTableKind)) {
+        const kind = slug as LandingTableKind;
+        const [rows, yMStr] = await Promise.all([
+          kind === "comeback"
+            ? listComeback(ctx.env.DB, SSR_HUB_ROWS)
+            : listLandingWithSparks(ctx.env.DB, kind as LandingKind, SSR_HUB_ROWS),
+          getMeta(ctx.env.DB, META_KEYS.maxYear),
+        ]);
+        const table = renderLandingTableHTML(kind, shapeLandingRows(kind, rows), Number(yMStr ?? 0));
+        html = html.replace('<div id="t"></div>', `<div id="t">${table}</div>`);
+      } else if (slug === "year") {
+        const [ymStr, yMStr] = await Promise.all([
+          getMeta(ctx.env.DB, META_KEYS.minYear),
+          getMeta(ctx.env.DB, META_KEYS.maxYear),
+        ]);
+        const yM = Number(yMStr ?? 0);
+        if (yM) {
+          html = html.replace(
+            '<div id="year-result"></div>',
+            `<div id="year-result">${renderYearIndexHTML(Number(ymStr ?? 1880), yM)}</div>`,
+          );
+        }
+      }
+    } catch {
+      // keep the static shell as-is
+    }
     const headers = new Headers(assetRes.headers);
     headers.set("Cache-Control", "public, s-maxage=86400, stale-while-revalidate=604800");
-    return new Response(assetRes.body, {
+    headers.set("Content-Type", "text/html; charset=utf-8");
+    return new Response(html, {
       status: assetRes.status,
       statusText: assetRes.statusText,
       headers,
