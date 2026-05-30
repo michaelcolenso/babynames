@@ -25,6 +25,7 @@ dead_letter_queue = "name-ingest-dlq"
 
 [vars]
 SSA_URL = "https://www.ssa.gov/oact/babynames/names.zip"
+STATE_SSA_URL = "https://www.ssa.gov/oact/babynames/state/namesbystate.zip"
 
 # SSA releases new data once per year (typically May). The scheduled() handler
 # checks the ETag so runs cost nothing when the dataset hasn't changed.

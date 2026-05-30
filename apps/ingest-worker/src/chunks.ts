@@ -7,11 +7,24 @@ import type { Sex } from "@nv/shared";
 export type IngestMessage =
   | { type: "rows"; runId: string; year: number; rows: ChunkRow[] }
   | { type: "year-totals"; runId: string; totals: YearTotalRow[] }
-  | { type: "finalize"; runId: string; ym: number; yM: number; etag: string | null };
+  | { type: "finalize"; runId: string; ym: number; yM: number; etag: string | null }
+  // State-level pipeline (diaspora map). state-rows lands raw rows into
+  // name_states; diaspora-finalize is the cursor-paged compute chain that
+  // self-re-enqueues until every (name, sex) is summarized, then swaps.
+  | { type: "state-rows"; runId: string; rows: StateRow[] }
+  | { type: "diaspora-finalize"; runId: string; cursor: { name: string; sex: Sex } | null };
 
 export interface ChunkRow {
   name: string;
   sex: Sex;
+  count: number;
+}
+
+export interface StateRow {
+  name: string;
+  sex: Sex;
+  year: number;
+  state: string;
   count: number;
 }
 
@@ -22,3 +35,4 @@ export interface YearTotalRow {
 }
 
 export const CHUNK_ROWS = 1000;
+export const STATE_CHUNK_ROWS = 1000;

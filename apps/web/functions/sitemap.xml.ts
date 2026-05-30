@@ -74,10 +74,11 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     ...names.slice(0, nameLimit).map((name) => absoluteUrl(url.origin, `/name/${encodeURIComponent(name.name)}/`)),
   ];
 
+  const lastmod = datasetLastmod(yM);
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...urls.map((loc) => `  <url><loc>${xmlEscape(loc)}</loc></url>`),
+    ...urls.map((loc) => `  <url><loc>${xmlEscape(loc)}</loc><lastmod>${lastmod}</lastmod></url>`),
     "</urlset>",
     "",
   ].join("\n");
@@ -103,6 +104,16 @@ function withoutBody(response: Response): Response {
 
 function absoluteUrl(origin: string, path: string): string {
   return new URL(path, origin).toString();
+}
+
+// SSA publishes year N's data the following spring, and the entire corpus
+// updates together at that point. Use a stable, dataset-wide "data vintage"
+// date (May 1 of maxYear+1), clamped to today, so crawlers can cheaply tell the
+// corpus is unchanged between the once-a-year ingests.
+function datasetLastmod(maxYear: number): string {
+  const candidate = new Date(Date.UTC(maxYear + 1, 4, 1)); // month index 4 = May
+  const now = new Date();
+  return (candidate.getTime() > now.getTime() ? now : candidate).toISOString().slice(0, 10);
 }
 
 function xmlEscape(s: string): string {

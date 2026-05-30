@@ -5,14 +5,24 @@
 
 import { classify, type ClassifyResult } from "./classify";
 import type { YearTopRow, YearTotal } from "./d1-queries";
+import { playgroundDensity } from "./enrichment-compute";
 import { buildSparkline } from "./sparkline";
+import { ALL_STATES, TILE_COLS, TILE_ROWS, US_TILE_GRID } from "./us-states-map";
 import type {
+  DiasporaResponse,
+  DiasporaSpreadPoint,
+  NameCatalyst,
   NameDiscoveryCard,
   NameDiscoveryClusterKind,
   NameDiscoveryModule,
+  NameEnrichmentBundle,
+  NameEnrichmentProfile,
+  NameHistoricalProfile,
   NameRecord,
+  NameRegionalAnomaly,
   RelatedName,
   Status,
+  WaveTopology,
 } from "./schema";
 
 const fmt = (n: number | null | undefined): string =>
@@ -140,6 +150,13 @@ interface RenderReportOptions {
   peerNames?: YearTopRow[];
   yearTotals?: YearTotal[];
   enrichmentSnippet?: string;
+  // Precomputed dossier layers (actuarial, wave, catalysts, regional,
+  // historical). Rendered as an additive sidebar panel; independent of
+  // enrichmentSnippet, which still drives the narrative opening paragraph.
+  enrichment?: NameEnrichmentBundle;
+  // Precomputed geographic diffusion. When present, renders the diaspora map
+  // in the main column below the trajectory chart. Absent → omitted entirely.
+  diaspora?: DiasporaResponse;
   // Amazon Associates tracking ID. When unset or empty, the affiliate
   // link is omitted entirely rather than emitted with an empty `tag=`
   // (which earns no commission and looks unfinished).
@@ -171,6 +188,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       : `<p>Down <strong>${a.declinePct ?? 0}%</strong> from its peak.</p>`;
   const totalSentence = `<p>In all, the Social Security Administration has recorded about <strong>${fmt(a.totalCount)}</strong> Americans named ${escape(record.name)} since ${a.firstYear}.</p>`;
   const exploreLinks = renderExploreLinks(record, a);
+  const diasporaMap = renderDiasporaMap(record, opts.diaspora);
   const relatedNames = renderRelatedNames(opts.relatedNames ?? []);
   const discoveryModule = renderDiscoveryModule(opts.discovery);
 
@@ -204,7 +222,14 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
 
     <section class="chart-panel" aria-label="${escape(record.name)} annual popularity chart">
       <div class="chart-caption"><span>${a.firstYear}</span><span>Peak ${a.peakYear}</span><span>${record.yM}</span></div>
-      ${buildSparkline(record.series, record.ym, record.yM)}
+      ${buildSparkline(record.series, record.ym, record.yM, {
+        status: a.status,
+        markers: (opts.enrichment?.catalysts ?? []).map((c) => ({
+          year: c.trigger_year,
+          label: c.catalyst_title,
+          kind: c.catalyst_type,
+        })),
+      })}
     </section>
 
     <div class="stats">
@@ -213,6 +238,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <div class="stat"><div class="label">${record.yM}</div><div class="value">${fmt(a.latestCount)}</div></div>
       <div class="stat"><div class="label">All-time</div><div class="value">${fmt(a.totalCount)}</div></div>
     </div>
+    ${diasporaMap}
     ${exploreLinks}
   </div>
 
@@ -231,6 +257,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <div class="insight-row"><span>Trajectory</span><strong>${dossier.trajectory}</strong></div>
     </div>
     ${collisionBox}
+    ${renderEnrichmentPanel(record, opts.enrichment)}
     ${relatedNames}
     ${discoveryModule}
     <div class="share-row">
@@ -261,6 +288,8 @@ export function renderFullPage(
     peerNames?: YearTopRow[];
     yearTotals?: YearTotal[];
     enrichmentSnippet?: string;
+    enrichment?: NameEnrichmentBundle;
+    diaspora?: DiasporaResponse;
     affiliateTag?: string;
   } = { canonical: "" },
 ): string {
@@ -274,6 +303,7 @@ export function renderFullPage(
     yM: record.yM,
     series: record.series,
     other: record.other,
+    diaspora: opts.diaspora,
   });
 
   const origin = opts.canonical ? new URL(opts.canonical).origin : "";
@@ -344,6 +374,8 @@ export function renderFullPage(
     peerNames: opts.peerNames,
     yearTotals: opts.yearTotals,
     enrichmentSnippet: opts.enrichmentSnippet,
+    enrichment: opts.enrichment,
+    diaspora: opts.diaspora,
     affiliateTag: opts.affiliateTag,
   })}</div>
   <footer class="site">
@@ -364,10 +396,230 @@ export function renderFullPage(
     var container = document.getElementById("view-name");
     NameVitals.attachShareHandlers(container, record);
     NameVitals.hydrateEnrichment(container, record);
+    if (NameVitals.hydrateDiaspora) NameVitals.hydrateDiaspora(container, record);
   })();
 </script>
 </body>
 </html>`;
+}
+
+// A name whose living cohort skews this old reads partly as historical
+// inheritance rather than current fashion — triggers the legacy treatment.
+const LEGACY_MEDIAN_AGE = 72;
+
+const STATE_NAMES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia",
+  FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois",
+  IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana",
+  ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan",
+  MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana",
+  NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
+  NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota",
+  OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania",
+  RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee",
+  TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington",
+  WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+};
+
+const WAVE_COPY: Record<WaveTopology, string> = {
+  "Flash Flood": "A concentrated generational spike rather than a slow classic.",
+  Glacier: "A long-duration classic distributed across many generations.",
+  "Steady Decline": "A name with a broad middle and a downward recent trajectory.",
+  "Steady Wave": "A name with sustained momentum rather than a single spike.",
+  Plateau: "A name with moderate spread and no sharp recent move.",
+};
+
+function stateName(abbr: string): string {
+  return STATE_NAMES[abbr] ?? abbr;
+}
+
+// Diffusion tier for a state, by years elapsed since the origin year.
+// Mirrored in app.js hydrateDiaspora() for the animated time-lapse.
+function diasporaTier(
+  state: string,
+  originState: string | null,
+  adoptedYear: number | undefined,
+  originYear: number | null,
+): "origin" | "early" | "mid" | "late" | "never" {
+  if (originState && state === originState) return "origin";
+  if (adoptedYear === undefined || originYear === null) return "never";
+  const diff = adoptedYear - originYear;
+  if (diff <= 5) return "early";
+  if (diff <= 15) return "mid";
+  return "late";
+}
+
+function diasporaNarrative(d: DiasporaResponse, name: string): string {
+  const safe = escape(name);
+  if (!d.origin) {
+    return `${safe} never established a geographic foothold — no state ever crossed the reporting threshold for it.`;
+  }
+  const origin = stateName(d.origin.state);
+  if (d.totalStates <= 1) {
+    return `${safe} never left ${origin}. A true local.`;
+  }
+  if (d.diffusionYears < 10) {
+    return `${safe} swept the country in under a decade — born in ${origin} (${d.origin.year}) and coast-to-coast before most names leave the hospital.`;
+  }
+  if (d.diffusionYears > 50) {
+    return `${safe} took ${d.diffusionYears} years to cross the map. A slow burn from ${origin} to the edges.`;
+  }
+  return `${safe} started in ${origin} (${d.origin.year}) and reached ${d.totalStates} states over ${d.diffusionYears} years.`;
+}
+
+// Server-rendered choropleth on a geographic tile grid. Static here (final,
+// fully-revealed state); app.js progressively upgrades it into a year-by-year
+// time-lapse using the same data embedded in #nv-data.
+function renderDiasporaMap(record: NameRecord, d?: DiasporaResponse): string {
+  if (!d) return "";
+
+  const adopted = new Map<string, DiasporaSpreadPoint>();
+  for (const p of d.spread) adopted.set(p.state, p);
+  const originState = d.origin?.state ?? null;
+  const originYear = d.origin?.year ?? null;
+
+  const CELL = 42;
+  const w = TILE_COLS * CELL;
+  const h = TILE_ROWS * CELL;
+
+  const tiles = ALL_STATES.map((st) => {
+    const pos = US_TILE_GRID[st];
+    if (!pos) return "";
+    const [rowIdx, colIdx] = pos;
+    const x = colIdx * CELL;
+    const y = rowIdx * CELL;
+    const point = adopted.get(st);
+    const tier = diasporaTier(st, originState, point?.year, originYear);
+    const adoptedYear = point?.year;
+    const titleYear =
+      tier === "never" ? "never crossed the threshold" : `adopted ${adoptedYear}`;
+    const yearAttr = adoptedYear !== undefined ? ` data-year="${adoptedYear}"` : "";
+    return `<g class="dz-tile dz-${tier}" data-state="${st}"${yearAttr}>
+      <title>${escape(stateName(st))}: ${titleYear}</title>
+      <rect x="${x + 2}" y="${y + 2}" width="${CELL - 4}" height="${CELL - 4}" rx="4"/>
+      <text x="${x + CELL / 2}" y="${y + CELL / 2 + 4}" text-anchor="middle">${st}</text>
+    </g>`;
+  }).join("");
+
+  const subtitle = d.origin
+    ? `Ground zero: <strong>${escape(stateName(d.origin.state))}, ${d.origin.year}</strong> · reached ${d.totalStates} ${d.totalStates === 1 ? "state" : "states"} over ${d.diffusionYears} ${d.diffusionYears === 1 ? "year" : "years"}`
+    : `No state ever crossed the reporting threshold for this name.`;
+
+  const legend = `<div class="diaspora-legend" aria-hidden="true">
+    <span class="dz-origin">Origin</span>
+    <span class="dz-early">≤5 yrs</span>
+    <span class="dz-mid">≤15 yrs</span>
+    <span class="dz-late">16+ yrs</span>
+    <span class="dz-never">Holdout</span>
+  </div>`;
+
+  return `<section class="diaspora-map" id="diaspora-map" aria-label="${escape(record.name)} geographic spread across the United States">
+    <div class="section-label">Diaspora map</div>
+    <p class="diaspora-narrative">${diasporaNarrative(d, record.name)}</p>
+    <p class="diaspora-subtitle">${subtitle}</p>
+    <svg class="diaspora-grid" viewBox="0 0 ${w} ${h}" role="img" preserveAspectRatio="xMidYMid meet">
+      ${tiles}
+    </svg>
+    ${legend}
+  </section>`;
+}
+
+function renderEnrichmentPanel(record: NameRecord, enrichment?: NameEnrichmentBundle): string {
+  if (!enrichment?.profile) return "";
+  const profile = enrichment.profile;
+  const legacyClass = profile.median_age > LEGACY_MEDIAN_AGE ? " enrichment-panel--legacy" : "";
+  return `<section class="enrichment-panel${legacyClass}" aria-label="${escape(record.name)} enrichment dossier">
+    ${renderActuarialVitals(profile)}
+    ${renderPlaygroundDensity(profile)}
+    ${renderWaveTopology(profile)}
+    ${renderCatalysts(enrichment.catalysts)}
+    ${renderRegionalAnomalies(enrichment.regionalAnomalies)}
+    ${renderHistoricalLegacy(profile, enrichment.historicalProfiles)}
+  </section>`;
+}
+
+function renderActuarialVitals(profile: NameEnrichmentProfile): string {
+  return `<div class="enrichment-card actuarial-card">
+    <div class="label">Living profile</div>
+    <div class="value">${fmt(profile.total_living_est)}</div>
+    <p>Estimated living Americans with this name.</p>
+    <div class="mini-grid">
+      <div><span>Median age</span><strong>${profile.median_age}</strong></div>
+      <div><span>Core range</span><strong>${profile.age_range_low}–${profile.age_range_high}</strong></div>
+    </div>
+  </div>`;
+}
+
+function renderPlaygroundDensity(profile: NameEnrichmentProfile): string {
+  const p = playgroundDensity(profile.latest_pct);
+  return `<div class="density-badge">
+    <span>Playground Density Index</span>
+    <strong>${(p * 100).toFixed(1)}%</strong>
+  </div>`;
+}
+
+function renderWaveTopology(profile: NameEnrichmentProfile): string {
+  return `<div class="enrichment-card wave-card">
+    <div class="label">Wave type</div>
+    <div class="value">${escape(profile.wave_topology)}</div>
+    <p>${escape(WAVE_COPY[profile.wave_topology] ?? "")}</p>
+  </div>`;
+}
+
+function renderCatalysts(catalysts: NameCatalyst[]): string {
+  if (!catalysts.length) return "";
+  const items = catalysts
+    .map(
+      (c) => `<div class="catalyst-item">
+      <strong>${c.trigger_year}: ${escape(c.catalyst_title)}</strong>
+      <span>${escape((c.catalyst_type ?? "").replace(/_/g, " "))}</span>
+      ${c.description ? `<p>${escape(c.description)}</p>` : ""}
+    </div>`,
+    )
+    .join("");
+  return `<div class="enrichment-card catalyst-card">
+    <div class="label">Cultural triggers</div>
+    <div class="catalyst-list">${items}</div>
+  </div>`;
+}
+
+function renderRegionalAnomalies(anomalies: NameRegionalAnomaly[]): string {
+  if (!anomalies.length) return "";
+  const top = anomalies[0]!;
+  const rows = anomalies
+    .map(
+      (a) => `<div>
+      <span>${escape(stateName(a.state))} · ${a.era_start_year}s</span>
+      <strong>${a.location_quotient.toFixed(1)}×</strong>
+    </div>`,
+    )
+    .join("");
+  return `<div class="enrichment-card regional-card">
+    <div class="label">Geographic heartland</div>
+    <div class="value">${escape(stateName(top.state))}</div>
+    <p><strong>${top.location_quotient.toFixed(1)}× higher affinity</strong> than the national baseline.</p>
+    <div class="regional-list">${rows}</div>
+  </div>`;
+}
+
+function renderHistoricalLegacy(
+  profile: NameEnrichmentProfile,
+  historicalProfiles: NameHistoricalProfile[],
+): string {
+  if (profile.median_age <= LEGACY_MEDIAN_AGE || !historicalProfiles.length) return "";
+  const selected = historicalProfiles[historicalProfiles.length - 1]!;
+  const occupations = selected.top_occupations.map((o) => `<li>${escape(o)}</li>`).join("");
+  return `<div class="enrichment-card historical-card">
+    <div class="label">Historical legacy</div>
+    <p>This name's living center of gravity is old enough to read partly as historical inheritance.</p>
+    <div class="legacy-meta">
+      <span>${selected.era_year}</span>
+      <span>${escape(selected.primary_region)}</span>
+      <span>${escape(selected.urban_vs_rural)}</span>
+    </div>
+    <ul class="occupation-list">${occupations}</ul>
+  </div>`;
 }
 
 function renderNarrativeInsights(

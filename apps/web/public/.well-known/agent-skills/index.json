@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "name-data-api",
+      "type": "skill-md",
+      "description": "Query US baby name popularity data (1880–2025) — search names, retrieve full timeseries, get trend classifications, and browse curated collections by status.",
+      "url": "https://nobodynamed.com/.well-known/agent-skills/name-data-api.md",
+      "digest": "sha256:92053113515b5c54c64edadd66ae5dc2e16e40eaee75ceb682488d96bb090062"
+    }
+  ]
+}
