@@ -3,10 +3,11 @@
 _Last updated: 2026-05-31_
 
 ## TL;DR
-Everything code/data-wise is committed, pushed, and live. **One thing is NOT done:**
-the user's rewritten version of the "your-states-signature-name" blog post has
-**not been applied** — it was paused to resolve 3 name mismatches against the map
-data (see "PENDING" below). Resolve those, then apply + commit.
+Everything is committed, pushed, and live. The blog rewrite is now DONE — applied
+to D1 as the new "The Map Hidden in America's Birth Certificates" post (migration
+`0014`). The ND/WV/KS mismatch was resolved by replacing "Names Time Forgot" with
+"The Frontier Sound" (matches the modern-era map names). Only remaining open item:
+the user must land `.github/workflows/ci.yml` (workflow-scope limit).
 
 ---
 
@@ -45,7 +46,18 @@ data (see "PENDING" below). Resolve those, then apply + commit.
 
 ---
 
-## PENDING — the user's blog rewrite (NOT applied)
+## ✅ RESOLVED — blog rewrite applied (migration 0014)
+Applied live + recorded. New title "The Map Hidden in America's Birth Certificates",
+restructured sections, map block preserved inline. The ND/WV/KS mismatch was solved
+by replacing "Names Time Forgot" (which implied old names) with **"The Frontier
+Sound"** — reframing the leftover/teal-bucket states as a *modern* surname/frontier
+naming style (Bridger, Oakley, Tate, Brecken, Cashton, Sawyer, Colby + invented
+-lee/-lyn names Brynlee/Oaklynn/Kinley). This matches what the map actually shows.
+Source: `migrations/0014_signature_post_rewrite.sql`.
+
+The original analysis that led here is kept below for reference.
+
+## (HISTORICAL) the blog rewrite blocker — now resolved
 
 The user rewrote the post body (new title: **"The Map Hidden in America's Birth
 Certificates"**) with better structure: lede → The Football Belt → The Immigration
