@@ -838,7 +838,7 @@ export async function getBlogPost(
 ): Promise<BlogPost | null> {
   const r = await db
     .prepare(
-      `SELECT id, slug, title, description, body_html AS bodyHtml,
+      `SELECT id, slug, title, description, body_html AS bodyHtml, body_md AS bodyMd,
               published_at AS publishedAt, created_at AS createdAt,
               updated_at AS updatedAt, status, author, og_image AS ogImage
          FROM blog_posts
@@ -852,6 +852,43 @@ export async function getBlogPost(
 
 // ─── Blog admin ──────────────────────────────────────────────────────────────
 
+export async function listAllBlogPostsAdmin(
+  db: D1Database,
+): Promise<import("./schema").BlogPostAdminSummary[]> {
+  const r = await db
+    .prepare(
+      `SELECT slug, title, status, published_at AS publishedAt, updated_at AS updatedAt
+         FROM blog_posts
+        ORDER BY updated_at DESC`,
+    )
+    .all<import("./schema").BlogPostAdminSummary>();
+  return r.results ?? [];
+}
+
+export async function getBlogPostAdmin(
+  db: D1Database,
+  slug: string,
+): Promise<BlogPost | null> {
+  const r = await db
+    .prepare(
+      `SELECT id, slug, title, description, body_html AS bodyHtml, body_md AS bodyMd,
+              published_at AS publishedAt, created_at AS createdAt,
+              updated_at AS updatedAt, status, author, og_image AS ogImage
+         FROM blog_posts
+        WHERE slug = ?1`,
+    )
+    .bind(slug)
+    .first<BlogPost>();
+  return r ?? null;
+}
+
+export async function deleteBlogPost(
+  db: D1Database,
+  slug: string,
+): Promise<void> {
+  await db.prepare(`DELETE FROM blog_posts WHERE slug = ?1`).bind(slug).run();
+}
+
 export async function upsertBlogPost(
   db: D1Database,
   post: {
@@ -859,6 +896,7 @@ export async function upsertBlogPost(
     title: string;
     description: string;
     bodyHtml: string;
+    bodyMd?: string | null;
     status: "draft" | "published";
     author: string;
     ogImage?: string | null;
@@ -867,12 +905,13 @@ export async function upsertBlogPost(
 ): Promise<void> {
   await db
     .prepare(
-      `INSERT INTO blog_posts(slug, title, description, body_html, status, author, og_image, published_at, updated_at)
-       VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'))
+      `INSERT INTO blog_posts(slug, title, description, body_html, body_md, status, author, og_image, published_at, updated_at)
+       VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, datetime('now'))
        ON CONFLICT(slug) DO UPDATE SET
          title=excluded.title,
          description=excluded.description,
          body_html=excluded.body_html,
+         body_md=excluded.body_md,
          status=excluded.status,
          author=excluded.author,
          og_image=excluded.og_image,
@@ -884,6 +923,7 @@ export async function upsertBlogPost(
       post.title,
       post.description,
       post.bodyHtml,
+      post.bodyMd ?? null,
       post.status,
       post.author,
       post.ogImage ?? null,
