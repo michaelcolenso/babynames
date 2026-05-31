@@ -214,7 +214,14 @@ async function main() {
     total_states INTEGER NOT NULL, diffusion_years INTEGER NOT NULL,
     PRIMARY KEY (name_lower, sex))`);
   await q(`DROP TABLE name_diaspora_old`);
-  console.log("Swap complete.");
+
+  // Bump data_version so the edge cache stops serving stale diaspora JSON
+  // (the /api/diaspora response is cached for 7 days). Mirrors what the
+  // worker's /compute-diaspora route does after its swap.
+  await q(
+    `UPDATE meta SET value='${crypto.randomUUID()}' WHERE key='data_version'`,
+  );
+  console.log("Swap complete; data_version bumped.");
 }
 
 main().catch((e) => {
