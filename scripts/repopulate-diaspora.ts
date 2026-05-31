@@ -126,7 +126,10 @@ async function peakYears(page: NameAgg[]): Promise<Map<string, number>> {
 }
 
 async function insertBatch(aggs: NameAgg[], totals: StateYearTotals, peaks: Map<string, number>) {
-  const ROWS = 40;
+  // The D1 HTTP API caps bound variables at 100 per request; at 10 columns per
+  // row that allows 10 rows, so 9 keeps a safe margin. (The Worker binding used
+  // by the production compute chain allows far more — this limit is HTTP-only.)
+  const ROWS = 9;
   for (let i = 0; i < aggs.length; i += ROWS) {
     const slice = aggs.slice(i, i + ROWS);
     const values: string[] = [];
