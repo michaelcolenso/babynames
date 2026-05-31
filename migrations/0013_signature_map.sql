@@ -31,7 +31,7 @@ SET body_html = REPLACE(body_html, '<h2>The immigrant map</h2>', '<div class="si
 .sig-card-state{font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.6;text-transform:uppercase}
 .sig-card-name{font-size:17px;font-weight:700;line-height:1.15;margin:1px 0 2px}
 .sig-card-lq{font-size:11px;opacity:.6}
-.sig-heritage{background:#2563eb}.sig-faith{background:#7c3aed}.sig-sports{background:#ea580c}.sig-modern{background:#0d9488}
+.sig-tile.sig-heritage{background:#2563eb}.sig-tile.sig-faith{background:#7c3aed}.sig-tile.sig-sports{background:#ea580c}.sig-tile.sig-modern{background:#0d9488}
 .sig-card.sig-heritage .sig-shape path{fill:#2563eb}.sig-card.sig-faith .sig-shape path{fill:#7c3aed}.sig-card.sig-sports .sig-shape path{fill:#ea580c}.sig-card.sig-modern .sig-shape path{fill:#0d9488}
 .sig-legend{display:flex;flex-wrap:wrap;gap:9px 18px;justify-content:center;margin:1.3rem auto 0;max-width:700px;font-size:13px}
 .sig-key{display:inline-flex;align-items:center;gap:6px}.sig-key i{width:13px;height:13px;border-radius:3px;display:inline-block}
