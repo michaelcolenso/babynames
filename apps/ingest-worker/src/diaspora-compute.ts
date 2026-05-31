@@ -1,19 +1,34 @@
 // Diaspora compute: turn raw per-(name, sex, year, state) rows in name_states
 // into one summary row per (name, sex) in name_diaspora.
 //
-// Adoption is measured PER CAPITA, not by raw count. A state "adopts" a name
-// the first year its share of that state's births crosses RATE_THRESHOLD (per
-// 100k same-year births in the state), subject to a small raw-count floor so a
-// single censored row can't register. Origin = earliest adopting state; among
-// states adopting in that year the highest per-capita rate wins (ties →
-// alphabetical, for determinism). Diffusion = the order states subsequently
-// adopt. Holdouts = the 51 states (50 + DC) that never do.
+// This computes a name's BREAKOUT geography, not its first paperwork. A state
+// "adopts" a name the first year it is over-represented there — its share of
+// that state's births is at least LQ_TRIGGER times the name's national share
+// that year (a location quotient). Origin = the first state to break out;
+// among states breaking out in that year the highest location quotient wins
+// (ties → alphabetical, for determinism). Diffusion = the order states
+// subsequently break out. Holdouts = the 51 states (50 + DC) that never do.
 //
-// Why per capita: ranking by raw count made origin/adoption order a proxy for
-// state population — California, Texas, and New York always "originated" every
-// name and adopted first simply because they have the most births. Normalizing
-// by each state's annual births surfaces where a name was genuinely
-// concentrated, which is what a diffusion map is supposed to show.
+// Two guards keep the location quotient meaningful:
+//   * NATIONAL_FLOOR — the name's national rate that year must clear a floor
+//     before any breakout is recorded. Without it, a name's earliest sparse
+//     years (a handful of births against a near-zero national rate) trivially
+//     clear any LQ multiple, and the origin collapses onto whichever large
+//     state happened to file the paperwork first. The floor requires the name
+//     to be nationally non-trivial before we ask *where* it concentrated.
+//   * THRESHOLD — a state needs at least this many births that year, matching
+//     SSA's own censoring floor, so denominator noise can't trip the trigger.
+//
+// Why this and not raw count or first-appearance: ranking by raw count (or by
+// first appearance, which is nearly the same thing) made origin a proxy for
+// state population — California always "originated" every popular name because
+// it has the most births and logged each name first. The location quotient
+// asks where a name was disproportionately popular, which is what the /name
+// map's "ground zero" / "born in" copy actually describes. The trade-off is
+// that only names that ever broke out somewhere get an origin; a name that
+// stayed nationally diffuse returns a null origin (the UI renders this as
+// "never established a geographic foothold"). In practice every one of the 500
+// most common names resolves to a real breakout origin.
 //
 // Runs as a self-re-enqueuing `diaspora-finalize` chain: each message
 // processes a bounded number of (name, sex) pages then re-enqueues with a
@@ -24,17 +39,13 @@
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import { ALL_STATES, type Sex } from "@nv/shared";
 
-// Per-capita adoption threshold, expressed per 100k of the state's same-year
-// births. 100/100k = 0.1% of a state's babies. This sits near the censoring
-// floor for the smallest states (a reported count of 5 against ~5k annual
-// births is ~100/100k), so small states register as soon as they report a
-// name at all, while large states must show proportional uptake — the whole
-// point of the normalization.
-export const RATE_THRESHOLD = 100;
-// Raw-count floor: ignore a state-year below this so a single near-censored
-// row can't trip the rate threshold in a tiny state. SSA already censors
-// counts below 5, so this mainly guards against denominator noise.
-export const MIN_BIRTHS = 5;
+export const THRESHOLD = 5; // min state births that year (matches SSA censoring)
+// A state breaks out when its per-capita rate is at least this multiple of the
+// name's national per-capita rate that year (a location quotient).
+export const LQ_TRIGGER = 1.5;
+// The name's national rate (per 100k births) must clear this before any state
+// can break out — keeps sparse early years from manufacturing a false origin.
+export const NATIONAL_FLOOR = 20;
 const NAMES_PAGE = 200; // (name, sex) pairs aggregated per DB round
 export const DIASPORA_MAX_PAGES = 40; // pages processed per queue message
 
@@ -45,21 +56,14 @@ export interface StateCountRow {
 }
 
 // state -> (year -> total births that state-year). Denominators for the
-// per-capita rate, built once from SUM(count) over name_states.
+// location quotient, built once from SUM(count) over name_states. A sentinel
+// "" key holds the national totals (sum across all states) per year.
 export type StateYearTotals = Map<string, Map<number, number>>;
 
-// Per-capita rate in units of "per 100k state births", or null when the
-// denominator is missing/zero or the raw count is below the floor.
-function rate(
-  totals: StateYearTotals,
-  state: string,
-  year: number,
-  count: number,
-): number | null {
-  if (count < MIN_BIRTHS) return null;
-  const denom = totals.get(state)?.get(year);
-  if (!denom || denom <= 0) return null;
-  return (count / denom) * 100_000;
+const NATIONAL_KEY = "";
+
+function denomFor(totals: StateYearTotals, state: string, year: number): number {
+  return totals.get(state)?.get(year) ?? 0;
 }
 
 export interface DiasporaComputeResult {
@@ -72,15 +76,16 @@ export interface DiasporaComputeResult {
 }
 
 // Pure core — no D1. Exported so the diffusion rules can be unit-tested
-// directly against hand-built sample rows. `totals` supplies the per-capita
-// denominators (state-year total births); adoption and origin are ranked by
-// rate, not raw count.
+// directly against hand-built sample rows. `totals` supplies the location-
+// quotient denominators (per-state and national births per year).
 export function computeDiasporaForName(
   rows: StateCountRow[],
   totals: StateYearTotals,
 ): DiasporaComputeResult {
-  // Group counts by year → (state → count), and track the earliest qualifying year.
+  // Group counts by year → (state → count), and track the per-year national
+  // total for this name (sum across states), used as the LQ denominator.
   const byYear = new Map<number, Map<string, number>>();
+  const nameNationalByYear = new Map<number, number>();
   for (const r of rows) {
     let y = byYear.get(r.year);
     if (!y) {
@@ -89,21 +94,48 @@ export function computeDiasporaForName(
     }
     // Defensive: collapse any duplicate (year, state) by summing.
     y.set(r.state, (y.get(r.state) ?? 0) + r.count);
+    nameNationalByYear.set(r.year, (nameNationalByYear.get(r.year) ?? 0) + r.count);
   }
   const years = [...byYear.keys()].sort((a, b) => a - b);
 
-  // Origin: first year with any state crossing RATE_THRESHOLD per capita; pick
-  // the highest rate that year, tie broken alphabetically.
+  // Location quotient for (state, year): the name's share of that state's
+  // births divided by its national share that year. >1 means over-represented
+  // there. Returns 0 when a denominator is missing so it can never win.
+  const lq = (state: string, year: number, count: number): number => {
+    const stateDenom = denomFor(totals, state, year);
+    const nationalDenom = denomFor(totals, NATIONAL_KEY, year);
+    const nameNational = nameNationalByYear.get(year) ?? 0;
+    if (stateDenom <= 0 || nationalDenom <= 0 || nameNational <= 0) return 0;
+    const stateShare = count / stateDenom;
+    const nationalShare = nameNational / nationalDenom;
+    return nationalShare > 0 ? stateShare / nationalShare : 0;
+  };
+
+  // A (state, year) breaks out when the name is nationally non-trivial that
+  // year (national rate clears NATIONAL_FLOOR per 100k), the state reports at
+  // least THRESHOLD births, and the location quotient clears LQ_TRIGGER.
+  const breaksOut = (state: string, year: number, count: number): boolean => {
+    if (count < THRESHOLD) return false;
+    const nationalDenom = denomFor(totals, NATIONAL_KEY, year);
+    const nameNational = nameNationalByYear.get(year) ?? 0;
+    if (nationalDenom <= 0) return false;
+    const nationalRate = (nameNational / nationalDenom) * 100_000;
+    if (nationalRate < NATIONAL_FLOOR) return false;
+    return lq(state, year, count) >= LQ_TRIGGER;
+  };
+
+  // Origin: first year any state breaks out. Among states breaking out that
+  // year, the highest location quotient wins (ties → alphabetical).
   let originYear: number | null = null;
   let originState: string | null = null;
   for (const year of years) {
     const states = byYear.get(year)!;
-    let best: { state: string; rate: number } | null = null;
+    let best: { state: string; lq: number } | null = null;
     for (const [state, count] of states) {
-      const r = rate(totals, state, year, count);
-      if (r === null || r < RATE_THRESHOLD) continue;
-      if (!best || r > best.rate || (r === best.rate && state < best.state)) {
-        best = { state, rate: r };
+      if (!breaksOut(state, year, count)) continue;
+      const q = lq(state, year, count);
+      if (!best || q > best.lq || (q === best.lq && state < best.state)) {
+        best = { state, lq: q };
       }
     }
     if (best) {
@@ -125,14 +157,13 @@ export function computeDiasporaForName(
   }
 
   // Diffusion: walk years from origin onward, recording each state's first
-  // year crossing RATE_THRESHOLD per capita.
+  // year breaking out.
   const adopted = new Map<string, { year: number; count: number }>();
   for (const year of years) {
     if (year < originYear) continue;
     const states = byYear.get(year)!;
     for (const [state, count] of states) {
-      const r = rate(totals, state, year, count);
-      if (r === null || r < RATE_THRESHOLD) continue;
+      if (!breaksOut(state, year, count)) continue;
       if (adopted.has(state)) continue;
       adopted.set(state, { year, count });
     }
@@ -166,14 +197,16 @@ export async function clearDiasporaStaging(db: D1Database): Promise<void> {
   await db.prepare("DELETE FROM name_diaspora_staging").run();
 }
 
-// Load the per-capita denominators: total births per (state, year) across all
-// names. One scan; ~5.9k rows (51 states × ~115 years), trivially small to
-// hold in memory and reuse across every page of the compute chain.
+// Load the location-quotient denominators: total births per (state, year)
+// across all names, plus the national total per year under the "" sentinel key
+// (the LQ's national-share denominator). One scan; ~5.9k rows (51 states ×
+// ~115 years), trivially small to hold in memory and reuse across the chain.
 export async function loadStateYearTotals(db: D1Database): Promise<StateYearTotals> {
   const r = await db
     .prepare("SELECT state, year, SUM(count) AS births FROM name_states GROUP BY state, year")
     .all<{ state: string; year: number; births: number }>();
   const totals: StateYearTotals = new Map();
+  const national = new Map<number, number>();
   for (const row of r.results ?? []) {
     let byYear = totals.get(row.state);
     if (!byYear) {
@@ -181,7 +214,9 @@ export async function loadStateYearTotals(db: D1Database): Promise<StateYearTota
       totals.set(row.state, byYear);
     }
     byYear.set(row.year, row.births);
+    national.set(row.year, (national.get(row.year) ?? 0) + row.births);
   }
+  totals.set(NATIONAL_KEY, national);
   return totals;
 }
 
