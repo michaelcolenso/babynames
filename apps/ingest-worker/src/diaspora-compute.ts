@@ -1,10 +1,19 @@
 // Diaspora compute: turn raw per-(name, sex, year, state) rows in name_states
 // into one summary row per (name, sex) in name_diaspora.
 //
-// Origin = earliest year any state crosses ORIGIN_THRESHOLD births; among the
-// states active that year, highest count wins (ties → alphabetical, for
-// determinism). Diffusion = the order states subsequently cross THRESHOLD.
-// Holdouts = the 51 states (50 + DC) that never do.
+// Adoption is measured PER CAPITA, not by raw count. A state "adopts" a name
+// the first year its share of that state's births crosses RATE_THRESHOLD (per
+// 100k same-year births in the state), subject to a small raw-count floor so a
+// single censored row can't register. Origin = earliest adopting state; among
+// states adopting in that year the highest per-capita rate wins (ties →
+// alphabetical, for determinism). Diffusion = the order states subsequently
+// adopt. Holdouts = the 51 states (50 + DC) that never do.
+//
+// Why per capita: ranking by raw count made origin/adoption order a proxy for
+// state population — California, Texas, and New York always "originated" every
+// name and adopted first simply because they have the most births. Normalizing
+// by each state's annual births surfaces where a name was genuinely
+// concentrated, which is what a diffusion map is supposed to show.
 //
 // Runs as a self-re-enqueuing `diaspora-finalize` chain: each message
 // processes a bounded number of (name, sex) pages then re-enqueues with a
@@ -15,8 +24,17 @@
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import { ALL_STATES, type Sex } from "@nv/shared";
 
-export const THRESHOLD = 5; // min births for a state to count as "adopted"
-export const ORIGIN_THRESHOLD = 5; // min births to count as the origin
+// Per-capita adoption threshold, expressed per 100k of the state's same-year
+// births. 100/100k = 0.1% of a state's babies. This sits near the censoring
+// floor for the smallest states (a reported count of 5 against ~5k annual
+// births is ~100/100k), so small states register as soon as they report a
+// name at all, while large states must show proportional uptake — the whole
+// point of the normalization.
+export const RATE_THRESHOLD = 100;
+// Raw-count floor: ignore a state-year below this so a single near-censored
+// row can't trip the rate threshold in a tiny state. SSA already censors
+// counts below 5, so this mainly guards against denominator noise.
+export const MIN_BIRTHS = 5;
 const NAMES_PAGE = 200; // (name, sex) pairs aggregated per DB round
 export const DIASPORA_MAX_PAGES = 40; // pages processed per queue message
 
@@ -24,6 +42,24 @@ export interface StateCountRow {
   year: number;
   state: string;
   count: number;
+}
+
+// state -> (year -> total births that state-year). Denominators for the
+// per-capita rate, built once from SUM(count) over name_states.
+export type StateYearTotals = Map<string, Map<number, number>>;
+
+// Per-capita rate in units of "per 100k state births", or null when the
+// denominator is missing/zero or the raw count is below the floor.
+function rate(
+  totals: StateYearTotals,
+  state: string,
+  year: number,
+  count: number,
+): number | null {
+  if (count < MIN_BIRTHS) return null;
+  const denom = totals.get(state)?.get(year);
+  if (!denom || denom <= 0) return null;
+  return (count / denom) * 100_000;
 }
 
 export interface DiasporaComputeResult {
@@ -36,8 +72,13 @@ export interface DiasporaComputeResult {
 }
 
 // Pure core — no D1. Exported so the diffusion rules can be unit-tested
-// directly against hand-built sample rows.
-export function computeDiasporaForName(rows: StateCountRow[]): DiasporaComputeResult {
+// directly against hand-built sample rows. `totals` supplies the per-capita
+// denominators (state-year total births); adoption and origin are ranked by
+// rate, not raw count.
+export function computeDiasporaForName(
+  rows: StateCountRow[],
+  totals: StateYearTotals,
+): DiasporaComputeResult {
   // Group counts by year → (state → count), and track the earliest qualifying year.
   const byYear = new Map<number, Map<string, number>>();
   for (const r of rows) {
@@ -51,17 +92,18 @@ export function computeDiasporaForName(rows: StateCountRow[]): DiasporaComputeRe
   }
   const years = [...byYear.keys()].sort((a, b) => a - b);
 
-  // Origin: first year with any state >= ORIGIN_THRESHOLD; pick the highest
-  // count that year, tie broken alphabetically.
+  // Origin: first year with any state crossing RATE_THRESHOLD per capita; pick
+  // the highest rate that year, tie broken alphabetically.
   let originYear: number | null = null;
   let originState: string | null = null;
   for (const year of years) {
     const states = byYear.get(year)!;
-    let best: { state: string; count: number } | null = null;
+    let best: { state: string; rate: number } | null = null;
     for (const [state, count] of states) {
-      if (count < ORIGIN_THRESHOLD) continue;
-      if (!best || count > best.count || (count === best.count && state < best.state)) {
-        best = { state, count };
+      const r = rate(totals, state, year, count);
+      if (r === null || r < RATE_THRESHOLD) continue;
+      if (!best || r > best.rate || (r === best.rate && state < best.state)) {
+        best = { state, rate: r };
       }
     }
     if (best) {
@@ -83,13 +125,14 @@ export function computeDiasporaForName(rows: StateCountRow[]): DiasporaComputeRe
   }
 
   // Diffusion: walk years from origin onward, recording each state's first
-  // year crossing THRESHOLD.
+  // year crossing RATE_THRESHOLD per capita.
   const adopted = new Map<string, { year: number; count: number }>();
   for (const year of years) {
     if (year < originYear) continue;
     const states = byYear.get(year)!;
     for (const [state, count] of states) {
-      if (count < THRESHOLD) continue;
+      const r = rate(totals, state, year, count);
+      if (r === null || r < RATE_THRESHOLD) continue;
       if (adopted.has(state)) continue;
       adopted.set(state, { year, count });
     }
@@ -123,12 +166,33 @@ export async function clearDiasporaStaging(db: D1Database): Promise<void> {
   await db.prepare("DELETE FROM name_diaspora_staging").run();
 }
 
+// Load the per-capita denominators: total births per (state, year) across all
+// names. One scan; ~5.9k rows (51 states × ~115 years), trivially small to
+// hold in memory and reuse across every page of the compute chain.
+export async function loadStateYearTotals(db: D1Database): Promise<StateYearTotals> {
+  const r = await db
+    .prepare("SELECT state, year, SUM(count) AS births FROM name_states GROUP BY state, year")
+    .all<{ state: string; year: number; births: number }>();
+  const totals: StateYearTotals = new Map();
+  for (const row of r.results ?? []) {
+    let byYear = totals.get(row.state);
+    if (!byYear) {
+      byYear = new Map();
+      totals.set(row.state, byYear);
+    }
+    byYear.set(row.year, row.births);
+  }
+  return totals;
+}
+
 // Process up to maxPages of (name, sex) pairs from `cursor`. Returns the next
-// cursor, or null when there is no more work.
+// cursor, or null when there is no more work. `totals` is loaded once by the
+// caller and reused across the whole chain.
 export async function computeDiasporaChunk(
   db: D1Database,
   cursor: { name: string; sex: Sex } | null,
   maxPages: number,
+  totals: StateYearTotals,
 ): Promise<{ nextCursor: { name: string; sex: Sex } | null; namesDone: number }> {
   let cur = cursor;
   let namesDone = 0;
@@ -140,7 +204,7 @@ export async function computeDiasporaChunk(
       break;
     }
     const peakYears = await fetchPeakYears(db, page);
-    const stmts = buildDiasporaStatements(db, page, peakYears);
+    const stmts = buildDiasporaStatements(db, page, peakYears, totals);
     if (stmts.length) await db.batch(stmts);
     namesDone += page.length;
     const last = page[page.length - 1]!;
@@ -211,6 +275,7 @@ function buildDiasporaStatements(
   db: D1Database,
   page: NameAgg[],
   peakYears: Map<string, number>,
+  totals: StateYearTotals,
 ): D1PreparedStatement[] {
   const ROWS_PER_STMT = 50;
   const stmts: D1PreparedStatement[] = [];
@@ -219,7 +284,7 @@ function buildDiasporaStatements(
     const values: string[] = [];
     const binds: (string | number | null)[] = [];
     for (const agg of slice) {
-      const d = computeDiasporaForName(agg.rows);
+      const d = computeDiasporaForName(agg.rows, totals);
       const peak = peakYears.get(agg.name + "|" + agg.sex) ?? null;
       values.push("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       binds.push(
