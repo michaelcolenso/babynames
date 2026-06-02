@@ -85,14 +85,39 @@ export function renderShadowPage(data: ShadowPageData): string {
     shadow.series[shadow.series.length - 1]?.year ?? 2024,
   );
 
-  const structuredData = JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    name: title,
-    url: canonical,
-    description: desc,
-    isPartOf: { "@type": "WebSite", name: "NobodyNamed", url: origin + "/" },
-  }).replace(/</g, "\\u003c");
+  const iUrl = `${origin}/name/${encodeURIComponent(i.name)}/`;
+  const sUrl = `${origin}/name/${encodeURIComponent(s.name)}/`;
+  const structuredData = JSON.stringify([
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: origin + "/" },
+        { "@type": "ListItem", position: 2, name: i.name, item: iUrl },
+        { "@type": "ListItem", position: 3, name: "Shadow", item: canonical },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: title,
+      url: canonical,
+      description: desc,
+      isPartOf: { "@type": "WebSite", name: "NobodyNamed", url: origin + "/" },
+      mainEntity: {
+        "@type": "Dataset",
+        name: `Parallel popularity comparison: ${i.name} vs ${s.name}`,
+        description: `Counterfactual popularity comparison between ${i.name} (${match.birthYear}) and ${s.name} (${match.shadowYear}), names that occupied the same statistical rank ${match.birthYear - match.shadowYear} years apart.`,
+        creator: {
+          "@type": "Organization",
+          name: "Social Security Administration",
+          url: "https://www.ssa.gov/oact/babynames/",
+        },
+        spatialCoverage: { "@type": "Place", name: "United States" },
+        temporalCoverage: `${match.shadowYear}/${match.birthYear}`,
+      },
+    },
+  ]).replace(/</g, "\\u003c");
 
   return `<!doctype html>
 <html lang="en">
@@ -231,7 +256,7 @@ export function renderShadowPage(data: ShadowPageData): string {
 
   <footer class="site">
     <div>
-      <div>nobodynamed is a small data project about American first names.</div>
+      <div>NobodyNamed is a small data project about American first names.</div>
       <div class="footer-note">Data sourced from Social Security Administration birth records (1880–present).</div>
     </div>
     <div><a href="/about">About</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>

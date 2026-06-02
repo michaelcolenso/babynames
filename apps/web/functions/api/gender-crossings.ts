@@ -2,7 +2,7 @@
 // Names used significantly in BOTH sexes, with year-by-year M vs F counts.
 // Pre-computes the crossing year where dominant sex flipped (e.g. Riley going F, Shirley going F).
 
-import { getMeta, META_KEYS } from "@nv/shared";
+import { chunkedIn, getMeta, META_KEYS } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 interface CrossingName {
@@ -50,26 +50,35 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
      ORDER BY (m_total + f_total) DESC`,
   ).all<{ name: string; m_id: number; f_id: number; m_total: number; f_total: number }>();
 
-  const rows = (candidates.results ?? []).filter(
-    (r) => r.m_total >= 500 && r.f_total >= 500,
-  ).slice(0, 80);
+  const rows = (candidates.results ?? []).filter((r) => r.m_total >= 500 && r.f_total >= 500).slice(0, 80);
 
   if (rows.length === 0) {
     const body: GenderCrossingsResponse = { ym, yM, names: [] };
     return Response.json(body);
   }
 
-  const allIds = rows.flatMap((r) => [r.m_id, r.f_id]);
-  const placeholders = allIds.map(() => "?").join(",");
+  // Collect the M and F name_ids for every candidate name. Filter out any NULL
+  // ids so they are never bound as SQL variables (NULL never matches an IN list
+  // and still counts toward the bound-variable ceiling).
+  const allIds = rows.flatMap((r) => [r.m_id, r.f_id]).filter((id): id is number => id != null);
 
-  const years = await ctx.env.DB.prepare(
-    `SELECT name_id, year, count FROM name_years WHERE name_id IN (${placeholders}) ORDER BY name_id, year`,
-  ).bind(...allIds).all<{ name_id: number; year: number; count: number }>();
+  // D1 enforces a per-statement bound-variable ceiling that is lower than
+  // SQLite's native 999 limit, so a single `IN (?, ?, ...)` with ~160 ids that
+  // works in local dev throws `too many SQL variables` on deployed D1. chunkedIn
+  // batches the ids to stay safely under the ceiling and merges the results.
+  const yearRows = await chunkedIn<{ name_id: number; year: number; count: number }>(
+    ctx.env.DB,
+    allIds,
+    (ph) => `SELECT name_id, year, count FROM name_years WHERE name_id IN (${ph})`,
+  );
 
   const byId = new Map<number, { year: number; count: number }[]>();
-  for (const r of years.results ?? []) {
+  for (const r of yearRows) {
     let arr = byId.get(r.name_id);
-    if (!arr) { arr = []; byId.set(r.name_id, arr); }
+    if (!arr) {
+      arr = [];
+      byId.set(r.name_id, arr);
+    }
     arr.push({ year: r.year, count: r.count });
   }
 
@@ -123,11 +132,11 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
 
   // Sort: M→F crossings first, then F→M, then contested
   names.sort((a, b) => {
-    const order: Record<string, number> = { "M→F": 0, "F→M": 1, "contested": 2 };
+    const order: Record<string, number> = { "M→F": 0, "F→M": 1, contested: 2 };
     const ao = order[a.direction ?? "contested"] ?? 3;
     const bo = order[b.direction ?? "contested"] ?? 3;
     if (ao !== bo) return ao - bo;
-    return (b.mTotal + b.fTotal) - (a.mTotal + a.fTotal);
+    return b.mTotal + b.fTotal - (a.mTotal + a.fTotal);
   });
 
   const body: GenderCrossingsResponse = { ym, yM, names };

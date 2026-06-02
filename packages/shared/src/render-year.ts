@@ -7,6 +7,12 @@ export interface YearNameRow {
   rank: number;
 }
 
+const PUBLISHER_ORG = {
+  "@type": "Organization" as const,
+  name: "NobodyNamed",
+  url: "https://nobodynamed.com/",
+};
+
 export function renderYearPage(
   year: number,
   rows: YearNameRow[],
@@ -16,6 +22,7 @@ export function renderYearPage(
   const desc = `The most popular baby names from ${year}, ranked by Social Security Administration birth records. See what names defined the ${year} classroom.`;
   const origin = opts.origin || new URL(opts.canonical).origin;
   const ogImageUrl = `${origin}/api/og/year/${year}`;
+  const dataDate = `${year}-05-15`;
 
   const structuredData = JSON.stringify([
     {
@@ -34,15 +41,25 @@ export function renderYearPage(
       url: opts.canonical,
       description: desc,
       isPartOf: { "@type": "WebSite", name: "NobodyNamed", url: origin + "/" },
+      publisher: PUBLISHER_ORG,
+      datePublished: dataDate,
+      dateModified: dataDate,
       mainEntity: {
         "@type": "Dataset",
         name: `Top baby names in ${year}`,
         description: `Social Security Administration baby-name rankings for ${year}.`,
         temporalCoverage: `${year}/${year}`,
+        spatialCoverage: { "@type": "Place", name: "United States" },
         creator: {
           "@type": "Organization",
           name: "Social Security Administration",
           url: "https://www.ssa.gov/oact/babynames/",
+        },
+        keywords: ["baby names", "popular names", String(year), "SSA", "rankings"],
+        distribution: {
+          "@type": "DataDownload",
+          contentUrl: "https://www.ssa.gov/oact/babynames/names.zip",
+          encodingFormat: "application/zip",
         },
       },
     },
@@ -115,7 +132,7 @@ export function renderYearPage(
     </div>
   </main>
   <footer class="site">
-    <div>Based on SSA records 1880–present.</div>
+    <div>Based on SSA records 1880–${year}. Last updated ${dataDate}.</div>
     <div><a href="/about">Methodology</a></div>
   </footer>
 </div>

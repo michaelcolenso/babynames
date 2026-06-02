@@ -92,6 +92,70 @@ export interface NameRecord {
   other?: { sex: Sex; series: Record<number, number> };
 }
 
+export type WaveTopology =
+  | "Flash Flood"
+  | "Glacier"
+  | "Steady Decline"
+  | "Steady Wave"
+  | "Plateau";
+
+export type CatalystType =
+  | "movie"
+  | "tv"
+  | "music"
+  | "historical_event"
+  | "sports"
+  | "literature"
+  | "celebrity"
+  | "religion"
+  | "politics"
+  | "internet";
+
+export interface NameEnrichmentProfile {
+  name_lower: string;
+  sex: Sex;
+  total_living_est: number;
+  median_age: number;
+  age_range_low: number;
+  age_range_high: number;
+  wave_topology: WaveTopology;
+  latest_pct: number;
+  analysis_year: number;
+  source_version: string | null;
+}
+
+export interface NameCatalyst {
+  trigger_year: number;
+  catalyst_title: string;
+  catalyst_type: CatalystType;
+  impact_score: string | null;
+  description: string | null;
+  source_url: string | null;
+}
+
+export interface NameHistoricalProfile {
+  era_year: number;
+  top_occupations: string[];
+  primary_region: string;
+  urban_vs_rural: string;
+}
+
+export interface NameRegionalAnomaly {
+  state: string;
+  era_start_year: number;
+  location_quotient: number;
+  name_births: number;
+  historical_peak_year: number | null;
+  anomaly_type: string;
+}
+
+export interface NameEnrichmentBundle {
+  profile: NameEnrichmentProfile | null;
+  catalysts: NameCatalyst[];
+  historicalProfiles: NameHistoricalProfile[];
+  regionalAnomalies: NameRegionalAnomaly[];
+}
+
 // API: GET /api/landing/:kind
 export interface LandingRow {
   name: string;
