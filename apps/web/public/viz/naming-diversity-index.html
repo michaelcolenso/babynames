@@ -1,0 +1,1200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>The Naming Diversity Index - NobodyNamed</title>
+  <meta name="description" content="A self-contained D3 visualization comparing how boy and girl name concentration fell while naming entropy rose from 1880 to 2025.">
+  <link rel="canonical" href="https://nobodynamed.com/viz/naming-diversity-index">
+  <meta property="og:title" content="The Naming Diversity Index - NobodyNamed">
+  <meta property="og:description" content="Boys and girls both moved from concentrated naming pools to a much wider long tail.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nobodynamed.com/viz/naming-diversity-index">
+  <meta property="og:image" content="https://nobodynamed.com/api/og/default">
+  <meta name="twitter:card" content="summary_large_image">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    :root {
+      --paper: #f7f5f2;
+      --paper-deep: #eee8df;
+      --surface: #fffdf8;
+      --ink: #29231f;
+      --ink-soft: #4e4740;
+      --muted: #81766c;
+      --rule: #d8cdc1;
+      --rule-strong: #b9a99b;
+      --boy: #376b83;
+      --boy-soft: #b8ccd2;
+      --girl: #9a4f67;
+      --girl-soft: #d7aab5;
+      --cedar: #8b3f2f;
+      --ochre: #bb8333;
+      --tail: #e6dcca;
+      --shadow: 0 22px 60px rgba(69, 55, 42, 0.12);
+    }
+
+    html {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: Iowan Old Style, Palatino, Georgia, serif;
+      letter-spacing: 0;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(90deg, rgba(139,63,47,0.05) 1px, transparent 1px) 0 0 / 48px 48px,
+        linear-gradient(180deg, rgba(139,63,47,0.04), transparent 320px),
+        var(--paper);
+      color: var(--ink);
+    }
+
+    a { color: inherit; }
+
+    .page {
+      width: calc(100% - 40px);
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 24px 0 56px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 0 30px;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .topbar nav {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .topbar a {
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+
+    .topbar a:hover { border-bottom-color: currentColor; }
+
+    .brand {
+      font-weight: 650;
+      color: var(--ink);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(250px, 320px);
+      gap: 52px;
+      align-items: end;
+      padding: 34px 0 46px;
+      border-bottom: 1px solid var(--rule);
+    }
+
+    .kicker {
+      margin: 0 0 12px;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--cedar);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      max-width: 820px;
+      margin: 0;
+      font-size: clamp(42px, 6vw, 68px);
+      line-height: 0.98;
+      font-weight: 450;
+      letter-spacing: 0;
+    }
+
+    .lede {
+      max-width: 760px;
+      margin: 22px 0 0;
+      color: var(--ink-soft);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 19px;
+      line-height: 1.65;
+    }
+
+    .hero-note {
+      padding: 18px 0 4px;
+      border-top: 2px solid var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .hero-note strong {
+      display: block;
+      color: var(--ink);
+      font-family: Iowan Old Style, Palatino, Georgia, serif;
+      font-size: 46px;
+      font-weight: 450;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .summary-band {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      margin: 38px 0;
+      border: 1px solid var(--rule);
+      background: var(--rule);
+    }
+
+    .summary-item {
+      background: rgba(255, 253, 248, 0.84);
+      padding: 20px 22px 22px;
+      min-width: 0;
+    }
+
+    .summary-item .label {
+      display: block;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .summary-item .value {
+      display: block;
+      color: var(--ink);
+      font-size: clamp(25px, 3.2vw, 34px);
+      line-height: 1;
+      font-weight: 450;
+      white-space: nowrap;
+    }
+
+    .section-title {
+      max-width: 820px;
+      margin: 56px 0 22px;
+    }
+
+    .section-title h2 {
+      margin: 0 0 9px;
+      font-size: 31px;
+      line-height: 1.15;
+      font-weight: 500;
+    }
+
+    .section-title p {
+      margin: 0;
+      color: var(--ink-soft);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .tile-panels {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 42px;
+    }
+
+    .tile-panel {
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      min-width: 0;
+    }
+
+    .tile-panel h3 {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 4px;
+      font-size: 25px;
+      font-weight: 450;
+      line-height: 1.1;
+    }
+
+    .tile-panel h3 span:last-child {
+      color: var(--muted);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      align-self: baseline;
+    }
+
+    .tile-panel p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .tile-panel svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .tile-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 12px;
+    }
+
+    .tile-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .swatch {
+      width: 11px;
+      height: 11px;
+      border: 1px solid var(--rule-strong);
+    }
+
+    .chart-stack {
+      display: grid;
+      gap: 22px;
+    }
+
+    .chart-frame {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      box-shadow: var(--shadow);
+      padding: 18px 18px 14px;
+    }
+
+    .chart-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 18px;
+      padding: 2px 2px 12px;
+    }
+
+    .chart-head h3 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 500;
+      line-height: 1.15;
+    }
+
+    .chart-head p {
+      max-width: 520px;
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px 14px;
+      color: var(--muted);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .legend-line {
+      width: 22px;
+      height: 0;
+      border-top: 3px solid currentColor;
+    }
+
+    .legend-line.thin {
+      border-top-width: 2px;
+      opacity: 0.62;
+    }
+
+    .chart {
+      min-height: 420px;
+    }
+
+    .chart svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+
+    .axis text {
+      fill: var(--muted);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 12px;
+    }
+
+    .axis path,
+    .axis line {
+      stroke: var(--rule-strong);
+      shape-rendering: crispEdges;
+    }
+
+    .grid line {
+      stroke: var(--rule);
+      stroke-dasharray: 2 6;
+      shape-rendering: crispEdges;
+    }
+
+    .grid path { display: none; }
+
+    .chart-label {
+      fill: var(--ink);
+      font-family: Iowan Old Style, Palatino, Georgia, serif;
+      font-size: 19px;
+      font-weight: 500;
+    }
+
+    .chart-note,
+    .annotation {
+      fill: var(--muted);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 12px;
+    }
+
+    .annotation-strong {
+      fill: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1px;
+      margin-top: 22px;
+      border: 1px solid var(--rule);
+      background: var(--rule);
+    }
+
+    .insight {
+      background: rgba(255, 253, 248, 0.72);
+      padding: 17px 18px;
+    }
+
+    .insight b {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--ink);
+      font-size: 22px;
+      font-weight: 450;
+      line-height: 1.1;
+    }
+
+    .insight span {
+      color: var(--muted);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .tooltip {
+      position: fixed;
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0;
+      max-width: 290px;
+      padding: 12px 14px;
+      border: 1px solid var(--rule-strong);
+      background: rgba(255, 253, 248, 0.98);
+      box-shadow: var(--shadow);
+      color: var(--ink);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      line-height: 1.45;
+      transition: opacity 0.08s ease;
+    }
+
+    .tooltip.visible { opacity: 1; }
+
+    .tooltip .year {
+      display: block;
+      margin-bottom: 7px;
+      font-family: Iowan Old Style, Palatino, Georgia, serif;
+      font-size: 23px;
+      color: var(--ink);
+    }
+
+    .tooltip-row {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .tooltip b.boy { color: var(--boy); }
+    .tooltip b.girl { color: var(--girl); }
+
+    .method {
+      max-width: 820px;
+      margin: 26px 0 0;
+      color: var(--muted);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 56px;
+      padding-top: 22px;
+      border-top: 1px solid var(--rule);
+      color: var(--muted);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .summary-band { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .tile-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .insight-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 780px) {
+      .page {
+        width: calc(100% - 28px);
+        max-width: 1160px;
+        padding-top: 14px;
+      }
+      .topbar {
+        display: grid;
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+        justify-content: start;
+        padding-bottom: 18px;
+      }
+      .topbar nav { flex-wrap: wrap; justify-content: flex-start; }
+      .hero { grid-template-columns: 1fr; gap: 28px; padding-top: 22px; }
+      h1 { font-size: 38px; line-height: 1.04; overflow-wrap: normal; }
+      .lede { font-size: 17px; }
+      .chart-frame { padding: 12px; }
+      .chart-head { display: block; }
+      .legend { justify-content: flex-start; margin-top: 12px; }
+      .chart { min-height: 360px; }
+    }
+
+    @media (max-width: 540px) {
+      .summary-band,
+      .tile-panels { grid-template-columns: 1fr; }
+      h1 { font-size: 35px; }
+      .hero-note strong { font-size: 36px; }
+      .section-title h2 { font-size: 25px; }
+      .tile-panel { padding: 16px; }
+      .summary-item .value { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <a class="brand" href="/">nobodynamed</a>
+      <nav aria-label="Page navigation">
+        <a href="/viz/">Visualizations</a>
+        <a href="https://www.ssa.gov/oact/babynames/" target="_blank" rel="noopener">SSA data</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="page-title">
+        <div>
+          <p class="kicker">06 / Individuality</p>
+          <h1 id="page-title">The Naming Diversity Index</h1>
+          <p class="lede">In 1880, ten boy names captured 44% of recorded boy births. Ten girl names captured 25%. By 2025, both pools had fallen below 8%. The quiet revolution was not just a decline in John and Mary. It was the birth of a much longer tail.</p>
+        </div>
+        <aside class="hero-note" aria-label="Main finding">
+          <strong id="hero-factor">11x</strong>
+          Entropy converts to effective names: the number of equally common names needed to create the same unpredictability. That count rose about elevenfold for both boys and girls.
+        </aside>
+      </section>
+
+      <section class="summary-band" aria-label="Summary numbers">
+        <div class="summary-item">
+          <span class="label">Boys, top-ten share</span>
+          <span class="value" id="boy-share-summary">44.2% -> 8.0%</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Girls, top-ten share</span>
+          <span class="value" id="girl-share-summary">24.6% -> 7.0%</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Effective boy names</span>
+          <span class="value" id="boy-effective-summary">118 -> 1,382</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Effective girl names</span>
+          <span class="value" id="girl-effective-summary">193 -> 2,119</span>
+        </div>
+      </section>
+
+      <section aria-labelledby="tile-title">
+        <div class="section-title">
+          <h2 id="tile-title">The same hundred births, four ways</h2>
+          <p>Each panel is 100 births in that sex and year. Dark squares are the top ten names; lighter squares are ranks 11 through 50. The white space is the rest of the naming universe.</p>
+        </div>
+        <div class="tile-panels" id="tile-panels"></div>
+        <div class="tile-legend" aria-hidden="true">
+          <span><i class="swatch" style="background: var(--boy);"></i> Boys top ten</span>
+          <span><i class="swatch" style="background: var(--girl);"></i> Girls top ten</span>
+          <span><i class="swatch" style="background: var(--tail);"></i> Ranks 11-50</span>
+          <span><i class="swatch" style="background: var(--surface);"></i> Everything else</span>
+        </div>
+      </section>
+
+      <section aria-labelledby="chart-title">
+        <div class="section-title">
+          <h2 id="chart-title">Concentration collapses, but not from the same starting point</h2>
+          <p>Boys began with a much tighter canon. Girls were already more varied in 1880, then moved into an even wider naming field as the top 50 lost its hold.</p>
+        </div>
+
+        <div class="chart-stack">
+          <article class="chart-frame">
+            <div class="chart-head">
+              <div>
+                <h3>Top-name share</h3>
+                <p>Top 10 shows the names everyone heard constantly. Top 50 shows the broader common-name shelf losing power.</p>
+              </div>
+              <div class="legend" aria-hidden="true">
+                <span style="color: var(--boy);"><i class="legend-line"></i> Boys top 10</span>
+                <span style="color: var(--girl);"><i class="legend-line"></i> Girls top 10</span>
+                <span style="color: var(--boy);"><i class="legend-line thin"></i> Boys top 50</span>
+                <span style="color: var(--girl);"><i class="legend-line thin"></i> Girls top 50</span>
+              </div>
+            </div>
+            <div id="concentration-chart" class="chart" role="img" aria-label="Line chart comparing boys and girls top ten and top fifty name shares from 1880 to 2025."></div>
+          </article>
+
+          <article class="chart-frame">
+            <div class="chart-head">
+              <div>
+                <h3>Entropy and effective names</h3>
+                <p>Higher entropy means the next baby's name is harder to predict. Effective names translates that entropy into a more intuitive count.</p>
+              </div>
+              <div class="legend" aria-hidden="true">
+                <span style="color: var(--boy);"><i class="legend-line"></i> Boys</span>
+                <span style="color: var(--girl);"><i class="legend-line"></i> Girls</span>
+              </div>
+            </div>
+            <div id="entropy-chart" class="chart" role="img" aria-label="Line chart comparing boys and girls Shannon entropy from 1880 to 2025."></div>
+          </article>
+        </div>
+
+        <div class="insight-grid" aria-label="Key findings">
+          <div class="insight">
+            <b id="boy-drop">-36.2 pts</b>
+            <span>Boys had the sharper collapse in top-ten concentration.</span>
+          </div>
+          <div class="insight">
+            <b id="girl-advantage">1.5x</b>
+            <span>Girls still have the larger effective name pool in 2025.</span>
+          </div>
+          <div class="insight">
+            <b id="tail-count">31,227</b>
+            <span>Distinct name/sex observations appear in the 2025 national files.</span>
+          </div>
+        </div>
+
+        <p class="method">Data: U.S. Social Security Administration national baby-name files, 1880-2025, from the checked-in Name Vitals ingest migrations. Top-ten and top-fifty shares are calculated within sex: ranked name counts divided by recorded births for that sex and year. Shannon entropy is calculated across all recorded name counts for a sex/year. Effective names are 2^entropy. SSA suppresses names with fewer than five births in a given year, so the deepest tail remains unobserved.</p>
+      </section>
+    </main>
+
+    <footer>
+      <span>Built as a standalone D3 visualization.</span>
+      <span><a href="/viz/explore.html#diversity-index">See the full exhibit version</a></span>
+    </footer>
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <script type="text/plain" id="diversity-data">year,boyTop10,girlTop10,boyTop50,girlTop50,boyEntropy,girlEntropy,boyEffective,girlEffective,boyUnique,girlUnique
+1880,44.22,24.65,70.27,58.44,6.885,7.592,118.2,192.9,1058,942
+1881,43.80,24.15,70.19,58.37,6.887,7.600,118.4,193.9,996,938
+1882,42.72,23.94,69.32,58.09,6.972,7.638,125.6,199.2,1099,1028
+1883,42.63,23.42,69.75,57.61,6.952,7.679,123.8,204.9,1030,1054
+1884,41.23,23.14,68.56,57.16,7.048,7.734,132.3,212.9,1125,1172
+1885,40.68,22.65,68.09,56.71,7.079,7.770,135.2,218.2,1097,1197
+1886,40.39,22.20,67.91,56.15,7.086,7.809,135.9,224.2,1110,1282
+1887,39.94,21.91,67.79,55.92,7.099,7.836,137.1,228.5,1067,1306
+1888,39.42,21.36,67.12,55.11,7.168,7.897,143.8,238.4,1177,1474
+1889,38.93,21.18,67.16,54.75,7.162,7.919,143.2,241.9,1111,1479
+1890,38.37,20.75,66.65,54.26,7.210,7.956,148.1,248.3,1161,1534
+1891,37.73,20.72,66.16,54.05,7.240,7.971,151.2,250.9,1127,1533
+1892,36.98,20.63,65.57,53.76,7.306,8.000,158.2,256.0,1260,1661
+1893,36.84,20.78,65.51,53.68,7.298,8.005,157.3,256.8,1179,1652
+1894,35.91,20.18,64.94,52.93,7.355,8.045,163.7,264.2,1239,1702
+1895,35.71,20.26,64.70,52.65,7.378,8.081,166.4,270.8,1241,1808
+1896,35.22,20.29,64.02,52.66,7.427,8.089,172.0,272.2,1266,1825
+1897,35.16,20.13,64.31,52.29,7.414,8.099,170.6,274.2,1229,1799
+1898,34.90,20.03,64.34,51.72,7.429,8.151,172.3,284.3,1289,1975
+1899,34.28,20.15,63.53,51.81,7.458,8.130,175.9,280.2,1200,1842
+1900,34.22,19.48,62.88,50.81,7.548,8.220,187.1,298.2,1506,2223
+1901,33.61,19.62,62.77,50.92,7.503,8.186,181.3,291.1,1210,1943
+1902,33.57,19.76,62.45,50.81,7.540,8.199,186.1,293.9,1320,2042
+1903,33.22,19.88,62.16,50.82,7.563,8.209,189.1,296.0,1306,2083
+1904,32.73,19.97,61.52,50.46,7.609,8.231,195.2,300.5,1395,2165
+1905,32.13,19.93,60.88,50.32,7.653,8.243,201.3,302.9,1421,2234
+1906,32.35,20.55,61.08,50.81,7.647,8.225,200.5,299.3,1413,2220
+1907,31.68,20.36,60.11,50.50,7.720,8.258,210.8,306.1,1549,2399
+1908,31.70,20.85,60.10,50.80,7.727,8.249,211.8,304.1,1584,2434
+1909,31.33,21.06,59.42,50.55,7.779,8.273,219.7,309.4,1679,2548
+1910,31.22,21.05,59.30,50.04,7.808,8.305,224.1,316.3,1839,2790
+1911,31.46,21.91,59.61,50.62,7.808,8.274,224.1,309.5,1999,2868
+1912,30.58,22.23,58.98,50.44,7.909,8.313,240.3,318.0,2905,3445
+1913,30.58,22.65,58.82,50.64,7.932,8.315,244.2,318.4,3261,3707
+1914,30.82,22.89,58.82,50.65,7.958,8.333,248.7,322.5,3759,4206
+1915,30.45,23.17,58.60,50.93,7.990,8.351,254.2,326.5,4390,4967
+1916,30.66,23.14,58.67,50.64,7.988,8.368,253.8,330.4,4535,5161
+1917,30.88,23.28,58.93,50.66,7.973,8.372,251.3,331.2,4602,5310
+1918,31.03,23.28,59.03,50.38,7.963,8.390,249.5,335.6,4813,5585
+1919,30.94,23.00,58.86,50.05,7.986,8.406,253.5,339.2,4810,5559
+1920,31.57,23.25,59.65,50.09,7.937,8.398,245.0,337.4,4989,5767
+1921,31.72,23.40,60.02,50.11,7.917,8.397,241.7,337.1,4985,5871
+1922,31.97,23.28,59.83,49.69,7.919,8.416,242.1,341.6,4967,5789
+1923,32.26,23.42,60.27,49.75,7.884,8.409,236.2,339.8,4904,5739
+1924,32.65,23.29,60.40,49.70,7.869,8.422,233.7,343.0,4970,5900
+1925,32.92,22.98,60.59,49.52,7.844,8.432,229.8,345.4,4867,5771
+1926,33.05,22.52,60.62,49.19,7.843,8.438,229.6,346.8,4837,5622
+1927,33.18,22.43,60.70,49.14,7.840,8.431,229.2,345.2,4802,5602
+1928,33.16,22.37,60.83,49.38,7.833,8.424,228.0,343.5,4723,5440
+1929,33.47,22.27,61.02,49.65,7.807,8.407,223.9,339.3,4545,5277
+1930,33.72,22.29,61.08,50.03,7.791,8.390,221.5,335.4,4542,5247
+1931,33.78,22.86,60.97,50.44,7.777,8.356,219.3,327.6,4321,4979
+1932,33.57,22.95,60.70,50.18,7.782,8.381,220.2,333.4,4284,5098
+1933,33.42,22.84,60.63,50.06,7.775,8.385,219.0,334.3,4156,4858
+1934,33.25,23.41,60.54,50.24,7.768,8.369,217.9,330.6,4205,4973
+1935,33.25,24.74,60.93,50.78,7.745,8.319,214.6,319.3,4146,4893
+1936,33.31,24.18,61.50,50.52,7.707,8.337,209.0,323.4,4037,4856
+1937,33.60,23.59,61.97,49.86,7.684,8.371,205.7,331.1,4020,4930
+1938,33.47,23.26,62.10,50.15,7.673,8.363,204.1,329.3,4035,4995
+1939,33.42,23.03,62.47,50.91,7.654,8.347,201.5,325.7,3968,4950
+1940,33.46,23.08,62.72,52.00,7.635,8.321,198.8,319.8,3937,5028
+1941,33.58,23.50,63.26,53.06,7.598,8.281,193.8,311.0,4002,5085
+1942,33.85,23.99,63.93,53.92,7.549,8.263,187.2,307.3,4044,5378
+1943,34.13,24.43,63.94,54.21,7.532,8.245,185.0,303.3,4040,5367
+1944,34.36,24.21,64.05,54.22,7.511,8.247,182.4,303.8,3909,5243
+1945,34.31,23.84,63.96,53.88,7.502,8.261,181.2,306.7,3783,5242
+1946,34.87,24.46,64.57,54.14,7.451,8.241,175.0,302.4,4018,5686
+1947,34.39,25.74,64.36,54.65,7.469,8.195,177.2,293.1,4266,6104
+1948,33.91,25.48,64.12,54.12,7.496,8.222,180.5,298.6,4199,6040
+1949,33.88,24.74,64.57,53.89,7.489,8.245,179.6,303.5,4205,6066
+1950,33.80,24.10,64.82,53.28,7.482,8.282,178.8,311.3,4196,6109
+1951,33.78,23.98,64.98,53.35,7.472,8.282,177.5,311.4,4253,6213
+1952,33.71,23.21,64.89,52.87,7.473,8.322,177.7,320.0,4257,6389
+1953,33.23,23.11,64.54,52.01,7.499,8.362,180.8,329.1,4341,6497
+1954,32.52,23.02,64.58,51.17,7.514,8.389,182.8,335.2,4360,6625
+1955,32.15,22.29,64.50,50.10,7.535,8.444,185.4,348.3,4400,6732
+1956,31.48,21.44,63.87,49.24,7.576,8.495,190.8,360.7,4455,6891
+1957,30.78,20.12,62.92,48.74,7.627,8.550,197.7,374.7,4552,7015
+1958,30.04,18.58,62.01,47.85,7.675,8.614,204.4,391.8,4502,7030
+1959,29.44,17.88,61.28,47.10,7.719,8.663,210.8,405.4,4572,7202
+1960,29.08,16.96,60.87,46.11,7.739,8.729,213.7,424.2,4598,7332
+1961,29.07,16.27,60.91,45.60,7.740,8.778,213.7,438.9,4657,7527
+1962,28.78,15.94,60.75,45.15,7.749,8.807,215.2,447.9,4631,7584
+1963,28.75,16.07,60.94,44.83,7.752,8.833,215.6,456.0,4621,7661
+1964,29.00,15.57,61.31,44.24,7.745,8.886,214.5,473.2,4594,7806
+1965,28.35,16.04,61.38,45.02,7.758,8.869,216.5,467.7,4425,7535
+1966,28.18,15.95,61.76,45.13,7.762,8.902,217.1,478.3,4540,7624
+1967,28.27,15.77,61.93,44.45,7.766,8.960,217.7,497.9,4551,7852
+1968,28.31,16.14,61.67,43.89,7.806,9.013,223.7,516.8,4746,8198
+1969,27.69,15.92,60.88,42.79,7.868,9.087,233.5,543.7,5043,8708
+1970,26.85,16.27,59.99,41.97,7.940,9.156,245.6,570.3,5433,9355
+1971,26.51,16.78,58.91,41.25,8.027,9.221,260.9,596.7,5655,9645
+1972,26.53,17.59,58.30,41.31,8.080,9.251,270.6,609.4,5751,9666
+1973,26.49,17.65,57.78,40.49,8.127,9.321,279.5,639.6,5877,9810
+1974,26.54,17.78,57.78,40.38,8.146,9.360,283.3,656.9,6004,10247
+1975,25.68,17.38,57.16,40.25,8.215,9.420,297.1,684.9,6337,10618
+1976,25.19,17.20,57.26,41.06,8.230,9.417,300.2,683.4,6495,10913
+1977,24.94,16.73,57.32,40.87,8.237,9.464,301.7,706.3,6861,11329
+1978,24.63,16.54,57.58,40.88,8.233,9.478,300.8,713.3,6762,11475
+1979,24.10,17.00,57.63,41.10,8.254,9.491,305.4,719.6,7071,11972
+1980,23.58,17.10,57.69,41.93,8.263,9.465,307.1,706.9,7293,12161
+1981,23.58,17.33,58.07,42.54,8.247,9.446,303.8,697.2,7289,12198
+1982,23.88,17.25,58.17,43.06,8.245,9.431,303.3,690.4,7367,12332
+1983,23.74,18.12,58.87,44.19,8.213,9.366,296.7,659.7,7344,12074
+1984,23.47,18.06,58.59,43.95,8.228,9.383,299.7,667.9,7341,12181
+1985,22.76,18.01,57.76,43.85,8.284,9.421,311.8,685.7,7586,12505
+1986,22.19,18.09,56.96,43.55,8.342,9.459,324.6,703.6,7830,12836
+1987,21.85,18.16,56.14,42.99,8.396,9.491,337.0,719.7,8152,13263
+1988,21.39,17.29,55.18,42.02,8.465,9.578,353.4,764.1,8495,13883
+1989,20.43,16.86,53.54,40.98,8.585,9.661,384.1,809.7,9232,14550
+1990,19.48,15.96,52.35,39.55,8.652,9.760,402.3,867.1,9493,15234
+1991,18.41,14.93,51.20,38.26,8.729,9.844,424.2,919.2,9648,15466
+1992,17.32,13.79,49.98,37.03,8.815,9.934,450.5,978.1,9820,15610
+1993,16.69,13.26,48.79,36.26,8.896,9.990,476.5,1016.8,10170,15801
+1994,16.33,12.51,47.77,35.06,8.962,10.046,498.8,1057.0,10245,15759
+1995,16.11,11.85,46.62,34.07,9.016,10.089,517.7,1088.8,10330,15753
+1996,15.51,11.47,45.38,33.14,9.084,10.151,542.6,1136.8,10536,15894
+1997,15.29,11.29,44.39,32.40,9.148,10.221,567.4,1193.5,10814,16163
+1998,14.66,11.16,43.55,31.61,9.224,10.295,597.8,1256.2,11311,16601
+1999,14.10,10.73,42.51,30.98,9.286,10.359,624.3,1313.5,11614,16947
+2000,13.37,10.22,41.05,30.13,9.379,10.444,665.8,1392.8,12119,17660
+2001,12.70,9.79,40.11,29.38,9.447,10.522,698.1,1470.7,12307,17978
+2002,12.39,9.57,39.35,28.61,9.493,10.567,720.8,1517.1,12489,18086
+2003,11.79,9.62,38.17,27.73,9.549,10.625,749.1,1579.7,12761,18439
+2004,11.36,9.32,36.91,26.77,9.636,10.705,795.4,1669.5,13228,18835
+2005,10.74,8.98,35.90,26.16,9.699,10.757,831.2,1730.6,13370,19199
+2006,10.15,8.73,34.76,25.25,9.782,10.844,880.2,1837.7,14047,20064
+2007,9.83,8.76,34.06,24.63,9.846,10.912,920.2,1927.2,14394,20584
+2008,9.45,8.52,33.09,23.82,9.918,10.963,967.4,1996.5,14625,20482
+2009,9.20,8.65,32.37,23.64,9.976,10.986,1007.0,2028.5,14540,20199
+2010,8.97,8.87,32.10,23.70,9.999,10.989,1023.0,2032.0,14270,19841
+2011,9.02,8.87,31.47,23.67,10.016,10.983,1035.7,2024.1,14360,19590
+2012,8.93,8.80,30.91,23.48,10.048,10.994,1058.5,2040.2,14250,19534
+2013,8.72,8.69,30.34,23.40,10.053,10.965,1062.6,1998.5,14070,19279
+2014,8.54,8.46,29.89,23.18,10.082,10.955,1084.0,1985.2,14081,19232
+2015,8.32,8.44,29.45,23.27,10.112,10.957,1106.3,1988.3,14059,19130
+2016,8.15,8.33,28.80,23.07,10.156,10.967,1141.2,2001.8,14207,18885
+2017,8.01,8.38,28.30,23.03,10.196,10.972,1173.4,2008.6,14262,18448
+2018,7.95,8.22,27.55,22.79,10.240,10.978,1209.1,2017.7,14118,18152
+2019,7.94,8.18,27.04,22.55,10.285,10.997,1247.6,2043.2,14133,18024
+2020,7.86,7.89,26.25,22.22,10.334,11.013,1290.9,2067.2,14060,17527
+2021,7.77,7.66,25.87,21.95,10.367,11.034,1320.8,2096.5,14096,17676
+2022,7.68,7.39,25.37,21.56,10.420,11.069,1370.0,2148.8,14333,17760
+2023,7.78,7.16,25.05,21.13,10.449,11.096,1397.8,2189.3,14215,17615
+2024,7.98,7.08,25.10,21.13,10.447,11.083,1395.5,2169.0,14294,17726
+2025,7.98,6.99,25.05,21.35,10.433,11.049,1382.1,2118.5,13930,17297</script>
+
+  <script>
+    const data = d3.csvParse(document.getElementById("diversity-data").textContent.trim(), d => ({
+      year: +d.year,
+      boyTop10: +d.boyTop10,
+      girlTop10: +d.girlTop10,
+      boyTop50: +d.boyTop50,
+      girlTop50: +d.girlTop50,
+      boyEntropy: +d.boyEntropy,
+      girlEntropy: +d.girlEntropy,
+      boyEffective: +d.boyEffective,
+      girlEffective: +d.girlEffective,
+      boyUnique: +d.boyUnique,
+      girlUnique: +d.girlUnique
+    }));
+
+    const first = data[0];
+    const last = data[data.length - 1];
+    const fmtPct = d3.format(".1f");
+    const fmtBits = d3.format(".2f");
+    const fmtInt = d3.format(",");
+    const tooltip = d3.select("#tooltip");
+
+    const boyFactor = last.boyEffective / first.boyEffective;
+    const girlFactor = last.girlEffective / first.girlEffective;
+    document.getElementById("hero-factor").textContent = `${fmtPct((boyFactor + girlFactor) / 2)}x`;
+    document.getElementById("boy-share-summary").textContent = `${fmtPct(first.boyTop10)}% -> ${fmtPct(last.boyTop10)}%`;
+    document.getElementById("girl-share-summary").textContent = `${fmtPct(first.girlTop10)}% -> ${fmtPct(last.girlTop10)}%`;
+    document.getElementById("boy-effective-summary").textContent = `${fmtInt(Math.round(first.boyEffective))} -> ${fmtInt(Math.round(last.boyEffective))}`;
+    document.getElementById("girl-effective-summary").textContent = `${fmtInt(Math.round(first.girlEffective))} -> ${fmtInt(Math.round(last.girlEffective))}`;
+    document.getElementById("boy-drop").textContent = `-${fmtPct(first.boyTop10 - last.boyTop10)} pts`;
+    document.getElementById("girl-advantage").textContent = `${fmtPct(last.girlEffective / last.boyEffective)}x`;
+    document.getElementById("tail-count").textContent = fmtInt(last.boyUnique + last.girlUnique);
+
+    function cssVar(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    }
+
+    function moveTooltip(event) {
+      const pad = 18;
+      const node = tooltip.node();
+      const box = node.getBoundingClientRect();
+      const x = Math.min(event.clientX + pad, window.innerWidth - box.width - pad);
+      const y = Math.max(pad, event.clientY - box.height - 10);
+      tooltip.style("left", `${x}px`).style("top", `${y}px`);
+    }
+
+    function showTooltip(event, html) {
+      tooltip.html(html).classed("visible", true);
+      moveTooltip(event);
+    }
+
+    function hideTooltip() {
+      tooltip.classed("visible", false);
+    }
+
+    function rafHover(handler) {
+      let frame = 0;
+      let lastEvent = null;
+      return function(event) {
+        lastEvent = event;
+        if (frame) return;
+        const target = this;
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          handler.call(target, lastEvent);
+        });
+      };
+    }
+
+    function nearestByYear(year) {
+      const bisect = d3.bisector(d => d.year).center;
+      return data[Math.max(0, Math.min(data.length - 1, bisect(data, year)))];
+    }
+
+    function tooltipRows(d, mode) {
+      if (mode === "concentration") {
+        return `
+          <span class="year">${d.year}</span>
+          <div class="tooltip-row"><b class="boy">Boys</b><span>${fmtPct(d.boyTop10)}% top 10, ${fmtPct(d.boyTop50)}% top 50</span></div>
+          <div class="tooltip-row"><b class="girl">Girls</b><span>${fmtPct(d.girlTop10)}% top 10, ${fmtPct(d.girlTop50)}% top 50</span></div>
+        `;
+      }
+      return `
+        <span class="year">${d.year}</span>
+        <div class="tooltip-row"><b class="boy">Boys</b><span>${fmtBits(d.boyEntropy)} bits, about ${fmtInt(Math.round(d.boyEffective))} effective names</span></div>
+        <div class="tooltip-row"><b class="girl">Girls</b><span>${fmtBits(d.girlEntropy)} bits, about ${fmtInt(Math.round(d.girlEffective))} effective names</span></div>
+      `;
+    }
+
+    function drawTiles() {
+      const tileData = [
+        { sex: "Boys", key: "boy", year: first.year, top10: first.boyTop10, top50: first.boyTop50 },
+        { sex: "Girls", key: "girl", year: first.year, top10: first.girlTop10, top50: first.girlTop50 },
+        { sex: "Boys", key: "boy", year: last.year, top10: last.boyTop10, top50: last.boyTop50 },
+        { sex: "Girls", key: "girl", year: last.year, top10: last.girlTop10, top50: last.girlTop50 }
+      ];
+
+      const panels = d3.select("#tile-panels")
+        .selectAll(".tile-panel")
+        .data(tileData)
+        .join("article")
+        .attr("class", "tile-panel");
+
+      panels.html(d => `
+        <h3><span>${d.sex}</span><span>${d.year}</span></h3>
+        <p><strong>${fmtPct(d.top10)}%</strong> top ten; <strong>${fmtPct(d.top50)}%</strong> top fifty.</p>
+        <svg viewBox="0 0 260 150" aria-label="${d.year} ${d.sex}: ${fmtPct(d.top10)} percent top ten and ${fmtPct(d.top50)} percent top fifty"></svg>
+      `);
+
+      panels.each(function(d) {
+        const svg = d3.select(this).select("svg");
+        const top10 = Math.round(d.top10);
+        const top50 = Math.round(d.top50);
+        const color = d.key === "boy" ? cssVar("--boy") : cssVar("--girl");
+        const cells = d3.range(100).map(i => ({
+          i,
+          band: i < top10 ? "top10" : i < top50 ? "top50" : "tail",
+          x: (i % 20) * 12,
+          y: Math.floor(i / 20) * 12
+        }));
+
+        svg.append("g")
+          .attr("transform", "translate(10,18)")
+          .selectAll("rect")
+          .data(cells)
+          .join("rect")
+          .attr("x", d => d.x)
+          .attr("y", d => d.y)
+          .attr("width", 9)
+          .attr("height", 9)
+          .attr("rx", 1.5)
+          .attr("fill", cell => cell.band === "top10" ? color : cell.band === "top50" ? cssVar("--tail") : cssVar("--surface"))
+          .attr("stroke", cell => cell.band === "tail" ? cssVar("--rule") : cell.band === "top50" ? cssVar("--rule-strong") : color)
+          .attr("stroke-width", 0.8);
+
+        svg.append("text")
+          .attr("x", 10)
+          .attr("y", 104)
+          .attr("fill", "var(--muted)")
+          .attr("font-family", "ui-sans-serif, system-ui, sans-serif")
+          .attr("font-size", 12)
+          .text(`${top10} top-ten squares; ${Math.max(0, top50 - top10)} more in ranks 11-50`);
+      });
+    }
+
+    function addEndLabel(svg, x, y, lines, color, alignEnd) {
+      const text = svg.append("text")
+        .attr("x", x)
+        .attr("y", y)
+        .attr("fill", color)
+        .attr("font-family", "ui-sans-serif, system-ui, sans-serif")
+        .attr("font-size", 12)
+        .attr("font-weight", 700)
+        .attr("text-anchor", alignEnd ? "end" : "start");
+
+      lines.forEach((line, i) => {
+        text.append("tspan")
+          .attr("x", x)
+          .attr("dy", i === 0 ? 0 : 15)
+          .text(line);
+      });
+    }
+
+    function drawConcentration() {
+      const container = document.getElementById("concentration-chart");
+      const availableWidth = container.getBoundingClientRect().width || 900;
+      const compact = availableWidth < 680;
+      const width = Math.max(320, availableWidth);
+      const height = compact ? 440 : 470;
+      const margin = compact
+        ? { top: 24, right: 18, bottom: 42, left: 48 }
+        : { top: 28, right: 92, bottom: 46, left: 58 };
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+
+      d3.select(container).selectAll("*").remove();
+      const svg = d3.select(container)
+        .append("svg")
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("width", width)
+        .attr("height", height);
+
+      const x = d3.scaleLinear()
+        .domain(d3.extent(data, d => d.year))
+        .range([margin.left, margin.left + innerWidth]);
+      const y = d3.scaleLinear()
+        .domain([0, 75])
+        .range([margin.top + innerHeight, margin.top]);
+
+      const yearTicks = compact ? [1880, 1920, 1960, 2000, 2025] : [1880, 1900, 1925, 1950, 1975, 2000, 2025];
+      svg.append("g")
+        .attr("class", "grid")
+        .attr("transform", `translate(0,${margin.top + innerHeight})`)
+        .call(d3.axisBottom(x).tickValues(yearTicks).tickSize(-innerHeight).tickFormat(""));
+
+      svg.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y).tickValues([0, 15, 30, 45, 60, 75]).tickFormat(d => `${d}%`));
+
+      svg.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(0,${margin.top + innerHeight})`)
+        .call(d3.axisBottom(x).tickValues(yearTicks).tickFormat(d3.format("d")));
+
+      const lineFor = key => d3.line()
+        .x(d => x(d.year))
+        .y(d => y(d[key]))
+        .curve(d3.curveMonotoneX);
+
+      const series = [
+        { key: "boyTop50", color: cssVar("--boy"), width: 2, opacity: 0.38 },
+        { key: "girlTop50", color: cssVar("--girl"), width: 2, opacity: 0.38 },
+        { key: "boyTop10", color: cssVar("--boy"), width: 3, opacity: 1 },
+        { key: "girlTop10", color: cssVar("--girl"), width: 3, opacity: 1 }
+      ];
+
+      svg.selectAll(".concentration-line")
+        .data(series)
+        .join("path")
+        .attr("class", "concentration-line")
+        .attr("d", d => lineFor(d.key)(data))
+        .attr("fill", "none")
+        .attr("stroke", d => d.color)
+        .attr("stroke-width", d => compact ? Math.max(1.8, d.width - 0.4) : d.width)
+        .attr("stroke-opacity", d => d.opacity);
+
+      if (!compact) {
+        addEndLabel(svg, x(last.year) + 10, y(last.boyTop10) + 4, [`Boys top 10`, `${fmtPct(last.boyTop10)}%`], cssVar("--boy"));
+        addEndLabel(svg, x(last.year) + 10, y(last.girlTop10) + 30, [`Girls top 10`, `${fmtPct(last.girlTop10)}%`], cssVar("--girl"));
+        addEndLabel(svg, x(first.year) + 8, y(first.boyTop50) - 22, [`Top 50 once`, `held 70% of boys`], cssVar("--muted"));
+      }
+
+      const focus = svg.append("g").style("display", "none");
+      focus.append("line")
+        .attr("y1", margin.top)
+        .attr("y2", margin.top + innerHeight)
+        .attr("stroke", "var(--ink)")
+        .attr("stroke-width", 1)
+        .attr("stroke-opacity", 0.28);
+      ["boyTop10", "girlTop10", "boyTop50", "girlTop50"].forEach(key => {
+        focus.append("circle")
+          .attr("class", `focus-${key}`)
+          .attr("r", key.includes("10") ? 5 : 4)
+          .attr("fill", key.startsWith("boy") ? cssVar("--boy") : cssVar("--girl"))
+          .attr("opacity", key.includes("10") ? 1 : 0.62);
+      });
+
+      svg.append("rect")
+        .attr("x", margin.left)
+        .attr("y", margin.top)
+        .attr("width", innerWidth)
+        .attr("height", innerHeight)
+        .attr("fill", "transparent")
+        .on("pointermove", rafHover(function(event) {
+          const [mx] = d3.pointer(event, this);
+          const d = nearestByYear(Math.round(x.invert(mx)));
+          const xp = x(d.year);
+          focus.style("display", null);
+          focus.select("line").attr("x1", xp).attr("x2", xp);
+          ["boyTop10", "girlTop10", "boyTop50", "girlTop50"].forEach(key => {
+            focus.select(`.focus-${key}`)
+              .attr("cx", xp)
+              .attr("cy", y(d[key]));
+          });
+          showTooltip(event, tooltipRows(d, "concentration"));
+        }))
+        .on("pointerleave", () => {
+          focus.style("display", "none");
+          hideTooltip();
+        });
+    }
+
+    function drawEntropy() {
+      const container = document.getElementById("entropy-chart");
+      const availableWidth = container.getBoundingClientRect().width || 900;
+      const compact = availableWidth < 680;
+      const width = Math.max(320, availableWidth);
+      const height = compact ? 440 : 470;
+      const margin = compact
+        ? { top: 24, right: 18, bottom: 42, left: 48 }
+        : { top: 28, right: 124, bottom: 46, left: 58 };
+      const innerWidth = width - margin.left - margin.right;
+      const innerHeight = height - margin.top - margin.bottom;
+
+      d3.select(container).selectAll("*").remove();
+      const svg = d3.select(container)
+        .append("svg")
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("width", width)
+        .attr("height", height);
+
+      const x = d3.scaleLinear()
+        .domain(d3.extent(data, d => d.year))
+        .range([margin.left, margin.left + innerWidth]);
+      const y = d3.scaleLinear()
+        .domain([6.5, 11.3])
+        .range([margin.top + innerHeight, margin.top]);
+
+      const yearTicks = compact ? [1880, 1920, 1960, 2000, 2025] : [1880, 1900, 1925, 1950, 1975, 2000, 2025];
+      svg.append("g")
+        .attr("class", "grid")
+        .attr("transform", `translate(0,${margin.top + innerHeight})`)
+        .call(d3.axisBottom(x).tickValues(yearTicks).tickSize(-innerHeight).tickFormat(""));
+
+      svg.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(${margin.left},0)`)
+        .call(d3.axisLeft(y).tickValues([7, 8, 9, 10, 11]).tickFormat(d => `${d}`));
+
+      svg.append("g")
+        .attr("class", "axis")
+        .attr("transform", `translate(0,${margin.top + innerHeight})`)
+        .call(d3.axisBottom(x).tickValues(yearTicks).tickFormat(d3.format("d")));
+
+      svg.append("text")
+        .attr("class", "chart-note")
+        .attr("x", margin.left)
+        .attr("y", margin.top - 8)
+        .text("Shannon entropy, in bits");
+
+      const areaGap = d3.area()
+        .x(d => x(d.year))
+        .y0(d => y(d.boyEntropy))
+        .y1(d => y(d.girlEntropy))
+        .curve(d3.curveMonotoneX);
+      const boyLine = d3.line()
+        .x(d => x(d.year))
+        .y(d => y(d.boyEntropy))
+        .curve(d3.curveMonotoneX);
+      const girlLine = d3.line()
+        .x(d => x(d.year))
+        .y(d => y(d.girlEntropy))
+        .curve(d3.curveMonotoneX);
+
+      svg.append("path")
+        .datum(data)
+        .attr("d", areaGap)
+        .attr("fill", cssVar("--girl-soft"))
+        .attr("fill-opacity", 0.22);
+
+      svg.append("path")
+        .datum(data)
+        .attr("d", boyLine)
+        .attr("fill", "none")
+        .attr("stroke", cssVar("--boy"))
+        .attr("stroke-width", compact ? 2.4 : 3);
+
+      svg.append("path")
+        .datum(data)
+        .attr("d", girlLine)
+        .attr("fill", "none")
+        .attr("stroke", cssVar("--girl"))
+        .attr("stroke-width", compact ? 2.4 : 3);
+
+      if (!compact) {
+        addEndLabel(svg, x(last.year) + 10, y(last.girlEntropy) - 4, [`Girls ${fmtBits(last.girlEntropy)} bits`, `~${fmtInt(Math.round(last.girlEffective))} effective names`], cssVar("--girl"));
+        addEndLabel(svg, x(last.year) + 10, y(last.boyEntropy) + 4, [`Boys ${fmtBits(last.boyEntropy)} bits`, `~${fmtInt(Math.round(last.boyEffective))} effective names`], cssVar("--boy"));
+        addEndLabel(svg, x(1960), y(data.find(d => d.year === 1960).girlEntropy) - 28, [`Girls stayed`, `ahead on entropy`], cssVar("--muted"), true);
+      }
+
+      const focus = svg.append("g").style("display", "none");
+      focus.append("line")
+        .attr("y1", margin.top)
+        .attr("y2", margin.top + innerHeight)
+        .attr("stroke", "var(--ink)")
+        .attr("stroke-width", 1)
+        .attr("stroke-opacity", 0.28);
+      focus.append("circle")
+        .attr("class", "focus-boy")
+        .attr("r", 5)
+        .attr("fill", cssVar("--boy"));
+      focus.append("circle")
+        .attr("class", "focus-girl")
+        .attr("r", 5)
+        .attr("fill", cssVar("--girl"));
+
+      svg.append("rect")
+        .attr("x", margin.left)
+        .attr("y", margin.top)
+        .attr("width", innerWidth)
+        .attr("height", innerHeight)
+        .attr("fill", "transparent")
+        .on("pointermove", rafHover(function(event) {
+          const [mx] = d3.pointer(event, this);
+          const d = nearestByYear(Math.round(x.invert(mx)));
+          const xp = x(d.year);
+          focus.style("display", null);
+          focus.select("line").attr("x1", xp).attr("x2", xp);
+          focus.select(".focus-boy").attr("cx", xp).attr("cy", y(d.boyEntropy));
+          focus.select(".focus-girl").attr("cx", xp).attr("cy", y(d.girlEntropy));
+          showTooltip(event, tooltipRows(d, "entropy"));
+        }))
+        .on("pointerleave", () => {
+          focus.style("display", "none");
+          hideTooltip();
+        });
+    }
+
+    drawTiles();
+    drawConcentration();
+    drawEntropy();
+
+    let resizeFrame = 0;
+    const resizeObserver = new ResizeObserver(() => {
+      if (resizeFrame) cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = 0;
+        drawConcentration();
+        drawEntropy();
+      });
+    });
+    resizeObserver.observe(document.getElementById("concentration-chart"));
+    resizeObserver.observe(document.getElementById("entropy-chart"));
+  </script>
+</body>
+</html>

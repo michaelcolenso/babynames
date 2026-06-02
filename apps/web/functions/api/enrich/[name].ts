@@ -1,4 +1,10 @@
-import { META_KEYS, getMeta, enrichName } from "@nv/shared";
+import {
+  getMeta,
+  getNameEnrichmentBundle,
+  getNameWithSeries,
+  META_KEYS,
+  type Sex,
+} from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
@@ -6,50 +12,63 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   if (typeof name !== "string" || !name) return new Response("missing name", { status: 400 });
 
   const reqUrl = new URL(ctx.request.url);
-  const sex = (reqUrl.searchParams.get("sex") ?? "").trim().toUpperCase();
-  const dataVersion = (await getMeta(ctx.env.DB, META_KEYS.dataVersion)) ?? "dev";
-
-  // Try the ingest worker service binding first (production).
-  // In local dev the binding may be unavailable, so fall back to computing
-  // enrichment directly in this Pages Function.
-  try {
-    const upstream = new URL("https://enrich.internal/enrich");
-    upstream.searchParams.set("name", decodeURIComponent(name));
-    if (sex === "M" || sex === "F") upstream.searchParams.set("sex", sex);
-
-    const r = await ctx.env.ENRICH_WORKER.fetch(upstream.toString(), {
-      headers: { "X-Data-Version": dataVersion },
-    });
-
-    if (r.ok) {
-      return new Response(await r.text(), {
-        status: r.status,
-        headers: {
-          "Content-Type": "application/json; charset=utf-8",
-          "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=86400",
-          "X-Cache-Key": `enrich:${decodeURIComponent(name).toLowerCase()}:${sex || "*"}:${dataVersion}`,
-        },
-      });
-    }
-    // Non-OK from worker: fall through to local compute.
-  } catch {
-    // Binding failure (e.g. 503 in local dev): fall through to local compute.
+  const requestedSex = (reqUrl.searchParams.get("sex") ?? "").trim().toUpperCase();
+  if (requestedSex && requestedSex !== "M" && requestedSex !== "F") {
+    return Response.json({ error: "invalid_sex" }, { status: 400 });
   }
 
-  // Local fallback — compute enrichment directly from D1.
-  const result = await enrichName(
-    ctx.env.DB,
-    name,
-    sex === "M" || sex === "F" ? sex : undefined,
-  );
-  const body = JSON.stringify(result);
+  const nameLower = decodeURIComponent(name).toLowerCase();
+  const [rows, dataVersion] = await Promise.all([
+    getNameWithSeries(ctx.env.DB, nameLower),
+    getMeta(ctx.env.DB, META_KEYS.dataVersion),
+  ]);
 
-  return new Response(body, {
-    status: 200,
+  if (!rows.length) {
+    return Response.json(
+      { error: "not_found" },
+      {
+        status: 404,
+        headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" },
+      },
+    );
+  }
+
+  const sex = (requestedSex || dominantSex(rows)) as Sex;
+  const selected = rows.find((row) => row.row.sex === sex);
+  if (!selected) {
+    return Response.json(
+      { error: "not_found" },
+      {
+        status: 404,
+        headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" },
+      },
+    );
+  }
+
+  const bundle = await getNameEnrichmentBundle(ctx.env.DB, nameLower, sex);
+
+  return Response.json({
+    name: selected.row.name,
+    nameLower,
+    sex,
+    profile: bundle.profile,
+    catalysts: bundle.catalysts,
+    historicalProfiles: bundle.historicalProfiles,
+    regionalAnomalies: bundle.regionalAnomalies,
+  }, {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=86400",
-      "X-Cache-Key": `enrich:${decodeURIComponent(name).toLowerCase()}:${sex || "*"}:${dataVersion}`,
+      "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
+      "X-Cache-Key": `enrich-bundle:${nameLower}:${sex}:${dataVersion ?? "dev"}`,
     },
   });
 };
+
+function dominantSex(rows: Awaited<ReturnType<typeof getNameWithSeries>>): Sex {
+  const totals = rows.map((row) => ({
+    sex: row.row.sex,
+    total: row.series.reduce((sum, point) => sum + point.count, 0),
+  }));
+  totals.sort((a, b) => b.total - a.total);
+  return totals[0]?.sex ?? "F";
+}

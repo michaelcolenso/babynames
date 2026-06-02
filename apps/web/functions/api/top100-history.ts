@@ -22,15 +22,18 @@ interface Top100HistoryResponse {
 }
 
 function buildSpans(sortedYears: number[]): [number, number][] {
+  if (sortedYears.length === 0) return [];
+
   const out: [number, number][] = [];
-  let start = sortedYears[0];
-  let prev = sortedYears[0];
+  let start = sortedYears[0]!;
+  let prev = sortedYears[0]!;
   for (let i = 1; i < sortedYears.length; i++) {
-    if (sortedYears[i] > prev + 1) {
+    const year = sortedYears[i]!;
+    if (year > prev + 1) {
       out.push([start, prev]);
-      start = sortedYears[i];
+      start = year;
     }
-    prev = sortedYears[i];
+    prev = year;
   }
   out.push([start, prev]);
   return out;
@@ -81,7 +84,8 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     const sex = k.slice(0, sep) as "M" | "F";
     const name = k.slice(sep + 1);
     const spans = buildSpans(years);
-    const iron = spans.length === 1 && spans[0][1] >= yM - 1;
+    const firstSpan = spans[0];
+    const iron = spans.length === 1 && firstSpan !== undefined && firstSpan[1] >= yM - 1;
     names.push({ name, sex, spans, totalYears: years.length, iron });
   }
 

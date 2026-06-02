@@ -9,6 +9,7 @@ export * from "./render-blog";
 export * from "./render-landing";
 export * from "./render-shadow";
 export * from "./cf-access";
+export * from "./d1-chunk";
 export * from "./d1-queries";
 export * from "./spark-blob";
 export * from "./enrich";
