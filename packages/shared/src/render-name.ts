@@ -453,19 +453,19 @@ function diasporaTier(
 function diasporaNarrative(d: DiasporaResponse, name: string): string {
   const safe = escape(name);
   if (!d.origin) {
-    return `${safe} never established a geographic foothold — no state ever crossed the reporting threshold for it.`;
+    return `${safe} never concentrated in any one state — it spread evenly enough that no state was ever a clear hotspot.`;
   }
   const origin = stateName(d.origin.state);
   if (d.totalStates <= 1) {
-    return `${safe} never left ${origin}. A true local.`;
+    return `${safe} only ever caught on in ${origin}. A true local.`;
   }
   if (d.diffusionYears < 10) {
-    return `${safe} swept the country in under a decade — born in ${origin} (${d.origin.year}) and coast-to-coast before most names leave the hospital.`;
+    return `${safe} broke out fast — concentrated in ${origin} (${d.origin.year}) and over-represented in ${d.totalStates} states within a decade.`;
   }
   if (d.diffusionYears > 50) {
-    return `${safe} took ${d.diffusionYears} years to cross the map. A slow burn from ${origin} to the edges.`;
+    return `${safe} took ${d.diffusionYears} years to spread. A slow burn from ${origin} outward.`;
   }
-  return `${safe} started in ${origin} (${d.origin.year}) and reached ${d.totalStates} states over ${d.diffusionYears} years.`;
+  return `${safe} broke out in ${origin} (${d.origin.year}) and became over-represented in ${d.totalStates} states over ${d.diffusionYears} years.`;
 }
 
 // Server-rendered choropleth on a geographic tile grid. Static here (final,
@@ -493,7 +493,7 @@ function renderDiasporaMap(record: NameRecord, d?: DiasporaResponse): string {
     const tier = diasporaTier(st, originState, point?.year, originYear);
     const adoptedYear = point?.year;
     const titleYear =
-      tier === "never" ? "never crossed the threshold" : `adopted ${adoptedYear}`;
+      tier === "never" ? "never a hotspot" : `broke out ${adoptedYear}`;
     const yearAttr = adoptedYear !== undefined ? ` data-year="${adoptedYear}"` : "";
     return `<g class="dz-tile dz-${tier}" data-state="${st}"${yearAttr}>
       <title>${escape(stateName(st))}: ${titleYear}</title>
@@ -503,8 +503,8 @@ function renderDiasporaMap(record: NameRecord, d?: DiasporaResponse): string {
   }).join("");
 
   const subtitle = d.origin
-    ? `Ground zero: <strong>${escape(stateName(d.origin.state))}, ${d.origin.year}</strong> · reached ${d.totalStates} ${d.totalStates === 1 ? "state" : "states"} over ${d.diffusionYears} ${d.diffusionYears === 1 ? "year" : "years"}`
-    : `No state ever crossed the reporting threshold for this name.`;
+    ? `Ground zero: <strong>${escape(stateName(d.origin.state))}, ${d.origin.year}</strong> · over-represented in ${d.totalStates} ${d.totalStates === 1 ? "state" : "states"} over ${d.diffusionYears} ${d.diffusionYears === 1 ? "year" : "years"}`
+    : `This name never concentrated in any one state — no clear regional hotspot.`;
 
   const legend = `<div class="diaspora-legend" aria-hidden="true">
     <span class="dz-origin">Origin</span>

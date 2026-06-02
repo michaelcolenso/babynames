@@ -83,10 +83,27 @@ export function buildSparkline(
   const latestLabelY = Math.max(12, latestY - 8);
   const markers = renderMarkers(opts.markers ?? [], series, ym, yM, xStep, yScale, pad.left);
 
+  // Draw-on animation, self-contained in the SVG so it ships with the markup
+  // (no external CSS needed). The line uses pathLength="1" so a single
+  // dashoffset keyframe draws it left-to-right regardless of its real length;
+  // the fill, then the peak dot, latest pin, and event markers fade in after.
+  // Disabled under prefers-reduced-motion.
+  const animStyle = `<style>
+    .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
+    .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
+    .sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{opacity:0;animation:nv-spark-fade .6s ease-out 1.35s forwards}
+    @keyframes nv-spark-draw{to{stroke-dashoffset:0}}
+    @keyframes nv-spark-fade{to{opacity:1}}
+    @media (prefers-reduced-motion:reduce){
+      .sparkline .line,.sparkline .fill,.sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{animation:none;opacity:1;stroke-dashoffset:0}
+    }
+  </style>`;
+
   return `<svg class="sparkline sparkline-${status}" style="--line-color:${statusColor[status]};--fill-color:${fillColor[status]}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from ${ym} to ${yM}">
+  ${animStyle}
   <line class="axis" x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}"/>
   <path class="fill" d="${fillPath}"/>
-  <path class="line" d="${linePath}"/>
+  <path class="line" pathLength="1" d="${linePath}"/>
   ${markers}
   <circle class="peak" cx="${peakX.toFixed(1)}" cy="${peakY.toFixed(1)}" r="4"/>
   <text x="${peakX.toFixed(1)}" y="${peakLabelY.toFixed(1)}" class="point-label" text-anchor="middle">peak ${years[peakIdx]}</text>
