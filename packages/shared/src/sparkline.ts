@@ -12,7 +12,6 @@ export interface SparklineOpts {
   width?: number;
   height?: number;
   status?: Status;
-  // Optional event pins (e.g. cultural catalysts) drawn on the curve.
   markers?: SparklineMarker[];
 }
 
@@ -82,16 +81,7 @@ export function buildSparkline(
 
   const peakLabelY = Math.max(12, peakY - 8);
   const latestLabelY = Math.max(12, latestY - 8);
-
-  let markerEls = "";
-  for (const m of opts.markers ?? []) {
-    if (m.year < ym || m.year > yM) continue;
-    const i = m.year - ym;
-    const mx = pad.left + i * xStep;
-    const my = yScale(vals[i] ?? 0);
-    const title = `${m.year}: ${escapeXml(m.label)}`;
-    markerEls += `<circle class="spark-marker" data-kind="${escapeXml(m.kind)}" cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="4"><title>${title}</title></circle>`;
-  }
+  const markers = renderMarkers(opts.markers ?? [], series, ym, yM, xStep, yScale, pad.left);
 
   // Draw-on animation, self-contained in the SVG so it ships with the markup
   // (no external CSS needed). The line uses pathLength="1" so a single
@@ -109,23 +99,43 @@ export function buildSparkline(
     }
   </style>`;
 
-  return `<svg class="sparkline sparkline-${status}" style="--line-color:${statusColor[status]};--fill-color:${fillColor[status]}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  return `<svg class="sparkline sparkline-${status}" style="--line-color:${statusColor[status]};--fill-color:${fillColor[status]}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from ${ym} to ${yM}">
   ${animStyle}
   <line class="axis" x1="${pad.left}" y1="${height - pad.bottom}" x2="${width - pad.right}" y2="${height - pad.bottom}"/>
   <path class="fill" d="${fillPath}"/>
   <path class="line" pathLength="1" d="${linePath}"/>
+  ${markers}
   <circle class="peak" cx="${peakX.toFixed(1)}" cy="${peakY.toFixed(1)}" r="4"/>
   <text x="${peakX.toFixed(1)}" y="${peakLabelY.toFixed(1)}" class="point-label" text-anchor="middle">peak ${years[peakIdx]}</text>
   <text x="${latestX.toFixed(1)}" y="${latestLabelY.toFixed(1)}" class="point-label" text-anchor="end">${yM}</text>
   ${ticks}
-  ${markerEls}
 </svg>`;
 }
 
-function escapeXml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+function renderMarkers(
+  markers: SparklineMarker[],
+  series: Record<number, number>,
+  ym: number,
+  yM: number,
+  xStep: number,
+  yScale: (value: number) => number,
+  leftPad: number,
+): string {
+  return markers
+    .filter((marker) => marker.year >= ym && marker.year <= yM)
+    .map((marker) => {
+      const x = leftPad + (marker.year - ym) * xStep;
+      const y = yScale(series[marker.year] ?? 0);
+      const kind = cssToken(marker.kind);
+      return `<circle class="spark-marker spark-marker-${kind}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5"><title>${marker.year}: ${escapeSvg(marker.label)}</title></circle>`;
+    })
+    .join("\n  ");
+}
+
+function cssToken(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "marker";
+}
+
+function escapeSvg(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

@@ -196,6 +196,7 @@ export interface BlogPost {
   title: string;
   description: string;
   bodyHtml: string;
+  bodyMd: string | null;
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -210,6 +211,14 @@ export interface BlogPostSummary {
   description: string;
   publishedAt: string | null;
   author: string;
+}
+
+export interface BlogPostAdminSummary {
+  slug: string;
+  title: string;
+  status: "draft" | "published";
+  publishedAt: string | null;
+  updatedAt: string;
 }
 
 export const META_KEYS = {

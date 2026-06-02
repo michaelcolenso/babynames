@@ -18,10 +18,20 @@ migrations/seed/
 data_src/
 names.zip
 
-# Enrichment pipeline: curated inputs in data/manual/ are tracked; the
-# generated SQL (data/dist) and downloaded SSA zips (data/raw) are not.
-data/dist/
-data/raw/
+# Enrichment input structure. Keep manual inputs tracked; keep generated SQL ignored.
+data/*
+!data/manual/
+!data/manual/*.csv
+!data/raw/
+!data/raw/ssa-national/
+data/raw/ssa-national/*
+!data/raw/ssa-national/.gitkeep
+!data/raw/ssa-state/
+data/raw/ssa-state/*
+!data/raw/ssa-state/.gitkeep
+!data/dist/
+data/dist/*
+!data/dist/.gitkeep
 
 # Legacy data dirs (pre-Cloudflare; kept ignored for any local checkout)
 flat/

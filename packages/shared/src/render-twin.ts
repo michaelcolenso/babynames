@@ -36,6 +36,16 @@ export function renderTwinPage(
       url: opts.canonical,
       description: desc,
       isPartOf: { "@type": "WebSite", name: "NobodyNamed", url: origin + "/" },
+      mainEntity: {
+        "@type": "ItemList",
+        name: `Names similar to ${targetName}`,
+        itemListElement: twins.slice(0, 10).map((t, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: t.name,
+          url: `${origin}/name/${encodeURIComponent(t.name)}/`,
+        })),
+      },
     },
   ]).replace(/</g, "\\u003c");
 
