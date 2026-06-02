@@ -464,27 +464,62 @@ export interface TopByYear {
   count: number;
 }
 
-// Returns the top-N per (year, sex). Used by /api/meta to populate the
-// "popular right now" grid on the home page. We compute it lazily and
-// cache the response — the underlying query is cheap with the
-// (year, count DESC) covering index but still a hot path.
-export async function topByYear(db: D1Database, perBucket = 10): Promise<TopByYear[]> {
+// The set of years that have data, read from the small year_totals table
+// (~290 rows). Used to drive per-year ranking without scanning name_years.
+async function listDataYears(db: D1Database): Promise<number[]> {
   const r = await db
-    .prepare(
-      `WITH ranked AS (
-         SELECT n.name, n.sex, ny.year, ny.count,
-                ROW_NUMBER() OVER (PARTITION BY ny.year, n.sex ORDER BY ny.count DESC) AS rn
-           FROM name_years ny
-           JOIN names n ON n.id = ny.name_id
-       )
-       SELECT year, sex, name, count
-         FROM ranked
-        WHERE rn <= ?1
-        ORDER BY year, sex, count DESC`,
-    )
-    .bind(perBucket)
-    .all<TopByYear>();
-  return r.results ?? [];
+    .prepare(`SELECT DISTINCT year FROM year_totals ORDER BY year`)
+    .all<{ year: number }>();
+  return (r.results ?? []).map((row) => row.year);
+}
+
+// How many per-year ranking statements to pipeline in a single db.batch().
+const YEAR_BATCH = 24;
+
+// Returns the top-N per (year, sex). Used by /api/meta to populate the
+// "popular right now" grid on the home page.
+//
+// Ranking is done one year at a time and pipelined through db.batch(). A single
+// window function partitioned over the *whole* name_years table (~2M rows) has
+// to materialize and sort every row at once, which blows past the Worker
+// memory/CPU budget that D1 executes under and surfaces as Cloudflare Error
+// 1101 on a cache miss. Each per-year statement instead filters on
+// `WHERE ny.year = ?`, hits the name_years(year, count DESC) index, and only
+// ever holds one year's rows in memory — so peak memory stays bounded no matter
+// how large the table grows.
+export async function topByYear(db: D1Database, perBucket = 10): Promise<TopByYear[]> {
+  const years = await listDataYears(db);
+  if (!years.length) return [];
+
+  const out: TopByYear[] = [];
+  for (let i = 0; i < years.length; i += YEAR_BATCH) {
+    const slice = years.slice(i, i + YEAR_BATCH);
+    const batch = slice.map((year) =>
+      db
+        .prepare(
+          `WITH ranked AS (
+             SELECT n.name, n.sex, ny.count,
+                    ROW_NUMBER() OVER (PARTITION BY n.sex ORDER BY ny.count DESC) AS rn
+               FROM name_years ny
+               JOIN names n ON n.id = ny.name_id
+              WHERE ny.year = ?1
+           )
+           SELECT name, sex, count
+             FROM ranked
+            WHERE rn <= ?2
+            ORDER BY sex, count DESC`,
+        )
+        .bind(year, perBucket),
+    );
+    const results = await db.batch<{ name: string; sex: Sex; count: number }>(batch);
+    results.forEach((res, idx) => {
+      const year = slice[idx]!;
+      for (const row of res.results ?? []) {
+        out.push({ year, sex: row.sex, name: row.name, count: row.count });
+      }
+    });
+  }
+  return out;
 }
 
 export interface YearTopRow {
@@ -643,33 +678,67 @@ export interface RiverNameRow {
   series: Record<number, number>;
 }
 
-// Names that have ever ranked top-N in some (year, sex). One query: rank with a
-// window function, dedupe the id set, then re-join to pull every (year, count)
-// for those names. The (year, count DESC) covering index on name_years keeps
-// the inner window cheap.
+// Names that have ever ranked top-N in some (year, sex). Two phases: first
+// collect the qualifying name ids by ranking one year at a time, then pull the
+// full (year, count) series for just those ids.
+//
+// Like topByYear, the id collection must not rank over the whole name_years
+// table in a single window function — that materializes ~2M rows at once and
+// exceeds the Worker memory budget D1 runs under (Cloudflare Error 1101). Each
+// per-year statement filters on `WHERE ny.year = ?` (name_years(year, count
+// DESC) index), keeping peak memory bounded, and is pipelined via db.batch().
 export async function riverNames(db: D1Database, perBucket = 30): Promise<RiverNameRow[]> {
-  const r = await db
-    .prepare(
-      `WITH ranked AS (
-         SELECT n.id,
-                ROW_NUMBER() OVER (PARTITION BY ny.year, n.sex ORDER BY ny.count DESC) AS rn
-           FROM name_years ny
-           JOIN names n ON n.id = ny.name_id
-       ),
-       river_ids AS (SELECT DISTINCT id FROM ranked WHERE rn <= ?1)
-       SELECT n.id AS id, n.name AS name, n.sex AS sex,
-              n.peak_year AS peak_year, n.peak_count AS peak_count,
-              ny.year AS year, ny.count AS count
-         FROM river_ids r
-         JOIN names n ON n.id = r.id
-         JOIN name_years ny ON ny.name_id = r.id
-        ORDER BY n.id, ny.year`,
-    )
-    .bind(perBucket)
-    .all<{ id: number; name: string; sex: Sex; peak_year: number; peak_count: number; year: number; count: number }>();
+  const years = await listDataYears(db);
+  if (!years.length) return [];
+
+  const ids = new Set<number>();
+  for (let i = 0; i < years.length; i += YEAR_BATCH) {
+    const slice = years.slice(i, i + YEAR_BATCH);
+    const batch = slice.map((year) =>
+      db
+        .prepare(
+          `WITH ranked AS (
+             SELECT n.id AS id,
+                    ROW_NUMBER() OVER (PARTITION BY n.sex ORDER BY ny.count DESC) AS rn
+               FROM name_years ny
+               JOIN names n ON n.id = ny.name_id
+              WHERE ny.year = ?1
+           )
+           SELECT DISTINCT id FROM ranked WHERE rn <= ?2`,
+        )
+        .bind(year, perBucket),
+    );
+    const results = await db.batch<{ id: number }>(batch);
+    for (const res of results) {
+      for (const row of res.results ?? []) ids.add(row.id);
+    }
+  }
+  if (!ids.size) return [];
+
+  // Pull every (year, count) for the qualifying ids. The IN list is chunked to
+  // stay under D1's bound-variable ceiling.
+  const rows = await chunkedIn<{
+    id: number;
+    name: string;
+    sex: Sex;
+    peak_year: number;
+    peak_count: number;
+    year: number;
+    count: number;
+  }>(
+    db,
+    [...ids],
+    (ph) => `SELECT n.id AS id, n.name AS name, n.sex AS sex,
+                    n.peak_year AS peak_year, n.peak_count AS peak_count,
+                    ny.year AS year, ny.count AS count
+               FROM names n
+               JOIN name_years ny ON ny.name_id = n.id
+              WHERE n.id IN (${ph})
+              ORDER BY n.id, ny.year`,
+  );
 
   const grouped = new Map<number, RiverNameRow>();
-  for (const row of r.results ?? []) {
+  for (const row of rows) {
     let g = grouped.get(row.id);
     if (!g) {
       g = {
