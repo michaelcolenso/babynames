@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Name Universe — NobodyNamed</title>
+<meta name="description" content="Every name ever given to 20+ American babies, rendered as a star. 30,000 names. 140 years. One galaxy.">
+<link rel="canonical" href="https://nobodynamed.com/viz/universe">
+<meta property="og:title" content="The Name Universe — NobodyNamed">
+<meta property="og:description" content="Every name ever given to 20+ American babies, rendered as a star.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --amber: #c9922a;
+    --amber-bright: #f0b340;
+    --muted: #6b7280;
+    --text: #e8e6e3;
+    --rule: rgba(255,255,255,0.06);
+    --bg: #050508;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+  }
+
+  /* ── Canvas ── */
+  #canvas {
+    position: fixed;
+    inset: 0;
+    display: block;
+    cursor: grab;
+  }
+  #canvas:active { cursor: grabbing; }
+
+  /* ── Nav overlay ── */
+  #nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 1.75rem;
+    background: linear-gradient(to bottom, rgba(5,5,8,0.88) 0%, rgba(5,5,8,0) 100%);
+    font-size: 0.85rem;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  #nav.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #nav a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+  #nav a:hover { color: var(--text); }
+  #nav .brand {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    margin-right: auto;
+    text-decoration: none;
+  }
+
+  /* ── Hero overlay ── */
+  #hero {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 90;
+    pointer-events: none;
+    transition: opacity 0.8s ease;
+    padding: 2rem;
+  }
+  #hero.hidden { opacity: 0; }
+  .hero-kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 1rem;
+  }
+  .hero-h1 {
+    font-size: clamp(2.4rem, 6vw, 4.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+    color: var(--text);
+    margin-bottom: 1rem;
+    text-shadow: 0 0 60px rgba(5,5,8,0.9);
+  }
+  .hero-lede {
+    font-size: clamp(0.9rem, 1.8vw, 1.1rem);
+    color: var(--muted);
+    line-height: 1.6;
+    max-width: 540px;
+    margin: 0 auto;
+    text-shadow: 0 0 20px rgba(5,5,8,1);
+  }
+  .hero-loading {
+    margin-top: 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  /* ── Controls panel ── */
+  #controls {
+    position: fixed;
+    top: 4rem; right: 1.25rem;
+    z-index: 100;
+    background: rgba(5,5,8,0.85);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+    min-width: 170px;
+    backdrop-filter: blur(12px);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  #controls.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .ctrl-section {
+    margin-bottom: 1rem;
+  }
+  .ctrl-section:last-child { margin-bottom: 0; }
+  .ctrl-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+  .pill-group {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+  .pill {
+    padding: 0.2rem 0.65rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pill:hover { border-color: var(--amber); color: var(--amber-bright); }
+  .pill.active { background: var(--amber); border-color: var(--amber); color: #050508; font-weight: 700; }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .status-pill:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
+  .status-pill.active { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.2); color: var(--text); }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .reset-btn {
+    width: 100%;
+    padding: 0.35rem 0;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 0.25rem;
+  }
+  .reset-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+  /* ── Stats chips ── */
+  #stats-chips {
+    position: fixed;
+    bottom: 1.5rem; left: 1.5rem;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    opacity: 0;
+    transition: opacity 0.8s;
+    pointer-events: none;
+  }
+  #stats-chips.visible { opacity: 1; }
+  .chip {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-family: 'Space Mono', monospace;
+  }
+  .chip-val {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--amber-bright);
+    line-height: 1;
+  }
+  .chip-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── Tooltip ── */
+  #tooltip {
+    position: fixed;
+    pointer-events: none;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+  #tooltip.visible { opacity: 1; }
+  .tt-card {
+    background: rgba(8,8,14,0.97);
+    border: 1px solid rgba(201,146,42,0.35);
+    border-radius: 10px;
+    padding: 0.9rem 1.1rem;
+    min-width: 170px;
+    max-width: 230px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+    backdrop-filter: blur(16px);
+    cursor: pointer;
+  }
+  .tt-name {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 0.3rem;
+  }
+  .tt-sex {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 0.65rem;
+  }
+  .tt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.3rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  .tt-row span:last-child { color: var(--text); }
+  .tt-badge {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    margin-top: 0.55rem;
+    font-weight: 700;
+  }
+  .tt-hint {
+    margin-top: 0.5rem;
+    font-size: 0.6rem;
+    color: rgba(255,255,255,0.25);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Error ── */
+  #error-msg {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    text-align: center;
+    z-index: 200;
+    display: none;
+  }
+  #error-msg h2 { color: #c4786e; font-size: 1.2rem; margin-bottom: 0.5rem; }
+  #error-msg p { color: var(--muted); font-size: 0.85rem; font-family: 'Space Mono', monospace; }
+</style>
+</head>
+<body>
+
+<!-- Canvas -->
+<canvas id="canvas"></canvas>
+
+<!-- Nav overlay -->
+<nav id="nav">
+  <a class="brand" href="/">NOBODYNAMED</a>
+  <a href="/viz/">← Visualizations</a>
+  <a href="/">Home</a>
+</nav>
+
+<!-- Hero text -->
+<div id="hero">
+  <div class="hero-kicker">28 / THE UNIVERSE</div>
+  <h1 class="hero-h1">The Name Universe</h1>
+  <p class="hero-lede">Every name ever given to 20+ American babies, rendered as a star. 30,000 names. 140 years. One galaxy.</p>
+  <div class="hero-loading" id="loading-text">LOADING STAR DATA…</div>
+</div>
+
+<!-- Controls -->
+<div id="controls">
+  <div class="ctrl-section">
+    <div class="ctrl-label">Sex</div>
+    <div class="pill-group" id="sex-filter">
+      <button class="pill active" data-sex="both">Both</button>
+      <button class="pill" data-sex="F">Girls</button>
+      <button class="pill" data-sex="M">Boys</button>
+    </div>
+  </div>
+  <div class="ctrl-section">
+    <div class="ctrl-label">Status</div>
+    <div class="pill-group" id="status-filter" style="flex-direction:column;gap:4px;">
+      <button class="status-pill active" data-st="r"><span class="status-dot" style="background:#7ec8b0"></span>Rising</button>
+      <button class="status-pill active" data-st="s"><span class="status-dot" style="background:#adc8e8"></span>Stable</button>
+      <button class="status-pill active" data-st="d"><span class="status-dot" style="background:#c9922a"></span>Declining</button>
+      <button class="status-pill active" data-st="e"><span class="status-dot" style="background:#c4786e"></span>Endangered</button>
+      <button class="status-pill active" data-st="x"><span class="status-dot" style="background:rgba(180,160,140,0.6)"></span>Extinct</button>
+    </div>
+  </div>
+  <div class="ctrl-section">
+    <button class="reset-btn" id="reset-btn">RESET VIEW</button>
+  </div>
+</div>
+
+<!-- Stats chips -->
+<div id="stats-chips">
+  <div class="chip"><span class="chip-val" id="stat-total">—</span><span class="chip-label">Total Stars</span></div>
+  <div class="chip"><span class="chip-val" id="stat-largest" style="font-size:0.85rem">—</span><span class="chip-label">Largest Star</span></div>
+  <div class="chip"><span class="chip-val" id="stat-extinct">—</span><span class="chip-label">Extinct</span></div>
+  <div class="chip"><span class="chip-val" id="stat-rising">—</span><span class="chip-label">Rising</span></div>
+</div>
+
+<!-- Tooltip -->
+<div id="tooltip">
+  <div class="tt-card" id="tt-card"></div>
+</div>
+
+<!-- Error -->
+<div id="error-msg">
+  <h2>Failed to load</h2>
+  <p id="error-detail">Could not fetch /api/name-universe</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const PAD = 0.10; // 10% padding on all sides
+  const ANIM_DURATION = 1500; // ms
+  const HOVER_RADIUS = 8; // px in screen space
+
+  const STATUS_COLOR = {
+    r: '#7ec8b0',
+    s: '#adc8e8',
+    d: '#c9922a',
+    e: '#c4786e',
+    x: 'rgba(180,160,140,0.5)',
+  };
+  const STATUS_LABEL = { r: 'Rising', s: 'Stable', d: 'Declining', e: 'Endangered', x: 'Extinct' };
+  const STATUS_BG = {
+    r: 'rgba(126,200,176,0.15)', s: 'rgba(173,200,232,0.15)',
+    d: 'rgba(201,146,42,0.15)', e: 'rgba(196,120,110,0.15)', x: 'rgba(180,160,140,0.1)',
+  };
+
+  const LANDMARK_NAMES = ['Mary', 'James', 'Emma', 'Aiden', 'Jennifer'];
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let allNames = [];
+  let ym = 1880, yM = 2024;
+  let maxPc = 1;
+  let transform = { x: 0, y: 0, k: 1 };
+  let animStart = null;
+  let animRunning = false;
+  let dirty = true;
+  let offscreen = null; // offscreen canvas for static render
+  let offDirty = true;
+  let hoveredStar = null;
+  let dragging = false;
+  let dragStart = { x: 0, y: 0 };
+  let dragTransformStart = { x: 0, y: 0 };
+  let dataLoaded = false;
+  let navHideTimer = null;
+
+  // Filter state
+  let sexFilter = 'both';
+  let statusFilter = new Set(['r', 's', 'd', 'e', 'x']);
+
+  // Canvas
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+
+  // ── Sizing ────────────────────────────────────────────────────────────────
+  function resize() {
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    // Do NOT scale ctx here — all drawing functions use CSS px coords and we
+    // apply dpr via setTransform in render() as needed.
+    offDirty = true;
+    dirty = true;
+    if (dataLoaded) scheduleRender();
+  }
+
+  // ── Coordinate mapping ────────────────────────────────────────────────────
+  function W() { return window.innerWidth; }
+  function H() { return window.innerHeight; }
+
+  function dataToCanvas(fy, py) {
+    const w = W(), h = H();
+    const px_l = w * PAD, px_r = w * (1 - PAD);
+    const py_t = h * PAD, py_b = h * (1 - PAD);
+    const x = px_l + (fy - ym) / (yM - ym) * (px_r - px_l);
+    const y = py_t + (py - ym) / (yM - ym) * (py_b - py_t);
+    return { x, y };
+  }
+
+  function canvasToScreen(cx, cy) {
+    return {
+      x: cx * transform.k + transform.x,
+      y: cy * transform.k + transform.y,
+    };
+  }
+
+  function screenToCanvas(sx, sy) {
+    return {
+      x: (sx - transform.x) / transform.k,
+      y: (sy - transform.y) / transform.k,
+    };
+  }
+
+  function starRadius(pc) {
+    return Math.sqrt(pc / maxPc) * 6 + 0.8;
+  }
+
+  // ── Easing ────────────────────────────────────────────────────────────────
+  function easeOutExpo(t) {
+    return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+  }
+
+  // ── Filtered names ────────────────────────────────────────────────────────
+  function getVisible() {
+    return allNames.filter(d => {
+      if (sexFilter !== 'both' && d.s !== sexFilter) return false;
+      if (!statusFilter.has(d.st)) return false;
+      return true;
+    });
+  }
+
+  // ── Draw ──────────────────────────────────────────────────────────────────
+  function drawStars(targetCtx, names, alpha_override, progress) {
+    const cx0 = W() / 2, cy0 = H() / 2; // origin for animation
+
+    for (let i = 0; i < names.length; i++) {
+      const d = names[i];
+      const final = d._canvas;
+      let x, y;
+
+      if (progress < 1) {
+        const t = easeOutExpo(Math.min(1, progress + (i / names.length) * 0.2));
+        x = cx0 + (final.x - cx0) * t;
+        y = cy0 + (final.y - cy0) * t;
+      } else {
+        x = final.x;
+        y = final.y;
+      }
+
+      const r = starRadius(d.pc);
+      const color = STATUS_COLOR[d.st] || '#aaa';
+      const opacity = d.st === 'x' ? 0.4 : 0.75;
+      const alpha = alpha_override !== null ? alpha_override : opacity;
+
+      targetCtx.save();
+      targetCtx.globalAlpha = alpha;
+      targetCtx.shadowBlur = r * 2.5;
+      targetCtx.shadowColor = color;
+      targetCtx.fillStyle = color;
+      targetCtx.beginPath();
+      targetCtx.arc(x, y, r, 0, Math.PI * 2);
+      targetCtx.fill();
+      targetCtx.restore();
+    }
+  }
+
+  function drawAxisLabels(targetCtx) {
+    const w = W(), h = H();
+    const pad_l = w * PAD, pad_r = w * (1 - PAD);
+    const pad_t = h * PAD, pad_b = h * (1 - PAD);
+
+    targetCtx.save();
+    targetCtx.font = '700 10px "Space Mono", monospace';
+    targetCtx.letterSpacing = '0.15em';
+    targetCtx.fillStyle = 'rgba(201,146,42,0.5)';
+    targetCtx.textAlign = 'left';
+
+    // X axis label — top
+    targetCtx.fillText('DEBUT YEAR →', pad_l, pad_t - 10);
+
+    // Y axis label — right side, rotated
+    targetCtx.save();
+    targetCtx.translate(pad_r + 14, pad_t);
+    targetCtx.rotate(Math.PI / 2);
+    targetCtx.textAlign = 'left';
+    targetCtx.fillText('PEAK YEAR ↓', 0, 0);
+    targetCtx.restore();
+
+    // Year labels at corners
+    targetCtx.font = '400 10px "Space Mono", monospace';
+    targetCtx.fillStyle = 'rgba(107,114,128,0.7)';
+
+    // Top-left: debut 1880
+    targetCtx.textAlign = 'left';
+    targetCtx.fillText(String(ym), pad_l, pad_t - 22);
+
+    // Top-right: debut current year
+    targetCtx.textAlign = 'right';
+    targetCtx.fillText(String(yM), pad_r, pad_t - 22);
+
+    // Left side for peak year axis
+    targetCtx.textAlign = 'right';
+    targetCtx.fillText(String(ym), pad_l - 6, pad_t + 4);
+    targetCtx.fillText(String(yM), pad_l - 6, pad_b + 4);
+
+    targetCtx.restore();
+  }
+
+  function drawDiagonalGuide(targetCtx) {
+    const w = W(), h = H();
+    const pad_l = w * PAD, pad_r = w * (1 - PAD);
+    const pad_t = h * PAD, pad_b = h * (1 - PAD);
+
+    targetCtx.save();
+    targetCtx.strokeStyle = 'rgba(255,255,255,0.04)';
+    targetCtx.lineWidth = 1;
+    targetCtx.setLineDash([4, 8]);
+    targetCtx.beginPath();
+    targetCtx.moveTo(pad_l, pad_t);
+    targetCtx.lineTo(pad_r, pad_b);
+    targetCtx.stroke();
+    targetCtx.restore();
+  }
+
+  function drawLandmarks(targetCtx, visible) {
+    const drawn = new Set();
+    for (const name of LANDMARK_NAMES) {
+      const star = visible.find(d => d.n === name);
+      if (!star) continue;
+      const { x, y } = star._canvas;
+      const r = starRadius(star.pc);
+      const color = STATUS_COLOR[star.st] || '#aaa';
+
+      // Ring
+      targetCtx.save();
+      targetCtx.globalAlpha = 0.6;
+      targetCtx.strokeStyle = color;
+      targetCtx.lineWidth = 1;
+      targetCtx.beginPath();
+      targetCtx.arc(x, y, r + 4, 0, Math.PI * 2);
+      targetCtx.stroke();
+      targetCtx.restore();
+
+      // Label with connector
+      const lx = x + r + 14;
+      const ly = y - 6;
+
+      targetCtx.save();
+      targetCtx.globalAlpha = 0.8;
+      targetCtx.strokeStyle = 'rgba(201,146,42,0.4)';
+      targetCtx.lineWidth = 0.75;
+      targetCtx.beginPath();
+      targetCtx.moveTo(x + r + 2, y);
+      targetCtx.lineTo(lx, ly + 3);
+      targetCtx.stroke();
+
+      targetCtx.font = '700 11px "Space Grotesk", sans-serif';
+      targetCtx.fillStyle = 'rgba(232,230,227,0.85)';
+      targetCtx.textAlign = 'left';
+      targetCtx.shadowBlur = 6;
+      targetCtx.shadowColor = 'rgba(5,5,8,0.9)';
+      targetCtx.fillText(name, lx, ly);
+      targetCtx.restore();
+
+      drawn.add(name);
+    }
+  }
+
+  // Build offscreen canvas — renders the full scene at identity transform (no pan/zoom).
+  // Drawn in CSS-pixel coordinates; the offscreen itself is DPR-scaled via setTransform.
+  function buildOffscreen(visible) {
+    const w = W(), h = H();
+    if (!offscreen) offscreen = document.createElement('canvas');
+    offscreen.width = w * dpr;
+    offscreen.height = h * dpr;
+    const oc = offscreen.getContext('2d');
+    // Set DPR scale so drawing in CSS px renders sharply
+    oc.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    drawDiagonalGuide(oc);
+    drawAxisLabels(oc);
+    drawStars(oc, visible, null, 1);
+    drawLandmarks(oc, visible);
+    offDirty = false;
+  }
+
+  function render(timestamp) {
+    if (!dataLoaded) return;
+    dirty = false;
+
+    const visible = getVisible();
+
+    // Clear at native resolution
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (animRunning) {
+      if (!animStart) animStart = timestamp;
+      const elapsed = timestamp - animStart;
+      const progress = Math.min(1, elapsed / ANIM_DURATION);
+
+      // Animation runs at identity pan/zoom (k=1, x=0, y=0) so stars fly from center
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawDiagonalGuide(ctx);
+      drawAxisLabels(ctx);
+      drawStars(ctx, visible, null, progress);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+      if (progress >= 1) {
+        animRunning = false;
+        offDirty = true;
+        document.getElementById('controls').classList.add('visible');
+        document.getElementById('stats-chips').classList.add('visible');
+        dirty = true; // trigger one final static frame
+      } else {
+        dirty = true;
+      }
+    } else {
+      // Static: blit offscreen with pan/zoom transform
+      if (offDirty) buildOffscreen(visible);
+
+      if (offscreen) {
+        // Apply pan/zoom: the offscreen is DPR-scaled CSS-px content.
+        // We want to draw it transformed by (k, tx, ty) in CSS-px space.
+        // In device-pixel space that means: scale = k*dpr, translate = (tx*dpr, ty*dpr)
+        ctx.setTransform(
+          transform.k * dpr, 0,
+          0, transform.k * dpr,
+          transform.x * dpr, transform.y * dpr
+        );
+        // Draw at CSS-px size (offscreen was allocated at physical px but ctx was set to dpr scale)
+        ctx.drawImage(offscreen, 0, 0, W(), H());
+      }
+
+      // Hovered star highlight — drawn in screen CSS-px coords on top
+      if (hoveredStar) {
+        const d = hoveredStar;
+        const { x, y } = d._canvas;
+        const r = starRadius(d.pc);
+        const color = STATUS_COLOR[d.st] || '#aaa';
+        const sx = x * transform.k + transform.x;
+        const sy = y * transform.k + transform.y;
+        const sr = r * transform.k;
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.globalAlpha = 0.9;
+        ctx.shadowBlur = sr * 4;
+        ctx.shadowColor = color;
+        ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(sx, sy, sr + 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      }
+    }
+
+    if (dirty) {
+      requestAnimationFrame(render);
+    }
+  }
+
+  function scheduleRender() {
+    if (!dirty) {
+      dirty = true;
+      requestAnimationFrame(render);
+    }
+  }
+
+  // ── Animation entry ───────────────────────────────────────────────────────
+  function startAnimation() {
+    animStart = null;
+    animRunning = true;
+    dirty = true;
+    requestAnimationFrame(render);
+  }
+
+  // ── Hover detection ───────────────────────────────────────────────────────
+  function findHoveredStar(screenX, screenY) {
+    const { x: cx, y: cy } = screenToCanvas(screenX, screenY);
+    const visible = getVisible();
+    const threshold = HOVER_RADIUS / transform.k;
+    let best = null, bestDist = Infinity;
+
+    for (const d of visible) {
+      const dx = d._canvas.x - cx;
+      const dy = d._canvas.y - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const r = starRadius(d.pc);
+      if (dist < r + threshold && dist < bestDist) {
+        bestDist = dist;
+        best = d;
+      }
+    }
+    return best;
+  }
+
+  function showTooltip(d, screenX, screenY) {
+    const tt = document.getElementById('tooltip');
+    const card = document.getElementById('tt-card');
+
+    const sexLabel = d.s === 'F' ? 'Girl' : 'Boy';
+    const statusLabel = STATUS_LABEL[d.st] || d.st;
+    const statusColor = STATUS_COLOR[d.st] || '#aaa';
+    const statusBg = STATUS_BG[d.st] || 'rgba(255,255,255,0.1)';
+    const peakFmt = d.pc.toLocaleString();
+
+    card.innerHTML = `
+      <div class="tt-name">${d.n}</div>
+      <div class="tt-sex">${sexLabel} · SSA data</div>
+      <div class="tt-row"><span>DEBUT</span><span>${d.fy}</span></div>
+      <div class="tt-row"><span>PEAK YEAR</span><span>${d.py}</span></div>
+      <div class="tt-row"><span>PEAK COUNT</span><span>${peakFmt}</span></div>
+      <div class="tt-badge" style="background:${statusBg};color:${statusColor}">${statusLabel}</div>
+      <div class="tt-hint">click to open →</div>
+    `;
+
+    card.onclick = () => window.open(`/name/${encodeURIComponent(d.n)}/`, '_blank');
+    card.style.cursor = 'pointer';
+
+    const w = W(), h = H();
+    let lx = screenX + 14, ly = screenY - 20;
+    const cardW = 200, cardH = 180;
+    if (lx + cardW > w - 10) lx = screenX - cardW - 14;
+    if (ly + cardH > h - 10) ly = screenY - cardH + 10;
+    if (ly < 60) ly = 60;
+
+    tt.style.left = lx + 'px';
+    tt.style.top = ly + 'px';
+    tt.classList.add('visible');
+  }
+
+  function hideTooltip() {
+    document.getElementById('tooltip').classList.remove('visible');
+  }
+
+  // ── Nav auto-hide ─────────────────────────────────────────────────────────
+  function showNav() {
+    document.getElementById('nav').classList.add('visible');
+    clearTimeout(navHideTimer);
+    navHideTimer = setTimeout(() => {
+      document.getElementById('nav').classList.remove('visible');
+    }, 3000);
+  }
+
+  // ── Zoom / Pan ────────────────────────────────────────────────────────────
+  const MIN_K = 0.5, MAX_K = 20;
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+    const mx = e.clientX, my = e.clientY;
+    const newK = Math.max(MIN_K, Math.min(MAX_K, transform.k * factor));
+    const scale = newK / transform.k;
+    transform.x = mx - scale * (mx - transform.x);
+    transform.y = my - scale * (my - transform.y);
+    transform.k = newK;
+    offDirty = true; // offscreen positions don't change but transform does
+    hoveredStar = null;
+    hideTooltip();
+    scheduleRender();
+  }, { passive: false });
+
+  canvas.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    dragging = true;
+    dragStart = { x: e.clientX, y: e.clientY };
+    dragTransformStart = { x: transform.x, y: transform.y };
+    hideTooltip();
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    showNav();
+
+    if (dragging) {
+      transform.x = dragTransformStart.x + (e.clientX - dragStart.x);
+      transform.y = dragTransformStart.y + (e.clientY - dragStart.y);
+      hoveredStar = null;
+      scheduleRender();
+      return;
+    }
+
+    if (!dataLoaded || animRunning) return;
+
+    const star = findHoveredStar(e.clientX, e.clientY);
+    if (star !== hoveredStar) {
+      hoveredStar = star;
+      canvas.style.cursor = star ? 'pointer' : 'grab';
+      scheduleRender();
+    }
+    if (star) {
+      showTooltip(star, e.clientX, e.clientY);
+    } else {
+      hideTooltip();
+    }
+  });
+
+  window.addEventListener('mouseup', () => {
+    dragging = false;
+  });
+
+  canvas.addEventListener('click', (e) => {
+    if (!hoveredStar) return;
+    window.open(`/name/${encodeURIComponent(hoveredStar.n)}/`, '_blank');
+  });
+
+  // Touch support
+  let lastTouchDist = null;
+  let lastTouchMid = null;
+
+  canvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      dragging = true;
+      dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      dragTransformStart = { x: transform.x, y: transform.y };
+    } else if (e.touches.length === 2) {
+      dragging = false;
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+      lastTouchMid = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      };
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1 && dragging) {
+      transform.x = dragTransformStart.x + (e.touches[0].clientX - dragStart.x);
+      transform.y = dragTransformStart.y + (e.touches[0].clientY - dragStart.y);
+      scheduleRender();
+    } else if (e.touches.length === 2 && lastTouchDist !== null) {
+      const dx = e.touches[1].clientX - e.touches[0].clientX;
+      const dy = e.touches[1].clientY - e.touches[0].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const mid = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      };
+      const factor = dist / lastTouchDist;
+      const newK = Math.max(MIN_K, Math.min(MAX_K, transform.k * factor));
+      const scale = newK / transform.k;
+      transform.x = mid.x - scale * (mid.x - transform.x);
+      transform.y = mid.y - scale * (mid.y - transform.y);
+      transform.k = newK;
+      lastTouchDist = dist;
+      scheduleRender();
+    }
+    e.preventDefault();
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', () => {
+    dragging = false;
+    lastTouchDist = null;
+  });
+
+  // ── Controls ──────────────────────────────────────────────────────────────
+  document.getElementById('sex-filter').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-sex]');
+    if (!btn) return;
+    sexFilter = btn.dataset.sex;
+    document.querySelectorAll('[data-sex]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    offDirty = true;
+    scheduleRender();
+  });
+
+  document.getElementById('status-filter').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-st]');
+    if (!btn) return;
+    const st = btn.dataset.st;
+    if (statusFilter.has(st)) {
+      statusFilter.delete(st);
+      btn.classList.remove('active');
+    } else {
+      statusFilter.add(st);
+      btn.classList.add('active');
+    }
+    offDirty = true;
+    scheduleRender();
+  });
+
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    transform = { x: 0, y: 0, k: 1 };
+    offDirty = true;
+    scheduleRender();
+  });
+
+  // ── Fetch & Init ──────────────────────────────────────────────────────────
+  async function init() {
+    resize();
+    window.addEventListener('resize', () => {
+      resize();
+      // Recompute canvas positions after layout change
+      for (const d of allNames) {
+        d._canvas = dataToCanvas(d.fy, d.py);
+      }
+    });
+
+    try {
+      const resp = await fetch('/api/name-universe');
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+
+      ym = data.ym || 1880;
+      yM = data.yM || 2024;
+      allNames = data.names || [];
+
+      // Pre-compute canvas positions and max
+      maxPc = 0;
+      for (const d of allNames) {
+        if (d.pc > maxPc) maxPc = d.pc;
+      }
+      for (const d of allNames) {
+        d._canvas = dataToCanvas(d.fy, d.py);
+      }
+
+      // Stats
+      const totalCount = allNames.length;
+      const largestName = allNames[0] ? allNames[0].n : '—'; // sorted by peak_count DESC
+      const extinctCount = allNames.filter(d => d.st === 'x').length;
+      const risingCount = allNames.filter(d => d.st === 'r').length;
+
+      document.getElementById('stat-total').textContent = totalCount.toLocaleString();
+      document.getElementById('stat-largest').textContent = largestName;
+      document.getElementById('stat-extinct').textContent = extinctCount.toLocaleString();
+      document.getElementById('stat-rising').textContent = risingCount.toLocaleString();
+
+      // Dismiss hero
+      const hero = document.getElementById('hero');
+      document.getElementById('loading-text').style.display = 'none';
+      setTimeout(() => {
+        hero.classList.add('hidden');
+        setTimeout(() => { hero.style.display = 'none'; }, 800);
+      }, 300);
+
+      dataLoaded = true;
+      startAnimation();
+
+    } catch (err) {
+      document.getElementById('loading-text').textContent = 'ERROR LOADING DATA';
+      document.getElementById('error-msg').style.display = 'block';
+      document.getElementById('error-detail').textContent = String(err);
+      console.error('Name Universe: fetch failed', err);
+    }
+  }
+
+  init();
+
+})();
+</script>
+</body>
+</html>
