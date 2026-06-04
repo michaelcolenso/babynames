@@ -6,6 +6,7 @@ import {
   listComeback,
   listLandingWithSparks,
   META_KEYS,
+  pageShell,
   renderLandingTableHTML,
   renderYearIndexHTML,
   type LandingKind,
@@ -164,58 +165,25 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
     },
   ]).replace(/</g, "\\u003c");
 
-  return new Response(`<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${page.title}</title>
-<meta name="description" content="${page.lede}">
-<link rel="canonical" href="${pageCanonical}">
-<meta property="og:title" content="${page.title}">
-<meta property="og:description" content="${page.lede}">
-<meta property="og:type" content="article">
-<meta property="og:url" content="${pageCanonical}">
-<meta property="og:image" content="${ogImageUrl}">
-<meta property="og:image:type" content="image/png">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="${ogImageUrl}">
-<link rel="stylesheet" href="/assets/style.css">
-<script type="application/ld+json">${structuredData}</script>
-</head>
-<body>
-<div class="page">
-  <header class="site">
-    <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
-    <nav>
-      <a href="/extinct">Extinct</a>
-      <a href="/endangered">Endangered</a>
-      <a href="/comeback">Comebacks</a>
-      <a href="/year">Birth year</a>
-      <a href="/rising">Rising</a>
-      <a href="/viz">Visualizations</a>
-      <a href="/blog/">Namecalling</a>
-      <a href="/about">About</a>
-    </nav>
-  </header>
-  <main>
+  return new Response(pageShell({
+    title: page.title,
+    description: page.lede,
+    canonical: pageCanonical,
+    ogImage: ogImageUrl,
+    ogType: "article",
+    currentPath: `/${slug}`,
+    body: `
     <p class="eyebrow">${page.eyebrow}</p>
     <h1>${page.title.replace(" — NobodyNamed", "")}</h1>
     <p class="lede">${page.lede}</p>
     <p class="archive-note">${page.body}</p>
     <div class="diagnosis-grid">${cards}</div>
     ${table}
-  </main>
-  <footer class="site">
-    <div>Built on public-domain data from the Social Security Administration.</div>
-    <div><a href="/about">Methodology</a></div>
-  </footer>
-</div>
-<script src="/assets/app.js"></script>
-<script src="/assets/landing.js"></script>
-${tableScript}
-</body>
-</html>`, {
+  `,
+    structuredData: JSON.parse(structuredData),
+    scripts: ["/assets/app.js", "/assets/landing.js"],
+    footerVariant: "minimal",
+  }), {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",

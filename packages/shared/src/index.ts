@@ -7,6 +7,7 @@ export * from "./render-twin";
 export * from "./render-year";
 export * from "./render-blog";
 export * from "./render-landing";
+export * from "./render-shell";
 export * from "./render-shadow";
 export * from "./cf-access";
 export * from "./d1-chunk";

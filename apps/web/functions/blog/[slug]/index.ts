@@ -2,7 +2,7 @@
 //
 // Single blog post page. Hits D1 by slug, renders full HTML.
 
-import { getBlogPost, linkifyBlogBody, renderBlogPost } from "@nv/shared";
+import { getBlogPost, linkifyBlogBody, pageShell, renderBlogPost } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
@@ -50,18 +50,16 @@ function withoutBody(response: Response): Response {
 
 function renderNotFound(slug: string): string {
   const safe = slug.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]!);
-  return `<!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Post not found — Namecalling</title>
-<link rel="stylesheet" href="/assets/style.css">
-</head><body><div class="page">
-<header class="site"><a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a></header>
-<main>
+  return pageShell({
+    title: "Post not found — Namecalling",
+    description: "No blog post with that address.",
+    canonical: `https://nobodynamed.com/blog/${safe}/`,
+    currentPath: "/blog",
+    body: `
   <h1>Post not found</h1>
   <p class="lede">No blog post with that address.</p>
   <p><a href="/blog/">← Namecalling</a></p>
-</main>
-</div></body></html>`;
+`,
+    footerVariant: "full",
+  });
 }

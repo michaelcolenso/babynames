@@ -6,6 +6,7 @@
 import { classify, type ClassifyResult } from "./classify";
 import type { YearTopRow, YearTotal } from "./d1-queries";
 import { playgroundDensity } from "./enrichment-compute";
+import { pageShell } from "./render-shell";
 import { buildSparkline } from "./sparkline";
 import { ALL_STATES, TILE_COLS, TILE_ROWS, US_TILE_GRID } from "./us-states-map";
 import type {
@@ -296,6 +297,9 @@ export function renderFullPage(
   const desc = buildMetaDescription(record, classifyResult);
   const statusLabel = displayStatus(classifyResult, record.yM);
   const title = `${record.name} name popularity (${statusLabel}, peak ${classifyResult.peakYear}) | NobodyNamed`;
+  const origin = opts.canonical ? new URL(opts.canonical).origin : "";
+  const ogImageUrl = `${origin}/api/og/${encodeURIComponent(record.name)}`;
+
   const dataJson = JSON.stringify({
     name: record.name,
     sex: record.sex,
@@ -306,90 +310,34 @@ export function renderFullPage(
     diaspora: opts.diaspora,
   });
 
-  const origin = opts.canonical ? new URL(opts.canonical).origin : "";
-  const ogImageUrl = `${origin}/api/og/${encodeURIComponent(record.name)}`;
-  const structuredDataJson = JSON.stringify(
-    buildStructuredData(record, classifyResult, {
+  return pageShell({
+    title,
+    description: desc,
+    canonical: opts.canonical,
+    ogImage: ogImageUrl,
+    ogImageAlt: `${record.name} — ${statusLabel}, peak ${classifyResult.peakYear}`,
+    ogType: "article",
+    currentPath: undefined,
+    body: `<div id="view-name">${renderReportWithOptions(record, {
+      relatedNames: opts.relatedNames,
+      discovery: opts.discovery,
+      peerNames: opts.peerNames,
+      yearTotals: opts.yearTotals,
+      enrichmentSnippet: opts.enrichmentSnippet,
+      enrichment: opts.enrichment,
+      diaspora: opts.diaspora,
+      affiliateTag: opts.affiliateTag,
+    })}</div>`,
+    structuredData: buildStructuredData(record, classifyResult, {
       canonical: opts.canonical,
       title,
       description: desc,
       origin,
     }),
-  ).replace(/</g, "\\u003c");
-
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escape(title)}</title>
-<meta name="description" content="${escape(desc)}">
-<link rel="canonical" href="${escape(opts.canonical)}">
-<meta property="og:title" content="${escape(title)}">
-<meta property="og:description" content="${escape(desc)}">
-<meta property="og:type" content="article">
-<meta property="og:url" content="${escape(opts.canonical)}">
-<meta property="og:image" content="${escape(ogImageUrl)}">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:alt" content="${escape(record.name)} — ${statusLabel}, peak ${classifyResult.peakYear}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="${escape(ogImageUrl)}">
-<meta name="twitter:image:alt" content="${escape(record.name)} — ${statusLabel}, peak ${classifyResult.peakYear}">
-<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="/assets/style.css">
-<script type="application/ld+json">${structuredDataJson}</script>
-</head>
-<body>
-<div class="page">
-  <header class="site">
-    <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
-    <nav>
-      <a href="/extinct">Extinct</a>
-      <a href="/endangered">Endangered</a>
-      <a href="/comeback">Comebacks</a>
-      <a href="/year">Birth year</a>
-      <a href="/rising">Rising</a>
-      <a href="/viz">Visualizations</a>
-      <a href="/blog/">Namecalling</a>
-      <a href="/about">About</a>
-    </nav>
-    <details class="mobile-nav">
-      <summary aria-label="Open navigation"><span></span><span></span><span></span></summary>
-      <nav>
-        <a href="/extinct">Extinct</a>
-        <a href="/endangered">Endangered</a>
-        <a href="/comeback">Comebacks</a>
-        <a href="/year">Birth year</a>
-        <a href="/rising">Rising</a>
-        <a href="/viz">Visualizations</a>
-        <a href="/blog/">Namecalling</a>
-        <a href="/about">About</a>
-      </nav>
-    </details>
-  </header>
-  <div id="view-name">${renderReportWithOptions(record, {
-    relatedNames: opts.relatedNames,
-    discovery: opts.discovery,
-    peerNames: opts.peerNames,
-    yearTotals: opts.yearTotals,
-    enrichmentSnippet: opts.enrichmentSnippet,
-    enrichment: opts.enrichment,
-    diaspora: opts.diaspora,
-    affiliateTag: opts.affiliateTag,
-  })}</div>
-  <footer class="site">
-    <div>
-      <div>nobodynamed is a small data project about American first names.</div>
-      <div class="footer-note">Data sourced from Social Security Administration birth records (1880–${record.yM}). About 100,000 name/sex records and 2 million yearly observations.</div>
-    </div>
-    <div><a href="/about">About</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
-  </footer>
-</div>
-<script type="application/json" id="nv-data">${dataJson.replace(/</g, "\\u003c")}</script>
-<script src="/assets/app.js"></script>
-<script>
-  (function () {
+    scripts: ["/assets/app.js"],
+    jsonDataBlocks: [{ id: "nv-data", data: JSON.parse(dataJson) }],
+    inlineScripts: [
+      `(function () {
     var el = document.getElementById("nv-data");
     if (!el || !window.NameVitals) return;
     var record = JSON.parse(el.textContent);
@@ -397,10 +345,10 @@ export function renderFullPage(
     NameVitals.attachShareHandlers(container, record);
     NameVitals.hydrateEnrichment(container, record);
     if (NameVitals.hydrateDiaspora) NameVitals.hydrateDiaspora(container, record);
-  })();
-</script>
-</body>
-</html>`;
+  })();`,
+    ],
+    footerVariant: "full",
+  });
 }
 
 // A name whose living cohort skews this old reads partly as historical

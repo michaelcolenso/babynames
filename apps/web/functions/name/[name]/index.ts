@@ -17,6 +17,7 @@ import {
   getYearTotalsForYears,
   listRelatedNames,
   META_KEYS,
+  pageShell,
   renderFullPage,
   type NameRecord,
   type Sex,
@@ -149,18 +150,18 @@ function withoutBody(response: Response): Response {
 
 function renderNotFoundPage(name: string): string {
   const safe = name.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]!);
-  return `<!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${safe} — not found | NobodyNamed</title>
-<link rel="stylesheet" href="/assets/style.css">
-</head><body><div class="page">
-<header class="site"><a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a></header>
+  return pageShell({
+    title: `${safe} — not found | NobodyNamed`,
+    description: "That name is not in the SSA file. It may have been given to fewer than five babies a year, recorded with another spelling, or never issued through the baby-name dataset.",
+    canonical: `https://nobodynamed.com/name/${encodeURIComponent(name)}/`,
+    body: `
 <div class="report">
   <div class="section-label">404</div>
   <h1>${safe}</h1>
   <p class="lede">That name is not in the SSA file. It may have been given to fewer than five babies a year, recorded with another spelling, or never issued through the baby-name dataset.</p>
   <p><a href="/">Try another name</a>.</p>
-</div></div></body></html>`;
+</div>
+`,
+    footerVariant: "full",
+  });
 }
