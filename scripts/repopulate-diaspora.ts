@@ -1,13 +1,11 @@
-// One-off backfill: recompute name_diaspora with the per-capita logic by
+// One-off backfill: recompute name_diaspora with first-appearance logic by
 // running the SAME validated pure function the worker uses
 // (computeDiasporaForName), but driving it over the D1 HTTP API instead of the
-// Worker runtime. This exists because the live table holds rows computed under
-// the old raw-count logic and there is no deploy/secret access in this
-// environment to trigger the worker's /compute-diaspora route.
+// Worker runtime.
 //
-// Mirrors the worker's pipeline exactly: load state-year denominators once,
-// page through (name, sex) pairs, compute, write to name_diaspora_staging,
-// then swap staging onto live in one transaction.
+// Mirrors the worker's pipeline exactly: page through (name, sex) pairs,
+// compute, write to name_diaspora_staging, then swap staging onto live in one
+// transaction.
 //
 // Run: D1_TOKEN=<cf-api-token> npx tsx scripts/repopulate-diaspora.ts
 //   add --dry-run to compute + report a sample without writing/swapping.
@@ -15,7 +13,6 @@
 import {
   computeDiasporaForName,
   type StateCountRow,
-  type StateYearTotals,
 } from "../apps/ingest-worker/src/diaspora-compute";
 
 const TOKEN = process.env.D1_TOKEN;
@@ -52,26 +49,6 @@ async function q<T = Record<string, unknown>>(
   };
   if (!body.success) throw new Error(`D1 query failed: ${JSON.stringify(body.errors)}`);
   return body.result?.[0]?.results ?? [];
-}
-
-async function loadStateYearTotals(): Promise<StateYearTotals> {
-  const rows = await q<{ state: string; year: number; births: number }>(
-    "SELECT state, year, SUM(count) AS births FROM name_states GROUP BY state, year",
-  );
-  const totals: StateYearTotals = new Map();
-  const national = new Map<number, number>();
-  for (const r of rows) {
-    let byYear = totals.get(r.state);
-    if (!byYear) {
-      byYear = new Map();
-      totals.set(r.state, byYear);
-    }
-    byYear.set(r.year, r.births);
-    national.set(r.year, (national.get(r.year) ?? 0) + r.births);
-  }
-  // National totals under the "" sentinel key — the LQ national denominator.
-  totals.set("", national);
-  return totals;
 }
 
 interface NameAgg {
@@ -125,7 +102,7 @@ async function peakYears(page: NameAgg[]): Promise<Map<string, number>> {
   return map;
 }
 
-async function insertBatch(aggs: NameAgg[], totals: StateYearTotals, peaks: Map<string, number>) {
+async function insertBatch(aggs: NameAgg[], peaks: Map<string, number>) {
   // The D1 HTTP API caps bound variables at 100 per request; at 10 columns per
   // row that allows 10 rows, so 9 keeps a safe margin. (The Worker binding used
   // by the production compute chain allows far more — this limit is HTTP-only.)
@@ -135,7 +112,7 @@ async function insertBatch(aggs: NameAgg[], totals: StateYearTotals, peaks: Map<
     const values: string[] = [];
     const binds: (string | number | null)[] = [];
     for (const agg of slice) {
-      const d = computeDiasporaForName(agg.rows, totals);
+      const d = computeDiasporaForName(agg.rows);
       values.push("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       binds.push(
         agg.name,
@@ -161,10 +138,6 @@ async function insertBatch(aggs: NameAgg[], totals: StateYearTotals, peaks: Map<
 }
 
 async function main() {
-  console.log(`Loading state-year denominators...`);
-  const totals = await loadStateYearTotals();
-  console.log(`  ${totals.size} states.`);
-
   if (!DRY_RUN) await q("DELETE FROM name_diaspora_staging");
 
   let cursor: { name: string; sex: string } | null = null;
@@ -177,12 +150,12 @@ async function main() {
     if (DRY_RUN) {
       for (const agg of page) {
         if (["Aiden", "Madison", "Harper", "Liam"].includes(agg.name)) {
-          const d = computeDiasporaForName(agg.rows, totals);
+          const d = computeDiasporaForName(agg.rows);
           sample.push({ name: agg.name, sex: agg.sex, origin: d.originState, year: d.originYear });
         }
       }
     } else {
-      await insertBatch(page, totals, peaks);
+      await insertBatch(page, peaks);
     }
     done += page.length;
     const last = page[page.length - 1]!;

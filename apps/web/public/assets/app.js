@@ -375,9 +375,9 @@ async function hydrateEnrichment(container, record) {
   }
 }
 
-function diasporaTier(state, originState, year, originYear) {
-  if (state === originState) return "origin";
+function diasporaTier(year, originYear) {
   if (year == null) return "never";
+  if (year === originYear) return "origin";
   const diff = year - originYear;
   if (diff <= 5) return "early";
   if (diff <= 15) return "mid";
@@ -396,7 +396,6 @@ function hydrateDiaspora(container, record) {
   if (!d || !d.origin || !root) return;
   if (root.dataset.hydrated === "1") return;
 
-  const originState = d.origin.state;
   const originYear = d.origin.year;
   const adopt = new Map((d.spread || []).map((s) => [s.state, s.year]));
   const maxYear = (d.spread || []).reduce((m, s) => Math.max(m, s.year), originYear);
@@ -408,14 +407,14 @@ function hydrateDiaspora(container, record) {
   const playBtn = document.createElement("button");
   playBtn.type = "button";
   playBtn.className = "diaspora-play";
-  playBtn.textContent = "▶ Play diffusion";
+  playBtn.textContent = "▶ Play spread";
   const slider = document.createElement("input");
   slider.type = "range";
   slider.className = "diaspora-slider";
   slider.min = String(originYear);
   slider.max = String(maxYear);
   slider.value = String(maxYear);
-  slider.setAttribute("aria-label", "Diffusion year");
+  slider.setAttribute("aria-label", "State appearance year");
   const label = document.createElement("span");
   label.className = "diaspora-year";
   controls.appendChild(playBtn);
@@ -432,7 +431,7 @@ function hydrateDiaspora(container, record) {
       let cls;
       if (yr == null) cls = "never";
       else if (revealing && yr > T) cls = "pending";
-      else cls = diasporaTier(st, originState, yr, originYear);
+      else cls = diasporaTier(yr, originYear);
       g.setAttribute("class", "dz-tile dz-" + cls);
     }
     label.textContent = revealing ? String(T) : originYear + "–" + maxYear;
@@ -446,7 +445,7 @@ function hydrateDiaspora(container, record) {
       timer = null;
     }
     playing = false;
-    playBtn.textContent = "▶ Play diffusion";
+    playBtn.textContent = "▶ Play spread";
   };
   const play = () => {
     stop();
