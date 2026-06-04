@@ -23,7 +23,7 @@
     "seed-enrichment:local": "tsx scripts/seed-enrichment.ts --local",
     "verify-enrichment": "tsx scripts/verify-enrichment.ts",
     "verify-parity": "tsx scripts/verify-parity.ts",
-    "verify-diaspora": "tsx scripts/verify-diaspora-percapita.ts",
+    "verify-diaspora": "tsx scripts/verify-diaspora-appearance.ts",
     "test": "tsc -b apps/ingest-worker packages/shared && npm run verify-diaspora",
     "smoke:prod": "bash scripts/smoke-prod.sh",
     "blog:publish": "tsx scripts/blog-publish.ts",
