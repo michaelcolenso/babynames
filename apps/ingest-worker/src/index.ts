@@ -26,7 +26,6 @@ import {
   DIASPORA_MAX_PAGES,
   clearDiasporaStaging,
   computeDiasporaChunk,
-  loadStateYearTotals,
   swapDiasporaStaging,
 } from "./diaspora-compute";
 
@@ -91,11 +90,10 @@ export default {
         return new Response("unauthorized\n", { status: 401 });
       }
       await clearDiasporaStaging(env.DB);
-      const totals = await loadStateYearTotals(env.DB);
       let cursor: { name: string; sex: "M" | "F" } | null = null;
       let names = 0;
       do {
-        const r = await computeDiasporaChunk(env.DB, cursor, DIASPORA_MAX_PAGES, totals);
+        const r = await computeDiasporaChunk(env.DB, cursor, DIASPORA_MAX_PAGES);
         names += r.namesDone;
         cursor = r.nextCursor;
       } while (cursor);
@@ -287,14 +285,10 @@ async function handleMessage(env: Env, msg: IngestMessage): Promise<void> {
       // messages resume from the cursor. The message whose chunk exhausts the
       // table swaps staging onto live.
       if (msg.cursor === null) await clearDiasporaStaging(env.DB);
-      // Denominators are small (~6k rows) and cheap to reload per message;
-      // the chain spans many messages so we can't thread them through state.
-      const totals = await loadStateYearTotals(env.DB);
       const { nextCursor } = await computeDiasporaChunk(
         env.DB,
         msg.cursor,
         DIASPORA_MAX_PAGES,
-        totals,
       );
       if (nextCursor) {
         await env.INGEST_QUEUE.send({ type: "diaspora-finalize", runId: msg.runId, cursor: nextCursor });
