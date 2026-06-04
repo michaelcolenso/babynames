@@ -30,10 +30,14 @@
     "blog:preview": "tsx scripts/blog-publish.ts --stdout",
     "blog:apply:local": "wrangler d1 execute name-vitals --local --config apps/web/wrangler.toml --file",
     "blog:apply:remote": "wrangler d1 execute name-vitals --remote --config apps/web/wrangler.toml --file",
-    "blog:test": "tsx --test scripts/blog-publish.test.ts scripts/render-blog.test.ts"
+    "blog:test": "tsx --test scripts/blog-publish.test.ts scripts/render-blog.test.ts",
+    "gsc:quickwins": "tsx scripts/gsc/quickwins.ts",
+    "gsc:diff": "tsx scripts/gsc/diff.ts",
+    "gsc:inspect": "tsx scripts/gsc/inspect.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240909.0",
+    "@types/node": "^25.9.1",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4",
     "wrangler": "^4.85.0"

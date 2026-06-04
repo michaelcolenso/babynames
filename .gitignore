@@ -37,3 +37,11 @@ data/dist/*
 flat/
 extra/states/
 scripts/cache/
+
+# Google Search Console service-account key (sensitive)
+scripts/.gsc-service-account.json
+
+# GSC script output (generated CSVs)
+scripts/gsc-quickwins.csv
+scripts/gsc-data/
+scripts/gsc-inspect.csv

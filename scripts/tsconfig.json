@@ -1,0 +1,17 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["@cloudflare/workers-types", "@types/node"]
+  },
+  "include": ["gsc/*.ts"],
+  "exclude": []
+}
