@@ -1,6 +1,6 @@
 // GET /names/ending/:letter/ — programmatic SEO pages for baby names by final letter.
 
-import { getMeta, topByEnding, META_KEYS } from "@nv/shared";
+import { getMeta, pageShell, topByEnding, META_KEYS } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 function parseLetter(raw: string): string | null {
@@ -98,43 +98,25 @@ export const onRequestGet: PagesFunction<Env, "letter"> = async (ctx) => {
     },
   ]).replace(/</g, "\\u003c");
 
-  const html = `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escapeHtml(title)}</title>
-<meta name="description" content="${escapeHtml(desc)}">
-<link rel="canonical" href="${escapeHtml(canonical)}">
-<meta property="og:title" content="${escapeHtml(title)}">
-<meta property="og:description" content="${escapeHtml(desc)}">
-<meta property="og:type" content="article">
-<meta property="og:url" content="${escapeHtml(canonical)}">
-<meta property="og:image" content="${escapeHtml(`${origin}/api/og/default`)}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="${escapeHtml(`${origin}/api/og/default`)}">
-<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="/assets/style.css">
-<script type="application/ld+json">${structuredData}</script>
-</head>
-<body>
-<div class="page">
-  <header class="site">
-    <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
-    <nav>
-      <a href="/extinct">Extinct</a>
-      <a href="/endangered">Endangered</a>
-      <a href="/comeback">Comebacks</a>
-      <a href="/year">Birth year</a>
-      <a href="/names/1980s/">By decade</a>
-      <a href="/names/a/">By initial</a>
-      <a href="/names/ending/a/">By ending</a>
-      <a href="/rising">Rising</a>
-      <a href="/about">About</a>
-    </nav>
-  </header>
-  <main>
+  const html = pageShell({
+    title,
+    description: desc,
+    canonical,
+    ogImage: `${origin}/api/og/default`,
+    ogType: "article",
+    currentPath: `/names/ending/${ending.toLowerCase()}/`,
+    headerOpts: { navItems: [
+      { label: "Extinct", href: "/extinct" },
+      { label: "Endangered", href: "/endangered" },
+      { label: "Comebacks", href: "/comeback" },
+      { label: "Birth year", href: "/year" },
+      { label: "By decade", href: "/names/1980s/" },
+      { label: "By initial", href: "/names/a/" },
+      { label: "By ending", href: "/names/ending/a/" },
+      { label: "Rising", href: "/rising" },
+      { label: "About", href: "/about" },
+    ]},
+    body: `
     <p class="eyebrow">Ending dossier</p>
     <h1>Baby names ending in ${ending}</h1>
     <p class="lede">${topGirl ? escapeHtml(topGirl.name) : ""} and ${topBoy ? escapeHtml(topBoy.name) : ""} are among the most recorded names ending in ${ending}. Use this page to compare final-letter patterns across girls and boys, then open any dossier for the full popularity curve.</p>
@@ -150,15 +132,12 @@ export const onRequestGet: PagesFunction<Env, "letter"> = async (ctx) => {
         <ul class="year-name-list">${nameList(boys)}</ul>
       </div>
     </div>
-  </main>
-  <footer class="site">
-    <div>Based on SSA records ${ym}–${yM}.</div>
-    <div><a href="/about">Methodology</a></div>
-  </footer>
-</div>
-<script src="/assets/app.js"></script>
-</body>
-</html>`;
+  `,
+    structuredData: JSON.parse(structuredData),
+    scripts: ["/assets/app.js"],
+    footerVariant: "minimal",
+    footerYearRange: `${ym}–${yM}`,
+  });
 
   return new Response(html, {
     headers: {

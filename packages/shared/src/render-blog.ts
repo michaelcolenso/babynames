@@ -4,6 +4,7 @@
 //   - /blog/:slug/ — single post
 
 import { chunkedIn } from "./d1-chunk";
+import { pageShell } from "./render-shell";
 import type { BlogPost, BlogPostSummary } from "./schema";
 
 function escape(s: string): string {
@@ -333,45 +334,7 @@ function fmtDate(iso: string | null): string {
   });
 }
 
-function siteHeader(currentPath?: string): string {
-  const blogActive = currentPath?.startsWith("/blog") ? ' aria-current="page"' : "";
-  return `<header class="site">
-    <a class="brand" href="/"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="NobodyNamed"></a>
-    <nav aria-label="Main navigation">
-      <a href="/extinct">Extinct</a>
-      <a href="/endangered">Endangered</a>
-      <a href="/comeback">Comebacks</a>
-      <a href="/year">Birth year</a>
-      <a href="/rising">Rising</a>
-      <a href="/viz">Visualizations</a>
-      <a href="/blog/"${blogActive}>Namecalling</a>
-      <a href="/about">About</a>
-    </nav>
-    <details class="mobile-nav">
-      <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
-      <nav aria-label="Mobile navigation">
-        <a href="/extinct">Extinct</a>
-        <a href="/endangered">Endangered</a>
-        <a href="/comeback">Comebacks</a>
-        <a href="/year">Birth year</a>
-        <a href="/rising">Rising</a>
-        <a href="/viz">Visualizations</a>
-        <a href="/blog/">Namecalling</a>
-        <a href="/about">About</a>
-      </nav>
-    </details>
-  </header>`;
-}
 
-function siteFooter(): string {
-  return `<footer class="site">
-    <div>
-      <div>NobodyNamed is a small data project about American first names.</div>
-      <div class="footer-note">Built on public-domain Social Security Administration data: about 100,000 name/sex records and 2 million yearly observations.</div>
-    </div>
-    <div><a href="/about">About</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
-  </footer>`;
-}
 
 function wordCount(html: string): number {
   const text = html
@@ -386,26 +349,6 @@ const PUBLISHER_ORG = {
   name: "NobodyNamed",
   url: "https://nobodynamed.com/",
 };
-
-function postMetaTags(post: BlogPost, canonical: string, origin: string): string {
-  const title = `${escape(post.title)} | NobodyNamed`;
-  const desc = escape(post.description);
-  const ogImage = resolveOgImage(post, origin);
-  return `<title>${title}</title>
-<meta name="description" content="${desc}">
-<link rel="canonical" href="${escape(canonical)}">
-<meta property="og:title" content="${title}">
-<meta property="og:description" content="${desc}">
-<meta property="og:type" content="article">
-<meta property="og:url" content="${escape(canonical)}">
-<meta property="og:image" content="${escape(ogImage)}">
-<meta property="og:image:alt" content="${escape(post.title)}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${title}">
-<meta name="twitter:description" content="${desc}">
-<meta name="twitter:image" content="${escape(ogImage)}">
-<meta name="twitter:image:alt" content="${escape(post.title)}">`;
-}
 
 // ─── Blog index page ────────────────────────────────────────────────────────
 
@@ -434,72 +377,51 @@ export function renderBlogIndex(posts: BlogPostSummary[], opts: { canonical: str
         .join("")
     : `<p class="lede">No posts yet. Check back soon.</p>`;
 
-  const structuredData = JSON.stringify([
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Home", item: origin + "/" },
-        { "@type": "ListItem", position: 2, name: "Namecalling", item: opts.canonical },
-      ],
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "Blog",
-      name: "Namecalling",
-      url: opts.canonical,
-      description: desc,
-      publisher: PUBLISHER_ORG,
-      inLanguage: "en-US",
-      blogPost: posts.map((p) => ({
-        "@type": "BlogPosting",
-        headline: p.title,
-        description: p.description,
-        url: `${origin}/blog/${encodeURIComponent(p.slug)}/`,
-        datePublished: p.publishedAt,
-        author: p.author ? { "@type": "Person", name: p.author } : undefined,
-      })),
-    },
-  ]).replace(/</g, "\\u003c");
-
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escape(title)}</title>
-<meta name="description" content="${escape(desc)}">
-<link rel="canonical" href="${escape(opts.canonical)}">
-<meta property="og:title" content="${escape(title)}">
-<meta property="og:description" content="${escape(desc)}">
-<meta property="og:type" content="website">
-<meta property="og:url" content="${escape(opts.canonical)}">
-<meta property="og:image" content="${origin}/api/og/default">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="${escape(title)}">
-<meta name="twitter:description" content="${escape(desc)}">
-<meta name="twitter:image" content="${origin}/api/og/default">
-<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="/assets/style.css">
-<script type="application/ld+json">${structuredData}</script>
-</head>
-<body>
-<a href="#main-content" class="skip-link">Skip to content</a>
-<div class="page">
-  ${siteHeader("/blog")}
-  <main id="main-content">
+  return pageShell({
+    title,
+    description: desc,
+    canonical: opts.canonical,
+    ogImage: `${origin}/api/og/default`,
+    ogType: "website",
+    twitterCard: "summary",
+    currentPath: "/blog",
+    body: `
     <p class="eyebrow">Journal</p>
     <h1>Namecalling</h1>
     <p class="lede">${escape(desc)}</p>
     <div class="blog-index">
       ${cards}
     </div>
-  </main>
-  ${siteFooter()}
-</div>
-</body>
-</html>`;
+  `,
+    structuredData: [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: origin + "/" },
+          { "@type": "ListItem", position: 2, name: "Namecalling", item: opts.canonical },
+        ],
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Blog",
+        name: "Namecalling",
+        url: opts.canonical,
+        description: desc,
+        publisher: PUBLISHER_ORG,
+        inLanguage: "en-US",
+        blogPost: posts.map((p) => ({
+          "@type": "BlogPosting",
+          headline: p.title,
+          description: p.description,
+          url: `${origin}/blog/${encodeURIComponent(p.slug)}/`,
+          datePublished: p.publishedAt,
+          author: p.author ? { "@type": "Person", name: p.author } : undefined,
+        })),
+      },
+    ],
+    footerVariant: "full",
+  });
 }
 
 // ─── Single blog post page ──────────────────────────────────────────────────
@@ -507,6 +429,7 @@ export function renderBlogIndex(posts: BlogPostSummary[], opts: { canonical: str
 export function renderBlogPost(post: BlogPost, opts: { canonical: string; origin?: string }): string {
   const origin = opts.origin || new URL(opts.canonical).origin;
   const ogImage = resolveOgImage(post, origin);
+  const title = `${post.title} | NobodyNamed`;
 
   const wc = wordCount(post.bodyHtml);
   const hasModified = post.updatedAt && post.updatedAt !== post.publishedAt;
@@ -536,34 +459,15 @@ export function renderBlogPost(post: BlogPost, opts: { canonical: string; origin
     blogSchema.dateModified = post.updatedAt;
   }
 
-  const structuredData = JSON.stringify([
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "Home", item: origin + "/" },
-        { "@type": "ListItem", position: 2, name: "Namecalling", item: origin + "/blog/" },
-        { "@type": "ListItem", position: 3, name: post.title, item: opts.canonical },
-      ],
-    },
-    blogSchema,
-  ]).replace(/</g, "\\u003c");
-
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-${postMetaTags(post, opts.canonical, origin)}
-<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="/assets/style.css">
-<script type="application/ld+json">${structuredData}</script>
-</head>
-<body>
-<div class="page">
-  ${siteHeader("/blog")}
-  <main id="main-content">
+  return pageShell({
+    title,
+    description: post.description,
+    canonical: opts.canonical,
+    ogImage,
+    ogImageAlt: post.title,
+    ogType: "article",
+    currentPath: "/blog",
+    body: `
     <article class="blog-post">
       <header class="blog-post-header">
         <p class="eyebrow"><a href="/blog/">← Namecalling</a></p>
@@ -581,9 +485,19 @@ ${postMetaTags(post, opts.canonical, origin)}
         ${post.bodyHtml}
       </div>
     </article>
-  </main>
-  ${siteFooter()}
-</div>
-</body>
-</html>`;
+  `,
+    structuredData: [
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: origin + "/" },
+          { "@type": "ListItem", position: 2, name: "Namecalling", item: origin + "/blog/" },
+          { "@type": "ListItem", position: 3, name: post.title, item: opts.canonical },
+        ],
+      },
+      blogSchema,
+    ],
+    footerVariant: "full",
+  });
 }

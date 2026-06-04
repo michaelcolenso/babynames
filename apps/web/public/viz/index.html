@@ -15,7 +15,9 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="https://nobodynamed.com/api/og/default">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/assets/style.css?v=12">
+  <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="/assets/style.css">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -151,15 +153,22 @@
   </style>
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to content</a>
   <div class="page">
     <header class="site">
       <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
-      <nav>
-        <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" style="color:var(--accent)">Visualizations</a><a href="/blog">Blog</a><a href="/about">About</a>
+      <nav aria-label="Main navigation">
+        <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
       </nav>
+      <details class="mobile-nav">
+        <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
+        <nav aria-label="Mobile navigation">
+          <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
+        </nav>
+      </details>
     </header>
 
-    <main>
+    <main id="main-content">
       <div class="viz-hero">
         <h1>Twenty-seven ways of looking at a name.</h1>
         <p>Every chart is a different lens on the same story: how culture moves through the act of naming a child.</p>
@@ -374,9 +383,11 @@
     </main>
 
     <footer class="site">
-      <div>nobodynamed is a small data project. Names are forever. Mostly.</div>
-      <div>Built on public-domain data from the Social Security Administration.</div>
-      <div><a href="/blog">Blog</a><a href="/about">About</a> · <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
+      <div>
+        <div>nobodynamed is a small data project about American first names.</div>
+        <div class="footer-note">Data sourced from Social Security Administration birth records (1880–present).</div>
+      </div>
+      <div><a href="/about">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
     </footer>
   </div>
 </body>

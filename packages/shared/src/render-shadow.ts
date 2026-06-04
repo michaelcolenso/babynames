@@ -4,6 +4,7 @@
 // birth year and its "shadow" — the name that occupied the same popularity
 // rank exactly 50 years earlier.
 
+import { pageShell } from "./render-shell";
 import { buildSparkline } from "./sparkline";
 import type { NameWithSeries, ShadowMatch } from "./d1-queries";
 
@@ -119,26 +120,7 @@ export function renderShadowPage(data: ShadowPageData): string {
     },
   ]).replace(/</g, "\\u003c");
 
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escape(title)}</title>
-<meta name="description" content="${escape(desc)}">
-<link rel="canonical" href="${escape(canonical)}">
-<meta property="og:title" content="${escape(title)}">
-<meta property="og:description" content="${escape(desc)}">
-<meta property="og:type" content="article">
-<meta property="og:url" content="${escape(canonical)}">
-<meta property="og:image" content="${escape(ogImage)}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="${escape(ogImage)}">
-<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="/assets/style.css">
-<script type="application/ld+json">${structuredData}</script>
-<style>
+  const headExtras = `<style>
 .shadow-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin:2rem 0}
 .shadow-card{padding:1.5rem;border:1px solid var(--border);border-radius:0.5rem;background:var(--surface)}
 .shadow-card h2{margin:0 0 0.5rem;font-size:1.75rem}
@@ -152,38 +134,17 @@ export function renderShadowPage(data: ShadowPageData): string {
 .shadow-share button{padding:0.5rem 1rem;border:1px solid var(--border);background:var(--surface);cursor:pointer;border-radius:0.25rem}
 .shadow-share button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 @media(max-width:640px){.shadow-grid{grid-template-columns:1fr}}
-</style>
-</head>
-<body>
-<div class="page">
-  <header class="site">
-    <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
-    <nav>
-      <a href="/extinct">Extinct</a>
-      <a href="/endangered">Endangered</a>
-      <a href="/comeback">Comebacks</a>
-      <a href="/year">Birth year</a>
-      <a href="/rising">Rising</a>
-      <a href="/viz">Visualizations</a>
-      <a href="/blog/">Namecalling</a>
-      <a href="/about">About</a>
-    </nav>
-    <details class="mobile-nav">
-      <summary aria-label="Open navigation"><span></span><span></span><span></span></summary>
-      <nav>
-        <a href="/extinct">Extinct</a>
-        <a href="/endangered">Endangered</a>
-        <a href="/comeback">Comebacks</a>
-        <a href="/year">Birth year</a>
-        <a href="/rising">Rising</a>
-        <a href="/viz">Visualizations</a>
-        <a href="/blog/">Namecalling</a>
-        <a href="/about">About</a>
-      </nav>
-    </details>
-  </header>
+</style>`;
 
-  <main>
+  return pageShell({
+    title,
+    description: desc,
+    canonical,
+    ogImage,
+    ogType: "article",
+    currentPath: undefined,
+    headExtras,
+    body: `
     <p class="eyebrow">Counterfactual</p>
     <h1>The Parallel Lives of <em>${escape(i.name)}</em> and <em>${escape(s.name)}</em></h1>
     <p class="lede">In ${fmt(match.inputCount)} ${iSexLabel}, ${escape(i.name)} found its level. ${match.birthYear - match.shadowYear} years earlier, ${escape(s.name)} occupied that same statistical address.</p>
@@ -252,18 +213,10 @@ export function renderShadowPage(data: ShadowPageData): string {
       <a href="/name/${encodeURIComponent(i.name)}/"><button>Open ${escape(i.name)} dossier →</button></a>
       <a href="/name/${encodeURIComponent(s.name)}/"><button>Open ${escape(s.name)} dossier →</button></a>
     </div>
-  </main>
-
-  <footer class="site">
-    <div>
-      <div>NobodyNamed is a small data project about American first names.</div>
-      <div class="footer-note">Data sourced from Social Security Administration birth records (1880–present).</div>
-    </div>
-    <div><a href="/about">About</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
-  </footer>
-</div>
-<script>
-  document.querySelectorAll('[data-share="copy"]').forEach(function(btn){
+  `,
+    structuredData: JSON.parse(structuredData),
+    inlineScripts: [
+      `document.querySelectorAll('[data-share="copy"]').forEach(function(btn){
     btn.addEventListener('click',function(){
       navigator.clipboard.writeText(location.href).then(function(){btn.textContent='Copied!';setTimeout(function(){btn.textContent='Copy link'},2000)});
     });
@@ -272,8 +225,8 @@ export function renderShadowPage(data: ShadowPageData): string {
     btn.addEventListener('click',function(){
       window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(document.title)+'&url='+encodeURIComponent(location.href),'','width=550,height=420');
     });
+  });`,
+    ],
+    footerVariant: "full",
   });
-</script>
-</body>
-</html>`;
 }

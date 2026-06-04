@@ -9,6 +9,7 @@ import {
   getNameWithSeries,
   getShadowName,
   META_KEYS,
+  pageShell,
   renderShadowPage,
 } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
@@ -96,8 +97,19 @@ export const onRequestGet: PagesFunction<Env, "name" | "year"> = async (ctx) => 
 export const onRequestHead: PagesFunction<Env, "name" | "year"> = async (ctx) => withoutBody(await onRequestGet(ctx));
 
 function notFound(msg: string): Response {
+  const safe = msg.replace(/[<>&"]/g, (c) => ({"<":"&lt;",">":"&gt;","&":"&amp;","\"":"&quot;"})[c]!);
   return new Response(
-    `<!doctype html><html><body><div class="page"><header class="site"><a class="brand" href="/"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a></header><main><h1>Shadow not found</h1><p class="lede">${msg.replace(/[<>&"]/g, (c) => ({"<":"&lt;",">":"&gt;","&":"&amp;","\"":"&quot;"})[c]!)}</p><p><a href="/">Try another name</a></p></main></div></body></html>`,
+    pageShell({
+      title: "Shadow not found | NobodyNamed",
+      description: msg,
+      canonical: "https://nobodynamed.com/shadow/",
+      body: `
+    <h1>Shadow not found</h1>
+    <p class="lede">${safe}</p>
+    <p><a href="/">Try another name</a></p>
+  `,
+      footerVariant: "full",
+    }),
     { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } },
   );
 }
