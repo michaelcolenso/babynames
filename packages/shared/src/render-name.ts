@@ -182,7 +182,11 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
   const sexLabel = record.sex === "M" ? "boys" : "girls";
   const dossier = describeStatus(record, a);
   const openingParagraph = opts.enrichmentSnippet?.trim() || dossier.summary;
-  const narrative = opts.narrative ?? generateNameNarrative(record, a);
+  const topAnomalyRaw = opts.enrichment?.regionalAnomalies?.[0];
+  const resolvedAnomaly = topAnomalyRaw
+    ? { state: stateName(topAnomalyRaw.state), lq: topAnomalyRaw.location_quotient }
+    : undefined;
+  const narrative = opts.narrative ?? generateNameNarrative(record, a, resolvedAnomaly);
 
   const peakSentence = `${escape(record.name)} peaked in ${a.peakYear}, when <strong>${fmt(a.peakCount)}</strong> ${sexLabel} were given the name.`;
   const latestSentence = a.latestCount
@@ -231,6 +235,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
     </header>
 
     ${nameSummary}
+    ${nameAnswers}
 
     <section class="chart-panel" aria-label="${escape(record.name)} annual popularity chart">
       <div class="chart-caption"><span>${a.firstYear}</span><span>Peak ${a.peakYear}</span><span>${record.yM}</span></div>
@@ -250,7 +255,6 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <div class="stat"><div class="label">${record.yM}</div><div class="value">${fmt(a.latestCount)}</div></div>
       <div class="stat"><div class="label">All-time</div><div class="value">${fmt(a.totalCount)}</div></div>
     </div>
-    ${nameAnswers}
     ${diasporaMap}
     ${exploreLinks}
   </div>
@@ -306,7 +310,11 @@ export function renderFullPage(
     affiliateTag?: string;
   } = { canonical: "" },
 ): string {
-  const narrative = generateNameNarrative(record, classifyResult);
+  const topAnomalyRaw = opts.enrichment?.regionalAnomalies?.[0];
+  const resolvedAnomaly = topAnomalyRaw
+    ? { state: stateName(topAnomalyRaw.state), lq: topAnomalyRaw.location_quotient }
+    : undefined;
+  const narrative = generateNameNarrative(record, classifyResult, resolvedAnomaly);
   const desc = narrative.metaDescription;
   const title = narrative.metaTitle;
   const statusLabel = displayStatus(classifyResult, record.yM);
@@ -703,8 +711,10 @@ function renderNameAnswers(name: string, sex: "M" | "F", narrative: NameNarrativ
   if (answers.age) {
     items.push(`<h3>How old is the typical ${safeName}?</h3>\n  <p>${answers.age}</p>`);
   }
-  // Geographic distribution is not available in the SSA public dataset.
   items.push(`<h3>Is ${safeName} rising or falling?</h3>\n  <p>${answers.trend}</p>`);
+  if (answers.geography) {
+    items.push(`<h3>Where is ${safeName} most common?</h3>\n  <p>${answers.geography}</p>`);
+  }
 
   return `<section class="name-answers" aria-labelledby="name-answers-heading">
   <h2 id="name-answers-heading">Quick answers about ${safeName}</h2>
