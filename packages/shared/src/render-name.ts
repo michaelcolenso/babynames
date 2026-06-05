@@ -194,8 +194,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
     : `No ${sexLabel} were recorded with this name in ${record.yM} — at least not five of them (the SSA's reporting floor).`;
 
   const narrativeExtras = renderNarrativeInsights(record, a, opts, sexLabel);
-  const nameSummary = renderNameSummary(record.name, narrative);
-  const nameAnswers = renderNameAnswers(record.name, record.sex, narrative);
+  const nameAnswers = renderNameAnswers(record.name, narrative);
   const declineSentence =
     a.status === "rising" || (a.declinePct ?? 0) <= 5
       ? ""
@@ -234,7 +233,6 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       </div>
     </header>
 
-    ${nameSummary}
     ${nameAnswers}
 
     <section class="chart-panel" aria-label="${escape(record.name)} annual popularity chart">
@@ -699,7 +697,7 @@ function renderNameSummary(name: string, narrative: NameNarrative): string {
 </section>`;
 }
 
-function renderNameAnswers(name: string, sex: "M" | "F", narrative: NameNarrative): string {
+function renderNameAnswers(name: string, narrative: NameNarrative): string {
   const safeName = escape(name);
   const { answers } = narrative;
   const items: string[] = [];
@@ -707,11 +705,11 @@ function renderNameAnswers(name: string, sex: "M" | "F", narrative: NameNarrativ
   if (answers.population) {
     items.push(`<h3>How many people are named ${safeName}?</h3>\n  <p>${answers.population}</p>`);
   }
-  items.push(`<h3>How rare is the name ${safeName}?</h3>\n  <p>${answers.rarity}</p>`);
+  items.push(`<h3>How rare is ${safeName}?</h3>\n  <p>${answers.rarity}</p>`);
   if (answers.age) {
     items.push(`<h3>How old is the typical ${safeName}?</h3>\n  <p>${answers.age}</p>`);
   }
-  items.push(`<h3>Is ${safeName} rising or falling?</h3>\n  <p>${answers.trend}</p>`);
+  items.push(`<h3>Is ${safeName} still popular?</h3>\n  <p>${answers.trend}</p>`);
   if (answers.geography) {
     items.push(`<h3>Where is ${safeName} most common?</h3>\n  <p>${answers.geography}</p>`);
   }

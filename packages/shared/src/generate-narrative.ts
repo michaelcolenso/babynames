@@ -250,10 +250,8 @@ export function generateNameNarrative(
     if (a.status === "extinct") {
       population = `Based on SSA birth records through ${a.lastYear}, an estimated ${fmtLiving(age.estimatedLiving)} Americans born with the name ${safeName} may still be living. No new bearers have been recorded since ${a.lastYear}.`;
     } else {
-      population = `An estimated ${fmtLiving(age.estimatedLiving)} Americans carry the name ${safeName}, based on SSA birth records from ${a.firstYear} through ${record.yM} with age-adjusted survival rates applied.`;
+      population = `An estimated ${fmtLiving(age.estimatedLiving)} living Americans are named ${safeName}.`;
     }
-  } else if (a.totalCount > 0) {
-    population = `The SSA has recorded ${fmt(a.totalCount)} Americans named ${safeName} since ${a.firstYear}. Living estimates are negligible given the name's age profile.`;
   }
 
   // Rarity
@@ -261,15 +259,23 @@ export function generateNameNarrative(
   if (a.status === "extinct" || (a.latestCount === 0 && a.lastYear <= record.yM - 10)) {
     rarity = `${safeName} has not appeared in SSA records since ${a.lastYear}. It is effectively extinct as a new baby name — no ${sexBaby} received it in the latest available data.`;
   } else if (a.latestCount === 0) {
-    rarity = `${safeName} fell below the SSA's 5-birth reporting floor and registered zero new births in ${record.yM}. It is extremely rare as a new baby name.`;
-  } else if (a.latestCount < 50) {
-    rarity = `Very rare. Only ${fmt(a.latestCount)} ${sexBaby} were named ${safeName} in ${record.yM}, placing it near the edge of the SSA's 5-birth reporting floor.`;
-  } else if (a.latestCount < 500) {
-    rarity = `Uncommon. About ${fmt(a.latestCount)} ${sexBaby} were named ${safeName} in ${record.yM} — a small fraction of the name's ${a.peakYear} peak of ${fmt(a.peakCount)}.`;
-  } else if (a.latestCount < 5_000) {
-    rarity = `Moderately uncommon. About ${fmt(a.latestCount)} ${sexBaby} were named ${safeName} in ${record.yM}, down ${a.declinePct ?? 0}% from the ${a.peakYear} peak.`;
+    rarity = `${safeName} fell below the SSA's 5-birth reporting floor in ${record.yM}. It is extremely rare as a new baby name.`;
   } else {
-    rarity = `Still widely used. About ${fmt(a.latestCount)} ${sexBaby} were named ${safeName} in ${record.yM}.`;
+    const rarityLabel =
+      a.latestCount < 50
+        ? "very rare"
+        : a.latestCount < 500
+          ? "uncommon"
+          : a.latestCount < 5_000
+            ? "moderately uncommon"
+            : "still widely used";
+    const peakContext =
+      a.declinePct !== null && a.declinePct > 5
+        ? `, down ${a.declinePct}% from its ${a.peakYear} peak`
+        : a.latestCount >= a.peakCount
+          ? `, matching its recorded peak`
+          : ``;
+    rarity = `${safeName} is ${rarityLabel} among babies today, with ${fmt(a.latestCount)} ${sexBaby} receiving the name in ${record.yM}${peakContext}.`;
   }
 
   // Age
@@ -278,31 +284,31 @@ export function generateNameNarrative(
     ageAnswer = `The median age of a living American named ${safeName} is approximately ${age.medianAge} years, with most bearers falling between ${age.p25Age} and ${age.p75Age} years old.`;
   }
 
-  // Trend
+  // Current popularity
   let trend: string;
   if (a.status === "extinct") {
-    trend = `${safeName} is <a href="/extinct">extinct in new births</a>. The SSA last recorded it in ${a.lastYear} and it has not appeared since. Its all-time total was ${fmt(a.totalCount)} recorded ${sexBaby}.`;
+    trend = `No. ${safeName} is <a href="/extinct">extinct in new births</a>; the SSA last recorded it in ${a.lastYear}.`;
   } else if (a.status === "rising") {
     const growthPart =
       a.growthX && a.growthX > 1
         ? ` Births this decade are running about ${a.growthX}× higher than the previous decade.`
         : "";
-    trend = `${safeName} is currently <a href="/rising">rising in popularity</a>.${growthPart}`;
+    trend = `Yes — ${safeName} is currently <a href="/rising">rising in popularity</a>, with ${fmt(a.latestCount)} births in ${record.yM}.${growthPart}`;
   } else if (a.status === "endangered") {
     // Names that are technically "endangered" (>90% decline from peak) but still
     // receive 5,000+ births per year are better described as "past peak" —
     // the same threshold used by render-name.ts's displayStatus()/describeStatus().
     const stillCommon = a.latestCount >= 5000;
     if (stillCommon) {
-      trend = `${safeName} is past its peak but still widely used — down ${a.declinePct ?? 0}% from its ${a.peakYear} high, with about ${fmt(a.latestCount)} births in ${record.yM}.`;
+      trend = `Yes, but it is past its peak. ${safeName} still received ${fmt(a.latestCount)} births in ${record.yM}, down ${a.declinePct ?? 0}% from its ${a.peakYear} high.`;
     } else {
-      trend = `${safeName} is <a href="/endangered">endangered</a> — down ${a.declinePct ?? 0}% from its ${a.peakYear} peak, with only ${fmt(a.latestCount)} new births recorded in ${record.yM}.`;
+      trend = `No. ${safeName} is <a href="/endangered">endangered</a> as a baby name, down ${a.declinePct ?? 0}% from its ${a.peakYear} peak with ${fmt(a.latestCount)} births in ${record.yM}.`;
     }
   } else if (a.status === "declining") {
-    trend = `${safeName} has been declining since its ${a.peakYear} peak, now down ${a.declinePct ?? 0}% from that high. It still registers ${fmt(a.latestCount)} births per year.`;
+    trend = `${a.latestCount >= 1000 ? "Somewhat" : "Not especially"}. ${safeName} has been declining since its ${a.peakYear} peak and registered ${fmt(a.latestCount)} births in ${record.yM}.`;
   } else {
     // stable
-    trend = `${safeName} is holding steady. It registered ${fmt(a.latestCount)} births in ${record.yM}, consistent with its recent baseline.`;
+    trend = `Yes. ${safeName} is holding steady, with ${fmt(a.latestCount)} births in ${record.yM} and a consistent recent baseline.`;
   }
 
   // Geography — only when the LQ is high enough to be meaningfully "most common"
