@@ -70,8 +70,8 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     if (!/^[A-Z]$/.test(r.letter)) continue;
     const yi = yearIdx.get(r.year)!;
     const li = letterIdx.get(r.letter)!;
-    if (r.sex === "F") Fraw[yi][li] = r.count;
-    else Mraw[yi][li] = r.count;
+    if (r.sex === "F") Fraw[yi]![li] = r.count;
+    else Mraw[yi]![li] = r.count;
   }
 
   // Normalize to shares within each year

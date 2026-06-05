@@ -75,8 +75,8 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     if (!suffixSet.has(r.suffix)) continue;
     const yi = yearIdx.get(r.year)!;
     const si = suffixIdx.get(r.suffix)!;
-    if (r.sex === "F") F[yi][si] = r.count;
-    else M[yi][si] = r.count;
+    if (r.sex === "F") F[yi]![si] = r.count;
+    else M[yi]![si] = r.count;
   }
 
   const body: SuffixWavesResponse = { ym, yM, suffixes: topSuffixes, years, F, M };

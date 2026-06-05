@@ -109,9 +109,9 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     let direction: CrossingName["direction"] = null;
     let prevDominant: "M" | "F" | null = null;
     for (let i = 0; i < years.length; i++) {
-      const dominant = m[i] >= f[i] ? "M" : "F";
+      const dominant = m[i]! >= f[i]! ? "M" : "F";
       if (prevDominant && dominant !== prevDominant) {
-        crossingYear = years[i];
+        crossingYear = years[i]!;
         direction = prevDominant === "M" ? "M→F" : "F→M";
         break;
       }
