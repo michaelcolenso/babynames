@@ -5,6 +5,7 @@
 
 import { classify, type ClassifyResult } from "./classify";
 import type { YearTopRow, YearTotal } from "./d1-queries";
+import { generateNameNarrative, type NameNarrative } from "./generate-narrative";
 import { buildSparkline } from "./sparkline";
 import type {
   NameDiscoveryCard,
@@ -144,6 +145,11 @@ interface RenderReportOptions {
   // link is omitted entirely rather than emitted with an empty `tag=`
   // (which earns no commission and looks unfinished).
   affiliateTag?: string;
+  // Pre-computed ClassifyResult to avoid a second classify() call when the
+  // caller (renderFullPage) has already computed it.
+  classifyResult?: ClassifyResult;
+  // Pre-computed narrative to avoid a second generateNameNarrative() call.
+  narrative?: NameNarrative;
 }
 
 export function renderReport(record: NameRecord): string {
@@ -151,13 +157,14 @@ export function renderReport(record: NameRecord): string {
 }
 
 function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions = {}): string {
-  const a = classify({ series: record.series, yM: record.yM });
+  const a = opts.classifyResult ?? classify({ series: record.series, yM: record.yM });
   if (!a) {
     return `<div class="report"><h1>${escape(record.name)}</h1><p class="lede">No data for this name.</p></div>`;
   }
   const sexLabel = record.sex === "M" ? "boys" : "girls";
   const dossier = describeStatus(record, a);
   const openingParagraph = opts.enrichmentSnippet?.trim() || dossier.summary;
+  const narrative = opts.narrative ?? generateNameNarrative(record, a);
 
   const peakSentence = `${escape(record.name)} peaked in ${a.peakYear}, when <strong>${fmt(a.peakCount)}</strong> ${sexLabel} were given the name.`;
   const latestSentence = a.latestCount
@@ -165,6 +172,8 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
     : `No ${sexLabel} were recorded with this name in ${record.yM} — at least not five of them (the SSA's reporting floor).`;
 
   const narrativeExtras = renderNarrativeInsights(record, a, opts, sexLabel);
+  const nameSummary = renderNameSummary(record.name, narrative);
+  const nameAnswers = renderNameAnswers(record.name, record.sex, narrative);
   const declineSentence =
     a.status === "rising" || (a.declinePct ?? 0) <= 5
       ? ""
@@ -202,6 +211,8 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       </div>
     </header>
 
+    ${nameSummary}
+
     <section class="chart-panel" aria-label="${escape(record.name)} annual popularity chart">
       <div class="chart-caption"><span>${a.firstYear}</span><span>Peak ${a.peakYear}</span><span>${record.yM}</span></div>
       ${buildSparkline(record.series, record.ym, record.yM)}
@@ -213,6 +224,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <div class="stat"><div class="label">${record.yM}</div><div class="value">${fmt(a.latestCount)}</div></div>
       <div class="stat"><div class="label">All-time</div><div class="value">${fmt(a.totalCount)}</div></div>
     </div>
+    ${nameAnswers}
     ${exploreLinks}
   </div>
 
@@ -264,9 +276,10 @@ export function renderFullPage(
     affiliateTag?: string;
   } = { canonical: "" },
 ): string {
-  const desc = buildMetaDescription(record, classifyResult);
+  const narrative = generateNameNarrative(record, classifyResult);
+  const desc = narrative.metaDescription;
+  const title = narrative.metaTitle;
   const statusLabel = displayStatus(classifyResult, record.yM);
-  const title = `${record.name} name popularity (${statusLabel}, peak ${classifyResult.peakYear}) | NobodyNamed`;
   const dataJson = JSON.stringify({
     name: record.name,
     sex: record.sex,
@@ -346,6 +359,8 @@ export function renderFullPage(
     yearTotals: opts.yearTotals,
     enrichmentSnippet: opts.enrichmentSnippet,
     affiliateTag: opts.affiliateTag,
+    classifyResult,
+    narrative,
   })}</div>
   <footer class="site">
     <div>
@@ -453,6 +468,37 @@ function formatList(items: string[]): string {
   return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }
 
+function renderNameSummary(name: string, narrative: NameNarrative): string {
+  if (!narrative.summaryParagraphs.length) return "";
+  const safeName = escape(name);
+  const paras = narrative.summaryParagraphs.map((p) => `<p>${p}</p>`).join("\n    ");
+  return `<section class="name-summary" aria-labelledby="name-summary-heading">
+  <h2 id="name-summary-heading">${safeName} at a glance</h2>
+  ${paras}
+</section>`;
+}
+
+function renderNameAnswers(name: string, sex: "M" | "F", narrative: NameNarrative): string {
+  const safeName = escape(name);
+  const { answers } = narrative;
+  const items: string[] = [];
+
+  if (answers.population) {
+    items.push(`<h3>How many people are named ${safeName}?</h3>\n  <p>${answers.population}</p>`);
+  }
+  items.push(`<h3>How rare is the name ${safeName}?</h3>\n  <p>${answers.rarity}</p>`);
+  if (answers.age) {
+    items.push(`<h3>How old is the typical ${safeName}?</h3>\n  <p>${answers.age}</p>`);
+  }
+  // Geographic distribution is not available in the SSA public dataset.
+  items.push(`<h3>Is ${safeName} rising or falling?</h3>\n  <p>${answers.trend}</p>`);
+
+  return `<section class="name-answers" aria-labelledby="name-answers-heading">
+  <h2 id="name-answers-heading">Quick answers about ${safeName}</h2>
+  ${items.join("\n  ")}
+</section>`;
+}
+
 function reportNumber(name: string, sex: string): string {
   let hash = 5381;
   const raw = `${name}:${sex}`;
@@ -488,11 +534,11 @@ function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   if (ed && ed[1] !== (statusLink?.[1] ?? "")) {
     links.push(`<a href="${ed[1]}">${ed[0]}</a>`);
   }
-  links.push(`<a href="/year/${a.peakYear}/">Top names from ${a.peakYear}</a>`);
-  links.push(`<a href="/names/${decadeLabel(a.peakYear)}/">Names from the ${decadeLabel(a.peakYear)}</a>`);
+  links.push(`<a href="/year/${a.peakYear}/">Top baby names from ${a.peakYear}</a>`);
+  links.push(`<a href="/names/${decadeLabel(a.peakYear)}/">${decadeLabel(a.peakYear)} baby names</a>`);
   links.push(`<a href="/names/${encodeURIComponent(record.name.charAt(0).toLowerCase())}/">Names starting with ${escape(record.name.charAt(0).toUpperCase())}</a>`);
   links.push(`<a href="/names/ending/${encodeURIComponent(record.name.charAt(record.name.length - 1).toLowerCase())}/">Names ending in ${escape(record.name.charAt(record.name.length - 1).toUpperCase())}</a>`);
-  links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/">Names like ${escape(record.name)}</a>`);
+  links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/">Names similar to ${escape(record.name)}</a>`);
 
   return `<nav class="report-links" aria-label="Explore more name data">${links.join("")}</nav>`;
 }
@@ -600,7 +646,8 @@ function buildStructuredData(
       "@type": "BreadcrumbList",
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: origin + "/" },
-        { "@type": "ListItem", position: 2, name: `${escape(record.name)} name dossier`, item: opts.canonical },
+        { "@type": "ListItem", position: 2, name: "Names", item: origin + "/names/" },
+        { "@type": "ListItem", position: 3, name: `${record.name} name popularity`, item: opts.canonical },
       ],
     },
     {

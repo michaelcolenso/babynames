@@ -19,7 +19,9 @@
     "seed": "tsx scripts/seed-from-shards.ts",
     "ingest-ssa": "tsx scripts/ingest-ssa.ts",
     "verify-parity": "tsx scripts/verify-parity.ts",
-    "smoke:prod": "bash scripts/smoke-prod.sh"
+    "smoke:prod": "bash scripts/smoke-prod.sh",
+    "test:narrative": "tsx scripts/test-narrative.ts",
+    "validate:pages": "tsx scripts/validate-name-pages.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240909.0",
