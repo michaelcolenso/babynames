@@ -133,7 +133,7 @@ test("Helen (declining classic)", () => {
 
 test("Mary (massive historic feminine name)", () => {
   const n = generateNameNarrative(maryRecord, maryClassify);
-  assert("metaTitle correct format", n.metaTitle === "Mary Name Popularity, Rarity, Age & State Data | NobodyNamed");
+  assert("metaTitle correct format", n.metaTitle === "Mary Name Popularity: How Many People Are Named Mary? | NobodyNamed");
   assert("population answer present", n.answers.population !== undefined);
   assert("population contains 'million' or large number", n.answers.population!.includes("million") || parseInt(n.answers.population!.replace(/[^0-9]/g, "")) > 100000);
   assert("summary present", n.summaryParagraphs.length > 0);
@@ -200,8 +200,12 @@ test("metaTitle format is consistent for all names", () => {
       n.metaTitle.startsWith(rec.name),
     );
     assert(
-      `${rec.name}: description starts with 'See how many'`,
-      n.metaDescription.startsWith("See how many"),
+      `${rec.name}: description contains name`,
+      n.metaDescription.includes(rec.name),
+    );
+    assert(
+      `${rec.name}: description is non-empty and data-driven`,
+      n.metaDescription.length > 30 && !n.metaDescription.includes("undefined") && !n.metaDescription.includes("null"),
     );
   }
 });
@@ -220,6 +224,20 @@ test("No HTML injection through name field", () => {
   if (n.answers.population) {
     assert("answers.population does not contain raw <script> tag", !n.answers.population.includes("<script>"));
   }
+});
+
+test("Geography answer from topAnomaly", () => {
+  const n = generateNameNarrative(helenRecord, helenClassify, { state: "District of Columbia", lq: 4.5 });
+  assert("geography answer present", n.answers.geography !== undefined);
+  assert("geography mentions state name", n.answers.geography!.includes("District of Columbia"));
+  assert("geography mentions LQ", n.answers.geography!.includes("4.5"));
+  assert("meta description mentions 'strongest states'", n.metaDescription.includes("strongest states"));
+
+  // Low LQ should not produce a geography answer
+  const nLow = generateNameNarrative(helenRecord, helenClassify, { state: "Texas", lq: 1.2 });
+  assert("geography absent when LQ < 1.5", nLow.answers.geography === undefined);
+  assert("meta description omits 'strongest states' when no anomaly above threshold",
+    !nLow.metaDescription.includes("strongest states"));
 });
 
 // ── results ───────────────────────────────────────────────────────────────────

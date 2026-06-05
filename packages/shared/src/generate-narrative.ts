@@ -13,6 +13,7 @@ export interface NameNarrative {
     rarity: string;
     age?: string;          // omitted if series too sparse
     trend: string;
+    geography?: string;    // omitted if no anomaly data with LQ ≥ 1.5
   };
   // <title> and <meta name="description"> values.
   metaTitle: string;
@@ -165,7 +166,13 @@ function sexNounLabel(sex: "M" | "F"): string {
   return sex === "M" ? "masculine" : "feminine";
 }
 
-export function generateNameNarrative(record: NameRecord, a: ClassifyResult): NameNarrative {
+export function generateNameNarrative(
+  record: NameRecord,
+  a: ClassifyResult,
+  // Top geographic anomaly for the "Where is X most common?" answer.
+  // Pass the full state name (already resolved from abbreviation).
+  topAnomaly?: { state: string; lq: number },
+): NameNarrative {
   const name = record.name;
   const safeName = esc(name);
   const sexNoun = sexNounLabel(record.sex);
@@ -298,10 +305,26 @@ export function generateNameNarrative(record: NameRecord, a: ClassifyResult): Na
     trend = `${safeName} is holding steady. It registered ${fmt(a.latestCount)} births in ${record.yM}, consistent with its recent baseline.`;
   }
 
+  // Geography — only when the LQ is high enough to be meaningfully "most common"
+  let geography: string | undefined;
+  if (topAnomaly && topAnomaly.lq >= 1.5) {
+    const lqStr = topAnomaly.lq.toFixed(1);
+    geography = `${safeName} has its strongest geographic signal in ${topAnomaly.state}, where it appears ${lqStr}× more often than the national baseline.`;
+  }
+
   // ── Meta ──────────────────────────────────────────────────────────────────
 
-  const metaTitle = `${name} Name Popularity, Rarity, Age & State Data | NobodyNamed`;
-  const metaDescription = `See how many Americans are named ${name}, how rare it is, the typical age, popularity history, and where the name is most common.`;
+  const metaTitle = `${name} Name Popularity: How Many People Are Named ${name}? | NobodyNamed`;
+
+  let metaDescription: string;
+  if (hasReliableLiving) {
+    const statesNote = geography ? `, and strongest states` : ``;
+    metaDescription = `An estimated ${fmtLiving(age.estimatedLiving)} living Americans are named ${name}. See ${name}'s rarity, median age, popularity history, ${record.yM} births${statesNote}.`;
+  } else if (a.latestCount > 0) {
+    metaDescription = `${name} is a ${wave} baby name with ${fmt(a.latestCount)} births in ${record.yM}. See its full popularity history, rarity, and peak year data.`;
+  } else {
+    metaDescription = `See how many Americans are named ${name}, how rare it is, the typical age, popularity history, and where the name is most common.`;
+  }
 
   return {
     summaryParagraphs,
@@ -310,6 +333,7 @@ export function generateNameNarrative(record: NameRecord, a: ClassifyResult): Na
       rarity,
       age: ageAnswer,
       trend,
+      geography,
     },
     metaTitle,
     metaDescription,
