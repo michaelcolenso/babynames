@@ -282,7 +282,15 @@ export function generateNameNarrative(record: NameRecord, a: ClassifyResult): Na
         : "";
     trend = `${safeName} is currently <a href="/rising">rising in popularity</a>.${growthPart}`;
   } else if (a.status === "endangered") {
-    trend = `${safeName} is <a href="/endangered">endangered</a> — down ${a.declinePct ?? 0}% from its ${a.peakYear} peak, with only ${fmt(a.latestCount)} new births recorded in ${record.yM}.`;
+    // Names that are technically "endangered" (>90% decline from peak) but still
+    // receive 5,000+ births per year are better described as "past peak" —
+    // the same threshold used by render-name.ts's displayStatus()/describeStatus().
+    const stillCommon = a.latestCount >= 5000;
+    if (stillCommon) {
+      trend = `${safeName} is past its peak but still widely used — down ${a.declinePct ?? 0}% from its ${a.peakYear} high, with about ${fmt(a.latestCount)} births in ${record.yM}.`;
+    } else {
+      trend = `${safeName} is <a href="/endangered">endangered</a> — down ${a.declinePct ?? 0}% from its ${a.peakYear} peak, with only ${fmt(a.latestCount)} new births recorded in ${record.yM}.`;
+    }
   } else if (a.status === "declining") {
     trend = `${safeName} has been declining since its ${a.peakYear} peak, now down ${a.declinePct ?? 0}% from that high. It still registers ${fmt(a.latestCount)} births per year.`;
   } else {

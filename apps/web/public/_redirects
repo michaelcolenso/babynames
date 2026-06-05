@@ -3,6 +3,9 @@
 /viz/2025-obituaries  /viz/nobody-named-2025  301
 /viz/2025-obituaries.html  /viz/nobody-named-2025  301
 
+# Consolidate duplicate content.
+/comebacks  /comeback  301
+
 # Blog posts moved from /viz/ to /blog/
 /viz/pop-culture-names  /blog/the-kehlani-effect  301
 /viz/pop-culture-names.html  /blog/the-kehlani-effect  301

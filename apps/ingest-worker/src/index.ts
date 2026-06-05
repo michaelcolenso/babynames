@@ -17,15 +17,24 @@ import type {
 } from "@cloudflare/workers-types";
 
 import { fetchNamesZip, headEtag, unpackYobFiles } from "./ssa";
+import { fetchStateZip, enqueueStateRows } from "./states-ingest";
 import { parseYob } from "./parse";
 import { CHUNK_ROWS, type IngestMessage, type ChunkRow, type YearTotalRow } from "./chunks";
-import { ensureStaging, clearStagingForRun, insertRowChunk, upsertYearTotals } from "./upsert";
+import { ensureStaging, clearStagingForRun, insertRowChunk, insertStateRows, upsertYearTotals } from "./upsert";
 import { finalize } from "./compute";
+import {
+  DIASPORA_MAX_PAGES,
+  clearDiasporaStaging,
+  computeDiasporaChunk,
+  swapDiasporaStaging,
+} from "./diaspora-compute";
 
-// Augment the generated Env with the secret binding (not in wrangler.toml).
+// Augment the generated Env with the secret binding (not in wrangler.toml)
+// and the state-data URL var.
 declare global {
   interface Env {
     TRIGGER_SECRET: string;
+    STATE_SSA_URL: string;
   }
 }
 
@@ -55,11 +64,14 @@ export default {
       }
       const force = url.searchParams.get("force") === "1";
       const r2Key = url.searchParams.get("r2key");
+      const source = url.searchParams.get("source");
+      const run = source === "state" ? runStateIngest(env, force, r2Key) : runIngest(env, force, r2Key);
       ctx.waitUntil(
-        runIngest(env, force, r2Key).catch((err) => {
+        run.catch((err) => {
           console.error(
             JSON.stringify({
               message: "manual ingest failed",
+              source: source ?? "national",
               error: err instanceof Error ? err.message : String(err),
             }),
           );
@@ -67,6 +79,27 @@ export default {
         }),
       );
       return new Response("ingest started\n", { status: 202 });
+    }
+    // Compute the diaspora summary inline (used to verify after seeding
+    // name_states; production runs it via the delayed diaspora-finalize queue
+    // message instead). Bounded loop over the whole table.
+    if (url.pathname === "/compute-diaspora") {
+      const auth = req.headers.get("Authorization") ?? "";
+      const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+      if (!env.TRIGGER_SECRET || !(await timingSafeCompare(token, env.TRIGGER_SECRET))) {
+        return new Response("unauthorized\n", { status: 401 });
+      }
+      await clearDiasporaStaging(env.DB);
+      let cursor: { name: string; sex: "M" | "F" } | null = null;
+      let names = 0;
+      do {
+        const r = await computeDiasporaChunk(env.DB, cursor, DIASPORA_MAX_PAGES);
+        names += r.namesDone;
+        cursor = r.nextCursor;
+      } while (cursor);
+      await swapDiasporaStaging(env.DB);
+      await setMeta(env.DB, META_KEYS.dataVersion, crypto.randomUUID());
+      return Response.json({ ok: true, namesComputed: names });
     }
     if (url.pathname === "/health") {
       const dv = await getMeta(env.DB, META_KEYS.dataVersion);
@@ -191,6 +224,48 @@ async function runIngest(env: Env, force: boolean, r2Key: string | null): Promis
   }
 }
 
+// State-level ingest for the diaspora map. Fetches namesbystate.zip, caches it
+// in R2, fans rows onto the queue, then schedules the diaspora compute to run
+// after the row chunks have drained.
+async function runStateIngest(env: Env, force: boolean, r2Key: string | null): Promise<void> {
+  if (!r2Key) {
+    const lastEtag = await getMeta(env.DB, META_KEYS.lastStateSsaEtag);
+    const head = await headEtag(env.STATE_SSA_URL);
+    if (!force && head && lastEtag && head === lastEtag) {
+      console.log(JSON.stringify({ message: "state ingest skipped", reason: "etag_unchanged", etag: head }));
+      return;
+    }
+  }
+
+  const runId = crypto.randomUUID();
+  console.log(JSON.stringify({ message: "state ingest starting", runId, r2Key }));
+
+  let bytes: Uint8Array;
+  let etag: string | null;
+  if (r2Key) {
+    const obj = await env.INGEST_CACHE.get(r2Key);
+    if (!obj) throw new Error(`R2 object not found: ${r2Key}`);
+    bytes = new Uint8Array(await obj.arrayBuffer());
+    etag = obj.httpEtag ?? null;
+  } else {
+    const result = await fetchStateZip(env.STATE_SSA_URL);
+    bytes = result.bytes;
+    etag = result.etag;
+    await env.INGEST_CACHE.put(`names-by-state-${new Date().toISOString().slice(0, 10)}.zip`, bytes);
+  }
+
+  const { rows, files } = await enqueueStateRows(bytes, env.INGEST_QUEUE, runId);
+  await setMeta(env.DB, META_KEYS.lastStateSsaEtag, etag ?? "");
+
+  // Defer the compute so the ~thousands of state-rows messages land first.
+  await env.INGEST_QUEUE.send(
+    { type: "diaspora-finalize", runId, cursor: null },
+    { delaySeconds: 300 },
+  );
+
+  console.log(JSON.stringify({ message: "state ingest enqueued", runId, rows, files }));
+}
+
 async function handleMessage(env: Env, msg: IngestMessage): Promise<void> {
   switch (msg.type) {
     case "rows":
@@ -200,6 +275,30 @@ async function handleMessage(env: Env, msg: IngestMessage): Promise<void> {
     case "year-totals":
       await upsertYearTotals(env.DB, msg.totals);
       return;
+
+    case "state-rows":
+      await insertStateRows(env.DB, msg.rows);
+      return;
+
+    case "diaspora-finalize": {
+      // First message of a chain (cursor null) resets staging; subsequent
+      // messages resume from the cursor. The message whose chunk exhausts the
+      // table swaps staging onto live.
+      if (msg.cursor === null) await clearDiasporaStaging(env.DB);
+      const { nextCursor } = await computeDiasporaChunk(
+        env.DB,
+        msg.cursor,
+        DIASPORA_MAX_PAGES,
+      );
+      if (nextCursor) {
+        await env.INGEST_QUEUE.send({ type: "diaspora-finalize", runId: msg.runId, cursor: nextCursor });
+      } else {
+        await swapDiasporaStaging(env.DB);
+        await setMeta(env.DB, META_KEYS.dataVersion, crypto.randomUUID());
+        console.log(JSON.stringify({ message: "diaspora compute complete", runId: msg.runId }));
+      }
+      return;
+    }
 
     case "finalize": {
       try {

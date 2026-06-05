@@ -1,6 +1,8 @@
 {
   "version": 1,
   "include": [
+    "/",
+    "/mcp",
     "/name/*",
     "/names/*",
     "/api/*",
@@ -19,7 +21,9 @@
     "/classic-names",
     "/future-grandparent-names",
     "/blog",
-    "/blog/*"
+    "/blog/*",
+    "/shadow",
+    "/shadow/*"
   ],
   "exclude": [
     "/assets/*",

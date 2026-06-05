@@ -6,14 +6,25 @@
 import { classify, type ClassifyResult } from "./classify";
 import type { YearTopRow, YearTotal } from "./d1-queries";
 import { generateNameNarrative, type NameNarrative } from "./generate-narrative";
+import { playgroundDensity } from "./enrichment-compute";
+import { pageShell } from "./render-shell";
 import { buildSparkline } from "./sparkline";
+import { ALL_STATES, TILE_COLS, TILE_ROWS, US_TILE_GRID } from "./us-states-map";
 import type {
+  DiasporaResponse,
+  DiasporaSpreadPoint,
+  NameCatalyst,
   NameDiscoveryCard,
   NameDiscoveryClusterKind,
   NameDiscoveryModule,
+  NameEnrichmentBundle,
+  NameEnrichmentProfile,
+  NameHistoricalProfile,
   NameRecord,
+  NameRegionalAnomaly,
   RelatedName,
   Status,
+  WaveTopology,
 } from "./schema";
 
 const fmt = (n: number | null | undefined): string =>
@@ -141,6 +152,13 @@ interface RenderReportOptions {
   peerNames?: YearTopRow[];
   yearTotals?: YearTotal[];
   enrichmentSnippet?: string;
+  // Precomputed dossier layers (actuarial, wave, catalysts, regional,
+  // historical). Rendered as an additive sidebar panel; independent of
+  // enrichmentSnippet, which still drives the narrative opening paragraph.
+  enrichment?: NameEnrichmentBundle;
+  // Precomputed geographic diffusion. When present, renders the diaspora map
+  // in the main column below the trajectory chart. Absent → omitted entirely.
+  diaspora?: DiasporaResponse;
   // Amazon Associates tracking ID. When unset or empty, the affiliate
   // link is omitted entirely rather than emitted with an empty `tag=`
   // (which earns no commission and looks unfinished).
@@ -180,6 +198,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       : `<p>Down <strong>${a.declinePct ?? 0}%</strong> from its peak.</p>`;
   const totalSentence = `<p>In all, the Social Security Administration has recorded about <strong>${fmt(a.totalCount)}</strong> Americans named ${escape(record.name)} since ${a.firstYear}.</p>`;
   const exploreLinks = renderExploreLinks(record, a);
+  const diasporaMap = renderDiasporaMap(record, opts.diaspora);
   const relatedNames = renderRelatedNames(opts.relatedNames ?? []);
   const discoveryModule = renderDiscoveryModule(opts.discovery);
 
@@ -215,7 +234,14 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
 
     <section class="chart-panel" aria-label="${escape(record.name)} annual popularity chart">
       <div class="chart-caption"><span>${a.firstYear}</span><span>Peak ${a.peakYear}</span><span>${record.yM}</span></div>
-      ${buildSparkline(record.series, record.ym, record.yM)}
+      ${buildSparkline(record.series, record.ym, record.yM, {
+        status: a.status,
+        markers: (opts.enrichment?.catalysts ?? []).map((c) => ({
+          year: c.trigger_year,
+          label: c.catalyst_title,
+          kind: c.catalyst_type,
+        })),
+      })}
     </section>
 
     <div class="stats">
@@ -225,6 +251,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <div class="stat"><div class="label">All-time</div><div class="value">${fmt(a.totalCount)}</div></div>
     </div>
     ${nameAnswers}
+    ${diasporaMap}
     ${exploreLinks}
   </div>
 
@@ -243,6 +270,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <div class="insight-row"><span>Trajectory</span><strong>${dossier.trajectory}</strong></div>
     </div>
     ${collisionBox}
+    ${renderEnrichmentPanel(record, opts.enrichment)}
     ${relatedNames}
     ${discoveryModule}
     <div class="share-row">
@@ -273,6 +301,8 @@ export function renderFullPage(
     peerNames?: YearTopRow[];
     yearTotals?: YearTotal[];
     enrichmentSnippet?: string;
+    enrichment?: NameEnrichmentBundle;
+    diaspora?: DiasporaResponse;
     affiliateTag?: string;
   } = { canonical: "" },
 ): string {
@@ -280,6 +310,8 @@ export function renderFullPage(
   const desc = narrative.metaDescription;
   const title = narrative.metaTitle;
   const statusLabel = displayStatus(classifyResult, record.yM);
+  const origin = opts.canonical ? new URL(opts.canonical).origin : "";
+  const ogImageUrl = `${origin}/api/og/${encodeURIComponent(record.name)}`;
   const dataJson = JSON.stringify({
     name: record.name,
     sex: record.sex,
@@ -287,104 +319,285 @@ export function renderFullPage(
     yM: record.yM,
     series: record.series,
     other: record.other,
+    diaspora: opts.diaspora,
   });
 
-  const origin = opts.canonical ? new URL(opts.canonical).origin : "";
-  const ogImageUrl = `${origin}/api/og/${encodeURIComponent(record.name)}`;
-  const structuredDataJson = JSON.stringify(
-    buildStructuredData(record, classifyResult, {
+  return pageShell({
+    title,
+    description: desc,
+    canonical: opts.canonical,
+    ogImage: ogImageUrl,
+    ogImageAlt: `${record.name} — ${statusLabel}, peak ${classifyResult.peakYear}`,
+    ogType: "article",
+    currentPath: undefined,
+    body: `<div id="view-name">${renderReportWithOptions(record, {
+      relatedNames: opts.relatedNames,
+      discovery: opts.discovery,
+      peerNames: opts.peerNames,
+      yearTotals: opts.yearTotals,
+      enrichmentSnippet: opts.enrichmentSnippet,
+      enrichment: opts.enrichment,
+      diaspora: opts.diaspora,
+      affiliateTag: opts.affiliateTag,
+      classifyResult,
+      narrative,
+    })}</div>`,
+    structuredData: buildStructuredData(record, classifyResult, {
       canonical: opts.canonical,
       title,
       description: desc,
       origin,
     }),
-  ).replace(/</g, "\\u003c");
-
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escape(title)}</title>
-<meta name="description" content="${escape(desc)}">
-<link rel="canonical" href="${escape(opts.canonical)}">
-<meta property="og:title" content="${escape(title)}">
-<meta property="og:description" content="${escape(desc)}">
-<meta property="og:type" content="article">
-<meta property="og:url" content="${escape(opts.canonical)}">
-<meta property="og:image" content="${escape(ogImageUrl)}">
-<meta property="og:image:type" content="image/png">
-<meta property="og:image:alt" content="${escape(record.name)} — ${statusLabel}, peak ${classifyResult.peakYear}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="${escape(ogImageUrl)}">
-<meta name="twitter:image:alt" content="${escape(record.name)} — ${statusLabel}, peak ${classifyResult.peakYear}">
-<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
-<script type="application/ld+json">${structuredDataJson}</script>
-</head>
-<body>
-<div class="page">
-  <header class="site">
-    <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
-    <nav>
-      <a href="/extinct">Extinct</a>
-      <a href="/endangered">Endangered</a>
-      <a href="/comeback">Comebacks</a>
-      <a href="/year">Birth year</a>
-      <a href="/rising">Rising</a>
-      <a href="/viz">Visualizations</a>
-      <a href="/blog/">Namecalling</a>
-      <a href="/about">About</a>
-    </nav>
-    <details class="mobile-nav">
-      <summary aria-label="Open navigation"><span></span><span></span><span></span></summary>
-      <nav>
-        <a href="/extinct">Extinct</a>
-        <a href="/endangered">Endangered</a>
-        <a href="/comeback">Comebacks</a>
-        <a href="/year">Birth year</a>
-        <a href="/rising">Rising</a>
-        <a href="/viz">Visualizations</a>
-        <a href="/blog/">Namecalling</a>
-        <a href="/about">About</a>
-      </nav>
-    </details>
-  </header>
-  <div id="view-name">${renderReportWithOptions(record, {
-    relatedNames: opts.relatedNames,
-    discovery: opts.discovery,
-    peerNames: opts.peerNames,
-    yearTotals: opts.yearTotals,
-    enrichmentSnippet: opts.enrichmentSnippet,
-    affiliateTag: opts.affiliateTag,
-    classifyResult,
-    narrative,
-  })}</div>
-  <footer class="site">
-    <div>
-      <div>nobodynamed is a small data project about American first names.</div>
-      <!-- TODO: compute footer counts from D1 once. -->
-      <div class="footer-note">Built on public-domain Social Security Administration data: about 100,000 name/sex records and 2 million yearly observations.</div>
-    </div>
-    <div><a href="/about">About</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
-  </footer>
-</div>
-<script type="application/json" id="nv-data">${dataJson.replace(/</g, "\\u003c")}</script>
-<script src="/assets/app.js"></script>
-<script>
-  (function () {
+    scripts: ["/assets/app.js"],
+    jsonDataBlocks: [{ id: "nv-data", data: JSON.parse(dataJson) }],
+    inlineScripts: [
+      `(function () {
     var el = document.getElementById("nv-data");
     if (!el || !window.NameVitals) return;
     var record = JSON.parse(el.textContent);
     var container = document.getElementById("view-name");
     NameVitals.attachShareHandlers(container, record);
     NameVitals.hydrateEnrichment(container, record);
-  })();
-</script>
-</body>
-</html>`;
+    if (NameVitals.hydrateDiaspora) NameVitals.hydrateDiaspora(container, record);
+  })();`,
+    ],
+    footerVariant: "full",
+  });
+}
+
+// A name whose living cohort skews this old reads partly as historical
+// inheritance rather than current fashion — triggers the legacy treatment.
+const LEGACY_MEDIAN_AGE = 72;
+
+const STATE_NAMES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia",
+  FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois",
+  IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana",
+  ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan",
+  MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana",
+  NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
+  NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota",
+  OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania",
+  RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee",
+  TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington",
+  WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+};
+
+const WAVE_COPY: Record<WaveTopology, string> = {
+  "Flash Flood": "A concentrated generational spike rather than a slow classic.",
+  Glacier: "A long-duration classic distributed across many generations.",
+  "Steady Decline": "A name with a broad middle and a downward recent trajectory.",
+  "Steady Wave": "A name with sustained momentum rather than a single spike.",
+  Plateau: "A name with moderate spread and no sharp recent move.",
+};
+
+function stateName(abbr: string): string {
+  return STATE_NAMES[abbr] ?? abbr;
+}
+
+// Diffusion tier for a state, by years elapsed since the origin year.
+// Mirrored in app.js hydrateDiaspora() for the animated time-lapse.
+function diasporaTier(
+  adoptedYear: number | undefined,
+  originYear: number | null,
+): "origin" | "early" | "mid" | "late" | "never" {
+  if (adoptedYear === undefined || originYear === null) return "never";
+  if (adoptedYear === originYear) return "origin";
+  const diff = adoptedYear - originYear;
+  if (diff <= 5) return "early";
+  if (diff <= 15) return "mid";
+  return "late";
+}
+
+function originStateNames(d: DiasporaResponse): string[] {
+  if (!d.origin) return [];
+  const originYear = d.origin.year;
+  const states = d.spread
+    .filter((p) => p.year === originYear)
+    .map((p) => p.state)
+    .sort((a, b) => stateName(a).localeCompare(stateName(b)));
+  return states.length ? states.map(stateName) : [stateName(d.origin.state)];
+}
+
+function formatStateList(states: string[]): string {
+  const escaped = states.map(escape);
+  if (escaped.length <= 1) return escaped[0] ?? "";
+  if (escaped.length === 2) return `${escaped[0]} and ${escaped[1]}`;
+  return `${escaped.slice(0, -1).join(", ")}, and ${escaped[escaped.length - 1]}`;
+}
+
+function diasporaNarrative(d: DiasporaResponse, name: string): string {
+  const safe = escape(name);
+  if (!d.origin) {
+    return `${safe} never reached SSA's state-level reporting threshold in any state.`;
+  }
+  const origin = formatStateList(originStateNames(d));
+  if (d.totalStates <= 1) {
+    return `${safe} only ever appeared in ${origin}. A true local.`;
+  }
+  if (d.diffusionYears < 10) {
+    return `${safe} spread fast — first recorded in ${origin} (${d.origin.year}) and seen in ${d.totalStates} states within a decade.`;
+  }
+  if (d.diffusionYears > 50) {
+    return `${safe} took ${d.diffusionYears} years to reach ${d.totalStates} states. A slow burn from ${origin} outward.`;
+  }
+  return `${safe} first appeared in ${origin} (${d.origin.year}) and showed up in ${d.totalStates} states over ${d.diffusionYears} years.`;
+}
+
+// Server-rendered choropleth on a geographic tile grid. Static here (final,
+// fully-revealed state); app.js progressively upgrades it into a year-by-year
+// time-lapse using the same data embedded in #nv-data.
+function renderDiasporaMap(record: NameRecord, d?: DiasporaResponse): string {
+  if (!d) return "";
+
+  const adopted = new Map<string, DiasporaSpreadPoint>();
+  for (const p of d.spread) adopted.set(p.state, p);
+  const originYear = d.origin?.year ?? null;
+  const origins = d.origin ? originStateNames(d) : [];
+  const originLabel = formatStateList(origins);
+
+  const CELL = 42;
+  const w = TILE_COLS * CELL;
+  const h = TILE_ROWS * CELL;
+
+  const tiles = ALL_STATES.map((st) => {
+    const pos = US_TILE_GRID[st];
+    if (!pos) return "";
+    const [rowIdx, colIdx] = pos;
+    const x = colIdx * CELL;
+    const y = rowIdx * CELL;
+    const point = adopted.get(st);
+    const tier = diasporaTier(point?.year, originYear);
+    const adoptedYear = point?.year;
+    const titleYear =
+      tier === "never" ? "not recorded" : `first recorded ${adoptedYear}`;
+    const yearAttr = adoptedYear !== undefined ? ` data-year="${adoptedYear}"` : "";
+    return `<g class="dz-tile dz-${tier}" data-state="${st}"${yearAttr}>
+      <title>${escape(stateName(st))}: ${titleYear}</title>
+      <rect x="${x + 2}" y="${y + 2}" width="${CELL - 4}" height="${CELL - 4}" rx="4"/>
+      <text x="${x + CELL / 2}" y="${y + CELL / 2 + 4}" text-anchor="middle">${st}</text>
+    </g>`;
+  }).join("");
+
+  const subtitle = d.origin
+    ? `First recorded: <strong>${originLabel}, ${d.origin.year}</strong> · appeared in ${d.totalStates} ${d.totalStates === 1 ? "state" : "states"} over ${d.diffusionYears} ${d.diffusionYears === 1 ? "year" : "years"}`
+    : `This name never reached SSA's state-level reporting threshold in any state.`;
+
+  const legend = `<div class="diaspora-legend" aria-hidden="true">
+    <span class="dz-origin">Origin</span>
+    <span class="dz-early">≤5 yrs</span>
+    <span class="dz-mid">≤15 yrs</span>
+    <span class="dz-late">16+ yrs</span>
+    <span class="dz-never">Holdout</span>
+  </div>`;
+
+  return `<section class="diaspora-map" id="diaspora-map" aria-label="${escape(record.name)} geographic spread across the United States">
+    <div class="section-label">Diaspora map</div>
+    <p class="diaspora-narrative">${diasporaNarrative(d, record.name)}</p>
+    <p class="diaspora-subtitle">${subtitle}</p>
+    <svg class="diaspora-grid" viewBox="0 0 ${w} ${h}" role="img" preserveAspectRatio="xMidYMid meet">
+      ${tiles}
+    </svg>
+    ${legend}
+  </section>`;
+}
+
+function renderEnrichmentPanel(record: NameRecord, enrichment?: NameEnrichmentBundle): string {
+  if (!enrichment?.profile) return "";
+  const profile = enrichment.profile;
+  const legacyClass = profile.median_age > LEGACY_MEDIAN_AGE ? " enrichment-panel--legacy" : "";
+  return `<section class="enrichment-panel${legacyClass}" aria-label="${escape(record.name)} enrichment dossier">
+    ${renderActuarialVitals(profile)}
+    ${renderPlaygroundDensity(profile)}
+    ${renderWaveTopology(profile)}
+    ${renderCatalysts(enrichment.catalysts)}
+    ${renderRegionalAnomalies(enrichment.regionalAnomalies)}
+    ${renderHistoricalLegacy(profile, enrichment.historicalProfiles)}
+  </section>`;
+}
+
+function renderActuarialVitals(profile: NameEnrichmentProfile): string {
+  return `<div class="enrichment-card actuarial-card">
+    <div class="label">Living profile</div>
+    <div class="value">${fmt(profile.total_living_est)}</div>
+    <p>Estimated living Americans with this name.</p>
+    <div class="mini-grid">
+      <div><span>Median age</span><strong>${profile.median_age}</strong></div>
+      <div><span>Core range</span><strong>${profile.age_range_low}–${profile.age_range_high}</strong></div>
+    </div>
+  </div>`;
+}
+
+function renderPlaygroundDensity(profile: NameEnrichmentProfile): string {
+  const p = playgroundDensity(profile.latest_pct);
+  return `<div class="density-badge">
+    <span>Playground Density Index</span>
+    <strong>${(p * 100).toFixed(1)}%</strong>
+  </div>`;
+}
+
+function renderWaveTopology(profile: NameEnrichmentProfile): string {
+  return `<div class="enrichment-card wave-card">
+    <div class="label">Wave type</div>
+    <div class="value">${escape(profile.wave_topology)}</div>
+    <p>${escape(WAVE_COPY[profile.wave_topology] ?? "")}</p>
+  </div>`;
+}
+
+function renderCatalysts(catalysts: NameCatalyst[]): string {
+  if (!catalysts.length) return "";
+  const items = catalysts
+    .map(
+      (c) => `<div class="catalyst-item">
+      <strong>${c.trigger_year}: ${escape(c.catalyst_title)}</strong>
+      <span>${escape((c.catalyst_type ?? "").replace(/_/g, " "))}</span>
+      ${c.description ? `<p>${escape(c.description)}</p>` : ""}
+    </div>`,
+    )
+    .join("");
+  return `<div class="enrichment-card catalyst-card">
+    <div class="label">Cultural triggers</div>
+    <div class="catalyst-list">${items}</div>
+  </div>`;
+}
+
+function renderRegionalAnomalies(anomalies: NameRegionalAnomaly[]): string {
+  if (!anomalies.length) return "";
+  const top = anomalies[0]!;
+  const rows = anomalies
+    .map(
+      (a) => `<div>
+      <span>${escape(stateName(a.state))} · ${a.era_start_year}s</span>
+      <strong>${a.location_quotient.toFixed(1)}×</strong>
+    </div>`,
+    )
+    .join("");
+  return `<div class="enrichment-card regional-card">
+    <div class="label">Geographic heartland</div>
+    <div class="value">${escape(stateName(top.state))}</div>
+    <p><strong>${top.location_quotient.toFixed(1)}× higher affinity</strong> than the national baseline.</p>
+    <div class="regional-list">${rows}</div>
+  </div>`;
+}
+
+function renderHistoricalLegacy(
+  profile: NameEnrichmentProfile,
+  historicalProfiles: NameHistoricalProfile[],
+): string {
+  if (profile.median_age <= LEGACY_MEDIAN_AGE || !historicalProfiles.length) return "";
+  const selected = historicalProfiles[historicalProfiles.length - 1]!;
+  const occupations = selected.top_occupations.map((o) => `<li>${escape(o)}</li>`).join("");
+  return `<div class="enrichment-card historical-card">
+    <div class="label">Historical legacy</div>
+    <p>This name's living center of gravity is old enough to read partly as historical inheritance.</p>
+    <div class="legacy-meta">
+      <span>${selected.era_year}</span>
+      <span>${escape(selected.primary_region)}</span>
+      <span>${escape(selected.urban_vs_rural)}</span>
+    </div>
+    <ul class="occupation-list">${occupations}</ul>
+  </div>`;
 }
 
 function renderNarrativeInsights(
@@ -538,7 +751,8 @@ function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   links.push(`<a href="/names/${decadeLabel(a.peakYear)}/">${decadeLabel(a.peakYear)} baby names</a>`);
   links.push(`<a href="/names/${encodeURIComponent(record.name.charAt(0).toLowerCase())}/">Names starting with ${escape(record.name.charAt(0).toUpperCase())}</a>`);
   links.push(`<a href="/names/ending/${encodeURIComponent(record.name.charAt(record.name.length - 1).toLowerCase())}/">Names ending in ${escape(record.name.charAt(record.name.length - 1).toUpperCase())}</a>`);
-  links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/">Names similar to ${escape(record.name)}</a>`);
+  links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/">Names like ${escape(record.name)}</a>`);
+  links.push(`<a href="/shadow/${encodeURIComponent(record.name)}/${record.yM}/">Meet your shadow</a>`);
 
   return `<nav class="report-links" aria-label="Explore more name data">${links.join("")}</nav>`;
 }
@@ -627,11 +841,14 @@ function displayStatus(a: ClassifyResult, yM: number): string {
 
 function buildMetaDescription(record: NameRecord, a: ClassifyResult): string {
   const sexLabel = record.sex === "M" ? "boys" : "girls";
-  const latest = a.latestCount
-    ? `${fmt(a.latestCount)} ${sexLabel} were named ${record.name} in ${record.yM}`
-    : `no ${sexLabel} were recorded with the name ${record.name} in ${record.yM}`;
   const trendDescriptor = a.status === "endangered" && a.latestCount >= STILL_COMMON_THRESHOLD ? "past-peak" : a.status;
-  return `${record.name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} ${sexLabel}; ${latest}. See SSA baby-name popularity, trend, ${trendDescriptor} status, and nearby names from the same era.`;
+  if (a.status === "extinct") {
+    return `${record.name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} ${sexLabel} and has since disappeared from SSA records. Explore its full popularity curve, historical context, and similar names from the same era.`;
+  }
+  if (a.status === "rising" || a.status === "stable") {
+    return `${record.name} is ${trendDescriptor === "rising" ? "gaining popularity" : "maintaining steady usage"} in the latest SSA data, with ${fmt(a.latestCount)} ${sexLabel} in ${record.yM}. Explore its full popularity curve, peak year ${a.peakYear}, and names from the same era.`;
+  }
+  return `${record.name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} ${sexLabel}. See its full SSA popularity curve, ${trendDescriptor} trend, and nearby names from the same era.`;
 }
 
 function buildStructuredData(

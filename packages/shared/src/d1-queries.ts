@@ -8,43 +8,42 @@ import type {
   BlogPostSummary,
   IndexableName,
   LandingKind,
+  NameCatalyst,
   NameDiscoveryCard,
   NameDiscoveryCluster,
   NameDiscoveryClusterKind,
   NameDiscoveryModule,
+  DiasporaResponse,
+  DiasporaSpreadPoint,
+  NameDiasporaRow,
+  NameEnrichmentBundle,
+  NameEnrichmentProfile,
+  NameHistoricalProfile,
+  NameRegionalAnomaly,
   NameRow,
   RelatedName,
   SearchHit,
   Sex,
   Status,
 } from "./schema";
+import { chunkedIn } from "./d1-chunk";
 import { decodeSpark } from "./spark-blob";
 
 export async function getMeta(db: D1Database, key: string): Promise<string | null> {
-  const r = await db
-    .prepare("SELECT value FROM meta WHERE key = ?1")
-    .bind(key)
-    .first<{ value: string }>();
+  const r = await db.prepare("SELECT value FROM meta WHERE key = ?1").bind(key).first<{ value: string }>();
   return r?.value ?? null;
 }
 
 export async function setMeta(db: D1Database, key: string, value: string): Promise<void> {
   await db
-    .prepare(
-      "INSERT INTO meta(key, value) VALUES(?1, ?2) " +
-        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-    )
+    .prepare("INSERT INTO meta(key, value) VALUES(?1, ?2) " + "ON CONFLICT(key) DO UPDATE SET value=excluded.value")
     .bind(key, value)
     .run();
 }
 
 // Prefix autocomplete via half-open range scan on the (name_lower, peak_count DESC) index.
 // We bracket [prefix, prefix + "￿") for stable Unicode ordering.
-export async function searchByPrefix(
-  db: D1Database,
-  prefix: string,
-  limit = 10,
-): Promise<SearchHit[]> {
+export async function searchByPrefix(db: D1Database, prefix: string, limit = 10): Promise<SearchHit[]> {
   const lo = prefix.toLowerCase();
   const hi = lo + "￿";
   const r = await db
@@ -63,11 +62,7 @@ export async function searchByPrefix(
 // Sitemap cohort: one canonical URL per spelling, using the dominant sex row.
 // The threshold keeps very sparse SSA records out of initial indexation while
 // preserving broad coverage for names with meaningful history.
-export async function listIndexableNames(
-  db: D1Database,
-  limit = 49_900,
-  offset = 0,
-): Promise<IndexableName[]> {
+export async function listIndexableNames(db: D1Database, limit = 49_900, offset = 0): Promise<IndexableName[]> {
   const cappedLimit = Math.max(1, Math.min(49_900, Math.floor(limit)));
   const safeOffset = Math.max(0, Math.floor(offset));
   const r = await db
@@ -128,10 +123,7 @@ export interface NameWithSeries {
   series: { year: number; count: number }[];
 }
 
-export async function getNameWithSeries(
-  db: D1Database,
-  nameLower: string,
-): Promise<NameWithSeries[]> {
+export async function getNameWithSeries(db: D1Database, nameLower: string): Promise<NameWithSeries[]> {
   // Pull both sexes in one round-trip using a join. SQLite returns the
   // wide row repeated; we group on the client side. The (name_id, year)
   // PK keeps the series ordered.
@@ -178,6 +170,90 @@ export async function getNameWithSeries(
     g.series.push({ year: row.year, count: row.count });
   }
   return [...grouped.values()];
+}
+
+export interface ShadowMatch {
+  inputName: string;
+  inputNameLower: string;
+  inputSex: Sex;
+  inputCount: number;
+  shadowName: string;
+  shadowNameLower: string;
+  shadowCount: number;
+  shadowSex: Sex;
+  diff: number;
+  birthYear: number;
+  shadowYear: number;
+}
+
+/**
+ * Find the "shadow name" — the name in `shadowYear` whose birth count is
+ * closest to `nameLower`'s count in `birthYear`, restricted to the same sex.
+ * Returns null if the input name has no data for the birth year.
+ */
+export async function getShadowName(
+  db: D1Database,
+  nameLower: string,
+  birthYear: number,
+  shadowYear: number,
+): Promise<ShadowMatch | null> {
+  // Step 1: get input name's count in the birth year.
+  const inputRow = await db
+    .prepare(
+      `SELECT n.name AS input_name, n.name_lower AS input_lower, n.sex AS input_sex, ny.count AS input_count
+         FROM names n
+         JOIN name_years ny ON ny.name_id = n.id
+        WHERE n.name_lower = ?1
+          AND ny.year = ?2
+        LIMIT 1`,
+    )
+    .bind(nameLower, birthYear)
+    .first<{
+      input_name: string;
+      input_lower: string;
+      input_sex: Sex;
+      input_count: number;
+    }>();
+
+  if (!inputRow) return null;
+
+  // Step 2: find the name in shadowYear with the closest count, same sex.
+  const shadowRow = await db
+    .prepare(
+      `SELECT n.name AS shadow_name, n.name_lower AS shadow_lower, n.sex AS shadow_sex, ny.count AS shadow_count,
+              ABS(ny.count - ?1) AS diff
+         FROM names n
+         JOIN name_years ny ON ny.name_id = n.id
+        WHERE ny.year = ?2
+          AND n.sex = ?3
+          AND n.name_lower <> ?4
+        ORDER BY diff ASC, n.total_count DESC
+        LIMIT 1`,
+    )
+    .bind(inputRow.input_count, shadowYear, inputRow.input_sex, inputRow.input_lower)
+    .first<{
+      shadow_name: string;
+      shadow_lower: string;
+      shadow_sex: Sex;
+      shadow_count: number;
+      diff: number;
+    }>();
+
+  if (!shadowRow) return null;
+
+  return {
+    inputName: inputRow.input_name,
+    inputNameLower: inputRow.input_lower,
+    inputSex: inputRow.input_sex,
+    inputCount: inputRow.input_count,
+    shadowName: shadowRow.shadow_name,
+    shadowNameLower: shadowRow.shadow_lower,
+    shadowCount: shadowRow.shadow_count,
+    shadowSex: shadowRow.shadow_sex,
+    diff: shadowRow.diff,
+    birthYear,
+    shadowYear,
+  };
 }
 
 export async function listRelatedNames(
@@ -332,11 +408,7 @@ export async function getNameDiscoveryClusters(
   return { clusters };
 }
 
-export async function listLanding(
-  db: D1Database,
-  kind: LandingKind,
-  limit = 500,
-): Promise<NameRow[]> {
+export async function listLanding(db: D1Database, kind: LandingKind, limit = 500): Promise<NameRow[]> {
   const orderBy = kind === "rising" ? "curr_decade DESC" : "peak_count DESC";
   const r = await db
     .prepare(
@@ -381,9 +453,7 @@ export interface YearTotal {
 }
 
 export async function listYearTotals(db: D1Database): Promise<YearTotal[]> {
-  const r = await db
-    .prepare(`SELECT year, sex, total FROM year_totals ORDER BY year`)
-    .all<YearTotal>();
+  const r = await db.prepare(`SELECT year, sex, total FROM year_totals ORDER BY year`).all<YearTotal>();
   return r.results ?? [];
 }
 
@@ -394,30 +464,62 @@ export interface TopByYear {
   count: number;
 }
 
-// Returns the top-N per (year, sex). Used by /api/meta to populate the
-// "popular right now" grid on the home page. We compute it lazily and
-// cache the response — the underlying query is cheap with the
-// (year, count DESC) covering index but still a hot path.
-export async function topByYear(
-  db: D1Database,
-  perBucket = 10,
-): Promise<TopByYear[]> {
+// The set of years that have data, read from the small year_totals table
+// (~290 rows). Used to drive per-year ranking without scanning name_years.
+async function listDataYears(db: D1Database): Promise<number[]> {
   const r = await db
-    .prepare(
-      `WITH ranked AS (
-         SELECT n.name, n.sex, ny.year, ny.count,
-                ROW_NUMBER() OVER (PARTITION BY ny.year, n.sex ORDER BY ny.count DESC) AS rn
-           FROM name_years ny
-           JOIN names n ON n.id = ny.name_id
-       )
-       SELECT year, sex, name, count
-         FROM ranked
-        WHERE rn <= ?1
-        ORDER BY year, sex, count DESC`,
-    )
-    .bind(perBucket)
-    .all<TopByYear>();
-  return r.results ?? [];
+    .prepare(`SELECT DISTINCT year FROM year_totals ORDER BY year`)
+    .all<{ year: number }>();
+  return (r.results ?? []).map((row) => row.year);
+}
+
+// How many per-year ranking statements to pipeline in a single db.batch().
+const YEAR_BATCH = 24;
+
+// Returns the top-N per (year, sex). Used by /api/meta to populate the
+// "popular right now" grid on the home page.
+//
+// Ranking is done one year at a time and pipelined through db.batch(). A single
+// window function partitioned over the *whole* name_years table (~2M rows) has
+// to materialize and sort every row at once, which blows past the Worker
+// memory/CPU budget that D1 executes under and surfaces as Cloudflare Error
+// 1101 on a cache miss. Each per-year statement instead filters on
+// `WHERE ny.year = ?`, hits the name_years(year, count DESC) index, and only
+// ever holds one year's rows in memory — so peak memory stays bounded no matter
+// how large the table grows.
+export async function topByYear(db: D1Database, perBucket = 10): Promise<TopByYear[]> {
+  const years = await listDataYears(db);
+  if (!years.length) return [];
+
+  const out: TopByYear[] = [];
+  for (let i = 0; i < years.length; i += YEAR_BATCH) {
+    const slice = years.slice(i, i + YEAR_BATCH);
+    const batch = slice.map((year) =>
+      db
+        .prepare(
+          `WITH ranked AS (
+             SELECT n.name, n.sex, ny.count,
+                    ROW_NUMBER() OVER (PARTITION BY n.sex ORDER BY ny.count DESC) AS rn
+               FROM name_years ny
+               JOIN names n ON n.id = ny.name_id
+              WHERE ny.year = ?1
+           )
+           SELECT name, sex, count
+             FROM ranked
+            WHERE rn <= ?2
+            ORDER BY sex, count DESC`,
+        )
+        .bind(year, perBucket),
+    );
+    const results = await db.batch<{ name: string; sex: Sex; count: number }>(batch);
+    results.forEach((res, idx) => {
+      const year = slice[idx]!;
+      for (const row of res.results ?? []) {
+        out.push({ year, sex: row.sex, name: row.name, count: row.count });
+      }
+    });
+  }
+  return out;
 }
 
 export interface YearTopRow {
@@ -430,11 +532,7 @@ export interface YearTopRow {
 // Top-N names per sex for a specific birth year. Used by /api/year/:year.
 // Uses a CTE so the per-sex rank filter happens before truncation — a plain
 // ORDER BY sex + LIMIT would return only the first-sorted sex bucket.
-export async function topBySpecificYear(
-  db: D1Database,
-  year: number,
-  perSex = 25,
-): Promise<YearTopRow[]> {
+export async function topBySpecificYear(db: D1Database, year: number, perSex = 25): Promise<YearTopRow[]> {
   const r = await db
     .prepare(
       `WITH ranked AS (
@@ -454,34 +552,25 @@ export async function topBySpecificYear(
   return r.results ?? [];
 }
 
-export async function getTopNamesForYear(
-  db: D1Database,
-  year: number,
-  perSex = 5,
-): Promise<YearTopRow[]> {
+export async function getTopNamesForYear(db: D1Database, year: number, perSex = 5): Promise<YearTopRow[]> {
   return topBySpecificYear(db, year, perSex);
 }
 
-export async function getYearTotalsForYears(
-  db: D1Database,
-  sex: Sex,
-  years: number[],
-): Promise<YearTotal[]> {
+export async function getYearTotalsForYears(db: D1Database, sex: Sex, years: number[]): Promise<YearTotal[]> {
   const uniqueYears = [...new Set(years.map((year) => Math.floor(year)).filter(Number.isFinite))];
   if (!uniqueYears.length) return [];
 
-  const placeholders = uniqueYears.map((_, idx) => `?${idx + 2}`).join(", ");
-  const r = await db
-    .prepare(
-      `SELECT year, sex, total
+  // Batch the year IN list to stay under D1's deployed bound-variable ceiling.
+  return chunkedIn<YearTotal>(
+    db,
+    uniqueYears,
+    (ph) => `SELECT year, sex, total
          FROM year_totals
-        WHERE sex = ?1
-          AND year IN (${placeholders})
+        WHERE sex = ?
+          AND year IN (${ph})
         ORDER BY year`,
-    )
-    .bind(sex, ...uniqueYears)
-    .all<YearTotal>();
-  return r.results ?? [];
+    { prefixBinds: [sex] },
+  );
 }
 
 // Comeback names: peaked pre-1975 at 5k+ births, currently growing/stable with
@@ -516,9 +605,7 @@ export interface SparkBlobRow {
 
 // Returns name + sex + spark for every name that has a blob and meaningful
 // history. Used by the /api/twin endpoint to find trajectory matches.
-export async function listNameSparks(
-  db: D1Database,
-): Promise<SparkBlobRow[]> {
+export async function listNameSparks(db: D1Database): Promise<SparkBlobRow[]> {
   const r = await db
     .prepare(
       `SELECT name, sex, spark_blob
@@ -538,10 +625,7 @@ export interface DecodedSparkRow {
 
 // Cached variant of listNameSparks. Stores decoded sparks in caches.default
 // keyed by dataVersion so repeated twin lookups skip the D1 scan.
-export async function getCachedNameSparks(
-  db: D1Database,
-  dataVersion: string,
-): Promise<DecodedSparkRow[]> {
+export async function getCachedNameSparks(db: D1Database, dataVersion: string): Promise<DecodedSparkRow[]> {
   const cache = caches.default;
   const cacheKey = new Request(`https://internal/sparks/${dataVersion}`);
   const cached = await cache.match(cacheKey);
@@ -594,36 +678,67 @@ export interface RiverNameRow {
   series: Record<number, number>;
 }
 
-// Names that have ever ranked top-N in some (year, sex). One query: rank with a
-// window function, dedupe the id set, then re-join to pull every (year, count)
-// for those names. The (year, count DESC) covering index on name_years keeps
-// the inner window cheap.
-export async function riverNames(
-  db: D1Database,
-  perBucket = 30,
-): Promise<RiverNameRow[]> {
-  const r = await db
-    .prepare(
-      `WITH ranked AS (
-         SELECT n.id,
-                ROW_NUMBER() OVER (PARTITION BY ny.year, n.sex ORDER BY ny.count DESC) AS rn
-           FROM name_years ny
-           JOIN names n ON n.id = ny.name_id
-       ),
-       river_ids AS (SELECT DISTINCT id FROM ranked WHERE rn <= ?1)
-       SELECT n.id AS id, n.name AS name, n.sex AS sex,
-              n.peak_year AS peak_year, n.peak_count AS peak_count,
-              ny.year AS year, ny.count AS count
-         FROM river_ids r
-         JOIN names n ON n.id = r.id
-         JOIN name_years ny ON ny.name_id = r.id
-        ORDER BY n.id, ny.year`,
-    )
-    .bind(perBucket)
-    .all<{ id: number; name: string; sex: Sex; peak_year: number; peak_count: number; year: number; count: number }>();
+// Names that have ever ranked top-N in some (year, sex). Two phases: first
+// collect the qualifying name ids by ranking one year at a time, then pull the
+// full (year, count) series for just those ids.
+//
+// Like topByYear, the id collection must not rank over the whole name_years
+// table in a single window function — that materializes ~2M rows at once and
+// exceeds the Worker memory budget D1 runs under (Cloudflare Error 1101). Each
+// per-year statement filters on `WHERE ny.year = ?` (name_years(year, count
+// DESC) index), keeping peak memory bounded, and is pipelined via db.batch().
+export async function riverNames(db: D1Database, perBucket = 30): Promise<RiverNameRow[]> {
+  const years = await listDataYears(db);
+  if (!years.length) return [];
+
+  const ids = new Set<number>();
+  for (let i = 0; i < years.length; i += YEAR_BATCH) {
+    const slice = years.slice(i, i + YEAR_BATCH);
+    const batch = slice.map((year) =>
+      db
+        .prepare(
+          `WITH ranked AS (
+             SELECT n.id AS id,
+                    ROW_NUMBER() OVER (PARTITION BY n.sex ORDER BY ny.count DESC) AS rn
+               FROM name_years ny
+               JOIN names n ON n.id = ny.name_id
+              WHERE ny.year = ?1
+           )
+           SELECT DISTINCT id FROM ranked WHERE rn <= ?2`,
+        )
+        .bind(year, perBucket),
+    );
+    const results = await db.batch<{ id: number }>(batch);
+    for (const res of results) {
+      for (const row of res.results ?? []) ids.add(row.id);
+    }
+  }
+  if (!ids.size) return [];
+
+  // Pull every (year, count) for the qualifying ids. The IN list is chunked to
+  // stay under D1's bound-variable ceiling.
+  const rows = await chunkedIn<{
+    id: number;
+    name: string;
+    sex: Sex;
+    peak_year: number;
+    peak_count: number;
+    year: number;
+    count: number;
+  }>(
+    db,
+    [...ids],
+    (ph) => `SELECT n.id AS id, n.name AS name, n.sex AS sex,
+                    n.peak_year AS peak_year, n.peak_count AS peak_count,
+                    ny.year AS year, ny.count AS count
+               FROM names n
+               JOIN name_years ny ON ny.name_id = n.id
+              WHERE n.id IN (${ph})
+              ORDER BY n.id, ny.year`,
+  );
 
   const grouped = new Map<number, RiverNameRow>();
-  for (const row of r.results ?? []) {
+  for (const row of rows) {
     let g = grouped.get(row.id);
     if (!g) {
       g = {
@@ -660,11 +775,7 @@ export interface InitialNameRow {
 export type EndingNameRow = InitialNameRow;
 
 // Top names by first letter, ranked separately for each recorded sex.
-export async function topByInitial(
-  db: D1Database,
-  initial: string,
-  perSex = 25,
-): Promise<InitialNameRow[]> {
+export async function topByInitial(db: D1Database, initial: string, perSex = 25): Promise<InitialNameRow[]> {
   const letter = initial.toLowerCase();
   const nextLetter = String.fromCharCode(letter.charCodeAt(0) + 1);
   const cappedLimit = Math.max(1, Math.min(50, Math.floor(perSex)));
@@ -691,11 +802,7 @@ export async function topByInitial(
 }
 
 // Top names by final letter, ranked separately for each recorded sex.
-export async function topByEnding(
-  db: D1Database,
-  ending: string,
-  perSex = 25,
-): Promise<EndingNameRow[]> {
+export async function topByEnding(db: D1Database, ending: string, perSex = 25): Promise<EndingNameRow[]> {
   const letter = ending.toLowerCase();
   const cappedLimit = Math.max(1, Math.min(50, Math.floor(perSex)));
   const r = await db
@@ -740,13 +847,10 @@ export async function listBlogPosts(
   return r.results ?? [];
 }
 
-export async function getBlogPost(
-  db: D1Database,
-  slug: string,
-): Promise<BlogPost | null> {
+export async function getBlogPost(db: D1Database, slug: string): Promise<BlogPost | null> {
   const r = await db
     .prepare(
-      `SELECT id, slug, title, description, body_html AS bodyHtml,
+      `SELECT id, slug, title, description, body_html AS bodyHtml, body_md AS bodyMd,
               published_at AS publishedAt, created_at AS createdAt,
               updated_at AS updatedAt, status, author, og_image AS ogImage
          FROM blog_posts
@@ -760,6 +864,43 @@ export async function getBlogPost(
 
 // ─── Blog admin ──────────────────────────────────────────────────────────────
 
+export async function listAllBlogPostsAdmin(
+  db: D1Database,
+): Promise<import("./schema").BlogPostAdminSummary[]> {
+  const r = await db
+    .prepare(
+      `SELECT slug, title, status, published_at AS publishedAt, updated_at AS updatedAt
+         FROM blog_posts
+        ORDER BY updated_at DESC`,
+    )
+    .all<import("./schema").BlogPostAdminSummary>();
+  return r.results ?? [];
+}
+
+export async function getBlogPostAdmin(
+  db: D1Database,
+  slug: string,
+): Promise<BlogPost | null> {
+  const r = await db
+    .prepare(
+      `SELECT id, slug, title, description, body_html AS bodyHtml, body_md AS bodyMd,
+              published_at AS publishedAt, created_at AS createdAt,
+              updated_at AS updatedAt, status, author, og_image AS ogImage
+         FROM blog_posts
+        WHERE slug = ?1`,
+    )
+    .bind(slug)
+    .first<BlogPost>();
+  return r ?? null;
+}
+
+export async function deleteBlogPost(
+  db: D1Database,
+  slug: string,
+): Promise<void> {
+  await db.prepare(`DELETE FROM blog_posts WHERE slug = ?1`).bind(slug).run();
+}
+
 export async function upsertBlogPost(
   db: D1Database,
   post: {
@@ -767,6 +908,7 @@ export async function upsertBlogPost(
     title: string;
     description: string;
     bodyHtml: string;
+    bodyMd?: string | null;
     status: "draft" | "published";
     author: string;
     ogImage?: string | null;
@@ -775,12 +917,13 @@ export async function upsertBlogPost(
 ): Promise<void> {
   await db
     .prepare(
-      `INSERT INTO blog_posts(slug, title, description, body_html, status, author, og_image, published_at, updated_at)
-       VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, datetime('now'))
+      `INSERT INTO blog_posts(slug, title, description, body_html, body_md, status, author, og_image, published_at, updated_at)
+       VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, datetime('now'))
        ON CONFLICT(slug) DO UPDATE SET
          title=excluded.title,
          description=excluded.description,
          body_html=excluded.body_html,
+         body_md=excluded.body_md,
          status=excluded.status,
          author=excluded.author,
          og_image=excluded.og_image,
@@ -792,6 +935,7 @@ export async function upsertBlogPost(
       post.title,
       post.description,
       post.bodyHtml,
+      post.bodyMd ?? null,
       post.status,
       post.author,
       post.ogImage ?? null,
@@ -826,4 +970,117 @@ export async function topByDecade(
     .bind(startYear, endYear, perSex)
     .all<DecadeTopRow>();
   return r.results ?? [];
+}
+
+// Enrichment System: read the four precomputed dossier layers for one
+// (name_lower, sex) in a single round of parallel queries. All heavy
+// computation happens offline in scripts/build-enrichment.ts — this only
+// reads rows.
+export async function getNameEnrichmentBundle(
+  db: D1Database,
+  nameLower: string,
+  sex: Sex,
+): Promise<NameEnrichmentBundle> {
+  const [profile, catalysts, historical, anomalies] = await Promise.all([
+    db
+      .prepare(
+        `SELECT name_lower, sex, total_living_est, median_age, age_range_low,
+                age_range_high, wave_topology, latest_pct, analysis_year, source_version
+           FROM name_enrichment_profiles
+          WHERE name_lower = ?1 AND sex = ?2`,
+      )
+      .bind(nameLower, sex)
+      .first<NameEnrichmentProfile>(),
+    db
+      .prepare(
+        `SELECT trigger_year, catalyst_title, catalyst_type, impact_score, description, source_url
+           FROM name_catalysts
+          WHERE name_lower = ?1 AND sex = ?2
+          ORDER BY trigger_year ASC`,
+      )
+      .bind(nameLower, sex)
+      .all<NameCatalyst>(),
+    db
+      .prepare(
+        `SELECT era_year, top_occupations, primary_region, urban_vs_rural
+           FROM name_historical_profiles
+          WHERE name_lower = ?1 AND sex = ?2
+          ORDER BY era_year ASC`,
+      )
+      .bind(nameLower, sex)
+      .all<{
+        era_year: number;
+        top_occupations: string;
+        primary_region: string;
+        urban_vs_rural: string;
+      }>(),
+    db
+      .prepare(
+        `SELECT state, era_start_year, location_quotient, name_births, historical_peak_year, anomaly_type
+           FROM name_regional_anomalies
+          WHERE name_lower = ?1 AND sex = ?2
+          ORDER BY location_quotient DESC
+          LIMIT 3`,
+      )
+      .bind(nameLower, sex)
+      .all<NameRegionalAnomaly>(),
+  ]);
+
+  return {
+    profile: profile ?? null,
+    catalysts: catalysts.results ?? [],
+    historicalProfiles: (historical.results ?? []).map((row) => ({
+      era_year: row.era_year,
+      primary_region: row.primary_region,
+      urban_vs_rural: row.urban_vs_rural,
+      top_occupations: parseOccupations(row.top_occupations),
+    })),
+    regionalAnomalies: anomalies.results ?? [],
+  };
+}
+
+function parseOccupations(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? parsed.map((v) => String(v)) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Reads the precomputed diaspora summary for one (name, sex) and parses its
+// JSON columns into the API/SSR contract. Returns null when not computed.
+export async function getNameDiaspora(db: D1Database, nameLower: string, sex: Sex): Promise<DiasporaResponse | null> {
+  const row = await db
+    .prepare(
+      `SELECT name, name_lower, sex, origin_state, origin_year, peak_national_year,
+              spread_json, never_adopted, total_states, diffusion_years
+         FROM name_diaspora
+        WHERE name_lower = ?1 AND sex = ?2`,
+    )
+    .bind(nameLower, sex)
+    .first<NameDiasporaRow>();
+  if (!row) return null;
+
+  const spread = parseJsonArray<DiasporaSpreadPoint>(row.spread_json);
+  const neverAdopted = parseJsonArray<string>(row.never_adopted);
+  return {
+    name: row.name,
+    sex: row.sex,
+    origin: row.origin_state && row.origin_year !== null ? { state: row.origin_state, year: row.origin_year } : null,
+    peakNationalYear: row.peak_national_year,
+    spread,
+    neverAdopted,
+    totalStates: row.total_states,
+    diffusionYears: row.diffusion_years,
+  };
+}
+
+function parseJsonArray<T>(raw: string): T[] {
+  try {
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
+  } catch {
+    return [];
+  }
 }

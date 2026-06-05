@@ -4,7 +4,7 @@
 // renames staging onto live in one transaction.
 
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
-import type { ChunkRow, YearTotalRow } from "./chunks";
+import type { ChunkRow, StateRow, YearTotalRow } from "./chunks";
 
 export const RAW_STAGING_DDL = `CREATE TABLE IF NOT EXISTS name_year_raw_staging (
   run_id TEXT NOT NULL,
@@ -46,6 +46,24 @@ export async function insertRowChunk(
       slice.map(() => "(?, ?, ?, ?, ?)").join(",");
     const binds: (string | number)[] = [];
     for (const r of slice) binds.push(runId, year, r.name, r.sex, r.count);
+    stmts.push(db.prepare(sql).bind(...binds));
+  }
+  await db.batch(stmts);
+}
+
+// Raw state rows go straight to the live name_states table. INSERT OR REPLACE
+// is idempotent on the PK so queue retries are safe; no staging is needed
+// because name_states is read only by the diaspora compute step, never /api/*.
+export async function insertStateRows(db: D1Database, rows: StateRow[]): Promise<void> {
+  if (!rows.length) return;
+  const stmts: D1PreparedStatement[] = [];
+  for (let i = 0; i < rows.length; i += STMT_ROWS) {
+    const slice = rows.slice(i, i + STMT_ROWS);
+    const sql =
+      `INSERT OR REPLACE INTO name_states(name, sex, year, state, count) VALUES ` +
+      slice.map(() => "(?, ?, ?, ?, ?)").join(",");
+    const binds: (string | number)[] = [];
+    for (const r of slice) binds.push(r.name, r.sex, r.year, r.state, r.count);
     stmts.push(db.prepare(sql).bind(...binds));
   }
   await db.batch(stmts);

@@ -9,12 +9,15 @@ import {
   classify,
   enrichName,
   getMeta,
+  getNameDiaspora,
   getNameDiscoveryClusters,
+  getNameEnrichmentBundle,
   getNameWithSeries,
   getTopNamesForYear,
   getYearTotalsForYears,
   listRelatedNames,
   META_KEYS,
+  pageShell,
   renderFullPage,
   type NameRecord,
   type Sex,
@@ -93,7 +96,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   };
   const cls = classify({ series: record.series, yM: record.yM })!;
   const primaryRow = rows.find((r) => r.row.sex === primary.sex) ?? rows[0]!;
-  const [relatedNames, discovery, peerNames, yearTotals, enrichment] = await Promise.all([
+  const [relatedNames, discovery, peerNames, yearTotals, enrichment, enrichmentBundle, diaspora] = await Promise.all([
     listRelatedNames(ctx.env.DB, lower, primaryRow.row.sex, primaryRow.row.status, primaryRow.row.peak_year, 6),
     getNameDiscoveryClusters(ctx.env.DB, {
       currentNameLower: lower,
@@ -105,6 +108,8 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     getTopNamesForYear(ctx.env.DB, cls.peakYear, 5).catch(() => []),
     getYearTotalsForYears(ctx.env.DB, primaryRow.row.sex, [cls.peakYear, record.yM]).catch(() => []),
     enrichName(ctx.env.DB, record.name, record.sex).catch(() => null),
+    getNameEnrichmentBundle(ctx.env.DB, lower, primaryRow.row.sex).catch(() => null),
+    getNameDiaspora(ctx.env.DB, lower, primaryRow.row.sex).catch(() => null),
   ]);
   const url = new URL(ctx.request.url);
   const canonical = `${url.origin}/name/${encodeURIComponent(record.name)}/`;
@@ -116,6 +121,8 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     peerNames,
     yearTotals,
     enrichmentSnippet: enrichment?.snippet,
+    enrichment: enrichmentBundle ?? undefined,
+    diaspora: diaspora ?? undefined,
     affiliateTag: ctx.env.AMAZON_ASSOCIATES_TAG,
   });
   return new Response(html, {
@@ -143,19 +150,18 @@ function withoutBody(response: Response): Response {
 
 function renderNotFoundPage(name: string): string {
   const safe = name.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]!);
-  return `<!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${safe} — not found | NobodyNamed</title>
-<link rel="preload" href="/assets/style.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/assets/style.css"></noscript>
-</head><body><div class="page">
-<header class="site"><a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a></header>
+  return pageShell({
+    title: `${safe} — not found | NobodyNamed`,
+    description: "That name is not in the SSA file. It may have been given to fewer than five babies a year, recorded with another spelling, or never issued through the baby-name dataset.",
+    canonical: `https://nobodynamed.com/name/${encodeURIComponent(name)}/`,
+    body: `
 <div class="report">
   <div class="section-label">404</div>
   <h1>${safe}</h1>
   <p class="lede">That name is not in the SSA file. It may have been given to fewer than five babies a year, recorded with another spelling, or never issued through the baby-name dataset.</p>
   <p><a href="/">Try another name</a>.</p>
-</div></div></body></html>`;
+</div>
+`,
+    footerVariant: "full",
+  });
 }

@@ -11,10 +11,14 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://nobodynamed.com/viz/explore">
 <meta property="og:image" content="https://nobodynamed.com/api/og/default">
-<meta property="og:image:type" content="image/svg+xml">
+<meta property="og:image:type" content="image/png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://nobodynamed.com/api/og/default">
-<script type="application/ld+json">
+    <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+    <link rel="stylesheet" href="/assets/style.css">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@graph": [
@@ -445,6 +449,7 @@
 </head>
 <body>
 
+<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#818cf8);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
 <div class="hero">
   <h1>The Story of<br>Every Name</h1>
   <p>135 years of baby naming data from the US Social Security Administration and the UK Office for National Statistics, brought to life.</p>
@@ -732,6 +737,8 @@ const phantomNames = [{"name":"Martha","sex":"F","bestRank":14,"peakYear":1880,"
 const tooltip = d3.select('#tooltip');
 const fmt = d3.format(',');
 const fmtK = d => d >= 1000000 ? d3.format('.1f')(d / 1000000) + 'M' : d >= 1000 ? d3.format('.0f')(d / 1000) + 'K' : d;
+const usTotalsByYear = new Map(usTotals.map(d => [d.year, d]));
+const diversityByYear = new Map(diversityData.map(d => [d.year, d]));
 
 function showTooltip(evt, html) {
   tooltip.html(html).style('opacity', 1)
@@ -742,6 +749,20 @@ function hideTooltip() { tooltip.style('opacity', 0); }
 
 function getWidth(el) {
   return el.getBoundingClientRect().width;
+}
+
+function rafHover(handler) {
+  let frame = 0;
+  let lastEvent = null;
+  return function(evt) {
+    lastEvent = evt;
+    if (frame) return;
+    const target = this;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      if (lastEvent) handler.call(target, lastEvent);
+    });
+  };
 }
 
 // ============================================================
@@ -837,10 +858,10 @@ function getWidth(el) {
   const bisect = d3.bisector(d => d.year).left;
 
   g.append('rect').attr('width', w).attr('height', h).attr('fill', 'transparent')
-    .on('mousemove', function(evt) {
+    .on('mousemove', rafHover(function(evt) {
       const [mx] = d3.pointer(evt);
       const yr = Math.round(x.invert(mx));
-      const d = usTotals.find(t => t.year === yr);
+      const d = usTotalsByYear.get(yr);
       if (!d) return;
       hoverLine.style('display', null).attr('x1', x(yr)).attr('x2', x(yr));
       showTooltip(evt, `
@@ -849,7 +870,7 @@ function getWidth(el) {
         <div style="color:#f472b6"><span class="value">${fmt(d.F)}</span> girls</div>
         <div style="color:var(--text); margin-top:4px"><span class="value">${fmt(d.M + d.F)}</span> total</div>
       `);
-    })
+    }))
     .on('mouseleave', () => { hoverLine.style('display', 'none'); hideTooltip(); });
 
   // Stats
@@ -897,6 +918,7 @@ function getWidth(el) {
     year: d.year,
     ratio: d.M / d.F * 1000
   }));
+  const ratioByYear = new Map(ratioData.map(d => [d.year, d]));
 
   const svg = d3.select('#chart-ratio').append('svg')
     .attr('width', W).attr('height', H)
@@ -996,10 +1018,10 @@ function getWidth(el) {
   const hoverDot = g.append('circle').attr('r', 5).attr('fill', 'var(--accent)').attr('stroke', 'var(--bg2)').attr('stroke-width', 2).style('display', 'none');
 
   g.append('rect').attr('width', w).attr('height', h).attr('fill', 'transparent')
-    .on('mousemove', function(evt) {
+    .on('mousemove', rafHover(function(evt) {
       const [mx] = d3.pointer(evt);
       const yr = Math.round(x.invert(mx));
-      const d = ratioData.find(t => t.year === yr);
+      const d = ratioByYear.get(yr);
       if (!d) return;
       hoverLine.style('display', null).attr('x1', x(yr)).attr('x2', x(yr));
       hoverDot.style('display', null).attr('cx', x(yr)).attr('cy', y(d.ratio)).attr('fill', colorScale(d.ratio));
@@ -1008,7 +1030,7 @@ function getWidth(el) {
         <div class="value" style="color:${colorScale(d.ratio)}">${d3.format(',.1f')(d.ratio)}</div>
         <div style="color:var(--muted)">boys per 1,000 girls</div>
       `);
-    })
+    }))
     .on('mouseleave', () => { hoverLine.style('display', 'none'); hoverDot.style('display', 'none'); hideTooltip(); });
 })();
 
@@ -1248,7 +1270,8 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
 
 (function drawRadial() {
   const container = document.getElementById('chart-radial');
-  const size = Math.min(getWidth(container), 600);
+  const availableWidth = getWidth(container) || getWidth(container.parentElement) - 64;
+  const size = Math.min(Math.max(availableWidth, 320), 600);
   const R = size / 2 - 40;
 
   const svg = d3.select('#chart-radial').append('svg')
@@ -1412,16 +1435,16 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
   const hoverDotB = g.append('circle').attr('r', 4).attr('fill', '#60a5fa').attr('opacity', 0);
   const hoverDotG = g.append('circle').attr('r', 4).attr('fill', '#f472b6').attr('opacity', 0);
   g.append('rect').attr('width', w).attr('height', h).attr('fill', 'transparent')
-    .on('mousemove', function(evt) {
+    .on('mousemove', rafHover(function(evt) {
       const [mx] = d3.pointer(evt);
       const yr = Math.round(x.invert(mx));
-      const d = diversityData.find(t => t.year === yr);
+      const d = diversityByYear.get(yr);
       if (!d) return;
       hoverLine.attr('x1', x(yr)).attr('x2', x(yr)).attr('opacity', 0.5);
       hoverDotB.attr('cx', x(yr)).attr('cy', y(d.top10boyPct)).attr('opacity', 1);
       hoverDotG.attr('cx', x(yr)).attr('cy', y(d.top10girlPct)).attr('opacity', 1);
       showTooltip(evt, `<div class="label">${yr}</div><div class="value">Boys top 10: ${(d.top10boyPct * 100).toFixed(1)}%</div><div>Girls top 10: ${(d.top10girlPct * 100).toFixed(1)}%</div>`);
-    })
+    }))
     .on('mouseleave', function() { hideTooltip(); hoverLine.attr('opacity', 0); hoverDotB.attr('opacity', 0); hoverDotG.attr('opacity', 0); });
 
   const legend = d3.select('#legend-diversity');
@@ -1474,16 +1497,16 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
   const hDotB2 = g2.append('circle').attr('r', 4).attr('fill', '#60a5fa').attr('opacity', 0);
   const hDotG2 = g2.append('circle').attr('r', 4).attr('fill', '#f472b6').attr('opacity', 0);
   g2.append('rect').attr('width', w).attr('height', h2).attr('fill', 'transparent')
-    .on('mousemove', function(evt) {
+    .on('mousemove', rafHover(function(evt) {
       const [mx] = d3.pointer(evt);
       const yr = Math.round(x.invert(mx));
-      const d = diversityData.find(t => t.year === yr);
+      const d = diversityByYear.get(yr);
       if (!d) return;
       hLine2.attr('x1', x(yr)).attr('x2', x(yr)).attr('opacity', 0.5);
       hDotB2.attr('cx', x(yr)).attr('cy', yE(d.entropyBoy)).attr('opacity', 1);
       hDotG2.attr('cx', x(yr)).attr('cy', yE(d.entropyGirl)).attr('opacity', 1);
       showTooltip(evt, `<div class="label">${yr}</div><div class="value">Boy entropy: ${d.entropyBoy.toFixed(2)} bits</div><div>Girl entropy: ${d.entropyGirl.toFixed(2)} bits</div>`);
-    })
+    }))
     .on('mouseleave', function() { hideTooltip(); hLine2.attr('opacity', 0); hDotB2.attr('opacity', 0); hDotG2.attr('opacity', 0); });
 
   const legend2 = d3.select('#legend-entropy');
@@ -2069,5 +2092,13 @@ document.querySelectorAll('section, .chart-container').forEach(el => {
 });
 
 </script>
+
+<footer class="site" style="width:100%;padding:1.25rem 2rem;border-top:1px solid var(--rule,rgba(255,255,255,0.1));margin-top:2rem;font-family:var(--sans,system-ui,sans-serif);font-size:0.82rem;color:var(--muted,#6b7280);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;box-sizing:border-box;">
+    <div>
+      <div style="color:var(--muted,#6b7280);">nobodynamed is a small data project about American first names.</div>
+      <div style="color:var(--muted,#6b7280);font-size:0.82rem;">Data sourced from Social Security Administration birth records (1880–present).</div>
+    </div>
+    <div><a href="/about" style="color:var(--muted,#6b7280);text-decoration:none;">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/" style="color:var(--muted,#6b7280);text-decoration:none;">SSA source</a></div>
+  </footer>
 </body>
 </html>

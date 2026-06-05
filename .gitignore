@@ -18,8 +18,22 @@ migrations/seed/
 data_src/
 names.zip
 
+# Enrichment input structure. Keep manual inputs tracked; keep generated SQL ignored.
+data/*
+!data/manual/
+!data/manual/*.csv
+!data/raw/
+!data/raw/ssa-national/
+data/raw/ssa-national/*
+!data/raw/ssa-national/.gitkeep
+!data/raw/ssa-state/
+data/raw/ssa-state/*
+!data/raw/ssa-state/.gitkeep
+!data/dist/
+data/dist/*
+!data/dist/.gitkeep
+
 # Legacy data dirs (pre-Cloudflare; kept ignored for any local checkout)
-data/
 flat/
 extra/states/
 scripts/cache/

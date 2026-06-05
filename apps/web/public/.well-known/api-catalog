@@ -1,0 +1,29 @@
+{
+  "linkset": [
+    {
+      "anchor": "https://nobodynamed.com/",
+      "api-catalog": [{"href": "https://nobodynamed.com/.well-known/api-catalog"}],
+      "service-doc": [{"href": "https://nobodynamed.com/about", "type": "text/html"}]
+    },
+    {
+      "anchor": "https://nobodynamed.com/api/search",
+      "service-doc": [{"href": "https://nobodynamed.com/about", "type": "text/html"}]
+    },
+    {
+      "anchor": "https://nobodynamed.com/api/name/{name}",
+      "service-doc": [{"href": "https://nobodynamed.com/about", "type": "text/html"}]
+    },
+    {
+      "anchor": "https://nobodynamed.com/api/landing/{kind}",
+      "service-doc": [{"href": "https://nobodynamed.com/about", "type": "text/html"}]
+    },
+    {
+      "anchor": "https://nobodynamed.com/api/meta",
+      "service-doc": [{"href": "https://nobodynamed.com/about", "type": "text/html"}]
+    },
+    {
+      "anchor": "https://nobodynamed.com/api/year/{year}",
+      "service-doc": [{"href": "https://nobodynamed.com/about", "type": "text/html"}]
+    }
+  ]
+}
