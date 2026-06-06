@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Living Map — NobodyNamed</title>
+<meta name="description" content="A treemap of every living American by first name. Size = estimated living bearers. Color = median age. The name landscape as it exists today.">
+<link rel="canonical" href="https://nobodynamed.com/viz/living-treemap">
+<meta property="og:title" content="The Living Map — NobodyNamed">
+<meta property="og:description" content="A treemap of every living American by first name. The name landscape as it exists right now.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #07070f;
+    --bg2: #0e0e1a;
+    --text: #e8e6e3;
+    --muted: #6b7280;
+    --rule: rgba(255,255,255,0.06);
+    --accent: #f59e0b;
+  }
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 640px;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .controls {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0 2rem 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    align-items: center;
+  }
+  .btn {
+    padding: 0.3rem 0.85rem;
+    border-radius: 20px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+  .group-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-left: 0.75rem;
+  }
+
+  .legend-wrap {
+    padding: 0 2rem 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    flex-wrap: wrap;
+  }
+  #age-legend { display: flex; height: 12px; width: 200px; border-radius: 6px; overflow: hidden; }
+  .legend-labels { display: flex; justify-content: space-between; width: 200px; font-size: 0.65rem; }
+
+  #chart-wrap {
+    padding: 0 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  #treemap {
+    width: 100%;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .tm-cell {
+    position: absolute;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.5);
+    cursor: pointer;
+    transition: opacity 0.15s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2px;
+  }
+  .tm-cell:hover { opacity: 0.85; z-index: 2; outline: 2px solid rgba(255,255,255,0.5); }
+  .tm-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    color: rgba(0,0,0,0.8);
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+  }
+  .tm-count {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6em;
+    color: rgba(0,0,0,0.5);
+    white-space: nowrap;
+  }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: rgba(10,10,15,0.97);
+    border: 1px solid rgba(245,158,11,0.4);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    z-index: 1000;
+    max-width: 240px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .tooltip .tt-name { font-weight: 700; font-size: 1.2rem; color: var(--text); margin-bottom: 4px; }
+  .tooltip .tt-detail { color: var(--muted); font-size: 0.82rem; line-height: 1.7; }
+  .tooltip .tt-detail span { color: var(--accent); font-family: 'Space Mono', monospace; }
+
+  .summary {
+    display: flex;
+    gap: 2.5rem;
+    max-width: 1200px;
+    margin: 1.5rem auto 0;
+    padding: 0 2rem 2rem;
+    flex-wrap: wrap;
+  }
+  .summary .stat {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .summary .stat strong { color: var(--text); font-size: 1.1rem; display: block; margin-bottom: 2px; }
+
+  #loading {
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+  }
+
+  @media (max-width: 640px) {
+    .hero, .controls, #chart-wrap, .legend-wrap, .summary { padding-left: 1rem; padding-right: 1rem; }
+    h1 { font-size: 1.8rem; }
+  }
+</style>
+</head>
+<body>
+
+<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#818cf8);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
+<header class="site" style="width:100%;padding:0.8rem 2rem 1rem;border-bottom:1px solid var(--rule,rgba(255,255,255,0.1));margin:0 auto;box-sizing:border-box;">
+    <a class="brand" href="/" aria-label="NobodyNamed home" style="display:inline-flex;align-items:center;color:var(--text,#e8e6e3);text-decoration:none;"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" style="filter:invert(1) brightness(1.2);display:block;width:clamp(160px,20vw,210px);aspect-ratio:240/44;height:auto;"></a>
+    <nav aria-label="Main navigation" style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0.2rem 0.8rem;font-family:var(--sans,system-ui,sans-serif);">
+      <a href="/extinct" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Extinct</a>
+      <a href="/endangered" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Endangered</a>
+      <a href="/comeback" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Comebacks</a>
+      <a href="/year" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Birth year</a>
+      <a href="/rising" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Rising</a>
+      <a href="/viz" style="color:var(--text,#e8e6e3);font-size:0.83rem;font-weight:600;text-decoration:none;" aria-current="page">Visualizations</a>
+      <a href="/blog/" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Namecalling</a>
+      <a href="/about" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">About</a>
+    </nav>
+  </header>
+
+<div id="viz-content" class="hero">
+  <div class="kicker">32 / The Census</div>
+  <h1>The Living Map</h1>
+  <p class="lede">Not what parents are choosing now — what the American name landscape actually looks like today. Each rectangle is sized by estimated living bearers, colored by median age. The names of the young glow warm; the names of the old cool to blue.</p>
+</div>
+
+<div class="controls">
+  <button class="btn active" data-sex="all">All</button>
+  <button class="btn" data-sex="F">Girls</button>
+  <button class="btn" data-sex="M">Boys</button>
+  <span class="group-label">Color:</span>
+  <button class="btn active" data-color="age">By median age</button>
+  <button class="btn" data-color="topology">By wave type</button>
+</div>
+
+<div class="legend-wrap">
+  <div id="legend-age">
+    <canvas id="age-legend" width="200" height="12"></canvas>
+    <div class="legend-labels"><span>Young (5)</span><span>Mid (40)</span><span>Old (80+)</span></div>
+  </div>
+  <div id="legend-topology" style="display:none;gap:0.8rem;flex-wrap:wrap;">
+    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#f43f5e;display:inline-block"></span>Flash Flood</span>
+    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#3b82f6;display:inline-block"></span>Glacier</span>
+    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#a78bfa;display:inline-block"></span>Steady Decline</span>
+    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#4ade80;display:inline-block"></span>Steady Wave</span>
+    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#f59e0b;display:inline-block"></span>Plateau</span>
+  </div>
+  <span>· Hover for details · Click to open name page</span>
+</div>
+
+<div id="chart-wrap">
+  <div id="loading">COUNTING THE LIVING…</div>
+  <div id="treemap"></div>
+</div>
+
+<div class="summary" id="summary" style="display:none">
+  <div class="stat"><strong id="stat-total">—</strong>Total estimated living</div>
+  <div class="stat"><strong id="stat-names">—</strong>Names shown</div>
+  <div class="stat"><strong id="stat-biggest">—</strong>Most common</div>
+  <div class="stat"><strong id="stat-youngest">—</strong>Youngest median</div>
+  <div class="stat"><strong id="stat-oldest">—</strong>Oldest median</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+let allData = [];
+let activeSex = 'all';
+let activeColor = 'age';
+
+const ageScale = d3.scaleSequential()
+  .interpolator(d3.interpolateRgbBasis(['#ff6b6b','#ffa726','#ffee58','#66bb6a','#42a5f5','#7e57c2','#5c6bc0']))
+  .domain([5, 85]);
+
+const topoColors = {
+  'Flash Flood': '#f43f5e',
+  'Glacier': '#3b82f6',
+  'Steady Decline': '#a78bfa',
+  'Steady Wave': '#4ade80',
+  'Plateau': '#f59e0b'
+};
+
+function drawLegend() {
+  const canvas = document.getElementById('age-legend');
+  const ctx = canvas.getContext('2d');
+  for (let i = 0; i < 200; i++) {
+    const age = 5 + (i / 199) * 80;
+    ctx.fillStyle = ageScale(age);
+    ctx.fillRect(i, 0, 1, 12);
+  }
+}
+drawLegend();
+
+function fmt(n) {
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
+  return String(n);
+}
+
+function titleCase(s) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function cellColor(d) {
+  if (activeColor === 'topology') return topoColors[d.waveTopology] || '#555';
+  return ageScale(d.medianAge);
+}
+
+function textColor(d) {
+  if (activeColor === 'topology') return 'rgba(0,0,0,0.8)';
+  return d.medianAge > 55 ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)';
+}
+
+function drawTreemap(data) {
+  const wrap = document.getElementById('treemap');
+  wrap.innerHTML = '';
+
+  const filtered = activeSex === 'all' ? data : data.filter(d => d.sex === activeSex);
+  if (!filtered.length) return;
+
+  const width = wrap.parentElement.clientWidth;
+  const height = Math.max(500, Math.min(800, window.innerHeight - 300));
+  wrap.style.height = height + 'px';
+
+  const root = d3.hierarchy({ children: filtered })
+    .sum(d => d.totalLivingEst || 0)
+    .sort((a, b) => b.value - a.value);
+
+  d3.treemap()
+    .size([width, height])
+    .padding(1)
+    .round(true)
+    (root);
+
+  const tip = document.getElementById('tooltip');
+
+  for (const leaf of root.leaves()) {
+    const d = leaf.data;
+    const w = leaf.x1 - leaf.x0;
+    const h = leaf.y1 - leaf.y0;
+    if (w < 2 || h < 2) continue;
+
+    const cell = document.createElement('div');
+    cell.className = 'tm-cell';
+    cell.style.left = leaf.x0 + 'px';
+    cell.style.top = leaf.y0 + 'px';
+    cell.style.width = w + 'px';
+    cell.style.height = h + 'px';
+    cell.style.background = cellColor(d);
+
+    const fontSize = Math.min(w / (d.name.length * 0.65), h * 0.4, 28);
+    if (fontSize >= 7) {
+      const nameEl = document.createElement('div');
+      nameEl.className = 'tm-name';
+      nameEl.style.fontSize = fontSize + 'px';
+      nameEl.style.color = textColor(d);
+      nameEl.textContent = titleCase(d.name);
+      cell.appendChild(nameEl);
+
+      if (fontSize >= 10 && h > 30) {
+        const countEl = document.createElement('div');
+        countEl.className = 'tm-count';
+        countEl.style.fontSize = Math.max(8, fontSize * 0.5) + 'px';
+        countEl.style.color = textColor(d).replace('0.8', '0.5').replace('0.9', '0.6');
+        countEl.textContent = fmt(d.totalLivingEst);
+        cell.appendChild(countEl);
+      }
+    }
+
+    cell.addEventListener('mousemove', (event) => {
+      tip.innerHTML = `
+        <div class="tt-name">${titleCase(d.name)} <span style="font-size:0.7em;color:var(--muted)">${d.sex === 'F' ? '♀' : '♂'}</span></div>
+        <div class="tt-detail">
+          Living: <span>${d.totalLivingEst.toLocaleString()}</span><br>
+          Median age: <span>${d.medianAge}</span><br>
+          Core range: <span>${d.ageRangeLow}–${d.ageRangeHigh}</span><br>
+          Type: <span>${d.waveTopology}</span>
+        </div>`;
+      tip.style.opacity = 1;
+      tip.style.left = Math.min(event.clientX + 16, window.innerWidth - 260) + 'px';
+      tip.style.top = (event.clientY - 80) + 'px';
+    });
+    cell.addEventListener('mouseleave', () => { tip.style.opacity = 0; });
+    cell.addEventListener('click', () => {
+      window.open(`/name/${d.name}`, '_blank');
+    });
+
+    wrap.appendChild(cell);
+  }
+
+  // Summary stats
+  const total = filtered.reduce((s, d) => s + d.totalLivingEst, 0);
+  const biggest = filtered[0];
+  const youngest = filtered.reduce((a, b) => a.medianAge < b.medianAge ? a : b);
+  const oldest = filtered.reduce((a, b) => a.medianAge > b.medianAge ? a : b);
+
+  document.getElementById('stat-total').textContent = total.toLocaleString();
+  document.getElementById('stat-names').textContent = filtered.length.toLocaleString();
+  document.getElementById('stat-biggest').textContent = `${titleCase(biggest.name)} (${fmt(biggest.totalLivingEst)})`;
+  document.getElementById('stat-youngest').textContent = `${titleCase(youngest.name)} (${youngest.medianAge})`;
+  document.getElementById('stat-oldest').textContent = `${titleCase(oldest.name)} (${oldest.medianAge})`;
+  document.getElementById('summary').style.display = '';
+}
+
+// Controls
+document.querySelectorAll('[data-sex]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-sex]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeSex = btn.dataset.sex;
+    drawTreemap(allData);
+  });
+});
+
+document.querySelectorAll('[data-color]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-color]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeColor = btn.dataset.color;
+    document.getElementById('legend-age').style.display = activeColor === 'age' ? '' : 'none';
+    document.getElementById('legend-topology').style.display = activeColor === 'topology' ? 'flex' : 'none';
+    drawTreemap(allData);
+  });
+});
+
+// Responsive redraw
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => drawTreemap(allData), 200);
+});
+
+// Load data
+fetch('/api/living-treemap?limit=500')
+  .then(r => r.json())
+  .then(data => {
+    allData = data.names;
+    document.getElementById('loading').remove();
+    drawTreemap(allData);
+  })
+  .catch(() => {
+    document.getElementById('loading').textContent = 'Could not load data.';
+  });
+</script>
+
+<footer class="site" style="width:100%;padding:1.25rem 2rem;border-top:1px solid var(--rule,rgba(255,255,255,0.1));margin-top:2rem;font-family:var(--sans,system-ui,sans-serif);font-size:0.82rem;color:var(--muted,#6b7280);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;box-sizing:border-box;">
+    <div>
+      <div style="color:var(--muted,#6b7280);">nobodynamed is a small data project about American first names.</div>
+      <div style="color:var(--muted,#6b7280);font-size:0.82rem;">Data sourced from Social Security Administration birth records (1880–present).</div>
+    </div>
+    <div><a href="/about" style="color:var(--muted,#6b7280);text-decoration:none;">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/" style="color:var(--muted,#6b7280);text-decoration:none;">SSA source</a></div>
+  </footer>
+</body>
+</html>
