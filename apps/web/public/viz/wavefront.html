@@ -494,15 +494,22 @@ function stop() {
   document.getElementById('play-btn').textContent = '▶ Play';
 }
 
+let activeController = null;
+
 async function loadName(name) {
   stop();
+  if (activeController) activeController.abort();
+  const controller = new AbortController();
+  activeController = controller;
+
   document.getElementById('loading').style.display = '';
   document.getElementById('controls').style.display = 'none';
   document.getElementById('legend').style.display = 'none';
   document.getElementById('stats').style.display = 'none';
 
   try {
-    const res = await fetch(`/api/diaspora/${encodeURIComponent(name)}`);
+    const res = await fetch(`/api/diaspora/${encodeURIComponent(name)}`, { signal: controller.signal });
+    if (controller.signal.aborted) return;
     if (!res.ok) {
       document.getElementById('loading').textContent = res.status === 404
         ? `No diaspora data for "${name}". Try another name.`
@@ -510,10 +517,12 @@ async function loadName(name) {
       return;
     }
     diaspora = await res.json();
-  } catch {
+  } catch (e) {
+    if (e.name === 'AbortError') return;
     document.getElementById('loading').textContent = 'Network error.';
     return;
   }
+  if (controller.signal.aborted) return;
 
   document.getElementById('loading').style.display = 'none';
 

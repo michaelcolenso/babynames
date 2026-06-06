@@ -16,7 +16,7 @@ interface TreemapRow {
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
-  const limit = Math.min(Number(url.searchParams.get("limit")) || 300, 1000);
+  const limit = Math.max(1, Math.min(Number(url.searchParams.get("limit")) || 300, 1000));
   const sexFilter = (url.searchParams.get("sex") ?? "all").toUpperCase();
 
   let whereClause = "";
