@@ -1,18 +1,20 @@
-// One-off backfill: recompute name_diaspora with first-appearance logic by
-// running the SAME validated pure function the worker uses
+// One-off backfill: recompute name_diaspora with the per-capita breakout logic
+// by running the SAME validated pure function the worker uses
 // (computeDiasporaForName), but driving it over the D1 HTTP API instead of the
 // Worker runtime.
 //
-// Mirrors the worker's pipeline exactly: page through (name, sex) pairs,
-// compute, write to name_diaspora_staging, then swap staging onto live in one
-// transaction.
+// Mirrors the worker's pipeline exactly: load the location-quotient
+// denominators once, page through (name, sex) pairs, compute, write to
+// name_diaspora_staging, then swap staging onto live in one transaction.
 //
 // Run: D1_TOKEN=<cf-api-token> npx tsx scripts/repopulate-diaspora.ts
 //   add --dry-run to compute + report a sample without writing/swapping.
 
 import {
   computeDiasporaForName,
+  STATE_DATA_START_YEAR,
   type StateCountRow,
+  type StateYearTotals,
 } from "../apps/ingest-worker/src/diaspora-compute";
 
 const TOKEN = process.env.D1_TOKEN;
@@ -20,6 +22,7 @@ const ACCT = process.env.CF_ACCOUNT_ID ?? "4e921a01da1f55b0ddb32bb38a5524ce";
 const DB = process.env.D1_DATABASE_ID ?? "fc4741db-1f6d-457c-b4e4-675a4ea3ebc2";
 const DRY_RUN = process.argv.includes("--dry-run");
 const NAMES_PAGE = 300;
+const NATIONAL_KEY = "";
 
 if (!TOKEN) {
   console.error("Set D1_TOKEN to a Cloudflare API token with D1 edit access.");
@@ -51,10 +54,37 @@ async function q<T = Record<string, unknown>>(
   return body.result?.[0]?.results ?? [];
 }
 
+// Location-quotient denominators: total births per (state, year), plus the
+// national total per year under the "" sentinel key. Mirrors the worker's
+// loadStateYearTotals.
+async function loadTotals(): Promise<StateYearTotals> {
+  const rows = await q<{ state: string; year: number; births: number }>(
+    "SELECT state, year, SUM(count) AS births FROM name_states GROUP BY state, year",
+  );
+  const totals: StateYearTotals = new Map();
+  const national = new Map<number, number>();
+  for (const row of rows) {
+    let byYear = totals.get(row.state);
+    if (!byYear) {
+      byYear = new Map();
+      totals.set(row.state, byYear);
+    }
+    byYear.set(row.year, row.births);
+    national.set(row.year, (national.get(row.year) ?? 0) + row.births);
+  }
+  totals.set(NATIONAL_KEY, national);
+  return totals;
+}
+
 interface NameAgg {
   name: string;
   sex: "M" | "F";
   rows: StateCountRow[];
+}
+
+interface NameMeta {
+  peakYear: number | null;
+  firstYear: number;
 }
 
 // One page of (name, sex) pairs with all their state rows — mirrors the
@@ -89,20 +119,22 @@ async function fetchPage(
   return [...grouped.values()];
 }
 
-async function peakYears(page: NameAgg[]): Promise<Map<string, number>> {
-  const map = new Map<string, number>();
+// National peak + first year per (name, sex). first_year gates the emergence
+// rule; peak_year is stored for the UI.
+async function nameMeta(page: NameAgg[]): Promise<Map<string, NameMeta>> {
+  const map = new Map<string, NameMeta>();
   if (!page.length) return map;
   const lo = page[0]!.name;
   const hi = page[page.length - 1]!.name;
-  const rows = await q<{ name: string; sex: string; peak_year: number }>(
-    "SELECT name, sex, peak_year FROM names WHERE name >= ?1 AND name <= ?2",
+  const rows = await q<{ name: string; sex: string; peak_year: number; first_year: number }>(
+    "SELECT name, sex, peak_year, first_year FROM names WHERE name >= ?1 AND name <= ?2",
     [lo, hi],
   );
-  for (const r of rows) map.set(r.name + "|" + r.sex, r.peak_year);
+  for (const r of rows) map.set(r.name + "|" + r.sex, { peakYear: r.peak_year, firstYear: r.first_year });
   return map;
 }
 
-async function insertBatch(aggs: NameAgg[], peaks: Map<string, number>) {
+async function insertBatch(aggs: NameAgg[], meta: Map<string, NameMeta>, totals: StateYearTotals) {
   // The D1 HTTP API caps bound variables at 100 per request; at 10 columns per
   // row that allows 10 rows, so 9 keeps a safe margin. (The Worker binding used
   // by the production compute chain allows far more — this limit is HTTP-only.)
@@ -112,7 +144,9 @@ async function insertBatch(aggs: NameAgg[], peaks: Map<string, number>) {
     const values: string[] = [];
     const binds: (string | number | null)[] = [];
     for (const agg of slice) {
-      const d = computeDiasporaForName(agg.rows);
+      const m = meta.get(agg.name + "|" + agg.sex);
+      const firstYear = m?.firstYear ?? STATE_DATA_START_YEAR;
+      const d = computeDiasporaForName(agg.rows, totals, firstYear);
       values.push("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       binds.push(
         agg.name,
@@ -120,7 +154,7 @@ async function insertBatch(aggs: NameAgg[], peaks: Map<string, number>) {
         agg.sex,
         d.originState,
         d.originYear,
-        peaks.get(agg.name + "|" + agg.sex) ?? null,
+        m?.peakYear ?? null,
         JSON.stringify(d.spread),
         JSON.stringify(d.neverAdopted),
         d.totalStates,
@@ -138,6 +172,7 @@ async function insertBatch(aggs: NameAgg[], peaks: Map<string, number>) {
 }
 
 async function main() {
+  const totals = await loadTotals();
   if (!DRY_RUN) await q("DELETE FROM name_diaspora_staging");
 
   let cursor: { name: string; sex: string } | null = null;
@@ -146,16 +181,17 @@ async function main() {
   for (;;) {
     const page = await fetchPage(cursor);
     if (!page.length) break;
-    const peaks = await peakYears(page);
+    const meta = await nameMeta(page);
     if (DRY_RUN) {
       for (const agg of page) {
-        if (["Aiden", "Madison", "Harper", "Liam"].includes(agg.name)) {
-          const d = computeDiasporaForName(agg.rows);
-          sample.push({ name: agg.name, sex: agg.sex, origin: d.originState, year: d.originYear });
+        if (["Aiden", "Madison", "Harper", "Liam", "Mary", "Kehlani"].includes(agg.name)) {
+          const m = meta.get(agg.name + "|" + agg.sex);
+          const d = computeDiasporaForName(agg.rows, totals, m?.firstYear ?? STATE_DATA_START_YEAR);
+          sample.push({ name: agg.name, sex: agg.sex, firstYear: m?.firstYear, origin: d.originState, year: d.originYear, states: d.totalStates });
         }
       }
     } else {
-      await insertBatch(page, peaks);
+      await insertBatch(page, meta, totals);
     }
     done += page.length;
     const last = page[page.length - 1]!;
