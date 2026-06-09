@@ -70,6 +70,8 @@ Shared by both apps (same `database_id` in both `wrangler.toml` files). Key tabl
 
 - `_middleware.ts` — CDN caching wrapper for all functions
 - `api/search.ts` — `GET /api/search?q=` prefix autocomplete (half-open range scan on `name_lower`)
+- `api/ai-search/index.ts` — `GET /api/ai-search?q=` semantic/hybrid search over indexed content via the Cloudflare AI Search (`AI_SEARCH`) binding
+- `api/ai-search/ask.ts` — `GET|POST /api/ai-search/ask` RAG answer with source citations via AI Search `chatCompletions()`
 - `api/name/[name].ts` — `GET /api/name/:name` — full timeseries for both sexes
 - `api/meta.ts` — `GET /api/meta` — home-page aggregates + top-10 per year
 - `api/landing/[kind].ts` — `GET /api/landing/extinct|endangered|rising`

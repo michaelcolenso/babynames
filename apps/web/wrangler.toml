@@ -11,3 +11,10 @@ migrations_dir = "../../migrations"
 [[services]]
 binding = "ENRICH_WORKER"
 service = "name-vitals-ingest"
+
+# Cloudflare AI Search (formerly AutoRAG) — semantic / RAG search over indexed
+# content. Backs /api/ai-search and /api/ai-search/ask. Change `instance_name`
+# to match the AI Search instance created in your Cloudflare dashboard.
+[[ai_search]]
+binding = "AI_SEARCH"
+instance_name = "broken-unit-f69e"
