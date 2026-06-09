@@ -16,6 +16,20 @@ const ASK_HEADERS = {
 
 const MIN_QUESTION_LEN = 3;
 
+// Guardrail against the RAG failure mode where, given a question the corpus
+// can't answer (e.g. "most common name in Texas" — this is national SSA data
+// with no state dimension), the model stitches together lexically-similar but
+// irrelevant chunks and guesses. Tell it to stay grounded and refuse instead.
+// Whether the instance honors an inline system message varies, so this is
+// belt-and-suspenders with the `grounded` flag below (empty citations =>
+// nothing actually supported the answer).
+const SYSTEM_GUARDRAIL =
+  "You are a baby-name assistant for Name Vitals, built on US national SSA data " +
+  "(name, sex, year, count) with no state-level or geographic breakdowns. Answer " +
+  "ONLY from the provided sources. If the sources do not contain the answer, say " +
+  "you don't have that data — do not guess or infer. Never fabricate statistics " +
+  "(rankings, totals, 'most common') that are not stated verbatim in the sources.";
+
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
   const q = (url.searchParams.get("q") ?? "").trim();
@@ -43,14 +57,21 @@ async function run(env: Env, q: string, limit: number): Promise<Response> {
 
   try {
     const res = await env.AI_SEARCH.chatCompletions({
-      messages: [{ role: "user", content: q }],
+      messages: [
+        { role: "system", content: SYSTEM_GUARDRAIL },
+        { role: "user", content: q },
+      ],
       ai_search_options: {
         retrieval: { retrieval_type: "hybrid", max_num_results: limit },
       },
     });
     const answer = res.choices?.[0]?.message?.content ?? "";
     const citations = (res.chunks ?? []).map(toCitation);
-    return Response.json({ q, answer, citations }, { headers: ASK_HEADERS });
+    // No supporting chunks means nothing in the corpus actually backs this
+    // answer — clients should caveat or suppress it rather than present it as
+    // fact. This is the cheapest, most reliable hallucination filter.
+    const grounded = citations.length > 0;
+    return Response.json({ q, answer, grounded, citations }, { headers: ASK_HEADERS });
   } catch (err) {
     console.error("ai-search ask error", err);
     return Response.json(
