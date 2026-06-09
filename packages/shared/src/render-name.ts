@@ -201,7 +201,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       : `<p>Down <strong>${a.declinePct ?? 0}%</strong> from its peak.</p>`;
   const totalSentence = `<p>In all, the Social Security Administration has recorded about <strong>${fmt(a.totalCount)}</strong> Americans named ${escape(record.name)} since ${a.firstYear}.</p>`;
   const exploreLinks = renderExploreLinks(record, a);
-  const diasporaMap = renderDiasporaMap(record, opts.diaspora);
+  const geographySection = renderGeography(record, a, opts);
   const relatedNames = renderRelatedNames(opts.relatedNames ?? []);
   const discoveryModule = renderDiscoveryModule(opts.discovery);
 
@@ -253,7 +253,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <div class="stat"><div class="label">${record.yM}</div><div class="value">${fmt(a.latestCount)}</div></div>
       <div class="stat"><div class="label">All-time</div><div class="value">${fmt(a.totalCount)}</div></div>
     </div>
-    ${diasporaMap}
+    ${geographySection}
     ${exploreLinks}
   </div>
 
@@ -375,6 +375,12 @@ export function renderFullPage(
 // inheritance rather than current fashion — triggers the legacy treatment.
 const LEGACY_MEDIAN_AGE = 72;
 
+// SSA state-level data begins in 1910. Names already national by then have no
+// observable geographic origin, so the /name page shows their present-day
+// "strongholds" (over-representation today) instead of a diaspora origin story.
+// Mirrors STATE_DATA_START_YEAR in the ingest worker's diaspora-compute.
+const STATE_DATA_FIRST_YEAR = 1910;
+
 const STATE_NAMES: Record<string, string> = {
   AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
   CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia",
@@ -436,19 +442,19 @@ function formatStateList(states: string[]): string {
 function diasporaNarrative(d: DiasporaResponse, name: string): string {
   const safe = escape(name);
   if (!d.origin) {
-    return `${safe} never reached SSA's state-level reporting threshold in any state.`;
+    return `${safe} never concentrated in any one state — it stayed evenly spread.`;
   }
   const origin = formatStateList(originStateNames(d));
   if (d.totalStates <= 1) {
-    return `${safe} only ever appeared in ${origin}. A true local.`;
+    return `${safe} only ever broke out in ${origin}. A true local.`;
   }
   if (d.diffusionYears < 10) {
-    return `${safe} spread fast — first recorded in ${origin} (${d.origin.year}) and seen in ${d.totalStates} states within a decade.`;
+    return `${safe} spread fast — broke out in ${origin} (${d.origin.year}) and ran high in ${d.totalStates} states within a decade.`;
   }
   if (d.diffusionYears > 50) {
     return `${safe} took ${d.diffusionYears} years to reach ${d.totalStates} states. A slow burn from ${origin} outward.`;
   }
-  return `${safe} first appeared in ${origin} (${d.origin.year}) and showed up in ${d.totalStates} states over ${d.diffusionYears} years.`;
+  return `${safe} broke out in ${origin} (${d.origin.year}) and became over-represented in ${d.totalStates} states over ${d.diffusionYears} years.`;
 }
 
 // Server-rendered choropleth on a geographic tile grid. Static here (final,
@@ -477,7 +483,7 @@ function renderDiasporaMap(record: NameRecord, d?: DiasporaResponse): string {
     const tier = diasporaTier(point?.year, originYear);
     const adoptedYear = point?.year;
     const titleYear =
-      tier === "never" ? "not recorded" : `first recorded ${adoptedYear}`;
+      tier === "never" ? "never over-represented" : `broke out ${adoptedYear}`;
     const yearAttr = adoptedYear !== undefined ? ` data-year="${adoptedYear}"` : "";
     return `<g class="dz-tile dz-${tier}" data-state="${st}"${yearAttr}>
       <title>${escape(stateName(st))}: ${titleYear}</title>
@@ -487,8 +493,8 @@ function renderDiasporaMap(record: NameRecord, d?: DiasporaResponse): string {
   }).join("");
 
   const subtitle = d.origin
-    ? `First recorded: <strong>${originLabel}, ${d.origin.year}</strong> · appeared in ${d.totalStates} ${d.totalStates === 1 ? "state" : "states"} over ${d.diffusionYears} ${d.diffusionYears === 1 ? "year" : "years"}`
-    : `This name never reached SSA's state-level reporting threshold in any state.`;
+    ? `Broke out: <strong>${originLabel}, ${d.origin.year}</strong> · over-represented in ${d.totalStates} ${d.totalStates === 1 ? "state" : "states"} over ${d.diffusionYears} ${d.diffusionYears === 1 ? "year" : "years"}`
+    : `This name never concentrated in any one state.`;
 
   const legend = `<div class="diaspora-legend" aria-hidden="true">
     <span class="dz-origin">Origin</span>
@@ -502,6 +508,90 @@ function renderDiasporaMap(record: NameRecord, d?: DiasporaResponse): string {
     <div class="section-label">Diaspora map</div>
     <p class="diaspora-narrative">${diasporaNarrative(d, record.name)}</p>
     <p class="diaspora-subtitle">${subtitle}</p>
+    <svg class="diaspora-grid" viewBox="0 0 ${w} ${h}" role="img" preserveAspectRatio="xMidYMid meet">
+      ${tiles}
+    </svg>
+    ${legend}
+  </section>`;
+}
+
+// Chooses the geographic section for a name. Names that emerged after state
+// records begin (1910) get the diaspora origin-and-spread map; names already
+// national by then have no observable origin, so they get a present-day
+// "strongholds" map built from regional over-representation instead.
+function renderGeography(record: NameRecord, a: ClassifyResult, opts: RenderReportOptions): string {
+  const emergent = a.firstYear > STATE_DATA_FIRST_YEAR;
+  if (emergent && opts.diaspora?.origin) return renderDiasporaMap(record, opts.diaspora);
+  return renderStrongholdsMap(record, opts.enrichment?.regionalAnomalies ?? []);
+}
+
+// Location-quotient bands → the diaspora choropleth's existing tile classes, so
+// the strongholds map inherits the same styling with no new CSS.
+function strongholdTier(lq: number): "origin" | "early" | "mid" | "late" | "never" {
+  if (lq >= 3) return "origin";
+  if (lq >= 2) return "early";
+  if (lq >= 1.5) return "mid";
+  if (lq >= 1.2) return "late";
+  return "never";
+}
+
+// Present-day heartland map for legacy names: shade each state by how
+// over-represented the name is there in the most recent era we have data for.
+// Static (no time-lapse) — reuses the diaspora grid markup/styling.
+function renderStrongholdsMap(record: NameRecord, anomalies: NameRegionalAnomaly[]): string {
+  if (!anomalies.length) return "";
+  // "Where it lives now": prefer the most recent era's over-representation.
+  const latestEra = Math.max(...anomalies.map((x) => x.era_start_year));
+  const current = anomalies.filter((x) => x.era_start_year === latestEra && x.location_quotient >= 1.2);
+  const pool = current.length ? current : anomalies;
+  // Keep the strongest signal per state.
+  const byState = new Map<string, NameRegionalAnomaly>();
+  for (const x of pool) {
+    const cur = byState.get(x.state);
+    if (!cur || x.location_quotient > cur.location_quotient) byState.set(x.state, x);
+  }
+  if (!byState.size) return "";
+  const ranked = [...byState.values()].sort((p, q) => q.location_quotient - p.location_quotient);
+  const top = ranked[0]!;
+  const era = top.era_start_year;
+
+  const CELL = 42;
+  const w = TILE_COLS * CELL;
+  const h = TILE_ROWS * CELL;
+  const tiles = ALL_STATES.map((st) => {
+    const pos = US_TILE_GRID[st];
+    if (!pos) return "";
+    const [rowIdx, colIdx] = pos;
+    const x = colIdx * CELL;
+    const y = rowIdx * CELL;
+    const a = byState.get(st);
+    const tier = a ? strongholdTier(a.location_quotient) : "never";
+    const title = a
+      ? `${stateName(st)}: ${a.location_quotient.toFixed(1)}× the national rate`
+      : `${stateName(st)}: near or below the national rate`;
+    return `<g class="dz-tile dz-${tier}" data-state="${st}">
+      <title>${escape(title)}</title>
+      <rect x="${x + 2}" y="${y + 2}" width="${CELL - 4}" height="${CELL - 4}" rx="4"/>
+      <text x="${x + CELL / 2}" y="${y + CELL / 2 + 4}" text-anchor="middle">${st}</text>
+    </g>`;
+  }).join("");
+
+  const others = ranked.slice(1, 4).map((x) => stateName(x.state));
+  const tail = others.length ? ` It also runs high in ${formatStateList(others)}.` : "";
+  const narrative = `${escape(record.name)} is most concentrated in <strong>${escape(stateName(top.state))}</strong> — about <strong>${top.location_quotient.toFixed(1)}×</strong> the national rate in the ${era}s.${tail}`;
+
+  const legend = `<div class="diaspora-legend" aria-hidden="true">
+    <span class="dz-origin">3×+</span>
+    <span class="dz-early">2×+</span>
+    <span class="dz-mid">1.5×+</span>
+    <span class="dz-late">1.2×+</span>
+    <span class="dz-never">~ national</span>
+  </div>`;
+
+  return `<section class="diaspora-map" id="strongholds-map" aria-label="${escape(record.name)} geographic strongholds across the United States">
+    <div class="section-label">Where it lives now</div>
+    <p class="diaspora-narrative">${narrative}</p>
+    <p class="diaspora-subtitle">States where ${escape(record.name)} is given more often than the national average — its present-day heartland.</p>
     <svg class="diaspora-grid" viewBox="0 0 ${w} ${h}" role="img" preserveAspectRatio="xMidYMid meet">
       ${tiles}
     </svg>
