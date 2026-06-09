@@ -15,6 +15,31 @@ visual. Author = `NobodyNamed`.
 
 ---
 
+## Validated by search demand — GSC, last 3 months
+
+581 distinct queries; ~70 clicks / ~6k impressions; US-dominant; site in early ramp.
+Intent is already clear (full analysis: `docs/seo/2026-06-09-gsc-blog-demand.md`):
+
+| Intent cluster | Queries | Moat |
+| --- | ---: | --- |
+| Decade / year / generation | 136 | medium |
+| Name popularity + rarity | ~145 | medium |
+| "names like X" (discovery) | 70 | medium |
+| **"how many people are named X"** | **25** | **high — unique** |
+| **"how old is X" / age** | **12** | **high — unique** |
+| extinct / endangered / rarest | 8 | high |
+
+Two takeaways that reorder this backlog:
+
+- **Lead with the unique-data intents.** "How many people are named X" + "how old is X"
+  are the only questions no competitor answers well — we have `total_living_est` and
+  `median_age`. The Karen flagship sits exactly here: lowest competition, highest share.
+- **Decade demand is the biggest cluster (136) and we already rank page-1 — at 0% CTR.**
+  `/names/1930s/` is #4 with 237 impressions and zero clicks. The blog's job is the
+  clickable, link-worthy layer on top (plus title/meta fixes on those pages).
+
+---
+
 ## ★ Flagship (drafted) — "How Many Karens Are Left?"
 
 > The internet pictures Karen as a 45-year-old at a returns counter. The data says
@@ -139,7 +164,19 @@ dying of old age. Full draft: `how-many-karens-are-left.md`.
     of names ending in -a and -n, the great schwa migration. Phonetics at population scale.
     - *Lever:* last-letter / phoneme analysis across all names. *Bet:* data flex.
 
-## Pillar 8 — Recurring Franchises (own a beat, not a post)
+## Pillar 8 — Decades & Generations (search-validated: the #1 query cluster)
+*136 of 581 queries. We already rank page-1 for these and earn ~0% CTR — the blog is the
+click layer, plus title/meta rescue on the existing `/year/*` and `/names/*s/` pages.*
+
+- **Millennial Names, by the Numbers** — the names that *are* a millennial: peak years, the
+  ones that became generational shorthand, where they are now. ("millennial names" recurs in
+  live queries.) *Lever:* `/names/2000s/` + status. *Bet:* evergreen, biggest cluster.
+- **The Sound of [Year]** — take one year (1953 already ranks #4 with 0 clicks) and tell it
+  as a class roster: what a kindergarten sounded like, who's left now. *Bet:* evergreen + CTR rescue.
+- **What Decade Is Your Name From?** — assign each name its definitive decade by peak share;
+  serves the "names from the 1920s/2000s" demand and the age intent at once. *Bet:* viral + interactive.
+
+## Pillar 9 — Recurring Franchises (own a beat, not a post)
 
 22. **The Name Vitals Report (Annual)** — The week SSA drops new data each May: biggest
     risers, fallers, debuts, and deaths — auto-generated straight from the ingest pipeline.
@@ -152,7 +189,7 @@ dying of old age. Full draft: `how-many-karens-are-left.md`.
     Vitals workup (status, age, trajectory, diaspora, catalyst). Reactive, fast, repeatable.
     *Bet:* franchise + newsjacking.
 
-## Pillar 9 — Product-as-Content (interactive)
+## Pillar 10 — Product-as-Content (interactive)
 
 25. **Guess the Name's Age** — A quiz built on `median_age`. Score + shareable card.
 26. **Is Your Name Dying?** — Personal lookup → status verdict → auto-generated share image
@@ -171,9 +208,18 @@ dying of old age. Full draft: `how-many-karens-are-left.md`.
 - **Your Name Has a Half-Life** — frame every name as a radioactive isotope with a decay
   curve and compute its half-life. The most science-forward way to package decline.
 
-## Sequencing (suggested first 5)
-1. **How Many Karens Are Left?** (drafted) — proves the unique capability, built to travel.
-2. **The Most [State] Name in America** — map content is the most shareable thing we can make.
-3. **The One-Way Street** — counterintuitive, evergreen, gender hook.
-4. **The Mary Century** — the prestige/authority piece; anchors internal links.
+## Sequencing (GSC-weighted — see `docs/seo/2026-06-09-gsc-blog-demand.md`)
+1. **How Many Karens Are Left?** (drafted) — owns the unique-data intent ("how many people
+   are named X" + age). Lowest competition, highest share.
+2. **Millennial Names, by the Numbers** — rides the 136-query decade cluster; "millennial
+   names" recurs in live queries.
+3. **The Most [State] Name in America** — net-new map content; highest link/share ceiling.
+4. **The One-Way Street** — counterintuitive, evergreen, gender hook.
 5. **The Name Vitals Report** — stand up the franchise before the May SSA drop.
+
+**Scale play:** turn the flagship into a **"How Many People Are Named ___?"** franchise —
+25+ live queries already ask it by name (Sophia, Jacob, John, Michael, Madison…), and we are
+the only site that can answer it from `total_living_est` + `median_age`.
+
+**Free win (non-blog):** rewrite `<title>`/meta on `/names/1930s/` and `/year/195x/` —
+page-1 rankings stranded at 0% CTR.
