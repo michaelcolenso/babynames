@@ -11,21 +11,21 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://nobodynamed.com/api/og/default">
 <meta name="twitter:card" content="summary_large_image">
-  <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f7f5f2">
     <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/viz-theme.css">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0a0a0f;
+    --bg: #f4f0e7;
     --bg2: #111118;
     --surface: #16161f;
-    --text: #e8e6e3;
-    --muted: #6b7280;
-    --rule: rgba(255,255,255,0.07);
+    --text: #171511;
+    --muted: #787064;
+    --rule: rgba(23,21,17,0.09);
     --amber: #c9922a;
     --amber-glow: rgba(201,146,42,0.18);
     --rose: #c4786e;
@@ -33,8 +33,8 @@
     --accent: #c9922a;
   }
   body {
-    font-family: 'Space Grotesk', system-ui, sans-serif;
-    background: var(--bg);
+    font-family: 'Avenir Next', system-ui, sans-serif;
+    background: var(--paper);
     color: var(--text);
     min-height: 100vh;
     overflow-x: hidden;
@@ -49,11 +49,11 @@
     font-size: 0.82rem;
     position: sticky;
     top: 0;
-    background: var(--bg);
+    background: var(--paper);
     z-index: 100;
   }
   nav .brand {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.72rem;
     color: var(--amber);
     letter-spacing: 0.1em;
@@ -69,7 +69,7 @@
     margin: 0 auto;
   }
   .kicker {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.68rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -99,7 +99,7 @@
     margin-bottom: 0.5rem;
   }
   .stat-chip {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.76rem;
     display: flex;
     align-items: baseline;
@@ -125,7 +125,7 @@
     border-bottom: 1px solid var(--rule);
   }
   .controls-label {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.68rem;
     color: var(--muted);
     letter-spacing: 0.08em;
@@ -137,7 +137,7 @@
     border: 1px solid var(--rule);
     background: transparent;
     color: var(--muted);
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.68rem;
     letter-spacing: 0.04em;
     cursor: pointer;
@@ -161,7 +161,7 @@
     display: flex;
     align-items: center;
     gap: 0.45rem;
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.68rem;
     color: var(--muted);
   }
@@ -174,7 +174,7 @@
   .legend-swatch.iron { background: var(--amber); }
   .legend-swatch.female { background: var(--rose); }
   .legend-swatch.male { background: var(--blue); }
-  .legend-swatch.gap { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); }
+  .legend-swatch.gap { background: rgba(23,21,17,0.10); border: 1px solid rgba(23,21,17,0.14); }
 
   #chart-wrap {
     max-width: 1120px;
@@ -186,7 +186,7 @@
   #chart-svg { display: block; }
 
   .section-label {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.65rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -205,7 +205,7 @@
     box-shadow: 0 8px 40px rgba(0,0,0,0.7);
     opacity: 0;
     transition: opacity 0.12s;
-    font-family: 'Space Grotesk', system-ui;
+    font-family: 'Avenir Next', system-ui;
   }
   .tooltip .t-name {
     font-size: 1.05rem;
@@ -215,7 +215,7 @@
     letter-spacing: -0.01em;
   }
   .tooltip .t-iron {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.65rem;
     color: var(--amber);
     letter-spacing: 0.1em;
@@ -223,7 +223,7 @@
     margin-bottom: 6px;
   }
   .tooltip .t-row {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.75rem;
     color: var(--muted);
     line-height: 1.7;
@@ -240,7 +240,7 @@
   #loading {
     text-align: center;
     padding: 5rem 2rem;
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.8rem;
     color: var(--muted);
     letter-spacing: 0.1em;
@@ -268,22 +268,21 @@
   }
 </style>
 </head>
-<body>
+<body class="viz-page">
 
-<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#818cf8);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
-<header class="site" style="width:100%;padding:0.8rem 2rem 1rem;border-bottom:1px solid var(--rule,rgba(255,255,255,0.1));margin:0 auto;box-sizing:border-box;">
-    <a class="brand" href="/" aria-label="NobodyNamed home" style="display:inline-flex;align-items:center;color:var(--text,#e8e6e3);text-decoration:none;"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" style="filter:invert(1) brightness(1.2);display:block;width:clamp(160px,20vw,210px);aspect-ratio:240/44;height:auto;"></a>
-    <nav aria-label="Main navigation" style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0.2rem 0.8rem;font-family:var(--sans,system-ui,sans-serif);">
-      <a href="/extinct" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Extinct</a>
-      <a href="/endangered" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Endangered</a>
-      <a href="/comeback" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Comebacks</a>
-      <a href="/year" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Birth year</a>
-      <a href="/rising" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Rising</a>
-      <a href="/viz" style="color:var(--text,#e8e6e3);font-size:0.83rem;font-weight:600;text-decoration:none;" aria-current="page">Visualizations</a>
-      <a href="/blog/" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Namecalling</a>
-      <a href="/about" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">About</a>
+<a href="#viz-content" class="skip-link">Skip to content</a>
+<header class="site">
+  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" loading="lazy"></a>
+  <nav aria-label="Main navigation">
+    <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
+  </nav>
+  <details class="mobile-nav">
+    <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
+    <nav aria-label="Mobile navigation">
+      <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
     </nav>
-  </header>
+  </details>
+</header>
 
 <div id="viz-content" class="hero">
   <p class="kicker">Visualization · Top 100 · 1880–2025</p>
@@ -362,10 +361,10 @@ const COLOR = {
   ironGlow: 'rgba(201,146,42,0.12)',
   F: '#c4786e',
   M: '#6a8aaa',
-  gap: 'rgba(255,255,255,0.05)',
-  axis: 'rgba(255,255,255,0.18)',
-  axisText: '#6b7280',
-  sectionLabel: 'rgba(255,255,255,0.3)',
+  gap: 'rgba(23,21,17,0.07)',
+  axis: 'rgba(23,21,17,0.20)',
+  axisText: '#787064',
+  sectionLabel: 'rgba(23,21,17,0.32)',
 };
 
 // ─── Data fetch ───────────────────────────────────────────────────────────────
@@ -482,7 +481,7 @@ function render() {
     .attr('y', AXIS_H - 10)
     .attr('text-anchor', 'middle')
     .attr('fill', COLOR.axisText)
-    .attr('font-family', "'Space Mono', monospace")
+    .attr('font-family', "'IBM Plex Mono', monospace")
     .attr('font-size', 10)
     .text(d => d);
 
@@ -493,7 +492,7 @@ function render() {
       .attr('x', LABEL_W)
       .attr('y', ironHeaderY + 11)
       .attr('fill', COLOR.iron)
-      .attr('font-family', "'Space Mono', monospace")
+      .attr('font-family', "'IBM Plex Mono', monospace")
       .attr('font-size', 9)
       .attr('letter-spacing', 2)
       .text('★ CONTINUOUS — NEVER LEFT');
@@ -505,7 +504,7 @@ function render() {
       .attr('x', LABEL_W)
       .attr('y', restHeaderY + 11)
       .attr('fill', COLOR.sectionLabel)
-      .attr('font-family', "'Space Mono', monospace")
+      .attr('font-family', "'IBM Plex Mono', monospace")
       .attr('font-size', 9)
       .attr('letter-spacing', 2)
       .text('ENTERED & EXITED');
@@ -513,7 +512,7 @@ function render() {
     svg.append('line')
       .attr('x1', 0).attr('x2', SVG_W)
       .attr('y1', restHeaderY - 2).attr('y2', restHeaderY - 2)
-      .attr('stroke', 'rgba(255,255,255,0.07)')
+      .attr('stroke', 'rgba(23,21,17,0.09)')
       .attr('stroke-width', 1);
   }
 
@@ -541,7 +540,7 @@ function render() {
         .attr('text-anchor', 'end')
         .attr('fill', d.iron ? COLOR.iron : (currentSex === 'F' ? COLOR.F : COLOR.M))
         .attr('fill-opacity', d.iron ? 1 : 0.75)
-        .attr('font-family', "'Space Grotesk', system-ui")
+        .attr('font-family', "'Avenir Next', system-ui")
         .attr('font-size', 9.5)
         .attr('font-weight', d.iron ? 700 : 400)
         .text(d.name);
@@ -611,12 +610,9 @@ function render() {
 loadData();
 </script>
 
-<footer class="site" style="width:100%;padding:1.25rem 2rem;border-top:1px solid var(--rule,rgba(255,255,255,0.1));margin-top:2rem;font-family:var(--sans,system-ui,sans-serif);font-size:0.82rem;color:var(--muted,#6b7280);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;box-sizing:border-box;">
-    <div>
-      <div style="color:var(--muted,#6b7280);">nobodynamed is a small data project about American first names.</div>
-      <div style="color:var(--muted,#6b7280);font-size:0.82rem;">Data sourced from Social Security Administration birth records (1880–present).</div>
-    </div>
-    <div><a href="/about" style="color:var(--muted,#6b7280);text-decoration:none;">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/" style="color:var(--muted,#6b7280);text-decoration:none;">SSA source</a></div>
-  </footer>
+<footer>
+  <p>nobodynamed is a small data project about American first names. Data sourced from Social Security Administration birth records (1880–present).</p>
+  <p><a href="/about">About</a> · <a href="https://www.ssa.gov/oact/babynames/" target="_blank" rel="noopener">SSA source</a></p>
+</footer>
 </body>
 </html>

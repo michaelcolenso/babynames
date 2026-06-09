@@ -12,17 +12,18 @@
 <meta property="og:image" content="https://nobodynamed.com/api/og/default">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/viz-theme.css">
+<script src="https://d3js.org/d3.v7.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0a0a0f;
+    --bg: #f4f0e7;
     --bg2: #111118;
     --surface: #16161f;
-    --text: #e8e6e3;
-    --muted: #6b7280;
-    --rule: rgba(255,255,255,0.07);
+    --text: #171511;
+    --muted: #787064;
+    --rule: rgba(23,21,17,0.09);
     --amber: #c9922a;
     --amber-glow: rgba(201,146,42,0.18);
     --rose: #c4786e;
@@ -30,8 +31,8 @@
     --accent: #c9922a;
   }
   body {
-    font-family: 'Space Grotesk', system-ui, sans-serif;
-    background: var(--bg);
+    font-family: 'Avenir Next', system-ui, sans-serif;
+    background: var(--paper);
     color: var(--text);
     min-height: 100vh;
     overflow-x: hidden;
@@ -46,11 +47,11 @@
     font-size: 0.82rem;
     position: sticky;
     top: 0;
-    background: var(--bg);
+    background: var(--paper);
     z-index: 100;
   }
   nav .brand {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.72rem;
     color: var(--amber);
     letter-spacing: 0.1em;
@@ -66,7 +67,7 @@
     margin: 0 auto;
   }
   .kicker {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.68rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -96,7 +97,7 @@
     margin-bottom: 0.5rem;
   }
   .stat-chip {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.72rem;
     display: flex;
     flex-direction: column;
@@ -125,7 +126,7 @@
     border-bottom: 1px solid var(--rule);
   }
   .controls-label {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.68rem;
     color: var(--muted);
     letter-spacing: 0.08em;
@@ -137,7 +138,7 @@
     border: 1px solid var(--rule);
     background: transparent;
     color: var(--muted);
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.68rem;
     letter-spacing: 0.04em;
     cursor: pointer;
@@ -164,7 +165,7 @@
     border-radius: 12px;
     border: 1px solid transparent;
     background: transparent;
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.62rem;
     letter-spacing: 0.04em;
     cursor: pointer;
@@ -195,10 +196,10 @@
     box-shadow: 0 8px 40px rgba(0,0,0,0.7);
     opacity: 0;
     transition: opacity 0.1s;
-    font-family: 'Space Grotesk', system-ui;
+    font-family: 'Avenir Next', system-ui;
   }
   .tt-header {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.65rem;
     color: var(--amber);
     letter-spacing: 0.1em;
@@ -208,7 +209,7 @@
     padding-bottom: 5px;
   }
   .tt-row {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.72rem;
     color: var(--muted);
     line-height: 1.75;
@@ -231,7 +232,7 @@
     padding: 0 2rem;
   }
   .section-head h2 {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.72rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -258,12 +259,12 @@
     gap: 1rem;
   }
   .hl-decade {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.82rem;
     font-weight: 700;
   }
   .hl-value {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.72rem;
     color: var(--muted);
     text-align: right;
@@ -277,7 +278,7 @@
   #loading {
     text-align: center;
     padding: 5rem 2rem;
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.8rem;
     color: var(--muted);
     letter-spacing: 0.1em;
@@ -286,7 +287,7 @@
     display: none;
     text-align: center;
     padding: 4rem 2rem;
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.8rem;
     color: var(--rose);
     letter-spacing: 0.08em;
@@ -319,7 +320,7 @@
   }
 </style>
 </head>
-<body>
+<body class="viz-page">
 
 <nav>
   <a class="brand" href="/">NOBODYNAMED</a>
@@ -636,7 +637,7 @@ function buildHalflifeTable() {
     } else if (hl <= 15) {
       rightDiv.innerHTML = `<strong style="color:#e07060">&lt; ${hl} yrs</strong><br><span style="font-size:0.6rem">half-life</span>`;
     } else {
-      rightDiv.innerHTML = `<strong style="color:#e8e6e3">${hl} yrs</strong><br><span style="font-size:0.6rem">half-life</span>`;
+      rightDiv.innerHTML = `<strong style="color:#171511">${hl} yrs</strong><br><span style="font-size:0.6rem">half-life</span>`;
     }
 
     card.appendChild(leftDiv);
@@ -720,14 +721,14 @@ function render() {
     .attr('class','vgrid')
     .attr('x1', d => xScale(d)).attr('x2', d => xScale(d))
     .attr('y1', 0).attr('y2', iH)
-    .attr('stroke', 'rgba(255,255,255,0.05)').attr('stroke-width', 1);
+    .attr('stroke', 'rgba(23,21,17,0.07)').attr('stroke-width', 1);
 
   // Horizontal grid lines
   g.selectAll('.hgrid').data(yTickValues).join('line')
     .attr('class','hgrid')
     .attr('x1', 0).attr('x2', iW)
     .attr('y1', d => yScale(d)).attr('y2', d => yScale(d))
-    .attr('stroke', d => d === 0.5 ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.05)')
+    .attr('stroke', d => d === 0.5 ? 'rgba(23,21,17,0.20)' : 'rgba(23,21,17,0.07)')
     .attr('stroke-width', d => d === 0.5 ? 1.5 : 1)
     .attr('stroke-dasharray', d => d === 0.5 ? '6,4' : null);
 
@@ -737,8 +738,8 @@ function render() {
     .attr('x', iW + 4)
     .attr('y', halfY + 1)
     .attr('dy', '0.35em')
-    .attr('fill', 'rgba(255,255,255,0.35)')
-    .attr('font-family', "'Space Mono', monospace")
+    .attr('fill', 'rgba(23,21,17,0.35)')
+    .attr('font-family', "'IBM Plex Mono', monospace")
     .attr('font-size', 9)
     .attr('letter-spacing', '0.06em')
     .text('HALF-LIFE');
@@ -751,11 +752,11 @@ function render() {
       .tickSize(4)
       .tickFormat(d => d))
     .call(ax => {
-      ax.select('.domain').attr('stroke', 'rgba(255,255,255,0.15)');
-      ax.selectAll('line').attr('stroke', 'rgba(255,255,255,0.15)');
+      ax.select('.domain').attr('stroke', 'rgba(23,21,17,0.18)');
+      ax.selectAll('line').attr('stroke', 'rgba(23,21,17,0.18)');
       ax.selectAll('text')
-        .attr('fill', '#6b7280')
-        .attr('font-family', "'Space Mono', monospace")
+        .attr('fill', '#787064')
+        .attr('font-family', "'IBM Plex Mono', monospace")
         .attr('font-size', 10);
     });
 
@@ -764,8 +765,8 @@ function render() {
     .attr('x', iW / 2)
     .attr('y', iH + 46)
     .attr('text-anchor', 'middle')
-    .attr('fill', '#6b7280')
-    .attr('font-family', "'Space Grotesk', system-ui")
+    .attr('fill', '#787064')
+    .attr('font-family', "'Avenir Next', system-ui")
     .attr('font-size', 11)
     .text('Years since debut decade');
 
@@ -780,11 +781,11 @@ function render() {
       .tickSize(4)
       .tickFormat(yFmt))
     .call(ax => {
-      ax.select('.domain').attr('stroke', 'rgba(255,255,255,0.15)');
-      ax.selectAll('line').attr('stroke', 'rgba(255,255,255,0.15)');
+      ax.select('.domain').attr('stroke', 'rgba(23,21,17,0.18)');
+      ax.selectAll('line').attr('stroke', 'rgba(23,21,17,0.18)');
       ax.selectAll('text')
-        .attr('fill', '#6b7280')
-        .attr('font-family', "'Space Mono', monospace")
+        .attr('fill', '#787064')
+        .attr('font-family', "'IBM Plex Mono', monospace")
         .attr('font-size', 10);
     });
 
@@ -794,8 +795,8 @@ function render() {
     .attr('x', -iH / 2)
     .attr('y', -48)
     .attr('text-anchor', 'middle')
-    .attr('fill', '#6b7280')
-    .attr('font-family', "'Space Grotesk', system-ui")
+    .attr('fill', '#787064')
+    .attr('font-family', "'Avenir Next', system-ui")
     .attr('font-size', 11)
     .text('Survival rate (fraction of cohort still active)');
 
@@ -858,7 +859,7 @@ function render() {
         .attr('x', ax)
         .attr('y', ay + 4)
         .attr('fill', '#7eb8d4')
-        .attr('font-family', "'Space Grotesk', system-ui")
+        .attr('font-family', "'Avenir Next', system-ui")
         .attr('font-size', 10.5)
         .attr('font-weight', 500)
         .attr('letter-spacing', '-0.01em')
@@ -867,7 +868,7 @@ function render() {
         .attr('x', ax)
         .attr('y', ay + 17)
         .attr('fill', '#7eb8d4')
-        .attr('font-family', "'Space Grotesk', system-ui")
+        .attr('font-family', "'Avenir Next', system-ui")
         .attr('font-size', 10)
         .attr('opacity', 0.75)
         .text('after 50 years');
@@ -890,7 +891,7 @@ function render() {
         .attr('x', ax)
         .attr('y', ay + 1)
         .attr('fill', '#e07060')
-        .attr('font-family', "'Space Grotesk', system-ui")
+        .attr('font-family', "'Avenir Next', system-ui")
         .attr('font-size', 10.5)
         .attr('font-weight', 500)
         .attr('letter-spacing', '-0.01em')
@@ -899,7 +900,7 @@ function render() {
         .attr('x', ax)
         .attr('y', ay + 14)
         .attr('fill', '#e07060')
-        .attr('font-family', "'Space Grotesk', system-ui")
+        .attr('font-family', "'Avenir Next', system-ui")
         .attr('font-size', 10)
         .attr('opacity', 0.75)
         .text('by age 15');
@@ -911,19 +912,19 @@ function render() {
     const legX = iW - 110, legY = 8;
     const legG = g.append('g').attr('transform', `translate(${legX},${legY})`);
     legG.append('rect').attr('width', 108).attr('height', 44).attr('rx', 5)
-      .attr('fill', 'rgba(10,10,15,0.8)').attr('stroke', 'rgba(255,255,255,0.08)');
+      .attr('fill', 'rgba(10,10,15,0.8)').attr('stroke', 'rgba(23,21,17,0.10)');
 
     // Boys — solid
     legG.append('line').attr('x1',8).attr('y1',16).attr('x2',30).attr('y2',16)
       .attr('stroke','#aaa').attr('stroke-width',1.8);
-    legG.append('text').attr('x',34).attr('y',19.5).attr('fill','#6b7280')
-      .attr('font-family',"'Space Mono', monospace").attr('font-size',9).text('Boys');
+    legG.append('text').attr('x',34).attr('y',19.5).attr('fill','#787064')
+      .attr('font-family',"'IBM Plex Mono', monospace").attr('font-size',9).text('Boys');
 
     // Girls — dashed
     legG.append('line').attr('x1',8).attr('y1',32).attr('x2',30).attr('y2',32)
       .attr('stroke','#aaa').attr('stroke-width',1.8).attr('stroke-dasharray','5,3');
-    legG.append('text').attr('x',34).attr('y',35.5).attr('fill','#6b7280')
-      .attr('font-family',"'Space Mono', monospace").attr('font-size',9).text('Girls');
+    legG.append('text').attr('x',34).attr('y',35.5).attr('fill','#787064')
+      .attr('font-family',"'IBM Plex Mono', monospace").attr('font-size',9).text('Girls');
   }
 
   // ── Color legend bar ─────────────────────────────────────────────────────────
@@ -950,20 +951,20 @@ function render() {
     .attr('opacity', 0.75);
 
   g.append('text').attr('x', colorLegX).attr('y', colorLegY + 18)
-    .attr('fill', '#6b7280').attr('font-family',"'Space Mono', monospace").attr('font-size',9)
+    .attr('fill', '#787064').attr('font-family',"'IBM Plex Mono', monospace").attr('font-size',9)
     .text("1880s");
   g.append('text').attr('x', colorLegX + colorLegW).attr('y', colorLegY + 18)
-    .attr('fill', '#6b7280').attr('font-family',"'Space Mono', monospace").attr('font-size',9)
+    .attr('fill', '#787064').attr('font-family',"'IBM Plex Mono', monospace").attr('font-size',9)
     .attr('text-anchor','end').text("2010s");
   g.append('text').attr('x', colorLegX + colorLegW/2).attr('y', colorLegY + 18)
-    .attr('fill', '#6b7280').attr('font-family',"'Space Grotesk', system-ui").attr('font-size',9.5)
+    .attr('fill', '#787064').attr('font-family',"'Avenir Next', system-ui").attr('font-size',9.5)
     .attr('text-anchor','middle').text("Debut decade");
 
   // ── Crosshair / hover overlay ────────────────────────────────────────────────
   const crosshair = g.append('line')
     .attr('class','crosshair')
     .attr('y1', 0).attr('y2', iH)
-    .attr('stroke', 'rgba(255,255,255,0.22)')
+    .attr('stroke', 'rgba(23,21,17,0.24)')
     .attr('stroke-width', 1)
     .attr('pointer-events','none')
     .attr('opacity', 0);
@@ -1022,8 +1023,8 @@ function render() {
 
     if (snapshots.length > 0 && snapshots[0].pt.cohortSize) {
       const first = snapshots[0];
-      html += `<div class="tt-row" style="margin-top:5px;border-top:1px solid rgba(255,255,255,0.07);padding-top:5px">
-        <span style="color:#6b7280">alive (${first.line.decade}s)</span>
+      html += `<div class="tt-row" style="margin-top:5px;border-top:1px solid rgba(23,21,17,0.09);padding-top:5px">
+        <span style="color:#787064">alive (${first.line.decade}s)</span>
         <strong>${first.pt.alive.toLocaleString()} / ${first.pt.cohortSize.toLocaleString()}</strong>
       </div>`;
     }

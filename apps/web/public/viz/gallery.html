@@ -4,27 +4,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nobody Named Their Baby — 2025 SSA Data</title>
-    <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f7f5f2">
     <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/viz-theme.css">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #07070f;
+    --bg: #f4f0e7;
     --surface: #0e0e1a;
     --border: #1e1e30;
-    --amber: #f59e0b;
+    --amber: #c9922a;
     --amber-dim: #92600a;
-    --cyan: #22d3ee;
-    --rose: #f43f5e;
-    --violet: #a78bfa;
-    --green: #4ade80;
-    --muted: #6b7280;
+    --cyan: #5a7a9a;
+    --rose: #b83c2f;
+    --violet: #8b7ab8;
+    --green: #2f9e63;
+    --muted: #787064;
     --text: #e5e7eb;
   }
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Georgia', serif; }
+  html, body { height: 100%; background: var(--paper); color: var(--text); font-family: 'Georgia', serif; }
 
   header {
     text-align: center;
@@ -39,7 +39,7 @@
     padding: 1.5rem 1rem;
     flex-wrap: wrap;
     position: sticky; top: 0; z-index: 100;
-    background: var(--bg);
+    background: var(--paper);
     border-bottom: 1px solid var(--border);
   }
   nav button {
@@ -75,27 +75,26 @@
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 </style>
 </head>
-<body>
+<body class="viz-page">
 
-<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#818cf8);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
+<a href="#viz-content" class="skip-link">Skip to content</a>
 <header>
   <h1>Nobody Named Their Baby — 2025</h1>
   <p>145 years of US baby names · SSA data 1880–2025 · 117,820 name/sex pairs</p>
 </header>
 
-<header class="site" style="width:100%;padding:0.8rem 2rem 1rem;border-bottom:1px solid var(--rule,rgba(255,255,255,0.1));margin:0 auto;box-sizing:border-box;">
-    <a class="brand" href="/" aria-label="NobodyNamed home" style="display:inline-flex;align-items:center;color:var(--text,#e8e6e3);text-decoration:none;"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" style="filter:invert(1) brightness(1.2);display:block;width:clamp(160px,20vw,210px);aspect-ratio:240/44;height:auto;"></a>
-    <nav aria-label="Main navigation" style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0.2rem 0.8rem;font-family:var(--sans,system-ui,sans-serif);">
-      <a href="/extinct" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Extinct</a>
-      <a href="/endangered" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Endangered</a>
-      <a href="/comeback" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Comebacks</a>
-      <a href="/year" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Birth year</a>
-      <a href="/rising" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Rising</a>
-      <a href="/viz" style="color:var(--text,#e8e6e3);font-size:0.83rem;font-weight:600;text-decoration:none;" aria-current="page">Visualizations</a>
-      <a href="/blog/" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Namecalling</a>
-      <a href="/about" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">About</a>
+<header class="site">
+  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" loading="lazy"></a>
+  <nav aria-label="Main navigation">
+    <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
+  </nav>
+  <details class="mobile-nav">
+    <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
+    <nav aria-label="Mobile navigation">
+      <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
     </nav>
-  </header>
+  </details>
+</header>
 
 <div id="viz-content" class="tooltip" id="tip"></div>
 
@@ -104,11 +103,11 @@
   <div class="viz-title">The Name Universe</div>
   <div class="viz-subtitle">Every major name plotted by when it peaked (x) and how popular it was (y). Color = current status.</div>
   <div class="legend">
-    <span class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span>endangered</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#f43f5e"></span>extinct</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#6b7280"></span>declining</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#4ade80"></span>rising</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#a78bfa"></span>stable</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#c9922a"></span>endangered</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#b83c2f"></span>extinct</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#787064"></span>declining</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#2f9e63"></span>rising</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#8b7ab8"></span>stable</span>
   </div>
   <svg id="svg-landscape"></svg>
 </section>
@@ -166,11 +165,11 @@ document.querySelectorAll('nav button').forEach(btn => {
 });
 
 const statusColor = {
-  endangered: '#f59e0b',
-  extinct:    '#f43f5e',
-  declining:  '#6b7280',
-  rising:     '#4ade80',
-  stable:     '#a78bfa',
+  endangered: '#c9922a',
+  extinct:    '#b83c2f',
+  declining:  '#787064',
+  rising:     '#2f9e63',
+  stable:     '#8b7ab8',
 };
 
 // ─── DATA ──────────────────────────────────────────────────────────────────
@@ -367,18 +366,18 @@ const beforeAfterData = [
   g.append('g')
     .attr('transform', `translate(0,${ih})`)
     .call(d3.axisBottom(xScale).tickFormat(d3.format('d')).ticks(10))
-    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill','#6b7280').attr('font-size','11'); });
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill','#787064').attr('font-size','11'); });
 
   g.append('g')
     .call(d3.axisLeft(yScale).tickValues([500,1000,2000,5000,10000,25000,50000,100000]).tickFormat(d => d >= 1000 ? (d/1000)+'k' : d))
-    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill','#6b7280').attr('font-size','11'); });
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill','#787064').attr('font-size','11'); });
 
   // 2025 line
   g.append('line')
     .attr('x1', xScale(2025)).attr('x2', xScale(2025))
     .attr('y1', 0).attr('y2', ih)
-    .attr('stroke', '#f43f5e').attr('stroke-width', 1.5).attr('stroke-dasharray','4,3').attr('opacity', 0.6);
-  g.append('text').attr('x', xScale(2025)+4).attr('y', 14).attr('fill','#f43f5e').attr('font-size','10').text('2025');
+    .attr('stroke', '#b83c2f').attr('stroke-width', 1.5).attr('stroke-dasharray','4,3').attr('opacity', 0.6);
+  g.append('text').attr('x', xScale(2025)+4).attr('y', 14).attr('fill','#b83c2f').attr('font-size','10').text('2025');
 
   // dots
   const dots = g.selectAll('circle').data(landscapeData).join('circle')
@@ -395,8 +394,8 @@ const beforeAfterData = [
   }).on('mouseleave', hideTip);
 
   // axis labels
-  svg.append('text').attr('x', W/2).attr('y', H-4).attr('text-anchor','middle').attr('fill','#6b7280').attr('font-size','12').attr('font-family','sans-serif').text('Peak Year');
-  svg.append('text').attr('transform','rotate(-90)').attr('x',-H/2).attr('y',16).attr('text-anchor','middle').attr('fill','#6b7280').attr('font-size','12').attr('font-family','sans-serif').text('Peak Count (log)');
+  svg.append('text').attr('x', W/2).attr('y', H-4).attr('text-anchor','middle').attr('fill','#787064').attr('font-size','12').attr('font-family','sans-serif').text('Peak Year');
+  svg.append('text').attr('transform','rotate(-90)').attr('x',-H/2).attr('y',16).attr('text-anchor','middle').attr('fill','#787064').attr('font-size','12').attr('font-family','sans-serif').text('Peak Count (log)');
 })();
 
 // ─── VIZ B: LIFESPANS ──────────────────────────────────────────────────────
@@ -419,19 +418,19 @@ const beforeAfterData = [
 
   g.append('g').attr('transform', `translate(0,${ih})`)
     .call(d3.axisBottom(xScale).tickFormat(d3.format('d')).ticks(10))
-    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill','#6b7280').attr('font-size','10'); });
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill','#787064').attr('font-size','10'); });
 
   // 2025 line
   g.append('line')
     .attr('x1', xScale(2025)).attr('x2', xScale(2025))
     .attr('y1', -5).attr('y2', ih)
-    .attr('stroke', '#f43f5e').attr('stroke-width', 1.5).attr('stroke-dasharray','4,3').attr('opacity', 0.5);
+    .attr('stroke', '#b83c2f').attr('stroke-width', 1.5).attr('stroke-dasharray','4,3').attr('opacity', 0.5);
 
   const barH = yScale.bandwidth();
 
   sorted.forEach(d => {
     const y = yScale(d.name + d.sex);
-    const color = d.status === 'extinct' ? '#f43f5e' : (d.status === 'endangered' ? '#f59e0b' : '#6b7280');
+    const color = d.status === 'extinct' ? '#b83c2f' : (d.status === 'endangered' ? '#c9922a' : '#787064');
 
     g.append('rect')
       .attr('x', xScale(d.first_year))
@@ -451,7 +450,7 @@ const beforeAfterData = [
       .attr('x', xScale(d.first_year) - 4)
       .attr('y', y + barH/2 + 3.5)
       .attr('text-anchor', 'end')
-      .attr('fill', '#9ca3af').attr('font-size', '9.5')
+      .attr('fill', '#787064').attr('font-size', '9.5')
       .attr('font-family', 'sans-serif')
       .text(d.name);
   });
@@ -498,9 +497,9 @@ const beforeAfterData = [
     const line = d3.line().x(p=>xS(p.y)).y(p=>yS(p.v)).curve(d3.curveMonotoneX);
 
     g.append('path').datum(points).attr('d', area)
-      .attr('fill', '#f43f5e').attr('opacity', 0.18);
+      .attr('fill', '#b83c2f').attr('opacity', 0.18);
     g.append('path').datum(points).attr('d', line)
-      .attr('fill', 'none').attr('stroke', '#f43f5e').attr('stroke-width', 1.5);
+      .attr('fill', 'none').attr('stroke', '#b83c2f').attr('stroke-width', 1.5);
 
     // zero line
     g.append('line').attr('x1',0).attr('x2',cellW-20).attr('y1',cellH).attr('y2',cellH)
@@ -509,7 +508,7 @@ const beforeAfterData = [
     // peak label
     const pk = points.reduce((a,b)=>a.v>b.v?a:b);
     g.append('text').attr('x',xS(pk.y)).attr('y',yS(pk.v)-4)
-      .attr('fill','#f59e0b').attr('font-size','9').attr('text-anchor','middle')
+      .attr('fill','#c9922a').attr('font-size','9').attr('text-anchor','middle')
       .attr('font-family','sans-serif').text(pk.v);
 
     // year labels
@@ -552,17 +551,17 @@ const beforeAfterData = [
 
   // baby boom annotation
   g.append('line').attr('x1',xS(1946)).attr('x2',xS(1964)).attr('y1',-10).attr('y2',-10)
-    .attr('stroke','#f59e0b').attr('stroke-width',1.5).attr('marker-end','url(#arrow)');
+    .attr('stroke','#c9922a').attr('stroke-width',1.5).attr('marker-end','url(#arrow)');
   g.append('text').attr('x',xS(1955)).attr('y',-18).attr('text-anchor','middle')
-    .attr('fill','#f59e0b').attr('font-size','11').attr('font-family','sans-serif').text('Baby Boom');
+    .attr('fill','#c9922a').attr('font-size','11').attr('font-family','sans-serif').text('Baby Boom');
 
   g.append('g').attr('transform',`translate(0,${ih})`)
     .call(d3.axisBottom(xS).tickFormat(d3.format('d')).ticks(10))
-    .call(ax=>{ax.select('.domain').remove();ax.selectAll('line').remove();ax.selectAll('text').attr('fill','#6b7280').attr('font-size','11');});
+    .call(ax=>{ax.select('.domain').remove();ax.selectAll('line').remove();ax.selectAll('text').attr('fill','#787064').attr('font-size','11');});
 
   g.append('g')
     .call(d3.axisLeft(yS).ticks(6).tickFormat(d => (d/1000000).toFixed(1)+'M'))
-    .call(ax=>{ax.select('.domain').remove();ax.selectAll('line').remove();ax.selectAll('text').attr('fill','#6b7280').attr('font-size','11');});
+    .call(ax=>{ax.select('.domain').remove();ax.selectAll('line').remove();ax.selectAll('text').attr('fill','#787064').attr('font-size','11');});
 
   // hover line
   const hoverLine = g.append('line').attr('y1',0).attr('y2',ih).attr('stroke','#fff').attr('stroke-width',1).attr('opacity',0).attr('pointer-events','none');
@@ -579,7 +578,7 @@ const beforeAfterData = [
   // legend
   svg.append('text').attr('x',mg.left+10).attr('y',H-8).attr('fill','#ec4899').attr('font-size','11').attr('font-family','sans-serif').text('Girls');
   svg.append('text').attr('x',mg.left+54).attr('y',H-8).attr('fill','#3b82f6').attr('font-size','11').attr('font-family','sans-serif').text('Boys');
-  svg.append('text').attr('x',W/2).attr('y',H-4).attr('text-anchor','middle').attr('fill','#6b7280').attr('font-size','11').attr('font-family','sans-serif').text('Millions of births per year in SSA data');
+  svg.append('text').attr('x',W/2).attr('y',H-4).attr('text-anchor','middle').attr('fill','#787064').attr('font-size','11').attr('font-family','sans-serif').text('Millions of births per year in SSA data');
 })();
 
 // ─── VIZ E: BEFORE / AFTER ─────────────────────────────────────────────────
@@ -596,8 +595,8 @@ const beforeAfterData = [
   const g = svg.append('g').attr('transform', `translate(${mg.left},${mg.top})`);
 
   // headers
-  svg.append('text').attr('x', mg.left - 10).attr('y', 24).attr('text-anchor','end').attr('fill','#f59e0b').attr('font-size','12').attr('font-family','sans-serif').attr('font-weight','700').text('PEAK');
-  svg.append('text').attr('x', W - mg.right + 10).attr('y', 24).attr('text-anchor','start').attr('fill','#22d3ee').attr('font-size','12').attr('font-family','sans-serif').attr('font-weight','700').text('2025');
+  svg.append('text').attr('x', mg.left - 10).attr('y', 24).attr('text-anchor','end').attr('fill','#c9922a').attr('font-size','12').attr('font-family','sans-serif').attr('font-weight','700').text('PEAK');
+  svg.append('text').attr('x', W - mg.right + 10).attr('y', 24).attr('text-anchor','start').attr('fill','#5a7a9a').attr('font-size','12').attr('font-family','sans-serif').attr('font-weight','700').text('2025');
 
   const sorted = [...beforeAfterData].sort((a,b)=>b.peak_count - a.peak_count);
   const rowH = 28;
@@ -610,9 +609,9 @@ const beforeAfterData = [
     const pctLoss = Math.round((1 - d.latest/d.peak_count)*100);
 
     // left bar (peak)
-    g.append('rect').attr('x', peakX).attr('y', y-6).attr('width', -peakX).attr('height', 11).attr('fill','#f59e0b').attr('opacity',0.75).attr('rx',1);
+    g.append('rect').attr('x', peakX).attr('y', y-6).attr('width', -peakX).attr('height', 11).attr('fill','#c9922a').attr('opacity',0.75).attr('rx',1);
     // right bar (2025)
-    g.append('rect').attr('x', 0).attr('y', y-6).attr('width', Math.max(latestX,1)).attr('height', 11).attr('fill','#22d3ee').attr('opacity',0.75).attr('rx',1);
+    g.append('rect').attr('x', 0).attr('y', y-6).attr('width', Math.max(latestX,1)).attr('height', 11).attr('fill','#5a7a9a').attr('opacity',0.75).attr('rx',1);
 
     // center line
     g.append('line').attr('x1',0).attr('x2',0).attr('y1',y-7).attr('y2',y+7).attr('stroke','#1e1e30').attr('stroke-width',1);
@@ -621,23 +620,20 @@ const beforeAfterData = [
     g.append('text').attr('x',-8).attr('y',y+4).attr('text-anchor','end').attr('fill','#e5e7eb').attr('font-size','10.5').attr('font-family','sans-serif').text(d.name);
 
     // pct loss
-    g.append('text').attr('x',iw*0.48+4).attr('y',y+4).attr('fill','#6b7280').attr('font-size','9.5').attr('font-family','sans-serif').text(`−${pctLoss}%`);
+    g.append('text').attr('x',iw*0.48+4).attr('y',y+4).attr('fill','#787064').attr('font-size','9.5').attr('font-family','sans-serif').text(`−${pctLoss}%`);
 
     // hover
     const hitArea = g.append('rect').attr('x',peakX).attr('y',y-8).attr('width',-peakX+iw*0.5).attr('height',16).attr('fill','transparent').attr('cursor','pointer');
     hitArea.on('mousemove', (e) => {
-      showTip(`<strong>${d.name}</strong> (${d.sex})<br>Peak ${d.peak_year}: <span style="color:#f59e0b">${d.peak_count.toLocaleString()}</span><br>2025: <span style="color:#22d3ee">${d.latest.toLocaleString()}</span><br>Down ${pctLoss}%`, e);
+      showTip(`<strong>${d.name}</strong> (${d.sex})<br>Peak ${d.peak_year}: <span style="color:#c9922a">${d.peak_count.toLocaleString()}</span><br>2025: <span style="color:#5a7a9a">${d.latest.toLocaleString()}</span><br>Down ${pctLoss}%`, e);
     }).on('mouseleave', hideTip);
   });
 })();
 </script>
 
-<footer class="site" style="width:100%;padding:1.25rem 2rem;border-top:1px solid var(--rule,rgba(255,255,255,0.1));margin-top:2rem;font-family:var(--sans,system-ui,sans-serif);font-size:0.82rem;color:var(--muted,#6b7280);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;box-sizing:border-box;">
-    <div>
-      <div style="color:var(--muted,#6b7280);">nobodynamed is a small data project about American first names.</div>
-      <div style="color:var(--muted,#6b7280);font-size:0.82rem;">Data sourced from Social Security Administration birth records (1880–present).</div>
-    </div>
-    <div><a href="/about" style="color:var(--muted,#6b7280);text-decoration:none;">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/" style="color:var(--muted,#6b7280);text-decoration:none;">SSA source</a></div>
-  </footer>
+<footer>
+  <p>nobodynamed is a small data project about American first names. Data sourced from Social Security Administration birth records (1880–present).</p>
+  <p><a href="/about">About</a> · <a href="https://www.ssa.gov/oact/babynames/" target="_blank" rel="noopener">SSA source</a></p>
+</footer>
 </body>
 </html>

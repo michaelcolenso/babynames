@@ -11,22 +11,22 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://nobodynamed.com/api/og/default">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f5f2">
 <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/viz-theme.css">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #07070f;
+    --bg: #f4f0e7;
     --bg2: #0e0e1a;
-    --text: #e8e6e3;
-    --muted: #6b7280;
-    --rule: rgba(255,255,255,0.06);
-    --accent: #22d3ee;
-    --origin: #f59e0b;
+    --text: #171511;
+    --muted: #787064;
+    --rule: rgba(23,21,17,0.08);
+    --accent: #5a7a9a;
+    --origin: #c9922a;
     --early: #06b6d4;
     --mid: #3b82f6;
     --late: #8b5cf6;
@@ -34,8 +34,8 @@
     --never: #111118;
   }
   body {
-    font-family: 'Space Grotesk', system-ui, sans-serif;
-    background: var(--bg);
+    font-family: 'Avenir Next', system-ui, sans-serif;
+    background: var(--paper);
     color: var(--text);
     min-height: 100vh;
     overflow-x: hidden;
@@ -46,7 +46,7 @@
     margin: 0 auto;
   }
   .kicker {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.72rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -78,7 +78,7 @@
     flex-wrap: wrap;
   }
   .search-row input {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.9rem;
     padding: 0.5rem 1rem;
     border-radius: 6px;
@@ -90,7 +90,7 @@
   }
   .search-row input:focus { border-color: var(--accent); }
   .search-row button {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.75rem;
     padding: 0.45rem 0.9rem;
     border-radius: 20px;
@@ -112,7 +112,7 @@
     flex-wrap: wrap;
   }
   .presets button {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.7rem;
     padding: 0.3rem 0.7rem;
     border-radius: 14px;
@@ -136,7 +136,7 @@
     height: auto;
   }
   .tile-bg { fill: var(--never); stroke: var(--bg); stroke-width: 2; rx: 5; }
-  .tile-label { fill: rgba(255,255,255,0.25); font-family: 'Space Mono', monospace; font-size: 11px; pointer-events: none; }
+  .tile-label { fill: rgba(23,21,17,0.28); font-family: 'IBM Plex Mono', monospace; font-size: 11px; pointer-events: none; }
   .tile-active .tile-bg { transition: fill 0.4s ease, filter 0.4s ease; }
   .tile-active .tile-label { fill: rgba(0,0,0,0.7); font-weight: 700; }
 
@@ -146,7 +146,7 @@
   .tile-late .tile-bg { fill: var(--late); }
   .tile-pending .tile-bg { fill: var(--pending); }
   .tile-never .tile-bg { fill: var(--never); }
-  .tile-never .tile-label { fill: rgba(255,255,255,0.12); }
+  .tile-never .tile-label { fill: rgba(23,21,17,0.14); }
 
   @keyframes pulse-ring {
     0% { r: 0; opacity: 0.6; }
@@ -164,7 +164,7 @@
     flex-wrap: wrap;
   }
   .play-btn {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.8rem;
     padding: 0.5rem 1.2rem;
     border-radius: 6px;
@@ -177,7 +177,7 @@
   }
   .play-btn:hover { background: var(--accent); color: #000; }
   .speed-btn {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.7rem;
     padding: 0.3rem 0.6rem;
     border-radius: 14px;
@@ -188,7 +188,7 @@
   }
   .speed-btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
   .year-display {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 1.8rem;
     font-weight: 700;
     color: var(--accent);
@@ -210,7 +210,7 @@
     flex-wrap: wrap;
   }
   .stat {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.75rem;
     color: var(--muted);
   }
@@ -223,7 +223,7 @@
     margin: 0.75rem auto 0;
     padding: 0 2rem;
     flex-wrap: wrap;
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.7rem;
     color: var(--muted);
   }
@@ -234,7 +234,7 @@
     text-align: center;
     padding: 4rem 2rem;
     color: var(--muted);
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.8rem;
   }
   .tooltip {
@@ -250,11 +250,11 @@
     box-shadow: 0 8px 40px rgba(0,0,0,0.6);
     opacity: 0;
     transition: opacity 0.1s;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Avenir Next', sans-serif;
   }
   .tooltip .tt-state { font-weight: 700; font-size: 1rem; color: var(--text); }
   .tooltip .tt-detail { color: var(--muted); font-size: 0.8rem; line-height: 1.6; }
-  .tooltip .tt-detail span { color: var(--accent); font-family: 'Space Mono', monospace; }
+  .tooltip .tt-detail span { color: var(--accent); font-family: 'IBM Plex Mono', monospace; }
 
   @media (max-width: 640px) {
     .hero { padding: 1.5rem 1rem 1rem; }
@@ -263,22 +263,21 @@
   }
 </style>
 </head>
-<body>
+<body class="viz-page">
 
-<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#818cf8);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
-<header class="site" style="width:100%;padding:0.8rem 2rem 1rem;border-bottom:1px solid var(--rule,rgba(255,255,255,0.1));margin:0 auto;box-sizing:border-box;">
-    <a class="brand" href="/" aria-label="NobodyNamed home" style="display:inline-flex;align-items:center;color:var(--text,#e8e6e3);text-decoration:none;"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" style="filter:invert(1) brightness(1.2);display:block;width:clamp(160px,20vw,210px);aspect-ratio:240/44;height:auto;"></a>
-    <nav aria-label="Main navigation" style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0.2rem 0.8rem;font-family:var(--sans,system-ui,sans-serif);">
-      <a href="/extinct" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Extinct</a>
-      <a href="/endangered" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Endangered</a>
-      <a href="/comeback" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Comebacks</a>
-      <a href="/year" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Birth year</a>
-      <a href="/rising" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Rising</a>
-      <a href="/viz" style="color:var(--text,#e8e6e3);font-size:0.83rem;font-weight:600;text-decoration:none;" aria-current="page">Visualizations</a>
-      <a href="/blog/" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Namecalling</a>
-      <a href="/about" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">About</a>
+<a href="#viz-content" class="skip-link">Skip to content</a>
+<header class="site">
+  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" loading="lazy"></a>
+  <nav aria-label="Main navigation">
+    <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
+  </nav>
+  <details class="mobile-nav">
+    <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
+    <nav aria-label="Mobile navigation">
+      <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
     </nav>
-  </header>
+  </details>
+</header>
 
 <div id="viz-content" class="hero">
   <div class="kicker">31 / The Ripple</div>
@@ -309,7 +308,7 @@
   <button class="play-btn" id="play-btn">▶ Play</button>
   <span class="year-display" id="year-display">—</span>
   <input type="range" class="slider" id="slider" min="1880" max="2025" value="1880">
-  <span style="font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--muted)">Speed:</span>
+  <span style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--muted)">Speed:</span>
   <button class="speed-btn" data-speed="200">1×</button>
   <button class="speed-btn active" data-speed="120">2×</button>
   <button class="speed-btn" data-speed="50">5×</button>
@@ -584,12 +583,9 @@ document.querySelectorAll('.speed-btn').forEach(btn => {
 loadName('Jennifer');
 </script>
 
-<footer class="site" style="width:100%;padding:1.25rem 2rem;border-top:1px solid var(--rule,rgba(255,255,255,0.1));margin-top:2rem;font-family:var(--sans,system-ui,sans-serif);font-size:0.82rem;color:var(--muted,#6b7280);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;box-sizing:border-box;">
-    <div>
-      <div style="color:var(--muted,#6b7280);">nobodynamed is a small data project about American first names.</div>
-      <div style="color:var(--muted,#6b7280);font-size:0.82rem;">Data sourced from Social Security Administration birth records (1880–present).</div>
-    </div>
-    <div><a href="/about" style="color:var(--muted,#6b7280);text-decoration:none;">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/" style="color:var(--muted,#6b7280);text-decoration:none;">SSA source</a></div>
-  </footer>
+<footer>
+  <p>nobodynamed is a small data project about American first names. Data sourced from Social Security Administration birth records (1880–present).</p>
+  <p><a href="/about">About</a> · <a href="https://www.ssa.gov/oact/babynames/" target="_blank" rel="noopener">SSA source</a></p>
+</footer>
 </body>
 </html>

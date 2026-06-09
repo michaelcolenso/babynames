@@ -4,28 +4,28 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Your Name Has a Lifespan — nobodynamed.com</title>
-    <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f7f5f2">
     <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/viz-theme.css">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #07070f;
-  --surface: #0d0d1a;
-  --border: #1a1a2e;
-  --amber: #f59e0b;
+  --bg: #f4f0e7;
+  --surface: #fbf8f1;
+  --border: #eee5d6;
+  --amber: #c9922a;
   --amber-dim: #78490a;
-  --cyan: #22d3ee;
-  --rose: #f43f5e;
-  --violet: #a78bfa;
-  --green: #4ade80;
-  --muted: #6b7280;
-  --text: #d1d5db;
-  --heading: #f3f4f6;
+  --cyan: #5a7a9a;
+  --rose: #b83c2f;
+  --violet: #8b7ab8;
+  --green: #2f9e63;
+  --muted: #787064;
+  --text: #4d4941;
+  --heading: #171511;
 }
-html { background: var(--bg); color: var(--text); font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.75; font-size: 18px; }
+html { background: var(--paper); color: var(--text); font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.75; font-size: 18px; }
 body { max-width: 720px; margin: 0 auto; padding: 0 1.5rem 6rem; }
 
 /* ── typography ── */
@@ -122,9 +122,9 @@ svg text { font-family: sans-serif; }
 footer { margin-top: 5rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: sans-serif; font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
 </style>
 </head>
-<body>
+<body class="viz-page">
 
-<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#818cf8);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
+<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#5a7a9a);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
 <div class="tip" id="tip"></div>
 
 <header>
@@ -372,7 +372,7 @@ function sparkChart(selector, data, opts = {}) {
   });
 
   // multiple series?
-  const series = opts.series || [{ data, color: opts.color || '#f59e0b', label: opts.label || '' }];
+  const series = opts.series || [{ data, color: opts.color || '#c9922a', label: opts.label || '' }];
 
   series.forEach(s => {
     const area = d3.area().x(d => xS(d.y)).y0(ih).y1(d => yS(d.v)).curve(d3.curveMonotoneX);
@@ -391,11 +391,11 @@ function sparkChart(selector, data, opts = {}) {
   // axes
   g.append('g').attr('transform', `translate(0,${ih})`)
     .call(d3.axisBottom(xS).tickFormat(d3.format('d')).ticks(Math.min(8, years.length)))
-    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#6b7280').attr('font-size', '10'); });
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#787064').attr('font-size', '10'); });
 
   g.append('g')
     .call(d3.axisLeft(yS).ticks(4).tickFormat(d => d >= 1000 ? (d / 1000).toFixed(d >= 2000 ? 0 : 1) + 'k' : d))
-    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#6b7280').attr('font-size', '10'); });
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#787064').attr('font-size', '10'); });
 
   // annotations
   if (opts.annotate) {
@@ -404,7 +404,7 @@ function sparkChart(selector, data, opts = {}) {
       g.append('line').attr('x1', ax).attr('x2', ax).attr('y1', -mg.top + 6).attr('y2', ih)
         .attr('stroke', '#4b5563').attr('stroke-width', 1).attr('stroke-dasharray', '3,3');
       g.append('text').attr('x', ax).attr('y', -mg.top + 4)
-        .attr('text-anchor', 'middle').attr('fill', '#9ca3af').attr('font-size', '9').text(a.label);
+        .attr('text-anchor', 'middle').attr('fill', '#787064').attr('font-size', '9').text(a.label);
     });
   }
 
@@ -457,7 +457,7 @@ const billie = [{y:1990,v:235},{y:1995,v:229},{y:2000,v:146},{y:2005,v:85},{y:20
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 sparkChart('#c-rihanna', rihanna, {
-  color: '#f43f5e', label: 'Rihanna', H: 160,
+  color: '#b83c2f', label: 'Rihanna', H: 160,
   annotate: [
     { year: 2005, label: 'Pon de Replay' },
     { year: 2008, label: 'Umbrella era' },
@@ -466,26 +466,26 @@ sparkChart('#c-rihanna', rihanna, {
 });
 
 sparkChart('#c-khloe', khloe, {
-  color: '#a78bfa', label: 'Khloe', H: 160,
+  color: '#8b7ab8', label: 'Khloe', H: 160,
   annotate: [{ year: 2007, label: 'KUWTK premieres' }]
 });
 
 sparkChart('#c-kehlani', kehlani, {
-  color: '#22d3ee', label: 'Kehlani', H: 160,
+  color: '#5a7a9a', label: 'Kehlani', H: 160,
   annotate: [{ year: 2015, label: 'You Should Be Here' }]
 });
 
 sparkChart('#c-elsa', elsa, {
-  color: '#818cf8', label: 'Elsa', H: 160,
+  color: '#5a7a9a', label: 'Elsa', H: 160,
   annotate: [{ year: 2013, label: 'Frozen release' }]
 });
 
 sparkChart('#c-got', null, {
   H: 180,
   series: [
-    { data: arya.filter(d => d.y >= 2011), color: '#4ade80', label: 'Arya' },
-    { data: khaleesi, color: '#f59e0b', label: 'Khaleesi' },
-    { data: daenerys, color: '#f43f5e', label: 'Daenerys' },
+    { data: arya.filter(d => d.y >= 2011), color: '#2f9e63', label: 'Arya' },
+    { data: khaleesi, color: '#c9922a', label: 'Khaleesi' },
+    { data: daenerys, color: '#b83c2f', label: 'Daenerys' },
   ],
   annotate: [
     { year: 2011, label: 'GoT S1' },
@@ -496,9 +496,9 @@ sparkChart('#c-got', null, {
 sparkChart('#c-encanto', null, {
   H: 160,
   series: [
-    { data: bruno, color: '#f59e0b', label: 'Bruno' },
-    { data: luisa, color: '#22d3ee', label: 'Luisa' },
-    { data: mirabel, color: '#a78bfa', label: 'Mirabel' },
+    { data: bruno, color: '#c9922a', label: 'Bruno' },
+    { data: luisa, color: '#5a7a9a', label: 'Luisa' },
+    { data: mirabel, color: '#8b7ab8', label: 'Mirabel' },
   ],
   annotate: [{ year: 2021, label: 'Encanto release' }]
 });
@@ -506,8 +506,8 @@ sparkChart('#c-encanto', null, {
 sparkChart('#c-darkside', null, {
   H: 160,
   series: [
-    { data: kylo, color: '#f43f5e', label: 'Kylo' },
-    { data: anakin.filter(d => d.y >= 2013), color: '#f59e0b', label: 'Anakin' },
+    { data: kylo, color: '#b83c2f', label: 'Kylo' },
+    { data: anakin.filter(d => d.y >= 2013), color: '#c9922a', label: 'Anakin' },
   ],
   annotate: [{ year: 2015, label: 'Force Awakens' }]
 });
@@ -521,17 +521,14 @@ sparkChart('#c-hermione', hermione, {
 });
 
 sparkChart('#c-billie', billie, {
-  color: '#4ade80', label: 'Billie', H: 160,
+  color: '#2f9e63', label: 'Billie', H: 160,
   annotate: [{ year: 2017, label: 'Billie Eilish breaks' }]
 });
 </script>
 
-<footer class="site" style="width:100%;padding:1.25rem 2rem;border-top:1px solid var(--rule,rgba(255,255,255,0.1));margin-top:2rem;font-family:var(--sans,system-ui,sans-serif);font-size:0.82rem;color:var(--muted,#6b7280);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;box-sizing:border-box;">
-    <div>
-      <div style="color:var(--muted,#6b7280);">nobodynamed is a small data project about American first names.</div>
-      <div style="color:var(--muted,#6b7280);font-size:0.82rem;">Data sourced from Social Security Administration birth records (1880–present).</div>
-    </div>
-    <div><a href="/about" style="color:var(--muted,#6b7280);text-decoration:none;">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/" style="color:var(--muted,#6b7280);text-decoration:none;">SSA source</a></div>
-  </footer>
+<footer>
+  <p>nobodynamed is a small data project about American first names. Data sourced from Social Security Administration birth records (1880–present).</p>
+  <p><a href="/about">About</a> · <a href="https://www.ssa.gov/oact/babynames/" target="_blank" rel="noopener">SSA source</a></p>
+</footer>
 </body>
 </html>

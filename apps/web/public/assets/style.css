@@ -257,14 +257,22 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35);
   font-size: clamp(1.1rem, 2.2vw, 1.55rem);
 }
-.search input[type="text"]::placeholder { color: #8a8174; }
+.search input[type="text"]::placeholder { color: #6b6559; }
 .search input[type="text"]:focus,
 .year-form input[type="number"]:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(139, 63, 47, 0.13), inset 0 0 0 1px rgba(255,255,255,0.45);
 }
 .search select {
-  display: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .sex-segments {
   display: inline-grid;
@@ -278,7 +286,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 }
 .sex-segments button {
   min-width: 4.2rem;
-  height: 100%;
+  height: 44px;
   padding: 0.65rem 0.75rem;
   color: var(--ink-soft);
   background: transparent;
@@ -1888,3 +1896,20 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   .faq-q { font-size: 0.88rem; }
   .faq-a { font-size: 0.85rem; }
 }
+
+.editorial-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans);
+  font-size: 0.88rem;
+}
+.editorial-nav a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-weight: 600;
+}
+.editorial-nav a:hover { color: var(--accent); }

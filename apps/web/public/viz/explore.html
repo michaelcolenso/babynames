@@ -14,9 +14,9 @@
 <meta property="og:image:type" content="image/png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://nobodynamed.com/api/og/default">
-    <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f7f5f2">
     <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/viz-theme.css">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <script type="application/ld+json">
 {
@@ -40,27 +40,27 @@
   ]
 }
 </script>
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #0a0a0f;
-    --bg2: #12121a;
-    --text: #e8e6e3;
-    --muted: #6b7280;
-    --accent: #818cf8;
-    --accent2: #f472b6;
-    --accent3: #34d399;
-    --male: #60a5fa;
-    --female: #f472b6;
+    --bg: #f4f0e7;
+    --bg2: #fbf8f1;
+    --text: #171511;
+    --muted: #787064;
+    --accent: #5a7a9a;
+    --accent2: #a85d5d;
+    --accent3: #2f9e63;
+    --male: #465d75;
+    --female: #a85d5d;
   }
 
   body {
-    font-family: 'Space Grotesk', system-ui, sans-serif;
-    background: var(--bg);
+    font-family: 'Avenir Next', system-ui, sans-serif;
+    background: var(--paper);
     color: var(--text);
     line-height: 1.6;
     overflow-x: hidden;
@@ -91,10 +91,7 @@
     letter-spacing: -0.03em;
     line-height: 1.1;
     margin-bottom: 1rem;
-    background: linear-gradient(135deg, #818cf8, #f472b6, #34d399);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--text);
   }
 
   .hero p {
@@ -107,17 +104,10 @@
   .hero .scroll-hint {
     position: absolute;
     bottom: 2rem;
-    animation: bounce 2s infinite;
     color: var(--muted);
     font-size: 0.85rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-  }
-
-  @keyframes bounce {
-    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-    60% { transform: translateY(-5px); }
   }
 
   section {
@@ -131,7 +121,7 @@
   }
 
   .section-header .number {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.8rem;
     color: var(--accent);
     letter-spacing: 0.2em;
@@ -155,7 +145,7 @@
   .chart-container {
     background: var(--bg2);
     border-radius: 16px;
-    border: 1px solid rgba(255,255,255,0.06);
+    border: 1px solid rgba(23,21,17,0.08);
     padding: 2rem;
     margin-bottom: 2rem;
     position: relative;
@@ -173,7 +163,7 @@
   svg { display: block; }
 
   svg text {
-    font-family: 'Space Grotesk', system-ui, sans-serif;
+    font-family: 'Avenir Next', system-ui, sans-serif;
   }
 
   .axis text {
@@ -182,7 +172,7 @@
   }
 
   .axis line, .axis path {
-    stroke: rgba(255,255,255,0.08);
+    stroke: rgba(23,21,17,0.10);
   }
 
   .tooltip {
@@ -242,7 +232,7 @@
   .stat-card {
     background: var(--bg2);
     border-radius: 12px;
-    border: 1px solid rgba(255,255,255,0.06);
+    border: 1px solid rgba(23,21,17,0.08);
     padding: 1.5rem;
   }
 
@@ -257,7 +247,7 @@
   .stat-card .stat-value {
     font-size: 2rem;
     font-weight: 700;
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
   }
 
   .stat-card .stat-detail {
@@ -267,7 +257,7 @@
   }
 
   .annotation-line {
-    stroke: rgba(255,255,255,0.15);
+    stroke: rgba(23,21,17,0.18);
     stroke-dasharray: 3 3;
   }
 
@@ -280,7 +270,7 @@
 
   .divider {
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    background: linear-gradient(90deg, transparent, rgba(23,21,17,0.08), transparent);
     margin: 4rem auto;
     max-width: 800px;
   }
@@ -330,15 +320,15 @@
     padding: 1rem;
   }
   .sparkline-card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(23,21,17,0.04);
+    border: 1px solid rgba(23,21,17,0.08);
     border-radius: 10px;
     padding: 12px 12px 4px;
     transition: border-color 0.2s, transform 0.2s;
     cursor: default;
   }
   .sparkline-card:hover {
-    border-color: rgba(255,255,255,0.15);
+    border-color: rgba(23,21,17,0.18);
     transform: translateY(-2px);
   }
   .sparkline-card .spark-name {
@@ -350,7 +340,7 @@
   .sparkline-card .spark-meta {
     font-size: 0.7rem;
     color: var(--muted);
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
   }
 
   /* Heatmap */
@@ -361,12 +351,12 @@
     margin-bottom: 1rem;
   }
   .toggle-btn {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(23,21,17,0.07);
+    border: 1px solid rgba(23,21,17,0.12);
     color: var(--muted);
     padding: 6px 16px;
     border-radius: 20px;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Avenir Next', sans-serif;
     font-size: 0.8rem;
     cursor: pointer;
     transition: all 0.2s;
@@ -377,13 +367,13 @@
     border-color: var(--accent);
   }
   .toggle-btn:hover:not(.active) {
-    border-color: rgba(255,255,255,0.25);
+    border-color: rgba(23,21,17,0.28);
     color: var(--text);
   }
 
   /* Half-life scatter */
   .halflife-axis text { fill: var(--muted); font-size: 11px; }
-  .halflife-axis .domain, .halflife-axis .tick line { stroke: rgba(255,255,255,0.08); }
+  .halflife-axis .domain, .halflife-axis .tick line { stroke: rgba(23,21,17,0.10); }
 
   /* Gender drift cards */
   .drift-grid {
@@ -393,15 +383,15 @@
     padding: 1rem;
   }
   .drift-card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(23,21,17,0.04);
+    border: 1px solid rgba(23,21,17,0.08);
     border-radius: 10px;
     padding: 12px;
     transition: border-color 0.2s;
   }
-  .drift-card:hover { border-color: rgba(255,255,255,0.15); }
+  .drift-card:hover { border-color: rgba(23,21,17,0.18); }
   .drift-card .drift-name { font-size: 1rem; font-weight: 600; margin-bottom: 2px; }
-  .drift-card .drift-meta { font-size: 0.7rem; color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: 6px; }
+  .drift-card .drift-meta { font-size: 0.7rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; margin-bottom: 6px; }
 
   /* Decade radar grid */
   .radar-grid {
@@ -411,8 +401,8 @@
     padding: 1rem;
   }
   .radar-card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(23,21,17,0.04);
+    border: 1px solid rgba(23,21,17,0.08);
     border-radius: 10px;
     padding: 12px;
     text-align: center;
@@ -435,10 +425,10 @@
     padding: 0 4px;
     border-radius: 3px;
   }
-  .phantom-row:hover { background: rgba(255,255,255,0.04); }
+  .phantom-row:hover { background: rgba(23,21,17,0.06); }
   .phantom-label {
     font-size: 0.7rem;
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     color: var(--muted);
     width: 80px;
     text-align: right;
@@ -447,9 +437,9 @@
   .phantom-row:hover .phantom-label { color: var(--text); }
 </style>
 </head>
-<body>
+<body class="viz-page">
 
-<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#818cf8);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
+<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#5a7a9a);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
 <div class="hero">
   <h1>The Story of<br>Every Name</h1>
   <p>135 years of baby naming data from the US Social Security Administration and the UK Office for National Statistics, brought to life.</p>
@@ -790,7 +780,7 @@ function rafHover(handler) {
   g.append('g').attr('class', 'axis')
     .selectAll('line').data(y.ticks(6)).join('line')
     .attr('x1', 0).attr('x2', w).attr('y1', d => y(d)).attr('y2', d => y(d))
-    .attr('stroke', 'rgba(255,255,255,0.04)');
+    .attr('stroke', 'rgba(23,21,17,0.06)');
 
   // Stacked areas
   const areaF = d3.area()
@@ -804,23 +794,23 @@ function rafHover(handler) {
   // Gradient for female
   const defs = svg.append('defs');
   const gradF = defs.append('linearGradient').attr('id', 'grad-f').attr('x1', '0').attr('y1', '0').attr('x2', '0').attr('y2', '1');
-  gradF.append('stop').attr('offset', '0%').attr('stop-color', '#f472b6').attr('stop-opacity', 0.6);
-  gradF.append('stop').attr('offset', '100%').attr('stop-color', '#f472b6').attr('stop-opacity', 0.1);
+  gradF.append('stop').attr('offset', '0%').attr('stop-color', '#a85d5d').attr('stop-opacity', 0.6);
+  gradF.append('stop').attr('offset', '100%').attr('stop-color', '#a85d5d').attr('stop-opacity', 0.1);
 
   const gradM = defs.append('linearGradient').attr('id', 'grad-m').attr('x1', '0').attr('y1', '0').attr('x2', '0').attr('y2', '1');
-  gradM.append('stop').attr('offset', '0%').attr('stop-color', '#60a5fa').attr('stop-opacity', 0.6);
-  gradM.append('stop').attr('offset', '100%').attr('stop-color', '#60a5fa').attr('stop-opacity', 0.1);
+  gradM.append('stop').attr('offset', '0%').attr('stop-color', '#465d75').attr('stop-opacity', 0.6);
+  gradM.append('stop').attr('offset', '100%').attr('stop-color', '#465d75').attr('stop-opacity', 0.1);
 
   g.append('path').datum(usTotals).attr('d', areaF).attr('fill', 'url(#grad-f)');
   g.append('path').datum(usTotals).attr('d', areaM).attr('fill', 'url(#grad-m)');
 
   // Lines on top
   g.append('path').datum(usTotals)
-    .attr('fill', 'none').attr('stroke', '#f472b6').attr('stroke-width', 1.5)
+    .attr('fill', 'none').attr('stroke', '#a85d5d').attr('stroke-width', 1.5)
     .attr('d', d3.line().x(d => x(d.year)).y(d => y(d.F)).curve(d3.curveMonotoneX));
 
   g.append('path').datum(usTotals)
-    .attr('fill', 'none').attr('stroke', '#60a5fa').attr('stroke-width', 1.5)
+    .attr('fill', 'none').attr('stroke', '#465d75').attr('stroke-width', 1.5)
     .attr('d', d3.line().x(d => x(d.year)).y(d => y(d.F + d.M)).curve(d3.curveMonotoneX));
 
   // Axes
@@ -853,7 +843,7 @@ function rafHover(handler) {
   });
 
   // Hover interaction
-  const hoverLine = g.append('line').attr('stroke', 'rgba(255,255,255,0.3)').attr('stroke-width', 1).style('display', 'none')
+  const hoverLine = g.append('line').attr('stroke', 'rgba(23,21,17,0.32)').attr('stroke-width', 1).style('display', 'none')
     .attr('y1', 0).attr('y2', h);
   const bisect = d3.bisector(d => d.year).left;
 
@@ -866,8 +856,8 @@ function rafHover(handler) {
       hoverLine.style('display', null).attr('x1', x(yr)).attr('x2', x(yr));
       showTooltip(evt, `
         <div class="label">${yr}</div>
-        <div style="color:#60a5fa"><span class="value">${fmt(d.M)}</span> boys</div>
-        <div style="color:#f472b6"><span class="value">${fmt(d.F)}</span> girls</div>
+        <div style="color:#465d75"><span class="value">${fmt(d.M)}</span> boys</div>
+        <div style="color:#a85d5d"><span class="value">${fmt(d.F)}</span> girls</div>
         <div style="color:var(--text); margin-top:4px"><span class="value">${fmt(d.M + d.F)}</span> total</div>
       `);
     }))
@@ -941,13 +931,13 @@ function rafHover(handler) {
   g.append('text')
     .attr('x', w).attr('y', y(1050) - 6)
     .attr('text-anchor', 'end')
-    .attr('fill', '#34d399').attr('font-size', 11)
+    .attr('fill', '#2f9e63').attr('font-size', 11)
     .text('Biological baseline (1,050)');
 
   // Color scale for ratio
   const colorScale = d3.scaleSequential()
     .domain([d3.min(ratioData, d => d.ratio), d3.max(ratioData, d => d.ratio)])
-    .interpolator(d3.interpolateRgbBasis(['#f472b6', '#818cf8', '#60a5fa']));
+    .interpolator(d3.interpolateRgbBasis(['#a85d5d', '#5a7a9a', '#465d75']));
 
   // Area under/over baseline
   const areaAbove = d3.area()
@@ -1014,7 +1004,7 @@ function rafHover(handler) {
     .text('Boys per 1,000 girls');
 
   // Hover
-  const hoverLine = g.append('line').attr('stroke', 'rgba(255,255,255,0.3)').attr('stroke-width', 1).style('display', 'none').attr('y1', 0).attr('y2', h);
+  const hoverLine = g.append('line').attr('stroke', 'rgba(23,21,17,0.32)').attr('stroke-width', 1).style('display', 'none').attr('y1', 0).attr('y2', h);
   const hoverDot = g.append('circle').attr('r', 5).attr('fill', 'var(--accent)').attr('stroke', 'var(--bg2)').attr('stroke-width', 2).style('display', 'none');
 
   g.append('rect').attr('width', w).attr('height', h).attr('fill', 'transparent')
@@ -1144,8 +1134,8 @@ function drawStream(containerId, legendId, data, colorRange) {
   });
 }
 
-const boyColors = ['#60a5fa','#818cf8','#a78bfa','#c084fc','#38bdf8','#22d3ee','#2dd4bf','#4ade80','#a3e635','#facc15'];
-const girlColors = ['#f472b6','#fb7185','#f43f5e','#e879f9','#c084fc','#a78bfa','#818cf8','#60a5fa','#38bdf8','#22d3ee'];
+const boyColors = ['#465d75','#5a7a9a','#8b7ab8','#c084fc','#38bdf8','#5a7a9a','#2dd4bf','#2f9e63','#a3e635','#facc15'];
+const girlColors = ['#a85d5d','#fb7185','#b83c2f','#e879f9','#c084fc','#8b7ab8','#5a7a9a','#465d75','#38bdf8','#5a7a9a'];
 
 drawStream('chart-stream-boys', 'legend-boys', britishBoys, boyColors);
 drawStream('chart-stream-girls', 'legend-girls', britishGirls, girlColors);
@@ -1188,7 +1178,7 @@ function drawBump(containerId, data, colorRange) {
     g.append('line')
       .attr('x1', 0).attr('x2', w)
       .attr('y1', y(i)).attr('y2', y(i))
-      .attr('stroke', 'rgba(255,255,255,0.03)');
+      .attr('stroke', 'rgba(23,21,17,0.04)');
   }
 
   // Lines
@@ -1292,7 +1282,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
     g.append('circle')
       .attr('r', R * 0.35 + (R - R * 0.35) * f)
       .attr('fill', 'none')
-      .attr('stroke', 'rgba(255,255,255,0.04)');
+      .attr('stroke', 'rgba(23,21,17,0.06)');
   });
 
   // Boy bars (outer)
@@ -1307,14 +1297,14 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
       .padAngle(0.02)
       .padRadius(R * 0.35)
     )
-    .attr('fill', '#60a5fa')
+    .attr('fill', '#465d75')
     .attr('fill-opacity', 0.5)
     .on('mousemove', function(evt, d) {
       d3.select(this).attr('fill-opacity', 0.9);
       showTooltip(evt, `
         <div class="label">Letter ${d}</div>
-        <div style="color:#60a5fa">${fmt(letterFreqBoys[d] || 0)} boy names</div>
-        <div style="color:#f472b6">${fmt(letterFreqGirls[d] || 0)} girl names</div>
+        <div style="color:#465d75">${fmt(letterFreqBoys[d] || 0)} boy names</div>
+        <div style="color:#a85d5d">${fmt(letterFreqGirls[d] || 0)} girl names</div>
       `);
     })
     .on('mouseleave', function() { d3.select(this).attr('fill-opacity', 0.5); hideTooltip(); });
@@ -1331,7 +1321,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
       .padAngle(0.02)
       .padRadius(R * 0.35)
     )
-    .attr('fill', '#f472b6')
+    .attr('fill', '#a85d5d')
     .attr('fill-opacity', 0.5);
 
   // Letter labels
@@ -1364,9 +1354,9 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
 
   // Legend
   const legendG = svg.append('g').attr('transform', `translate(${size / 2 - 120},${size + 20})`);
-  legendG.append('rect').attr('width', 12).attr('height', 12).attr('rx', 6).attr('fill', '#60a5fa').attr('fill-opacity', 0.5);
+  legendG.append('rect').attr('width', 12).attr('height', 12).attr('rx', 6).attr('fill', '#465d75').attr('fill-opacity', 0.5);
   legendG.append('text').attr('x', 18).attr('y', 10).attr('fill', 'var(--muted)').attr('font-size', 12).text('Boy names');
-  legendG.append('rect').attr('x', 120).attr('width', 12).attr('height', 12).attr('rx', 6).attr('fill', '#f472b6').attr('fill-opacity', 0.5);
+  legendG.append('rect').attr('x', 120).attr('width', 12).attr('height', 12).attr('rx', 6).attr('fill', '#a85d5d').attr('fill-opacity', 0.5);
   legendG.append('text').attr('x', 138).attr('y', 10).attr('fill', 'var(--muted)').attr('font-size', 12).text('Girl names');
 })();
 
@@ -1392,7 +1382,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
   const y = d3.scaleLinear().domain([0, 0.45]).range([h, 0]);
 
   const defs = svg.append('defs');
-  [['grad-boy-conc', '#60a5fa'], ['grad-girl-conc', '#f472b6']].forEach(([id, color]) => {
+  [['grad-boy-conc', '#465d75'], ['grad-girl-conc', '#a85d5d']].forEach(([id, color]) => {
     const grad = defs.append('linearGradient').attr('id', id).attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 1);
     grad.append('stop').attr('offset', '0%').attr('stop-color', color).attr('stop-opacity', 0.35);
     grad.append('stop').attr('offset', '100%').attr('stop-color', color).attr('stop-opacity', 0.02);
@@ -1405,15 +1395,15 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
 
   const lineBoy = d3.line().x(d => x(d.year)).y(d => y(d.top10boyPct)).curve(d3.curveMonotoneX);
   const lineGirl = d3.line().x(d => x(d.year)).y(d => y(d.top10girlPct)).curve(d3.curveMonotoneX);
-  g.append('path').datum(diversityData).attr('d', lineBoy).attr('fill', 'none').attr('stroke', '#60a5fa').attr('stroke-width', 2.5);
-  g.append('path').datum(diversityData).attr('d', lineGirl).attr('fill', 'none').attr('stroke', '#f472b6').attr('stroke-width', 2.5);
+  g.append('path').datum(diversityData).attr('d', lineBoy).attr('fill', 'none').attr('stroke', '#465d75').attr('stroke-width', 2.5);
+  g.append('path').datum(diversityData).attr('d', lineGirl).attr('fill', 'none').attr('stroke', '#a85d5d').attr('stroke-width', 2.5);
 
   // Axes
   g.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).ticks(10).tickFormat(d3.format('d')))
     .selectAll('text').attr('fill', 'var(--muted)').attr('font-size', 11);
   g.append('g').call(d3.axisLeft(y).ticks(5).tickFormat(d => (d * 100).toFixed(0) + '%'))
     .selectAll('text').attr('fill', 'var(--muted)').attr('font-size', 11);
-  g.selectAll('.domain, .tick line').attr('stroke', 'rgba(255,255,255,0.08)');
+  g.selectAll('.domain, .tick line').attr('stroke', 'rgba(23,21,17,0.10)');
   g.append('text').attr('transform', 'rotate(-90)').attr('x', -h / 2).attr('y', -45)
     .attr('text-anchor', 'middle').attr('fill', 'var(--muted)').attr('font-size', 11)
     .text('Share of births in top 10 names');
@@ -1432,8 +1422,8 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
 
   // Hover
   const hoverLine = g.append('line').attr('y1', 0).attr('y2', h).attr('stroke', 'var(--accent)').attr('stroke-width', 1).attr('opacity', 0);
-  const hoverDotB = g.append('circle').attr('r', 4).attr('fill', '#60a5fa').attr('opacity', 0);
-  const hoverDotG = g.append('circle').attr('r', 4).attr('fill', '#f472b6').attr('opacity', 0);
+  const hoverDotB = g.append('circle').attr('r', 4).attr('fill', '#465d75').attr('opacity', 0);
+  const hoverDotG = g.append('circle').attr('r', 4).attr('fill', '#a85d5d').attr('opacity', 0);
   g.append('rect').attr('width', w).attr('height', h).attr('fill', 'transparent')
     .on('mousemove', rafHover(function(evt) {
       const [mx] = d3.pointer(evt);
@@ -1448,8 +1438,8 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
     .on('mouseleave', function() { hideTooltip(); hoverLine.attr('opacity', 0); hoverDotB.attr('opacity', 0); hoverDotG.attr('opacity', 0); });
 
   const legend = d3.select('#legend-diversity');
-  legend.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: #60a5fa"></div> Boys — top 10 share');
-  legend.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: #f472b6"></div> Girls — top 10 share');
+  legend.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: #465d75"></div> Boys — top 10 share');
+  legend.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: #a85d5d"></div> Girls — top 10 share');
 
   // --- CHART 2: Shannon Entropy ---
   const container2 = document.getElementById('chart-entropy');
@@ -1467,7 +1457,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
   const yE = d3.scaleLinear().domain([eMin, eMax]).range([h2, 0]);
 
   const defs2 = svg2.append('defs');
-  [['grad-ent-boy', '#60a5fa'], ['grad-ent-girl', '#f472b6']].forEach(([id, color]) => {
+  [['grad-ent-boy', '#465d75'], ['grad-ent-girl', '#a85d5d']].forEach(([id, color]) => {
     const grad = defs2.append('linearGradient').attr('id', id).attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 1);
     grad.append('stop').attr('offset', '0%').attr('stop-color', color).attr('stop-opacity', 0.25);
     grad.append('stop').attr('offset', '100%').attr('stop-color', color).attr('stop-opacity', 0.02);
@@ -1480,22 +1470,22 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
 
   const lineEB = d3.line().x(d => x(d.year)).y(d => yE(d.entropyBoy)).curve(d3.curveMonotoneX);
   const lineEG = d3.line().x(d => x(d.year)).y(d => yE(d.entropyGirl)).curve(d3.curveMonotoneX);
-  g2.append('path').datum(diversityData).attr('d', lineEB).attr('fill', 'none').attr('stroke', '#60a5fa').attr('stroke-width', 2.5);
-  g2.append('path').datum(diversityData).attr('d', lineEG).attr('fill', 'none').attr('stroke', '#f472b6').attr('stroke-width', 2.5);
+  g2.append('path').datum(diversityData).attr('d', lineEB).attr('fill', 'none').attr('stroke', '#465d75').attr('stroke-width', 2.5);
+  g2.append('path').datum(diversityData).attr('d', lineEG).attr('fill', 'none').attr('stroke', '#a85d5d').attr('stroke-width', 2.5);
 
   g2.append('g').attr('transform', `translate(0,${h2})`).call(d3.axisBottom(x).ticks(10).tickFormat(d3.format('d')))
     .selectAll('text').attr('fill', 'var(--muted)').attr('font-size', 11);
   g2.append('g').call(d3.axisLeft(yE).ticks(5).tickFormat(d => d.toFixed(1)))
     .selectAll('text').attr('fill', 'var(--muted)').attr('font-size', 11);
-  g2.selectAll('.domain, .tick line').attr('stroke', 'rgba(255,255,255,0.08)');
+  g2.selectAll('.domain, .tick line').attr('stroke', 'rgba(23,21,17,0.10)');
   g2.append('text').attr('transform', 'rotate(-90)').attr('x', -h2 / 2).attr('y', -45)
     .attr('text-anchor', 'middle').attr('fill', 'var(--muted)').attr('font-size', 11)
     .text('Shannon entropy (bits)');
 
   // Hover
   const hLine2 = g2.append('line').attr('y1', 0).attr('y2', h2).attr('stroke', 'var(--accent)').attr('stroke-width', 1).attr('opacity', 0);
-  const hDotB2 = g2.append('circle').attr('r', 4).attr('fill', '#60a5fa').attr('opacity', 0);
-  const hDotG2 = g2.append('circle').attr('r', 4).attr('fill', '#f472b6').attr('opacity', 0);
+  const hDotB2 = g2.append('circle').attr('r', 4).attr('fill', '#465d75').attr('opacity', 0);
+  const hDotG2 = g2.append('circle').attr('r', 4).attr('fill', '#a85d5d').attr('opacity', 0);
   g2.append('rect').attr('width', w).attr('height', h2).attr('fill', 'transparent')
     .on('mousemove', rafHover(function(evt) {
       const [mx] = d3.pointer(evt);
@@ -1510,8 +1500,8 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
     .on('mouseleave', function() { hideTooltip(); hLine2.attr('opacity', 0); hDotB2.attr('opacity', 0); hDotG2.attr('opacity', 0); });
 
   const legend2 = d3.select('#legend-entropy');
-  legend2.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: #60a5fa"></div> Boy name entropy');
-  legend2.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: #f472b6"></div> Girl name entropy');
+  legend2.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: #465d75"></div> Boy name entropy');
+  legend2.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: #a85d5d"></div> Girl name entropy');
 
   // --- STATS ---
   const first = diversityData[0], last = diversityData[diversityData.length - 1];
@@ -1548,7 +1538,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
 
   riseAndFall.forEach(d => {
     const card = grid.append('div').attr('class', 'sparkline-card');
-    const color = d.sex === 'boy' ? '#60a5fa' : '#f472b6';
+    const color = d.sex === 'boy' ? '#465d75' : '#a85d5d';
 
     card.append('div').attr('class', 'spark-name').style('color', color).text(d.name);
     card.append('div').attr('class', 'spark-meta').text(`Peak: ${d.peakYear} · ${(d.peakPct * 100).toFixed(1)}%`);
@@ -1623,7 +1613,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
     return mx;
   }
 
-  const colorScale = d3.scaleSequential(d => d3.interpolateRgbBasis(['#0a0a1a', '#1a1145', '#3b0764', '#7c3aed', '#a78bfa', '#c4b5fd', '#fbbf24'])(d)).domain([0, getMax(data)]);
+  const colorScale = d3.scaleSequential(d => d3.interpolateRgbBasis(['#0a0a1a', '#1a1145', '#3b0764', '#7c3aed', '#8b7ab8', '#c4b5fd', '#c9922a'])(d)).domain([0, getMax(data)]);
 
   // Draw cells
   const cells = g.selectAll('.hm-cell').data(
@@ -1636,7 +1626,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
     .attr('width', cellW - 1)
     .attr('height', cellH - 1)
     .attr('rx', 1)
-    .attr('fill', d => d.value > 0 ? colorScale(d.value) : 'rgba(255,255,255,0.02)')
+    .attr('fill', d => d.value > 0 ? colorScale(d.value) : 'rgba(23,21,17,0.03)')
     .on('mousemove', function(evt, d) {
       const row = lettersByYear.find(r => r.year === d.year);
       const mVal = row ? row.letters[d.letter].M : 0;
@@ -1657,7 +1647,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
   letters.forEach((l, i) => {
     g.append('text').attr('x', -8).attr('y', i * cellH + cellH / 2 + 4)
       .attr('text-anchor', 'end').attr('fill', 'var(--muted)').attr('font-size', 10)
-      .attr('font-family', "'Space Mono', monospace").text(l);
+      .attr('font-family', "'IBM Plex Mono', monospace").text(l);
   });
 
   // X-axis: year labels (every 10 years)
@@ -1684,7 +1674,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
 
       cells.data(flat)
         .transition().duration(400)
-        .attr('fill', d => d.value > 0 ? colorScale(d.value) : 'rgba(255,255,255,0.02)');
+        .attr('fill', d => d.value > 0 ? colorScale(d.value) : 'rgba(23,21,17,0.03)');
     });
   });
 })();
@@ -1747,9 +1737,9 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
     .attr('cx', d => x(d.peakYear))
     .attr('cy', d => y(Math.min(d.halfLife, 130)))
     .attr('r', d => r(d.peakPct))
-    .attr('fill', d => d.sex === 'M' ? '#60a5fa' : '#f472b6')
+    .attr('fill', d => d.sex === 'M' ? '#465d75' : '#a85d5d')
     .attr('fill-opacity', 0.5)
-    .attr('stroke', d => d.sex === 'M' ? '#60a5fa' : '#f472b6')
+    .attr('stroke', d => d.sex === 'M' ? '#465d75' : '#a85d5d')
     .attr('stroke-width', 0.5)
     .on('mousemove', function(evt, d) {
       d3.select(this).attr('fill-opacity', 0.9).attr('stroke-width', 2);
@@ -1765,13 +1755,13 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
   halfLifeData.filter(d => labels.includes(d.name)).forEach(d => {
     const cx = x(d.peakYear), cy = y(Math.min(d.halfLife, 130));
     g.append('text').attr('x', cx + r(d.peakPct) + 3).attr('y', cy + 3)
-      .attr('fill', d.sex === 'M' ? '#60a5fa' : '#f472b6')
+      .attr('fill', d.sex === 'M' ? '#465d75' : '#a85d5d')
       .attr('font-size', 10).attr('font-weight', 500).text(d.name);
   });
 
   const legend = d3.select('#legend-halflife');
-  legend.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: #60a5fa"></div> Boy names');
-  legend.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: #f472b6"></div> Girl names');
+  legend.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: #465d75"></div> Boy names');
+  legend.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: #a85d5d"></div> Girl names');
   legend.append('div').attr('class', 'legend-item').html('<div class="legend-dot" style="background: var(--accent); width: 16px; height: 2px; border-radius: 0;"></div> Trend (moving avg)');
 })();
 
@@ -1808,9 +1798,9 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
   const y = d3.scaleLinear().domain(yExtent).range([h, 0]);
 
   const colors = [
-    '#818cf8', '#f472b6', '#34d399', '#fbbf24', '#60a5fa',
-    '#a78bfa', '#fb923c', '#38bdf8', '#e879f9', '#4ade80',
-    '#f87171', '#22d3ee', '#facc15', '#c084fc', '#2dd4bf',
+    '#5a7a9a', '#a85d5d', '#2f9e63', '#c9922a', '#465d75',
+    '#8b7ab8', '#fb923c', '#38bdf8', '#e879f9', '#2f9e63',
+    '#f87171', '#5a7a9a', '#facc15', '#c084fc', '#2dd4bf',
     '#fb7185', '#94a3b8'
   ];
   const color = d3.scaleOrdinal().domain(keys).range(colors);
@@ -1856,7 +1846,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
 
   g.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).ticks(10).tickFormat(d3.format('d')))
     .selectAll('text').attr('fill', 'var(--muted)').attr('font-size', 11);
-  g.selectAll('.domain, .tick line').attr('stroke', 'rgba(255,255,255,0.08)');
+  g.selectAll('.domain, .tick line').attr('stroke', 'rgba(23,21,17,0.10)');
 
   const legend = d3.select('#legend-endings');
   keys.forEach(k => {
@@ -1897,16 +1887,16 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
     // Boy area
     const areaBoy = d3.area().x(s => xS(s.year)).y0(sh).y1(s => yS(s.boy)).curve(d3.curveMonotoneX);
     g.append('path').datum(d.series).attr('d', areaBoy)
-      .attr('fill', '#60a5fa').attr('fill-opacity', 0.3);
+      .attr('fill', '#465d75').attr('fill-opacity', 0.3);
     g.append('path').datum(d.series).attr('d', d3.line().x(s => xS(s.year)).y(s => yS(s.boy)).curve(d3.curveMonotoneX))
-      .attr('fill', 'none').attr('stroke', '#60a5fa').attr('stroke-width', 1.5);
+      .attr('fill', 'none').attr('stroke', '#465d75').attr('stroke-width', 1.5);
 
     // Girl area
     const areaGirl = d3.area().x(s => xS(s.year)).y0(sh).y1(s => yS(s.girl)).curve(d3.curveMonotoneX);
     g.append('path').datum(d.series).attr('d', areaGirl)
-      .attr('fill', '#f472b6').attr('fill-opacity', 0.3);
+      .attr('fill', '#a85d5d').attr('fill-opacity', 0.3);
     g.append('path').datum(d.series).attr('d', d3.line().x(s => xS(s.year)).y(s => yS(s.girl)).curve(d3.curveMonotoneX))
-      .attr('fill', 'none').attr('stroke', '#f472b6').attr('stroke-width', 1.5);
+      .attr('fill', 'none').attr('stroke', '#a85d5d').attr('stroke-width', 1.5);
 
     card.on('mousemove', function(evt) {
       const peakBoy = d3.max(d.series, s => s.boy);
@@ -1950,7 +1940,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
     // Background rings
     [0.25, 0.5, 0.75, 1].forEach(frac => {
       g.append('circle').attr('r', R * frac)
-        .attr('fill', 'none').attr('stroke', 'rgba(255,255,255,0.06)');
+        .attr('fill', 'none').attr('stroke', 'rgba(23,21,17,0.08)');
     });
 
     // Axis lines and labels
@@ -1959,7 +1949,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
       const lx = Math.cos(angle) * R;
       const ly = Math.sin(angle) * R;
       g.append('line').attr('x1', 0).attr('y1', 0).attr('x2', lx).attr('y2', ly)
-        .attr('stroke', 'rgba(255,255,255,0.08)');
+        .attr('stroke', 'rgba(23,21,17,0.10)');
 
       const labelR = R + 12;
       g.append('text')
@@ -2023,17 +2013,17 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
   const xAxisG = svg.append('g').attr('transform', `translate(0,${phantomNames.length * rowH + 5})`);
   xAxisG.call(d3.axisBottom(x).ticks(10).tickFormat(d3.format('d')))
     .selectAll('text').attr('fill', 'var(--muted)').attr('font-size', 10);
-  xAxisG.selectAll('.domain, .tick line').attr('stroke', 'rgba(255,255,255,0.08)');
+  xAxisG.selectAll('.domain, .tick line').attr('stroke', 'rgba(23,21,17,0.10)');
 
   phantomNames.forEach((name, i) => {
     const yTop = i * rowH;
-    const color = name.sex === 'M' ? '#60a5fa' : '#f472b6';
+    const color = name.sex === 'M' ? '#465d75' : '#a85d5d';
 
     // Name label
     svg.append('text')
       .attr('x', margin.left - 6).attr('y', yTop + rowH / 2 + 3)
       .attr('text-anchor', 'end').attr('fill', 'var(--muted)')
-      .attr('font-size', 9).attr('font-family', "'Space Mono', monospace")
+      .attr('font-size', 9).attr('font-family', "'IBM Plex Mono', monospace")
       .attr('class', `phantom-text-${i}`)
       .text(name.name);
 
@@ -2059,7 +2049,7 @@ drawBump('chart-bump-girls', britishGirls, girlColors);
       .attr('x', margin.left).attr('y', yTop).attr('width', chartW).attr('height', rowH)
       .attr('fill', 'transparent')
       .on('mousemove', function(evt) {
-        d3.select(this).attr('fill', 'rgba(255,255,255,0.03)');
+        d3.select(this).attr('fill', 'rgba(23,21,17,0.04)');
         svg.select(`.phantom-text-${i}`).attr('fill', 'var(--text)');
         showTooltip(evt, `<div class="label">${name.name} (${name.sex === 'M' ? 'boy' : 'girl'})</div><div class="value">Best rank: #${name.bestRank}</div><div>Peak: ${name.peakPct}% in ${name.peakYear}</div>`);
       })
@@ -2093,12 +2083,9 @@ document.querySelectorAll('section, .chart-container').forEach(el => {
 
 </script>
 
-<footer class="site" style="width:100%;padding:1.25rem 2rem;border-top:1px solid var(--rule,rgba(255,255,255,0.1));margin-top:2rem;font-family:var(--sans,system-ui,sans-serif);font-size:0.82rem;color:var(--muted,#6b7280);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;box-sizing:border-box;">
-    <div>
-      <div style="color:var(--muted,#6b7280);">nobodynamed is a small data project about American first names.</div>
-      <div style="color:var(--muted,#6b7280);font-size:0.82rem;">Data sourced from Social Security Administration birth records (1880–present).</div>
-    </div>
-    <div><a href="/about" style="color:var(--muted,#6b7280);text-decoration:none;">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/" style="color:var(--muted,#6b7280);text-decoration:none;">SSA source</a></div>
-  </footer>
+<footer>
+  <p>nobodynamed is a small data project about American first names. Data sourced from Social Security Administration birth records (1880–present).</p>
+  <p><a href="/about">About</a> · <a href="https://www.ssa.gov/oact/babynames/" target="_blank" rel="noopener">SSA source</a></p>
+</footer>
 </body>
 </html>
