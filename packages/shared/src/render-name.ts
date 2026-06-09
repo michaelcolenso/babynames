@@ -328,6 +328,20 @@ export function renderFullPage(
     diaspora: opts.diaspora,
   });
 
+  // FAQPage schema mirrors the visible "Quick answers" Q&A (renderNameAnswers),
+  // so the unique-data answers — living population, median age, rarity — are
+  // machine-readable for search and AI overviews, not just rendered as prose.
+  const baseStructuredData = buildStructuredData(record, classifyResult, {
+    canonical: opts.canonical,
+    title,
+    description: desc,
+    origin,
+  });
+  const faqStructuredData = buildFaqStructuredData(record.name, narrative);
+  const structuredData = faqStructuredData
+    ? [...baseStructuredData, faqStructuredData]
+    : baseStructuredData;
+
   return pageShell({
     title,
     description: desc,
@@ -348,12 +362,7 @@ export function renderFullPage(
       classifyResult,
       narrative,
     })}</div>`,
-    structuredData: buildStructuredData(record, classifyResult, {
-      canonical: opts.canonical,
-      title,
-      description: desc,
-      origin,
-    }),
+    structuredData,
     scripts: ["/assets/app.js"],
     jsonDataBlocks: [{ id: "nv-data", data: JSON.parse(dataJson) }],
     inlineScripts: [
@@ -995,6 +1004,36 @@ function buildStructuredData(
       },
     },
   ];
+}
+
+// Plain text for JSON-LD: some narrative answers embed anchor tags
+// (e.g. the "rising"/"extinct" trend links), which don't belong in schema text.
+function stripTags(s: string): string {
+  return s.replace(/<[^>]*>/g, "");
+}
+
+// FAQPage built from the same narrative.answers the page renders visibly in
+// renderNameAnswers(). Questions must match the on-page <h3>s exactly so the
+// structured data reflects content actually present on the page.
+function buildFaqStructuredData(name: string, narrative: NameNarrative): object | null {
+  const { answers } = narrative;
+  const qa: { q: string; a: string }[] = [];
+  if (answers.population) qa.push({ q: `How many people are named ${name}?`, a: answers.population });
+  qa.push({ q: `How rare is ${name}?`, a: answers.rarity });
+  if (answers.age) qa.push({ q: `How old is the typical ${name}?`, a: answers.age });
+  qa.push({ q: `Is ${name} still popular?`, a: answers.trend });
+  if (answers.geography) qa.push({ q: `Where is ${name} most common?`, a: answers.geography });
+  if (!qa.length) return null;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: qa.map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: { "@type": "Answer", text: stripTags(a) },
+    })),
+  };
 }
 
 function escape(s: string): string {
