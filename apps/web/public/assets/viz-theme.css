@@ -1,0 +1,127 @@
+/* Shared visualization theme — warm palette.
+   Loaded after /assets/style.css. Scopes everything under body.viz-page. */
+
+/* ── Page base ── */
+body.viz-page {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Header ── */
+body.viz-page header.site {
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ── Hero ── */
+body.viz-page .hero {
+  padding: 3rem 2rem 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+body.viz-page .kicker {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+body.viz-page h1 {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+  color: var(--ink);
+}
+body.viz-page .lede {
+  font-size: 1.05rem;
+  color: var(--muted);
+  max-width: 600px;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+/* ── Controls ── */
+body.viz-page .controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0 2rem;
+  max-width: 900px;
+  margin: 0 auto 1.5rem;
+}
+body.viz-page .btn {
+  padding: 0.35rem 0.9rem;
+  border-radius: 20px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+body.viz-page .btn:hover { border-color: var(--accent); color: var(--accent); }
+body.viz-page .btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── Chart wrap ── */
+body.viz-page #chart-wrap {
+  position: relative;
+  padding: 0 1rem;
+}
+body.viz-page #chart-wrap svg { display: block; width: 100%; }
+
+/* ── Tooltip ── */
+body.viz-page .tooltip {
+  position: fixed;
+  pointer-events: none;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  z-index: 1000;
+  max-width: 260px;
+  box-shadow: 0 8px 40px rgba(23,21,17,0.12);
+  opacity: 0;
+  transition: opacity 0.1s;
+  color: var(--ink);
+}
+
+/* ── Legend ── */
+body.viz-page .legend,
+body.viz-page .legend-row {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  padding: 1rem 2rem;
+  max-width: 900px;
+  margin: 0.5rem auto 2rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+body.viz-page .legend-item { display: flex; align-items: center; gap: 0.5rem; }
+
+/* ── Loading ── */
+body.viz-page #loading {
+  text-align: center;
+  padding: 6rem 2rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  body.viz-page .hero,
+  body.viz-page .controls { padding-left: 1rem; padding-right: 1rem; }
+  body.viz-page h1 { font-size: 1.8rem; }
+}

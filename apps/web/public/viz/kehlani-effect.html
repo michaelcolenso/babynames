@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Kehlani Effect — NobodyNamed</title>
 <meta name="description" content="How Kehlani became the rare celebrity name that stuck. Interactive visualization of 2025 SSA data.">
-    <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f7f5f2">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/style.css">
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="stylesheet" href="/assets/viz-theme.css">
+<script src="https://d3js.org/d3.v7.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
 <style>
   :root {
     --kehlani: #a6382a;
@@ -158,23 +158,22 @@
   }
 </style>
 </head>
-<body>
+<body class="viz-page">
 
-<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#818cf8);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
+<a href="#viz-content" class="skip-link">Skip to content</a>
 <div class="page">
-  <header class="site" style="width:100%;padding:0.8rem 2rem 1rem;border-bottom:1px solid var(--rule,rgba(255,255,255,0.1));margin:0 auto;box-sizing:border-box;">
-    <a class="brand" href="/" aria-label="NobodyNamed home" style="display:inline-flex;align-items:center;color:var(--text,#e8e6e3);text-decoration:none;"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" style="filter:invert(1) brightness(1.2);display:block;width:clamp(160px,20vw,210px);aspect-ratio:240/44;height:auto;"></a>
-    <nav aria-label="Main navigation" style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0.2rem 0.8rem;font-family:var(--sans,system-ui,sans-serif);">
-      <a href="/extinct" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Extinct</a>
-      <a href="/endangered" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Endangered</a>
-      <a href="/comeback" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Comebacks</a>
-      <a href="/year" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Birth year</a>
-      <a href="/rising" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Rising</a>
-      <a href="/viz" style="color:var(--text,#e8e6e3);font-size:0.83rem;font-weight:600;text-decoration:none;" aria-current="page">Visualizations</a>
-      <a href="/blog/" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Namecalling</a>
-      <a href="/about" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">About</a>
+  <header class="site">
+  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" loading="lazy"></a>
+  <nav aria-label="Main navigation">
+    <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
+  </nav>
+  <details class="mobile-nav">
+    <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
+    <nav aria-label="Mobile navigation">
+      <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
     </nav>
-  </header>
+  </details>
+</header>
   <details class="mobile-nav">
     <summary aria-label="Open navigation"><span></span><span></span><span></span></summary>
     <nav><a href="/blog/the-kehlani-effect/">Read the essay →</a></nav>
@@ -347,12 +346,9 @@ drawCompare();
 window.addEventListener('resize', ()=>{ drawMain(); drawCompare(); });
 </script>
 
-<footer class="site" style="width:100%;padding:1.25rem 2rem;border-top:1px solid var(--rule,rgba(255,255,255,0.1));margin-top:2rem;font-family:var(--sans,system-ui,sans-serif);font-size:0.82rem;color:var(--muted,#6b7280);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;box-sizing:border-box;">
-    <div>
-      <div style="color:var(--muted,#6b7280);">nobodynamed is a small data project about American first names.</div>
-      <div style="color:var(--muted,#6b7280);font-size:0.82rem;">Data sourced from Social Security Administration birth records (1880–present).</div>
-    </div>
-    <div><a href="/about" style="color:var(--muted,#6b7280);text-decoration:none;">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/" style="color:var(--muted,#6b7280);text-decoration:none;">SSA source</a></div>
-  </footer>
+<footer>
+  <p>nobodynamed is a small data project about American first names. Data sourced from Social Security Administration birth records (1880–present).</p>
+  <p><a href="/about">About</a> · <a href="https://www.ssa.gov/oact/babynames/" target="_blank" rel="noopener">SSA source</a></p>
+</footer>
 </body>
 </html>

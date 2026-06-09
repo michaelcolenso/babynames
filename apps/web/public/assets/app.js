@@ -45,7 +45,11 @@ function setupSexSegments(group, sexSelect) {
   const buttons = [...group.querySelectorAll("[data-sex]")];
   const sync = (value) => {
     sexSelect.value = value;
-    buttons.forEach((btn) => btn.classList.toggle("active", btn.dataset.sex === value));
+    buttons.forEach((btn) => {
+      const active = btn.dataset.sex === value;
+      btn.classList.toggle("active", active);
+      btn.setAttribute("aria-pressed", String(active));
+    });
   };
   buttons.forEach((btn) => {
     btn.addEventListener("click", () => sync(btn.dataset.sex || ""));
@@ -488,15 +492,21 @@ function hydrateDiaspora(container, record) {
 async function setupSearch(input, suggestions, submit, sexSelect) {
   let currentSuggestions = [];
   let activeIdx = -1;
+  let debounceTimer = null;
 
-  const hide = () => { suggestions.classList.add("hidden"); activeIdx = -1; };
+  const hide = () => {
+    suggestions.classList.add("hidden");
+    input.setAttribute("aria-expanded", "false");
+    activeIdx = -1;
+  };
   const render = () => {
     if (!currentSuggestions.length) return hide();
     suggestions.classList.remove("hidden");
+    input.setAttribute("aria-expanded", "true");
     suggestions.innerHTML = currentSuggestions
-      .map((s, i) => `<div data-i="${i}" class="${i === activeIdx ? "active" : ""}"><span>${s.name}</span><span class="meta">${s.sex === "M" ? "masculine" : "feminine"}${s.peak_count ? " · peak " + fmt(s.peak_count) : ""}</span></div>`)
+      .map((s, i) => `<div role="option" aria-selected="${i === activeIdx}" data-i="${i}" class="${i === activeIdx ? "active" : ""}"><span>${s.name}</span><span class="meta">${s.sex === "M" ? "masculine" : "feminine"}${s.peak_count ? " · peak " + fmt(s.peak_count) : ""}</span></div>`)
       .join("");
-    suggestions.querySelectorAll("div").forEach((el) => {
+    suggestions.querySelectorAll("[role=option]").forEach((el) => {
       el.addEventListener("mousedown", (e) => {
         e.preventDefault();
         pick(currentSuggestions[Number(el.getAttribute("data-i"))]);
@@ -514,14 +524,17 @@ async function setupSearch(input, suggestions, submit, sexSelect) {
     location.href = `/name/${encodeURIComponent(n)}/${tail}`;
   };
 
-  input.addEventListener("input", async () => {
+  input.addEventListener("input", () => {
     const q = input.value.trim();
     if (q.length < 2) { hide(); return; }
-    try {
-      currentSuggestions = await searchNames(q, 10);
-      activeIdx = -1;
-      render();
-    } catch (e) { hide(); }
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(async () => {
+      try {
+        currentSuggestions = await searchNames(q, 10);
+        activeIdx = -1;
+        render();
+      } catch (e) { hide(); }
+    }, 180);
   });
 
   input.addEventListener("keydown", (e) => {

@@ -11,25 +11,25 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://nobodynamed.com/api/og/default">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f5f2">
 <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/viz-theme.css">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #07070f;
+    --bg: #f4f0e7;
     --bg2: #0e0e1a;
-    --text: #e8e6e3;
-    --muted: #6b7280;
-    --rule: rgba(255,255,255,0.06);
-    --accent: #f59e0b;
+    --text: #171511;
+    --muted: #787064;
+    --rule: rgba(23,21,17,0.08);
+    --accent: #c9922a;
   }
   body {
-    font-family: 'Space Grotesk', system-ui, sans-serif;
-    background: var(--bg);
+    font-family: 'Avenir Next', system-ui, sans-serif;
+    background: var(--paper);
     color: var(--text);
     min-height: 100vh;
     overflow-x: hidden;
@@ -40,7 +40,7 @@
     margin: 0 auto;
   }
   .kicker {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.72rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
@@ -77,7 +77,7 @@
     border: 1px solid var(--rule);
     background: transparent;
     color: var(--muted);
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.7rem;
     letter-spacing: 0.05em;
     cursor: pointer;
@@ -86,7 +86,7 @@
   .btn:hover { border-color: var(--accent); color: var(--accent); }
   .btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
   .group-label {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.7rem;
     color: var(--muted);
     margin-left: 0.75rem;
@@ -101,7 +101,7 @@
     gap: 1rem;
     font-size: 0.75rem;
     color: var(--muted);
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     flex-wrap: wrap;
   }
   #age-legend { display: flex; height: 12px; width: 200px; border-radius: 6px; overflow: hidden; }
@@ -131,9 +131,9 @@
     text-align: center;
     padding: 2px;
   }
-  .tm-cell:hover { opacity: 0.85; z-index: 2; outline: 2px solid rgba(255,255,255,0.5); }
+  .tm-cell:hover { opacity: 0.85; z-index: 2; outline: 2px solid rgba(23,21,17,0.45); }
   .tm-name {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'Avenir Next', sans-serif;
     font-weight: 600;
     color: rgba(0,0,0,0.8);
     line-height: 1.1;
@@ -143,7 +143,7 @@
     width: 100%;
   }
   .tm-count {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.6em;
     color: rgba(0,0,0,0.5);
     white-space: nowrap;
@@ -165,7 +165,7 @@
   }
   .tooltip .tt-name { font-weight: 700; font-size: 1.2rem; color: var(--text); margin-bottom: 4px; }
   .tooltip .tt-detail { color: var(--muted); font-size: 0.82rem; line-height: 1.7; }
-  .tooltip .tt-detail span { color: var(--accent); font-family: 'Space Mono', monospace; }
+  .tooltip .tt-detail span { color: var(--accent); font-family: 'IBM Plex Mono', monospace; }
 
   .summary {
     display: flex;
@@ -176,7 +176,7 @@
     flex-wrap: wrap;
   }
   .summary .stat {
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.75rem;
     color: var(--muted);
   }
@@ -186,7 +186,7 @@
     text-align: center;
     padding: 6rem 2rem;
     color: var(--muted);
-    font-family: 'Space Mono', monospace;
+    font-family: 'IBM Plex Mono', monospace;
     font-size: 0.8rem;
     letter-spacing: 0.1em;
   }
@@ -197,22 +197,21 @@
   }
 </style>
 </head>
-<body>
+<body class="viz-page">
 
-<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#818cf8);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
-<header class="site" style="width:100%;padding:0.8rem 2rem 1rem;border-bottom:1px solid var(--rule,rgba(255,255,255,0.1));margin:0 auto;box-sizing:border-box;">
-    <a class="brand" href="/" aria-label="NobodyNamed home" style="display:inline-flex;align-items:center;color:var(--text,#e8e6e3);text-decoration:none;"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" style="filter:invert(1) brightness(1.2);display:block;width:clamp(160px,20vw,210px);aspect-ratio:240/44;height:auto;"></a>
-    <nav aria-label="Main navigation" style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0.2rem 0.8rem;font-family:var(--sans,system-ui,sans-serif);">
-      <a href="/extinct" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Extinct</a>
-      <a href="/endangered" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Endangered</a>
-      <a href="/comeback" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Comebacks</a>
-      <a href="/year" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Birth year</a>
-      <a href="/rising" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Rising</a>
-      <a href="/viz" style="color:var(--text,#e8e6e3);font-size:0.83rem;font-weight:600;text-decoration:none;" aria-current="page">Visualizations</a>
-      <a href="/blog/" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Namecalling</a>
-      <a href="/about" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">About</a>
+<a href="#viz-content" class="skip-link">Skip to content</a>
+<header class="site">
+  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" loading="lazy"></a>
+  <nav aria-label="Main navigation">
+    <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
+  </nav>
+  <details class="mobile-nav">
+    <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
+    <nav aria-label="Mobile navigation">
+      <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
     </nav>
-  </header>
+  </details>
+</header>
 
 <div id="viz-content" class="hero">
   <div class="kicker">32 / The Census</div>
@@ -235,11 +234,11 @@
     <div class="legend-labels"><span>Young (5)</span><span>Mid (40)</span><span>Old (80+)</span></div>
   </div>
   <div id="legend-topology" style="display:none;gap:0.8rem;flex-wrap:wrap;">
-    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#f43f5e;display:inline-block"></span>Flash Flood</span>
+    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#b83c2f;display:inline-block"></span>Flash Flood</span>
     <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#3b82f6;display:inline-block"></span>Glacier</span>
-    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#a78bfa;display:inline-block"></span>Steady Decline</span>
-    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#4ade80;display:inline-block"></span>Steady Wave</span>
-    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#f59e0b;display:inline-block"></span>Plateau</span>
+    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#8b7ab8;display:inline-block"></span>Steady Decline</span>
+    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#2f9e63;display:inline-block"></span>Steady Wave</span>
+    <span style="display:inline-flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#c9922a;display:inline-block"></span>Plateau</span>
   </div>
   <span>· Hover for details · Click to open name page</span>
 </div>
@@ -269,11 +268,11 @@ const ageScale = d3.scaleSequential()
   .domain([5, 85]);
 
 const topoColors = {
-  'Flash Flood': '#f43f5e',
+  'Flash Flood': '#b83c2f',
   'Glacier': '#3b82f6',
-  'Steady Decline': '#a78bfa',
-  'Steady Wave': '#4ade80',
-  'Plateau': '#f59e0b'
+  'Steady Decline': '#8b7ab8',
+  'Steady Wave': '#2f9e63',
+  'Plateau': '#c9922a'
 };
 
 function drawLegend() {
@@ -304,7 +303,7 @@ function cellColor(d) {
 
 function textColor(d) {
   if (activeColor === 'topology') return 'rgba(0,0,0,0.8)';
-  return d.medianAge > 55 ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.8)';
+  return d.medianAge > 55 ? 'rgba(23,21,17,0.85)' : 'rgba(0,0,0,0.8)';
 }
 
 function drawTreemap(data) {
@@ -439,12 +438,9 @@ fetch('/api/living-treemap?limit=500')
   });
 </script>
 
-<footer class="site" style="width:100%;padding:1.25rem 2rem;border-top:1px solid var(--rule,rgba(255,255,255,0.1));margin-top:2rem;font-family:var(--sans,system-ui,sans-serif);font-size:0.82rem;color:var(--muted,#6b7280);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;box-sizing:border-box;">
-    <div>
-      <div style="color:var(--muted,#6b7280);">nobodynamed is a small data project about American first names.</div>
-      <div style="color:var(--muted,#6b7280);font-size:0.82rem;">Data sourced from Social Security Administration birth records (1880–present).</div>
-    </div>
-    <div><a href="/about" style="color:var(--muted,#6b7280);text-decoration:none;">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/" style="color:var(--muted,#6b7280);text-decoration:none;">SSA source</a></div>
-  </footer>
+<footer>
+  <p>nobodynamed is a small data project about American first names. Data sourced from Social Security Administration birth records (1880–present).</p>
+  <p><a href="/about">About</a> · <a href="https://www.ssa.gov/oact/babynames/" target="_blank" rel="noopener">SSA source</a></p>
+</footer>
 </body>
 </html>

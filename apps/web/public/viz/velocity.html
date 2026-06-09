@@ -11,110 +11,31 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://nobodynamed.com/api/og/default">
 <meta name="twitter:card" content="summary_large_image">
-  <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f7f5f2">
     <link rel="stylesheet" href="/assets/style.css">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="/assets/viz-theme.css">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0a0a0f;
-    --bg2: #12121a;
-    --text: #e8e6e3;
-    --muted: #6b7280;
-    --rule: rgba(255,255,255,0.06);
-    --female: #f472b6;
-    --male: #60a5fa;
-    --accent: #34d399;
-    --fad: rgba(239,68,68,0.08);
-    --legend: rgba(99,102,241,0.08);
-    --rocket: rgba(251,191,36,0.08);
-    --sleeper: rgba(52,211,153,0.08);
+    --female: #a85d5d;
+    --male: #465d75;
+    --accent: #8b3f2f;
+    --fad: rgba(139,63,47,0.08);
+    --legend: rgba(70,93,117,0.08);
+    --rocket: rgba(201,146,42,0.08);
+    --sleeper: rgba(47,158,99,0.08);
   }
-  body {
-    font-family: 'Space Grotesk', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-  nav {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 1rem 2rem;
-    border-bottom: 1px solid var(--rule);
-    font-size: 0.85rem;
-  }
-  nav a { color: var(--muted); text-decoration: none; }
-  nav a:hover { color: var(--text); }
-  nav .brand { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--accent); letter-spacing: 0.1em; margin-right: auto; }
-  .hero {
-    padding: 3rem 2rem 1.5rem;
-    max-width: 980px;
-    margin: 0 auto;
-  }
-  .kicker {
-    font-family: 'Space Mono', monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 0.75rem;
-  }
-  h1 {
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1.1;
-    margin-bottom: 0.75rem;
-    color: var(--text);
-  }
-  .lede {
-    font-size: 1rem;
-    color: var(--muted);
-    max-width: 640px;
-    line-height: 1.6;
-    margin-bottom: 1rem;
-  }
-
-  .controls {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    padding: 0 2rem;
-    max-width: 980px;
-    margin: 0 auto 1.5rem;
-  }
-  .btn {
-    padding: 0.3rem 0.85rem;
-    border-radius: 20px;
-    border: 1px solid var(--rule);
-    background: transparent;
-    color: var(--muted);
-    font-family: 'Space Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .btn:hover { border-color: var(--accent); color: var(--accent); }
-  .btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
-
   #chart-wrap {
     padding: 0 2rem;
     max-width: 980px;
     margin: 0 auto;
   }
-  svg { display: block; width: 100%; }
-
   .dot { cursor: pointer; }
   .dot:hover { opacity: 1 !important; }
 
   .quadrant-label {
-    font-family: 'Space Mono', monospace;
+    font-family: var(--mono);
     font-size: 11px;
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -122,76 +43,32 @@
     opacity: 0.5;
   }
   .quadrant-sub {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: var(--sans);
     font-size: 10px;
     opacity: 0.35;
   }
 
-  .tooltip {
-    position: fixed;
-    pointer-events: none;
-    background: rgba(10,10,15,0.97);
-    border: 1px solid rgba(52,211,153,0.35);
-    border-radius: 8px;
-    padding: 12px 16px;
-    font-size: 13px;
-    z-index: 1000;
-    max-width: 250px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
-    opacity: 0;
-    transition: opacity 0.1s;
-  }
-  .tooltip .name { font-weight: 700; font-size: 1.05rem; color: var(--text); margin-bottom: 4px; }
-  .tooltip .detail { color: var(--muted); font-size: 0.82rem; line-height: 1.6; }
-  .tooltip .detail span { color: var(--accent); font-family: 'Space Mono', monospace; }
-  .tooltip .archetype { font-size: 0.75rem; font-family: 'Space Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 6px; padding: 2px 6px; border-radius: 3px; display: inline-block; }
+  .tooltip .detail span { color: var(--accent); font-family: var(--mono); }
+  .tooltip .archetype { font-size: 0.75rem; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 6px; padding: 2px 6px; border-radius: 3px; display: inline-block; }
 
-  .legend-row {
-    display: flex;
-    gap: 1.5rem;
-    align-items: center;
-    padding: 1rem 2rem 3rem;
-    max-width: 980px;
-    margin: 0 auto;
-    font-size: 0.78rem;
-    color: var(--muted);
-    font-family: 'Space Mono', monospace;
-    flex-wrap: wrap;
-  }
-  .legend-item { display: flex; align-items: center; gap: 0.4rem; }
   .legend-swatch { width: 10px; height: 10px; border-radius: 50%; }
-
-  #loading {
-    text-align: center;
-    padding: 6rem 2rem;
-    color: var(--muted);
-    font-family: 'Space Mono', monospace;
-    font-size: 0.8rem;
-    letter-spacing: 0.1em;
-  }
-
-  @media (max-width: 640px) {
-    .hero, .controls, #chart-wrap { padding-left: 1rem; padding-right: 1rem; }
-    h1 { font-size: 1.8rem; }
-  }
 </style>
 </head>
-<body>
+<body class="viz-page">
 
-<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#818cf8);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
-<header class="site" style="width:100%;padding:0.8rem 2rem 1rem;border-bottom:1px solid var(--rule,rgba(255,255,255,0.1));margin:0 auto;box-sizing:border-box;">
-    <a class="brand" href="/" aria-label="NobodyNamed home" style="display:inline-flex;align-items:center;color:var(--text,#e8e6e3);text-decoration:none;"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" style="filter:invert(1) brightness(1.2);display:block;width:clamp(160px,20vw,210px);aspect-ratio:240/44;height:auto;"></a>
-    <nav aria-label="Main navigation" style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:0.2rem 0.8rem;font-family:var(--sans,system-ui,sans-serif);">
-      <a href="/extinct" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Extinct</a>
-      <a href="/endangered" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Endangered</a>
-      <a href="/comeback" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Comebacks</a>
-      <a href="/year" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Birth year</a>
-      <a href="/rising" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Rising</a>
-      <a href="/viz" style="color:var(--text,#e8e6e3);font-size:0.83rem;font-weight:600;text-decoration:none;" aria-current="page">Visualizations</a>
-      <a href="/blog/" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">Namecalling</a>
-      <a href="/about" style="color:var(--muted,#6b7280);font-size:0.83rem;font-weight:600;text-decoration:none;">About</a>
+<a href="#viz-content" class="skip-link">Skip to content</a>
+<header class="site">
+  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed" loading="lazy"></a>
+  <nav aria-label="Main navigation">
+    <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
+  </nav>
+  <details class="mobile-nav">
+    <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
+    <nav aria-label="Mobile navigation">
+      <a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
     </nav>
-  </header>
+  </details>
+</header>
 
 <div id="viz-content" class="hero">
   <div class="kicker">18 / The Archetypes</div>
@@ -272,10 +149,10 @@ function getArchetype(rise, fall) {
 }
 
 const archetypeColors = {
-  fad: '#ef4444',
-  rocket: '#fbbf24',
-  flash: '#a78bfa',
-  legend: '#818cf8'
+  fad: '#b83c2f',
+  rocket: '#c9922a',
+  flash: '#8b7ab8',
+  legend: '#5a7a9a'
 };
 
 const archetypeLabels = {
@@ -321,31 +198,31 @@ function drawChart(points) {
 
   // Quadrant backgrounds
   const quadrants = [
-    { x: 0, y: 0, w: qx, h: qy, color: 'rgba(251,191,36,0.06)', label: 'ROCKET', sub: 'Fast rise · slow fall', lx: qx * 0.5, ly: qy * 0.5 },
-    { x: qx, y: 0, w: w - qx, h: qy, color: 'rgba(99,102,241,0.06)', label: 'LEGEND', sub: 'Slow rise · slow fall', lx: qx + (w - qx) * 0.5, ly: qy * 0.5 },
-    { x: 0, y: qy, w: qx, h: h - qy, color: 'rgba(239,68,68,0.07)', label: 'FAD', sub: 'Fast rise · fast fall', lx: qx * 0.5, ly: qy + (h - qy) * 0.5 },
-    { x: qx, y: qy, w: w - qx, h: h - qy, color: 'rgba(167,139,250,0.06)', label: 'FLASH', sub: 'Slow rise · fast fall', lx: qx + (w - qx) * 0.5, ly: qy + (h - qy) * 0.5 },
+    { x: 0, y: 0, w: qx, h: qy, color: 'rgba(201,146,42,0.06)', label: 'ROCKET', sub: 'Fast rise · slow fall', lx: qx * 0.5, ly: qy * 0.5 },
+    { x: qx, y: 0, w: w - qx, h: qy, color: 'rgba(70,93,117,0.06)', label: 'LEGEND', sub: 'Slow rise · slow fall', lx: qx + (w - qx) * 0.5, ly: qy * 0.5 },
+    { x: 0, y: qy, w: qx, h: h - qy, color: 'rgba(139,63,47,0.07)', label: 'FAD', sub: 'Fast rise · fast fall', lx: qx * 0.5, ly: qy + (h - qy) * 0.5 },
+    { x: qx, y: qy, w: w - qx, h: h - qy, color: 'rgba(139,119,184,0.06)', label: 'FLASH', sub: 'Slow rise · fast fall', lx: qx + (w - qx) * 0.5, ly: qy + (h - qy) * 0.5 },
   ];
 
   quadrants.forEach(q => {
     g.append('rect').attr('x', q.x).attr('y', q.y).attr('width', q.w).attr('height', q.h).attr('fill', q.color);
     g.append('text').attr('class', 'quadrant-label').attr('x', q.lx).attr('y', q.ly - 10)
-      .attr('text-anchor', 'middle').attr('fill', '#9ca3af').text(q.label);
+      .attr('text-anchor', 'middle').attr('fill', '#787064').text(q.label);
     g.append('text').attr('class', 'quadrant-sub').attr('x', q.lx).attr('y', q.ly + 6)
-      .attr('text-anchor', 'middle').attr('fill', '#9ca3af').text(q.sub);
+      .attr('text-anchor', 'middle').attr('fill', '#787064').text(q.sub);
   });
 
   // Divider lines
   g.append('line').attr('x1', qx).attr('x2', qx).attr('y1', 0).attr('y2', h)
-    .attr('stroke', 'rgba(255,255,255,0.1)').attr('stroke-dasharray', '4,4');
+    .attr('stroke', 'rgba(23,21,17,0.12)').attr('stroke-dasharray', '4,4');
   g.append('line').attr('x1', 0).attr('x2', w).attr('y1', qy).attr('y2', qy)
-    .attr('stroke', 'rgba(255,255,255,0.1)').attr('stroke-dasharray', '4,4');
+    .attr('stroke', 'rgba(23,21,17,0.12)').attr('stroke-dasharray', '4,4');
 
   // Grid
   g.append('g').call(d3.axisLeft(yScale).tickSize(-w).ticks(6))
     .call(ax => {
       ax.select('.domain').remove();
-      ax.selectAll('.tick line').attr('stroke', 'rgba(255,255,255,0.04)').attr('stroke-dasharray', '2,5');
+      ax.selectAll('.tick line').attr('stroke', 'rgba(23,21,17,0.06)').attr('stroke-dasharray', '2,5');
       ax.selectAll('.tick text').remove();
     });
 
@@ -386,21 +263,21 @@ function drawChart(points) {
   const xAxisG = g.append('g').attr('transform', `translate(0,${h})`).call(
     d3.axisBottom(xScale).tickFormat(d => `${d}y`).ticks(6)
   );
-  xAxisG.select('.domain').attr('stroke', 'rgba(255,255,255,0.1)');
-  xAxisG.selectAll('text').attr('fill', '#6b7280').attr('font-family', 'Space Mono, monospace').attr('font-size', 10);
-  xAxisG.selectAll('line').attr('stroke', 'rgba(255,255,255,0.1)');
+  xAxisG.select('.domain').attr('stroke', 'rgba(23,21,17,0.12)');
+  xAxisG.selectAll('text').attr('fill', '#787064').attr('font-family', 'IBM Plex Mono, monospace').attr('font-size', 10);
+  xAxisG.selectAll('line').attr('stroke', 'rgba(23,21,17,0.12)');
 
   const yAxisG = g.append('g').call(d3.axisLeft(yScale).tickFormat(d => `${d}y`).ticks(6));
-  yAxisG.select('.domain').attr('stroke', 'rgba(255,255,255,0.1)');
-  yAxisG.selectAll('text').attr('fill', '#6b7280').attr('font-family', 'Space Mono, monospace').attr('font-size', 10);
-  yAxisG.selectAll('line').attr('stroke', 'rgba(255,255,255,0.1)');
+  yAxisG.select('.domain').attr('stroke', 'rgba(23,21,17,0.12)');
+  yAxisG.selectAll('text').attr('fill', '#787064').attr('font-family', 'IBM Plex Mono, monospace').attr('font-size', 10);
+  yAxisG.selectAll('line').attr('stroke', 'rgba(23,21,17,0.12)');
 
   // Axis labels
   g.append('text')
     .attr('x', w / 2).attr('y', h + 52)
     .attr('text-anchor', 'middle')
-    .attr('fill', '#6b7280')
-    .attr('font-family', 'Space Mono, monospace')
+    .attr('fill', '#787064')
+    .attr('font-family', 'IBM Plex Mono, monospace')
     .attr('font-size', 10)
     .attr('letter-spacing', '0.08em')
     .text('YEARS FROM DEBUT TO PEAK  →  SLOW RISE');
@@ -409,8 +286,8 @@ function drawChart(points) {
     .attr('transform', 'rotate(-90)')
     .attr('x', -h / 2).attr('y', -58)
     .attr('text-anchor', 'middle')
-    .attr('fill', '#6b7280')
-    .attr('font-family', 'Space Mono, monospace')
+    .attr('fill', '#787064')
+    .attr('font-family', 'IBM Plex Mono, monospace')
     .attr('font-size', 10)
     .attr('letter-spacing', '0.08em')
     .text('YEARS TO HALF PEAK  →  SLOW FALL');
@@ -422,8 +299,8 @@ function drawChart(points) {
     .join('text')
     .attr('x', d => xScale(d.riseYears) + rScale(d.peakCount) + 3)
     .attr('y', d => yScale(d.fallYears) + 4)
-    .attr('fill', '#9ca3af')
-    .attr('font-family', 'Space Grotesk, sans-serif')
+    .attr('fill', '#787064')
+    .attr('font-family', 'Avenir Next, sans-serif')
     .attr('font-size', 9)
     .attr('pointer-events', 'none')
     .text(d => d.name);
@@ -457,12 +334,9 @@ fetch('/api/river')
 window.addEventListener('resize', filterAndDraw);
 </script>
 
-<footer class="site" style="width:100%;padding:1.25rem 2rem;border-top:1px solid var(--rule,rgba(255,255,255,0.1));margin-top:2rem;font-family:var(--sans,system-ui,sans-serif);font-size:0.82rem;color:var(--muted,#6b7280);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;box-sizing:border-box;">
-    <div>
-      <div style="color:var(--muted,#6b7280);">nobodynamed is a small data project about American first names.</div>
-      <div style="color:var(--muted,#6b7280);font-size:0.82rem;">Data sourced from Social Security Administration birth records (1880–present).</div>
-    </div>
-    <div><a href="/about" style="color:var(--muted,#6b7280);text-decoration:none;">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/" style="color:var(--muted,#6b7280);text-decoration:none;">SSA source</a></div>
-  </footer>
+<footer>
+  <p>nobodynamed is a small data project about American first names. Data sourced from Social Security Administration birth records (1880–present).</p>
+  <p><a href="/about">About</a> · <a href="https://www.ssa.gov/oact/babynames/" target="_blank" rel="noopener">SSA source</a></p>
+</footer>
 </body>
 </html>

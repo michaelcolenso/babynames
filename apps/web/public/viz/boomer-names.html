@@ -4,28 +4,28 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Your Mom's Name Is Endangered — nobodynamed.com</title>
-    <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#f7f5f2">
     <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/viz-theme.css">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #07070f;
-  --surface: #0d0d1a;
-  --border: #1a1a2e;
-  --amber: #f59e0b;
+  --bg: #f4f0e7;
+  --surface: #fbf8f1;
+  --border: #eee5d6;
+  --amber: #c9922a;
   --amber-dim: #78490a;
-  --cyan: #22d3ee;
-  --rose: #f43f5e;
-  --violet: #a78bfa;
-  --green: #4ade80;
-  --muted: #6b7280;
-  --text: #d1d5db;
-  --heading: #f3f4f6;
+  --cyan: #5a7a9a;
+  --rose: #b83c2f;
+  --violet: #8b7ab8;
+  --green: #2f9e63;
+  --muted: #787064;
+  --text: #4d4941;
+  --heading: #171511;
 }
-html { background: var(--bg); color: var(--text); font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.75; font-size: 18px; }
+html { background: var(--paper); color: var(--text); font-family: 'Georgia', 'Times New Roman', serif; line-height: 1.75; font-size: 18px; }
 body { max-width: 720px; margin: 0 auto; padding: 0 1.5rem 6rem; }
 
 h1 { font-size: clamp(2rem, 6vw, 3.2rem); color: var(--heading); line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; }
@@ -85,7 +85,7 @@ svg text { font-family: sans-serif; }
 .name-table td { padding: 0.45rem 0.8rem; border-bottom: 1px solid #111; color: var(--text); }
 .name-table td:first-child { color: var(--heading); font-weight: 600; }
 .name-table td.peak { color: var(--amber); }
-.name-table td.current { color: #ef4444; }
+.name-table td.current { color: #b83c2f; }
 
 .tip {
   position: fixed; pointer-events: none;
@@ -99,9 +99,9 @@ svg text { font-family: sans-serif; }
 footer { margin-top: 5rem; padding-top: 2rem; border-top: 1px solid var(--border); font-family: sans-serif; font-size: 0.78rem; color: var(--muted); line-height: 1.6; }
 </style>
 </head>
-<body>
+<body class="viz-page">
 
-<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#818cf8);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
+<a href="#viz-content" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent,#5a7a9a);color:#fff;padding:0.5rem 1rem;text-decoration:none;font-family:var(--sans,system-ui,sans-serif);font-size:0.85rem;font-weight:600;z-index:100;border-radius:0 0 4px 0;">Skip to content</a>
 <div class="tip" id="tip"></div>
 
 <header>
@@ -225,7 +225,7 @@ function sparkChart(selector, data, opts = {}) {
   const iw = W - mg.left - mg.right;
   const ih = H - mg.top - mg.bottom;
 
-  const series = opts.series || [{ data, color: opts.color || '#f59e0b', label: opts.label || '' }];
+  const series = opts.series || [{ data, color: opts.color || '#c9922a', label: opts.label || '' }];
   const allData = series.flatMap(s => s.data);
 
   const xS = d3.scaleLinear().domain(d3.extent(allData, d => d.y)).range([0, iw]);
@@ -254,11 +254,11 @@ function sparkChart(selector, data, opts = {}) {
 
   g.append('g').attr('transform', `translate(0,${ih})`)
     .call(d3.axisBottom(xS).tickFormat(d3.format('d')).ticks(8))
-    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#6b7280').attr('font-size', '10'); });
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#787064').attr('font-size', '10'); });
 
   g.append('g')
     .call(d3.axisLeft(yS).ticks(4).tickFormat(d => d >= 1000 ? (d / 1000).toFixed(d >= 10000 ? 0 : 0) + 'k' : d))
-    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#6b7280').attr('font-size', '10'); });
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('line').remove(); ax.selectAll('text').attr('fill', '#787064').attr('font-size', '10'); });
 
   if (opts.annotate) {
     opts.annotate.forEach(a => {
@@ -266,7 +266,7 @@ function sparkChart(selector, data, opts = {}) {
       g.append('line').attr('x1', ax).attr('x2', ax).attr('y1', -mg.top + 6).attr('y2', ih)
         .attr('stroke', '#4b5563').attr('stroke-width', 1).attr('stroke-dasharray', '3,3');
       g.append('text').attr('x', ax).attr('y', -mg.top + 4)
-        .attr('text-anchor', 'middle').attr('fill', '#9ca3af').attr('font-size', '9').text(a.label);
+        .attr('text-anchor', 'middle').attr('fill', '#787064').attr('font-size', '9').text(a.label);
     });
   }
 
@@ -363,17 +363,17 @@ const dennis = [
 // ── RENDER ────────────────────────────────────────────────────────────────────
 
 sparkChart('#c-linda', linda, {
-  color: '#f43f5e', label: 'Linda', H: 180,
+  color: '#b83c2f', label: 'Linda', H: 180,
   annotate: [{ year: 1947, label: 'Peak: 99,692' }, { year: 1964, label: 'Boom ends' }]
 });
 
 sparkChart('#c-sisters1', null, {
   H: 200,
   series: [
-    { data: patricia, color: '#a78bfa', label: 'Patricia' },
-    { data: susan,    color: '#f59e0b', label: 'Susan' },
-    { data: deborah,  color: '#22d3ee', label: 'Deborah' },
-    { data: karen,    color: '#4ade80', label: 'Karen' },
+    { data: patricia, color: '#8b7ab8', label: 'Patricia' },
+    { data: susan,    color: '#c9922a', label: 'Susan' },
+    { data: deborah,  color: '#5a7a9a', label: 'Deborah' },
+    { data: karen,    color: '#2f9e63', label: 'Karen' },
   ],
   annotate: [{ year: 1955, label: 'Peak era' }]
 });
@@ -382,7 +382,7 @@ sparkChart('#c-sisters2', null, {
   H: 180,
   series: [
     { data: nancy,  color: '#e879f9', label: 'Nancy' },
-    { data: donna,  color: '#60a5fa', label: 'Donna' },
+    { data: donna,  color: '#465d75', label: 'Donna' },
     { data: sharon, color: '#f97316', label: 'Sharon' },
   ],
   annotate: [{ year: 1947, label: 'Post-war peak' }]
@@ -391,19 +391,16 @@ sparkChart('#c-sisters2', null, {
 sparkChart('#c-guys', null, {
   H: 180,
   series: [
-    { data: gary,   color: '#34d399', label: 'Gary' },
+    { data: gary,   color: '#2f9e63', label: 'Gary' },
     { data: dennis, color: '#fb7185', label: 'Dennis' },
   ],
   annotate: [{ year: 1953, label: 'Peak era' }]
 });
 </script>
 
-<footer class="site" style="width:100%;padding:1.25rem 2rem;border-top:1px solid var(--rule,rgba(255,255,255,0.1));margin-top:2rem;font-family:var(--sans,system-ui,sans-serif);font-size:0.82rem;color:var(--muted,#6b7280);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;box-sizing:border-box;">
-    <div>
-      <div style="color:var(--muted,#6b7280);">nobodynamed is a small data project about American first names.</div>
-      <div style="color:var(--muted,#6b7280);font-size:0.82rem;">Data sourced from Social Security Administration birth records (1880–present).</div>
-    </div>
-    <div><a href="/about" style="color:var(--muted,#6b7280);text-decoration:none;">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/" style="color:var(--muted,#6b7280);text-decoration:none;">SSA source</a></div>
-  </footer>
+<footer>
+  <p>nobodynamed is a small data project about American first names. Data sourced from Social Security Administration birth records (1880–present).</p>
+  <p><a href="/about">About</a> · <a href="https://www.ssa.gov/oact/babynames/" target="_blank" rel="noopener">SSA source</a></p>
+</footer>
 </body>
 </html>
