@@ -41,9 +41,18 @@ function shapeLandingRows(
   });
 }
 
-const PAGES: Record<string, { title: string; eyebrow: string; lede: string; names: string[]; body: string; table?: string }> = {
+// `title` stays short — it drives the on-page <h1> and breadcrumb. `seoTitle`
+// and `seoDescription` (optional) drive the <title>/meta tags: they lead with
+// the page's signature names plus a hook, which earns clicks far better than a
+// bare "<X> Baby Names" on competitive SERPs.
+const PAGES: Record<
+  string,
+  { title: string; seoTitle?: string; seoDescription?: string; eyebrow: string; lede: string; names: string[]; body: string; table?: string }
+> = {
   comebacks: {
     title: "Comeback Baby Names | NobodyNamed",
+    seoTitle: "Comeback Baby Names: Why Theodore, Hazel & Eleanor Returned | NobodyNamed",
+    seoDescription: "Names that fell out of use and came roaring back — Theodore, Hazel, Eleanor, Violet, Oliver. See which vintage baby names are surging again, with the data behind each revival.",
     eyebrow: "Recovered names",
     lede: "Names that fell out of daily use, waited in the archive, and returned as taste, nostalgia, or status.",
     names: ["Theodore", "Hazel", "Eleanor", "Violet", "Oliver", "Emma"],
@@ -52,6 +61,8 @@ const PAGES: Record<string, { title: string; eyebrow: string; lede: string; name
   },
   "millennial-names": {
     title: "Millennial Baby Names | NobodyNamed",
+    seoTitle: "Millennial Baby Names: Michael, Jessica & the '80s–'90s Class | NobodyNamed",
+    seoDescription: "The names that filled '80s and '90s classrooms — Michael, Jessica, Ashley, Christopher, Amanda. See the defining millennial baby names and how each one is aging now.",
     eyebrow: "Generation dossier",
     lede: "The classroom names of the 1980s and 1990s: high-volume, unmistakable, and now aging into cultural memory.",
     names: ["Michael", "Jessica", "Ashley", "Christopher", "Amanda", "Matthew"],
@@ -59,6 +70,8 @@ const PAGES: Record<string, { title: string; eyebrow: string; lede: string; name
   },
   "gen-z-names": {
     title: "Gen Z Baby Names | NobodyNamed",
+    seoTitle: "Gen Z Baby Names: Madison, Ethan & the 2000s Roster | NobodyNamed",
+    seoDescription: "The names that defined Gen Z — Madison, Ethan, Ava, Aiden, Isabella. See how late-'90s and 2000s naming got faster, sharper, and more fashion-driven.",
     eyebrow: "Generation dossier",
     lede: "The names that rose through the late 1990s and 2000s as naming culture became faster, more fragmented, and more image-conscious.",
     names: ["Madison", "Ethan", "Ava", "Aiden", "Isabella", "Jayden"],
@@ -66,6 +79,8 @@ const PAGES: Record<string, { title: string; eyebrow: string; lede: string; name
   },
   "classic-names": {
     title: "Classic Baby Names | NobodyNamed",
+    seoTitle: "Classic Baby Names: James, Elizabeth & Names That Never Date | NobodyNamed",
+    seoDescription: "Names that survived every fashion cycle — James, Elizabeth, William, Anna, John. See the classic baby names that stayed legible across a century of American births.",
     eyebrow: "Durability file",
     lede: "Names that resisted the sharpest boom-and-bust cycles and remained legible across American generations.",
     names: ["James", "Elizabeth", "William", "Anna", "John", "Mary"],
@@ -73,6 +88,8 @@ const PAGES: Record<string, { title: string; eyebrow: string; lede: string; name
   },
   "future-grandparent-names": {
     title: "Future Grandparent Names | NobodyNamed",
+    seoTitle: "Future Grandparent Names: Why Harper & Luna Will Sound Old | NobodyNamed",
+    seoDescription: "Today's cutest baby names are tomorrow's grandparent names. See why Harper, Luna, Mason, and Ava are on track to age into the next generation of \"old\" names.",
     eyebrow: "Forecast by memory",
     lede: "The names that may sound young now, then ordinary, then old, then charmingly available again.",
     names: ["Harper", "Luna", "Mason", "Ava", "Liam", "Olivia"],
@@ -166,8 +183,8 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   ]).replace(/</g, "\\u003c");
 
   return new Response(pageShell({
-    title: page.title,
-    description: page.lede,
+    title: page.seoTitle ?? page.title,
+    description: page.seoDescription ?? page.lede,
     canonical: pageCanonical,
     ogImage: ogImageUrl,
     ogType: "article",
