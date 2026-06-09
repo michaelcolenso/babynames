@@ -20,8 +20,16 @@ export function renderYearPage(
   rows: YearNameRow[],
   opts: { canonical: string; origin?: string; prevYear?: number | null; nextYear?: number | null },
 ): string {
-  const title = `Top baby names in ${year} — popular boys and girls names | NobodyNamed`;
-  const desc = `The most popular baby names from ${year}, ranked by Social Security Administration birth records. See what names defined the ${year} classroom.`;
+  // Lead the title with the year's actual #1 names: specific, truthful, and far
+  // more clickable than the generic "Top baby names in <year>" that was stranded
+  // at ~0% CTR despite page-1 rankings (see docs/seo/2026-06-09-gsc-blog-demand.md).
+  const topGirlName = [...rows].filter((r) => r.sex === "F").sort((a, b) => a.rank - b.rank)[0]?.name;
+  const topBoyName = [...rows].filter((r) => r.sex === "M").sort((a, b) => a.rank - b.rank)[0]?.name;
+  const hasLeaders = Boolean(topGirlName && topBoyName);
+  const title = hasLeaders
+    ? `Top Baby Names of ${year}: ${topGirlName} & ${topBoyName} Led the Year | NobodyNamed`
+    : `Top Baby Names of ${year}: Most Popular Boys & Girls | NobodyNamed`;
+  const desc = `The most popular baby names of ${year}, ranked by Social Security Administration birth records.${hasLeaders ? ` ${topGirlName} and ${topBoyName} topped the list —` : ""} see the full top 25 boys and girls, with peak counts and how each name has aged since.`;
   const origin = opts.origin || new URL(opts.canonical).origin;
   const ogImageUrl = `${origin}/api/og/year/${year}`;
   const dataDate = `${year}-05-15`;

@@ -65,17 +65,23 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
     );
   }
 
-  const title = `${decade.label} Baby Names | NobodyNamed`;
-  const desc = `The most popular baby names of the ${decade.label}. See the top boys and girls names from ${decade.start}–${decade.end}, ranked by total births.`;
-  const url = new URL(ctx.request.url);
-  const origin = url.origin;
-  const canonical = `${origin}/names/${decade.label}/`;
-
   const girls = rows.filter((r) => r.sex === "F").slice(0, 25);
   const boys = rows.filter((r) => r.sex === "M").slice(0, 25);
   const topGirl = girls[0];
   const topBoy = boys[0];
   const classroom = [...girls.slice(0, 2), ...boys.slice(0, 2)].map((r) => r.name);
+
+  // Lead the title with the decade's actual #1 names — specific and clickable.
+  // The generic "<decade> Baby Names" title ranked page-1 at ~0% CTR
+  // (see docs/seo/2026-06-09-gsc-blog-demand.md).
+  const hasLeaders = Boolean(topGirl && topBoy);
+  const title = hasLeaders
+    ? `Most Popular ${decade.label} Baby Names: ${topGirl!.name} & ${topBoy!.name} Led the Decade | NobodyNamed`
+    : `Most Popular ${decade.label} Baby Names | NobodyNamed`;
+  const desc = `The most popular baby names of the ${decade.label} (${decade.start}–${decade.end}), ranked by total SSA births.${hasLeaders ? ` ${topGirl!.name} and ${topBoy!.name} led the decade —` : ""} see the full top boys and girls, peak years, and which names now read like timestamps.`;
+  const url = new URL(ctx.request.url);
+  const origin = url.origin;
+  const canonical = `${origin}/names/${decade.label}/`;
 
   const nameList = (list: typeof rows) =>
     list
