@@ -442,19 +442,19 @@ function formatStateList(states: string[]): string {
 function diasporaNarrative(d: DiasporaResponse, name: string): string {
   const safe = escape(name);
   if (!d.origin) {
-    return `${safe} never reached SSA's state-level reporting threshold in any state.`;
+    return `${safe} never concentrated in any one state — it stayed evenly spread.`;
   }
   const origin = formatStateList(originStateNames(d));
   if (d.totalStates <= 1) {
-    return `${safe} only ever appeared in ${origin}. A true local.`;
+    return `${safe} only ever broke out in ${origin}. A true local.`;
   }
   if (d.diffusionYears < 10) {
-    return `${safe} spread fast — first recorded in ${origin} (${d.origin.year}) and seen in ${d.totalStates} states within a decade.`;
+    return `${safe} spread fast — broke out in ${origin} (${d.origin.year}) and ran high in ${d.totalStates} states within a decade.`;
   }
   if (d.diffusionYears > 50) {
     return `${safe} took ${d.diffusionYears} years to reach ${d.totalStates} states. A slow burn from ${origin} outward.`;
   }
-  return `${safe} first appeared in ${origin} (${d.origin.year}) and showed up in ${d.totalStates} states over ${d.diffusionYears} years.`;
+  return `${safe} broke out in ${origin} (${d.origin.year}) and became over-represented in ${d.totalStates} states over ${d.diffusionYears} years.`;
 }
 
 // Server-rendered choropleth on a geographic tile grid. Static here (final,
@@ -483,7 +483,7 @@ function renderDiasporaMap(record: NameRecord, d?: DiasporaResponse): string {
     const tier = diasporaTier(point?.year, originYear);
     const adoptedYear = point?.year;
     const titleYear =
-      tier === "never" ? "not recorded" : `first recorded ${adoptedYear}`;
+      tier === "never" ? "never over-represented" : `broke out ${adoptedYear}`;
     const yearAttr = adoptedYear !== undefined ? ` data-year="${adoptedYear}"` : "";
     return `<g class="dz-tile dz-${tier}" data-state="${st}"${yearAttr}>
       <title>${escape(stateName(st))}: ${titleYear}</title>
@@ -493,8 +493,8 @@ function renderDiasporaMap(record: NameRecord, d?: DiasporaResponse): string {
   }).join("");
 
   const subtitle = d.origin
-    ? `First recorded: <strong>${originLabel}, ${d.origin.year}</strong> · appeared in ${d.totalStates} ${d.totalStates === 1 ? "state" : "states"} over ${d.diffusionYears} ${d.diffusionYears === 1 ? "year" : "years"}`
-    : `This name never reached SSA's state-level reporting threshold in any state.`;
+    ? `Broke out: <strong>${originLabel}, ${d.origin.year}</strong> · over-represented in ${d.totalStates} ${d.totalStates === 1 ? "state" : "states"} over ${d.diffusionYears} ${d.diffusionYears === 1 ? "year" : "years"}`
+    : `This name never concentrated in any one state.`;
 
   const legend = `<div class="diaspora-legend" aria-hidden="true">
     <span class="dz-origin">Origin</span>
