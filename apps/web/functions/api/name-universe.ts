@@ -49,7 +49,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     fy: r.first_year,
     py: r.peak_year,
     pc: r.peak_count,
-    st: r.status[0], // first char only
+    st: r.status.charAt(0), // first char only
   }));
 
   const body: NameUniverseResponse = { ym, yM, names };
