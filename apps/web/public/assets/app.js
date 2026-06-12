@@ -157,6 +157,108 @@ function buildSparkline(record, opts = {}) {
 </svg>`;
 }
 
+function attachSparklineTooltip(container, record) {
+  const svg = container && container.querySelector('.chart-panel .sparkline');
+  if (!svg) return;
+  if (svg.dataset.tooltipAttached === '1') return;
+  svg.dataset.tooltipAttached = '1';
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'sparkline-tooltip';
+  tooltip.setAttribute('role', 'tooltip');
+  document.body.appendChild(tooltip);
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const indicator = document.createElementNS(ns, 'line');
+  indicator.setAttribute('class', 'sparkline-indicator');
+  svg.appendChild(indicator);
+
+  const dot = document.createElementNS(ns, 'circle');
+  dot.setAttribute('class', 'sparkline-hover-dot');
+  dot.setAttribute('r', '5');
+  svg.appendChild(dot);
+
+  const { ym, yM, series, name } = record;
+  const viewBox = svg.viewBox.baseVal;
+  const pad = { top: 30, right: 46, bottom: 26, left: 10 };
+  const years = yM - ym;
+  const xStep = years > 0 ? (viewBox.width - pad.left - pad.right) / years : 0;
+  const counts = Object.values(series);
+  const maxV = Math.max(1, ...counts);
+  const yScale = (v) =>
+    viewBox.height - pad.bottom - (v / maxV) * (viewBox.height - pad.top - pad.bottom);
+
+  const hide = () => {
+    tooltip.style.opacity = '0';
+    indicator.style.opacity = '0';
+    dot.style.opacity = '0';
+  };
+
+  const update = (clientX, clientY) => {
+    const rect = svg.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const viewBoxX = (x / rect.width) * viewBox.width;
+    let year = Math.round(ym + (viewBoxX - pad.left) / xStep);
+    year = Math.max(ym, Math.min(yM, year));
+    const count = series[year] || 0;
+
+    tooltip.innerHTML = `
+      <div class="sparkline-tooltip-year">${escapeHtml(name)} · ${year}</div>
+      <div class="sparkline-tooltip-count">${fmt(count)} births</div>
+    `;
+
+    const dotX = pad.left + (year - ym) * xStep;
+    const dotY = yScale(count);
+    indicator.setAttribute('x1', dotX.toFixed(1));
+    indicator.setAttribute('x2', dotX.toFixed(1));
+    indicator.setAttribute('y1', pad.top);
+    indicator.setAttribute('y2', (viewBox.height - pad.bottom).toFixed(1));
+    indicator.style.opacity = '1';
+
+    dot.setAttribute('cx', dotX.toFixed(1));
+    dot.setAttribute('cy', dotY.toFixed(1));
+    dot.style.opacity = '1';
+
+    const tipWidth = tooltip.offsetWidth || 120;
+    const tipHeight = tooltip.offsetHeight || 60;
+    let left = clientX + window.scrollX + 14;
+    let top = clientY + window.scrollY - tipHeight - 10;
+    if (left + tipWidth > window.innerWidth + window.scrollX) {
+      left = clientX + window.scrollX - tipWidth - 14;
+    }
+    if (top < window.scrollY) {
+      top = clientY + window.scrollY + 14;
+    }
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.style.opacity = '1';
+  };
+
+  svg.addEventListener('mousemove', (e) => update(e.clientX, e.clientY));
+  svg.addEventListener('mouseleave', hide);
+
+  // Touch: tap-and-hold to inspect, tap outside to dismiss.
+  let touchTimer = null;
+  svg.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    update(t.clientX, t.clientY);
+    if (touchTimer) clearTimeout(touchTimer);
+    touchTimer = setTimeout(hide, 3500);
+  }, { passive: false });
+  svg.addEventListener('touchend', () => {
+    if (touchTimer) clearTimeout(touchTimer);
+    touchTimer = setTimeout(hide, 1800);
+  });
+
+  hide();
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function renderReport(record) {
   const a = analyze(record);
   if (!a) return `<div class="report"><h1>${record.name}</h1><p class="lede">No data for this name.</p></div>`;
@@ -320,9 +422,133 @@ function attachShareHandlers(container, record) {
         if (canvas) downloadCanvas(canvas, `${record.name.toLowerCase()}-nobodynamed.png`);
       } else if (kind === "twin") {
         await handleTwinButton(btn, record, container);
+      } else if (kind === "compare") {
+        toggleComparePanel(container, true);
+      } else if (kind === "compare-close") {
+        toggleComparePanel(container, false);
       }
     });
   });
+}
+
+function toggleComparePanel(container, show) {
+  const panel = container.querySelector("#compare-controls");
+  if (!panel) return;
+  panel.style.display = show ? "block" : "none";
+  if (show) {
+    const input = panel.querySelector(".compare-input");
+    if (input) input.focus();
+  }
+}
+
+function initCompareControls(container, record) {
+  const panel = container.querySelector("#compare-controls");
+  if (!panel || panel.dataset.initialized === "1") return;
+  panel.dataset.initialized = "1";
+
+  const input = panel.querySelector(".compare-input");
+  const addBtn = panel.querySelector(".compare-add");
+  const goBtn = panel.querySelector(".compare-go");
+  const pillsEl = panel.querySelector(".compare-pills");
+  const suggestionsEl = panel.querySelector(".compare-suggestions");
+  const limitEl = panel.querySelector(".compare-limit");
+
+  const MAX_EXTRA = 2;
+  let selected = [];
+  let currentSuggestions = [];
+  let activeIdx = -1;
+  let debounceTimer = null;
+
+  const updateUI = () => {
+    pillsEl.innerHTML = selected.map((n) =>
+      `<span class="compare-pill">${escapeHtml(n)} <button type="button" data-remove="${escapeHtml(n)}" aria-label="Remove ${escapeHtml(n)}">×</button></span>`
+    ).join("");
+    goBtn.disabled = selected.length === 0;
+    const remaining = MAX_EXTRA - selected.length;
+    limitEl.textContent = remaining > 0 ? `Add up to ${remaining} more name${remaining === 1 ? "" : "s"}` : "Maximum names selected";
+    input.disabled = remaining === 0;
+    addBtn.disabled = remaining === 0;
+    if (remaining === 0) suggestionsEl.style.display = "none";
+
+    pillsEl.querySelectorAll("button[data-remove]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const name = btn.getAttribute("data-remove");
+        selected = selected.filter((n) => n !== name);
+        updateUI();
+      });
+    });
+  };
+
+  const renderSuggestions = () => {
+    if (!currentSuggestions.length) {
+      suggestionsEl.style.display = "none";
+      return;
+    }
+    suggestionsEl.style.display = "block";
+    suggestionsEl.innerHTML = currentSuggestions.map((s, i) =>
+      `<div role="option" aria-selected="${i === activeIdx}" data-i="${i}" class="${i === activeIdx ? "active" : ""}">
+        <span>${escapeHtml(s.name)}</span>
+        <span class="meta">${s.sex === "M" ? "masculine" : "feminine"}${s.peak_count ? " · peak " + fmt(s.peak_count) : ""}</span>
+      </div>`
+    ).join("");
+    suggestionsEl.querySelectorAll("[role=option]").forEach((el) => {
+      el.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        addName(currentSuggestions[Number(el.getAttribute("data-i"))].name);
+      });
+    });
+  };
+
+  const addName = (name) => {
+    const n = titleCase(name).trim();
+    if (!n || selected.includes(n) || n.toLowerCase() === record.name.toLowerCase()) return;
+    if (selected.length >= MAX_EXTRA) return;
+    selected.push(n);
+    input.value = "";
+    currentSuggestions = [];
+    activeIdx = -1;
+    renderSuggestions();
+    updateUI();
+  };
+
+  input.addEventListener("input", () => {
+    const q = input.value.trim();
+    if (q.length < 2) { currentSuggestions = []; renderSuggestions(); return; }
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(async () => {
+      try {
+        currentSuggestions = await searchNames(q, 8);
+        activeIdx = -1;
+        renderSuggestions();
+      } catch (e) {
+        currentSuggestions = [];
+        renderSuggestions();
+      }
+    }, 180);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (suggestionsEl.style.display !== "none") {
+      if (e.key === "ArrowDown") { activeIdx = Math.min(currentSuggestions.length - 1, activeIdx + 1); renderSuggestions(); e.preventDefault(); }
+      else if (e.key === "ArrowUp") { activeIdx = Math.max(0, activeIdx - 1); renderSuggestions(); e.preventDefault(); }
+      else if (e.key === "Enter" && activeIdx >= 0) { addName(currentSuggestions[activeIdx].name); e.preventDefault(); }
+      else if (e.key === "Escape") { currentSuggestions = []; renderSuggestions(); }
+    } else if (e.key === "Enter") {
+      addName(input.value);
+    }
+  });
+
+  input.addEventListener("blur", () => setTimeout(() => { currentSuggestions = []; renderSuggestions(); }, 120));
+
+  addBtn.addEventListener("click", () => addName(input.value));
+
+  goBtn.addEventListener("click", () => {
+    if (!selected.length) return;
+    const names = [record.name, ...selected].map((n) => encodeURIComponent(titleCase(n))).join(",");
+    location.href = `/compare/${names}/`;
+  });
+
+  updateUI();
 }
 
 async function handleTwinButton(btn, record, container) {
@@ -561,6 +787,8 @@ window.NameVitals = {
   buildSparkline,
   renderReport,
   attachShareHandlers,
+  attachSparklineTooltip,
+  initCompareControls,
   hydrateEnrichment,
   hydrateDiaspora,
   titleCase,

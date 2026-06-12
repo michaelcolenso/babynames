@@ -4,6 +4,7 @@ export * from "./us-states-map";
 export * from "./sparkline";
 export * from "./generate-narrative";
 export * from "./render-name";
+export * from "./render-compare";
 export * from "./render-twin";
 export * from "./render-year";
 export * from "./render-blog";
