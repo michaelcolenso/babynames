@@ -5,6 +5,7 @@
     "/mcp",
     "/name/*",
     "/names/*",
+    "/compare/*",
     "/api/*",
     "/era/*",
     "/year/*",

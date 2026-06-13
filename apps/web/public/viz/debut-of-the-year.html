@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Debut of the Year — NobodyNamed</title>
+<meta name="description" content="The boy and girl names that made the biggest first-year entrance, year by year — a century of headlines, screens, songs, and mysteries written in birth certificates.">
+<link rel="canonical" href="https://nobodynamed.com/viz/debut-of-the-year">
+<meta property="og:title" content="Debut of the Year — NobodyNamed">
+<meta property="og:description" content="The names that arrived all at once: a century of media, migration, invention, and mystery written in birth certificates.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://nobodynamed.com/viz/debut-of-the-year">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#f4f0e7">
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/viz-theme.css">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{--bg:var(--paper);--bg2:var(--surface);--text:var(--ink);--hit:var(--amber);--rose:#b76072;--green:var(--emerald);}
+  body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.6;}
+  .page{width:min(100% - 32px,1180px);margin:0 auto;padding:1.25rem 0 4rem;}
+  header.site{margin-bottom:0;}
+  .wrap{max-width:820px;margin:0 auto;padding:0 1.5rem;}
+  .hero{padding:3rem 0 1rem;}
+  .kicker{font-family:var(--mono);font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin-bottom:.9rem;}
+  h1{font-family:var(--serif);font-size:clamp(2.7rem,7vw,5rem);font-weight:500;letter-spacing:0;line-height:1.02;margin-bottom:1rem;color:var(--ink);}
+  .lede{font-family:var(--serif);font-size:clamp(1.08rem,2.2vw,1.35rem);color:var(--ink-soft);max-width:43rem;line-height:1.42;}
+  .method{margin:1.5rem 0 0;padding:1rem 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);color:var(--muted);font-size:.9rem;}
+  .method strong{color:var(--ink);}
+  .toolbar{position:sticky;top:0;z-index:20;background:var(--bg);padding:1.2rem 0 .8rem;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;}
+  .seg{display:inline-flex;border:1px solid var(--rule);border-radius:20px;overflow:hidden;margin-right:.3rem;}
+  .seg button{font-family:var(--mono);font-size:.7rem;padding:.38rem .9rem;background:transparent;color:var(--muted);border:none;cursor:pointer;}
+  .seg button.on{background:var(--amber);color:var(--accent-fg);font-weight:700;}
+  body.fmode .seg button.on{background:var(--rose);color:#fff8ed;}
+  .count-note{font-family:var(--mono);font-size:.68rem;color:var(--muted);margin-left:auto;}
+  .overview{position:sticky;top:var(--toolbar-height,3.8rem);z-index:19;margin:0 0 1rem;padding:1rem 0 .6rem;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);background:var(--bg);box-shadow:0 14px 20px -18px rgba(0,0,0,.9);}
+  .overview-head{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;margin-bottom:.35rem;}
+  .overview-title{font-size:.86rem;font-weight:700;color:var(--ink-soft);}
+  .overview-scale{font-family:var(--mono);font-size:.62rem;color:var(--muted);}
+  .debut-chart{position:relative;width:100%;height:230px;}
+  .debut-chart svg{display:block;width:100%;height:100%;overflow:visible;}
+  .chart-grid{stroke:var(--rule);stroke-width:1;vector-effect:non-scaling-stroke;}
+  .chart-decade{stroke:rgba(23,21,17,.055);stroke-width:1;vector-effect:non-scaling-stroke;}
+  .chart-axis-label{fill:var(--muted);font-family:var(--mono);font-size:9px;}
+  .chart-landmark{fill:var(--ink-soft);font-family:var(--mono);font-size:9px;pointer-events:none;}
+  .chart-hit{fill:transparent;cursor:pointer;}
+  .chart-dot{fill:var(--amber);opacity:.72;stroke:var(--paper);stroke-width:1.5;pointer-events:none;transform-box:fill-box;transform-origin:center;transition:opacity .18s ease,transform .18s cubic-bezier(.22,1,.36,1),fill .18s ease;}
+  body.fmode .chart-dot{fill:var(--rose);}
+  .chart-dot.artifact{fill:var(--red);}
+  .chart-hit:hover + .chart-dot,.chart-hit:focus + .chart-dot{opacity:1;transform:scale(1.7);}
+  .chart-hit:focus{outline:none;}
+  .chart-hit.selected + .chart-dot{opacity:1;transform:scale(1.9);}
+  .chart-hit.dimmed + .chart-dot{opacity:.28;}
+  .chart-guide{stroke:var(--hit);stroke-width:1;stroke-dasharray:2 3;opacity:.65;vector-effect:non-scaling-stroke;}
+  body.fmode .chart-guide{stroke:var(--rose);}
+  .chart-readout{min-height:3.1rem;display:grid;grid-template-columns:4.2rem minmax(0,1fr);gap:.8rem;padding:.6rem 0 .2rem;border-top:1px solid var(--rule);}
+  .chart-readout-year{font-family:var(--mono);color:var(--muted);font-size:.72rem;padding-top:.13rem;}
+  .chart-readout-main{min-width:0;}
+  .chart-readout-name{font-weight:700;color:var(--ink);margin-right:.45rem;}
+  .chart-readout-count{font-family:var(--mono);color:var(--muted);font-size:.7rem;}
+  .chart-readout-note{display:-webkit-box;color:var(--ink-soft);font-size:.82rem;line-height:1.45;margin-top:.08rem;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .ledger{border-top:1px solid var(--rule);margin-top:.4rem;}
+  .row{position:relative;display:grid;grid-template-columns:54px 1fr;gap:1rem;padding:.6rem 0;border-bottom:1px solid var(--rule);align-items:baseline;scroll-margin-top:5.5rem;}
+  .row.chart-selected{background:linear-gradient(90deg,rgba(231,192,113,.08),transparent);}
+  body.fmode .row.chart-selected{background:linear-gradient(90deg,rgba(224,138,176,.09),transparent);}
+  .row.decade-arrival{animation:decade-arrival .72s cubic-bezier(.22,1,.36,1);}
+  .row.decade-arrival::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(231,192,113,.18),rgba(231,192,113,0));transform-origin:left center;animation:decade-wash .72s cubic-bezier(.22,1,.36,1);}
+  body.fmode .row.decade-arrival::after{background:linear-gradient(90deg,rgba(224,138,176,.18),rgba(224,138,176,0));}
+  .yr{font-family:var(--mono);font-size:.8rem;color:var(--muted);padding-top:.35rem;}
+  .nm{display:flex;flex-wrap:wrap;align-items:baseline;gap:.55rem;}
+  .nm a{font-weight:700;letter-spacing:0;line-height:1.05;color:var(--ink);text-decoration:none;}
+  .ct{font-family:var(--mono);font-size:.72rem;color:var(--muted);}
+  .note{display:block;font-size:.98rem;color:var(--ink-soft);margin-top:.15rem;}
+  .row.art .nm a{color:var(--red)!important;} .row.art .note{color:var(--red);}
+  .decnav{display:flex;flex-wrap:wrap;gap:.4rem;margin:.4rem 0 0;}
+  .decnav a{position:relative;font-family:var(--mono);font-size:.66rem;color:var(--muted);border:1px solid var(--rule);border-radius:6px;padding:.2rem .5rem;text-decoration:none;transition:color .18s ease,border-color .18s ease,background-color .18s ease,transform .18s cubic-bezier(.22,1,.36,1);}
+  .decnav a:hover{color:var(--text);border-color:var(--hit);text-decoration:none;transform:translateY(-1px);}
+  .decnav a:active{transform:translateY(0) scale(.96);}
+  .decnav a.on{color:var(--accent-fg);background:var(--amber);border-color:var(--amber);font-weight:700;}
+  body.fmode .decnav a.on{color:#fff8ed;background:var(--rose);border-color:var(--rose);}
+  @keyframes decade-arrival{0%{transform:translateY(7px);opacity:.72}100%{transform:translateY(0);opacity:1}}
+  @keyframes decade-wash{0%{opacity:0;transform:scaleX(0)}28%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1)}}
+  footer.site{max-width:820px;margin:3rem auto 0;padding:1.5rem 0;border-top:1px solid var(--rule);font-family:var(--sans);font-size:.78rem;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;}
+  @media(max-width:640px){header.site,.wrap{padding-left:1rem;padding-right:1rem;}h1{font-size:2rem;}.debut-chart{height:195px}.chart-readout{grid-template-columns:3.5rem 1fr}.chart-readout-note{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.chart-landmark,.chart-axis-label.mobile-hide{display:none}}
+  @media(prefers-reduced-motion:reduce){.decnav a,.chart-dot{transition:none}.decnav a:hover,.decnav a:active,.chart-hit:hover + .chart-dot,.chart-hit:focus + .chart-dot,.chart-hit.selected + .chart-dot{transform:none}.row.decade-arrival,.row.decade-arrival::after{animation:none}}
+</style>
+</head>
+<body class="viz-page">
+<a href="#main-content" class="skip-link">Skip to content</a>
+<div class="page">
+<header class="site">
+  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt=""></a>
+  <nav aria-label="Main navigation"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a></nav>
+  <details class="mobile-nav"><summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary><nav aria-label="Mobile navigation"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a></nav></details>
+</header>
+
+<main class="wrap" id="main-content">
+  <div class="hero">
+<p class="kicker">Visualizations / Almanac</p>
+    <h1>Debut of the Year</h1>
+    <p class="lede">Year by year, these are the boy and girl names that made the biggest first-year entrance: absent from the national list, then suddenly there. Read top to bottom, the almanac becomes a century of American life written in birth certificates.</p>
+    <p class="method"><strong>How to read the notes.</strong> Some debuts follow a headline, character, performer, or song closely enough to name the catalyst. Others reveal only a spelling fashion or regional footprint. When the record does not support a story, we say so. Geography is evidence of where a name caught on, not proof of why. Red entries are known source-data artifacts, preserved here because they reveal how the record can fail.</p>
+  </div>
+
+  <div class="toolbar">
+    <span class="seg" id="seg-sex"><button type="button" data-s="M" class="on" aria-pressed="true">Boys</button><button type="button" data-s="F" aria-pressed="false">Girls</button></span>
+    <span class="count-note" id="cn"></span>
+  </div>
+  <figure class="overview" aria-labelledby="overview-title">
+    <div class="overview-head">
+      <figcaption class="overview-title" id="overview-title">First-year births, by year</figcaption>
+      <span class="overview-scale">logarithmic scale</span>
+    </div>
+    <div class="debut-chart" id="debut-chart"></div>
+    <div class="chart-readout" id="chart-readout" aria-live="polite"></div>
+  </figure>
+  <div class="decnav" id="decnav"></div>
+  <div class="ledger" id="ledger"></div>
+</main>
+
+<footer class="site">
+  <span>nobodynamed · built on public-domain SSA data, 1880–2025</span>
+  <span><a href="/blog/the-names-that-arrived-all-at-once/">Read the story</a> · <a href="/viz/">More visualizations</a></span>
+</footer>
+</div>
+
+<script>
+// [year, name, debut count, note ("" = obscure), kind ("" | "art")]
+var DM = [
+[1910,"Halley",12,"Halley's Comet swept past Earth that spring.",""],
+[1911,"Colie",16,"Likely a phonetic variant of Coley/Colin. Pre-1930 — no state data available.",""],
+[1912,"Woodroe",25,"Woodrow Wilson elected president (phonetic spelling).",""],
+[1913,"Vilas",24,"Possibly from the Vilas family name or Wisconsin's Vilas County. Pre-1930.",""],
+[1914,"Torao",17,"A Japanese given name. No single national catalyst has surfaced.",""],
+[1915,"Audra",18,"Lithuanian-origin name, later popularized by actress Audra Lindley. Pre-1930.",""],
+[1916,"Verdun",14,"The WWI battle, fought that year.",""],
+[1917,"Delwyn",14,"Welsh-origin name (\"pretty\" + \"white\"). Pre-1930.",""],
+[1918,"Foch",58,"Marshal Ferdinand Foch, the victorious Allied commander.",""],
+[1919,"Juaquin",11,"A variant spelling of Joaquin. The immediate trigger remains a mystery.",""],
+[1920,"Steele",11,"Surname-as-first-name. Possibly from a local notable. Pre-1930.",""],
+[1921,"Norberto",14,"Spanish/Italian form of Norbert. Pre-1930.",""],
+[1922,"Daren",35,"Variant of Darren/Darin. Pre-1930 — unusually large debut for the era.",""],
+[1923,"Clinard",9,"Surname-as-first-name. Pre-1930.",""],
+[1924,"Melquiades",13,"Spanish biblical name (Melchizedek). Pre-1930.",""],
+[1925,"Wayburn",11,"Surname-as-first-name. Pre-1930.",""],
+[1926,"Bibb",14,"Surname-as-first-name. Possibly from Bibb County, GA/AL. Pre-1930.",""],
+[1927,"Bidwell",14,"Surname-as-first-name. Pre-1930.",""],
+[1928,"Alfread",9,"Misspelling of Alfred — the year's biggest debut was a typo.",""],
+[1929,"Donnald",8,"Misspelling of Donald — the second consecutive year won by a typo.",""],
+[1930,"Shogo",11,"A Japanese given name. No single national catalyst has surfaced.",""],
+[1931,"Rockne",17,"Knute Rockne, the Notre Dame coach, died in a plane crash that March.",""],
+[1932,"Alvyn",7,"Variant of Alvin. Pre-1930s low point for new names.",""],
+[1933,"Skippy",10,"The Skippy comic strip and Jackie Cooper film era.",""],
+[1934,"Franchot",9,"Franchot Tone, the MGM leading man.",""],
+[1935,"Haile",11,"Haile Selassie, Time's Man of the Year.",""],
+[1936,"Renny",9,"Diminutive of René/Reynold. Small debut — no state data.",""],
+[1937,"Gaynell",11,"Possibly Gay plus Nell, in the style of Southern compound names. The trigger is unknown.",""],
+[1938,"Daivd",9,"A misspelling of David, oddly the year's biggest debut.",""],
+[1939,"Brenda",19,"Already familiar in Britain and Ireland, Brenda finally cleared the American reporting threshold here. No single 1939 catalyst explains it.",""],
+[1940,"Willkie",13,"Wendell Willkie, that year's Republican nominee.",""],
+[1941,"Saford",11,"Surname-as-first-name. Possibly a local notable.",""],
+[1942,"Mcarther",23,"Gen. Douglas MacArthur, written by ear.",""],
+[1943,"Howie",10,"The familiar nickname for Howard crossed onto the national list. No specific wartime catalyst is known.",""],
+[1944,"Kipp",9,"Diminutive of Kipling or a surname. Small debut.",""],
+[1945,"Vickie",10,"A nickname spelling related to Vicki and Victoria. Its first appearance is too small to tie to one event.",""],
+[1946,"Sung",8,"A name used in Korean and Chinese communities. At eight births, the debut offers too little evidence for a narrower explanation.",""],
+[1947,"Eliezer",11,"A biblical Hebrew name. The record supports the debut, but not a single explanation for it.",""],
+[1948,"Ridge",11,"Surname/word name. Post-war nature-name trend.",""],
+[1949,"Ezzard",21,"Ezzard Charles, the new heavyweight champion.",""],
+[1950,"Broderick",30,"Broderick Crawford won the Best Actor Oscar that spring.",""],
+[1951,"Cedrick",9,"Variant of Cedric. Small debut.",""],
+[1952,"Faron",12,"Faron Young, the breakout country star.",""],
+[1953,"Caster",21,"Possibly a surname or occupational name. No clear cultural trigger.",""],
+[1954,"Durk",17,"A variant of Dirk. No convincing public figure or character explains the timing.",""],
+[1955,"Anothony",10,"Misspelling of Anthony — another typo wins the year.",""],
+[1956,"Dondi",19,"The Dondi comic strip, then at its height.",""],
+[1957,"Maverick",33,"The TV western premiered that September (it also gave us Bret).",""],
+[1958,"Hoby",30,"Hoby Gilman, hero of the western Trackdown.",""],
+[1959,"Rowdy",22,"Rowdy Yates — Clint Eastwood's role on Rawhide.",""],
+[1960,"Cully",31,"A surname and nickname entering first-name use. No convincing athlete or screen character explains the timing.",""],
+[1961,"Jefre",21,"Jeffrey, written by ear. The unusual spelling is the story; no separate catalyst is known.",""],
+[1962,"Thadd",10,"Shortened form of Thaddeus. Small debut.",""],
+[1963,"Medgar",25,"Medgar Evers, the civil-rights leader assassinated that June.",""],
+[1964,"Janssen",16,"David Janssen, star of The Fugitive.",""],
+[1965,"Illya",35,"Illya Kuryakin, the teen-idol spy of The Man from U.N.C.L.E.",""],
+[1966,"Jarred",17,"A doubled-consonant spelling of Jared. No single catalyst is known.",""],
+[1967,"Clayt",13,"Shortened form of Clayton. Small debut.",""],
+[1968,"Jemal",47,"A variant of Jamal. The births were spread across several urban states, but the data does not identify a single catalyst.",""],
+[1969,"Tige",28,"Possibly from 'Tiger' or a diminutive. No clear trigger.",""],
+[1970,"Toriano",62,"Toriano 'Tito' Jackson — Jackson 5 mania.",""],
+[1971,"Diallo",54,"A West African surname and given name. Its births were dispersed across California, Michigan, New York, and Tennessee rather than centered on one locality.",""],
+[1972,"Jabbar",76,"Kareem Abdul-Jabbar.",""],
+[1973,"Toma",44,"The cop drama Toma, premiered that year.",""],
+[1974,"Nakia",613,"The ABC police drama Nakia premiered that year. The name appeared at scale across major television markets.",""],
+[1975,"Viet",23,"The fall of Saigon and the first wave of Vietnamese refugees.",""],
+[1976,"Delvecchio",27,"The detective series Delvecchio.",""],
+[1977,"Levar",523,"LeVar Burton — the year Roots aired.",""],
+[1978,"Mychal",59,"Mychal Thompson was the first pick in the 1978 NBA draft. Minnesota, where he played college basketball, recorded the most births.",""],
+[1979,"Jorel",22,"Jor-El, Superman's father, from the 1978 film.",""],
+[1980,"Tou",33,"A given name used in Hmong communities. The debut coincides with Hmong resettlement in the United States, though the data cannot identify a single catalyst.",""],
+[1981,"Taurean",91,"Taurean Blacque of Hill Street Blues.",""],
+[1982,"Eder",48,"Brazilian winger Éder Aleixo became one of the 1982 World Cup's most visible players. Thirty of the 48 recorded births were in California.",""],
+[1983,"Jonerik",20,"Jon plus Erik, compressed into one name. No public catalyst has surfaced.",""],
+[1984,"Eldra",17,"Possibly prompted by Eldra DeBarge, better known as El DeBarge. The count is too small to make the attribution certain.",""],
+[1985,"Rishawn",25,"A new construction built around the already familiar Shawn. No single media catalyst has surfaced.",""],
+[1986,"Cordero",173,"A Spanish surname meaning “lamb,” newly used at scale as a first name. Mississippi and Illinois were unusually prominent, but no single catalyst explains the spread.",""],
+[1987,"Teyon",25,"A newly recorded construction beginning with Te-. No specific catalyst has surfaced.",""],
+[1988,"Kadeem",52,"Kadeem Hardison of A Different World.",""],
+[1989,"Christop",1082,"Not a real name — Christopher truncated to 8 characters, a 1989 data glitch so large it wins the year.","art"],
+[1990,"Dajour",26,"A new Da- construction with the sound of the French phrase du jour. No single catalyst is established.",""],
+[1991,"Quayshaun",93,"A new construction ending in the familiar Shawn sound. North Carolina led the debut, followed by Florida and New York.",""],
+[1992,"Devanta",41,"One of several new De- and Dev- constructions appearing in this period. No single catalyst is known.",""],
+[1993,"Deyonta",37,"A new De- construction, close in sound to Devonta and DeVante. No single catalyst is known.",""],
+[1994,"Shyheim",168,"Shyheim, the teenage Wu-Tang-affiliated rapper.",""],
+[1995,"Alize",30,"Alizé cognac had become a conspicuous name in mid-1990s hip-hop. The timing makes that influence plausible, though not provable from birth records alone.",""],
+[1996,"Quindon",67,"Quindon Tarver, the boy singer from Romeo + Juliet.",""],
+[1997,"Cross",43,"A surname and English word crossing into first-name use. No single catalyst is known.",""],
+[1998,"Zyshonne",26,"A new Zy- construction ending in the familiar Shawn sound. No individual catalyst has surfaced.",""],
+[1999,"Cauy",32,"Probably Cody, radically respelled. The immediate source of the spelling remains unknown.",""],
+[2000,"Rithik",22,"Hrithik Roshan's Bollywood breakout.",""],
+[2001,"Jahiem",155,"The R&B singer Jaheim.",""],
+[2002,"Omarian",31,"Omarion of the group B2K.",""],
+[2003,"Pharrell",67,"Pharrell Williams, everywhere that year.",""],
+[2004,"Jkwon",100,"J-Kwon, whose 'Tipsy' was inescapable.",""],
+[2005,"Jayceon",49,"Jayceon Taylor — the rapper The Game.",""],
+[2006,"Balian",24,"Balian, hero of Kingdom of Heaven.",""],
+[2007,"Yurem",206,"Yurem, the Mexican child star — a telenovela debut.",""],
+[2008,"Yosgart",72,"Mexican goalkeeper Yosgart Gutiérrez became Cruz Azul's starter during the 2008 Clausura and led the club to the final.",""],
+[2009,"Jeremih",88,"The R&B singer Jeremih.",""],
+[2010,"Vadhir",55,"Vadhir Derbez, the telenovela actor.",""],
+[2011,"Jionni",63,"Jionni LaValle — Snooki's boyfriend on Jersey Shore.",""],
+[2012,"Naksh",28,"An Indian given name. No specific film, series, or public figure has been established as the catalyst.",""],
+[2013,"Jaceyon",89,"A respelling riding The Game's Jayceon.",""],
+[2014,"Llewyn",38,"The Coen Brothers' Inside Llewyn Davis.",""],
+[2015,"Gotham",48,"The Batman-prequel TV series.",""],
+[2016,"Yuvin",34,"The name arrived with 34 births, but no convincing public catalyst has surfaced.",""],
+[2017,"Asahd",59,"Asahd Khaled — DJ Khaled's toddler-turned-brand.",""],
+[2018,"Jahseh",65,"Jahseh Onfroy — XXXTentacion's real name, the year he died.",""],
+[2019,"Armias",55,"A sudden, widely scattered debut with no identifiable national catalyst.",""],
+[2020,"Aarnik",14,"Fourteen births and no clear geographic center. The trigger remains a mystery.",""],
+[2021,"Azaire",25,"A new A- name with the increasingly familiar -aire ending. No single catalyst is known.",""],
+[2022,"Maziyon",83,"A large first-year appearance without a clear regional center or identifiable public catalyst.",""],
+[2023,"Kaiyr",41,"A new spelling built around Kai, one of the decade's fastest-rising name sounds. No single catalyst is known.",""],
+[2024,"Lahiam",154,"The name was already visible online through a child in a prominent influencer family. Its 154 births were spread broadly, led by Texas, New York, and Florida.",""],
+[2025,"Akyris",74,"A substantial first-year appearance with no established catalyst yet.",""]
+];
+
+var DF = [
+[1930,"Laquita",68,"A striking first appearance, but no single public catalyst has surfaced.",""],
+[1931,"Joanie",12,"The familiar diminutive of Joan reached the national list. No single actress or character can be credited with confidence.",""],
+[1932,"Carolann",11,"Carol plus Ann, an early example of the compound names that would flourish at midcentury.",""],
+[1933,"Gayleen",23,"Gay plus the increasingly productive -leen ending. No single catalyst is known.",""],
+[1934,"Carollee",12,"Carol plus Lee, another early compound-name debut.",""],
+[1935,"Treasure",16,"The English word made a small but unmistakable entrance as a given name. The trigger is unknown.",""],
+[1936,"Shelva",89,"Shelva arrived beside a cluster of similar spellings — Shelba, Shelvia, Shelvie, and others — concentrated heavily in Appalachia. The pattern suggests a name heard aloud and spelled several ways, but its source remains unidentified.",""],
+[1937,"Deeann",18,"Dee plus Ann, part of the growing compound-name repertoire.",""],
+[1938,"Sonjia",19,"A phonetic variant of Sonia or Sonya. No specific catalyst is known.",""],
+[1939,"Thanna",17,"Possible variant of Thana/Anna with Th- prefix. Small debut.",""],
+[1940,"Sierra",32,"The Spanish word for a mountain range entered the national name list. No single 1940 catalyst explains it.",""],
+[1941,"Jerilynn",56,"Jeri plus Lynn, a compound construction that anticipated a major midcentury naming style.",""],
+[1942,"Dwala",15,"A tiny, one-year entrance with no identifiable public catalyst.",""],
+[1943,"Sharelle",28,"A new Sha- construction with the French-sounding -relle ending. No single catalyst has surfaced.",""],
+[1944,"Deatra",29,"A newly recorded De- construction. The birth record does not reveal its source.",""],
+[1945,"Sherida",26,"Possibly a feminine shortening of Sheridan, or a new Sher- construction. The source is uncertain.",""],
+[1946,"Suzzette",17,"Suzette with a doubled z. The debut is small and has no identifiable catalyst.",""],
+[1947,"Rory",41,"An unusually early female use of Rory. No convincing screen or radio catalyst has surfaced.",""],
+[1948,"Vickii",30,"Vicki with a decorative second i. No single catalyst is known.",""],
+[1949,"Rainelle",46,"A new construction combining Rain with the feminine -elle ending. Its source remains unknown.",""],
+[1950,"Monalisa",35,"Nat King Cole's 'Mona Lisa' topped the charts that year.",""],
+[1951,"Debralee",19,"Debra plus Lee, squarely in the midcentury compound-name tradition.",""],
+[1952,"Terria",17,"Probably a feminine extension of Terry. No specific catalyst is known.",""],
+[1953,"Trenace",32,"A newly recorded Tre- construction. The source remains unidentified.",""],
+[1954,"Corby",39,"A surname and place name crossing into female use. California recorded six of the 19 births visible in state data.",""],
+[1955,"Shevawn",36,"A phonetic American spelling of Siobhan. No single catalyst has surfaced.",""],
+[1956,"Siobhan",58,"The Irish actress Siobhán McKenna's American moment.",""],
+[1957,"Tierney",46,"The surname shared by actress Gene Tierney crossed onto the girls' list. Her influence is plausible, though the timing is not conclusive.",""],
+[1958,"Tamre",64,"A compressed spelling related to Tamara or Tammy. No single catalyst is known.",""],
+[1959,"Torey",103,"A spelling of Tori or Tory that arrived all at once. No clear public catalyst has surfaced.",""],
+[1960,"Leshia",76,"A new Le- construction with an Appalachian foothold: Kentucky and West Virginia each recorded seven births. The source remains unknown.",""],
+[1961,"Lavoris",37,"A newly recorded La- construction. No individual catalyst has surfaced.",""],
+[1962,"Lafondra",30,"Another new La- construction, with its strongest early presence in the South. No single catalyst is known.",""],
+[1963,"Phaedra",70,"The Sophia Loren film Phaedra.",""],
+[1964,"Djuna",198,"Djuna Phrayne was a character on the television drama Channing during the 1963–64 season, making the show a plausible catalyst. The simultaneous debut of Dejuna suggests the name was also being reshaped as people heard it.",""],
+[1965,"Latrenda",90,"One of several La- constructions entering the list in the mid-1960s. No single catalyst is known.",""],
+[1966,"Indira",43,"Indira Gandhi became India's prime minister that January.",""],
+[1967,"Cinnamon",41,"Cinnamon Carter, the glamorous agent on Mission: Impossible.",""],
+[1968,"Laryssa",67,"Larissa respelled with a y. No specific public catalyst has surfaced.",""],
+[1969,"Omayra",42,"A Spanish-language given name with no established 1969 media catalyst.",""],
+[1970,"Shilo",38,"Neil Diamond's 'Shilo.'",""],
+[1971,"Ayanna",194,"Ayanna appeared broadly rather than from one obvious regional center. No single national catalyst has been established.",""],
+[1972,"Cotina",109,"A new construction with a pronounced Gulf South center: Louisiana recorded 19 births and Mississippi 17. Its source remains unknown.",""],
+[1973,"Yajaira",55,"A Spanish-language given name with no established 1973 media catalyst.",""],
+[1974,"Shalawn",70,"A new Sha- construction ending in the familiar Dawn sound. No single catalyst has surfaced.",""],
+[1975,"Azure",121,"The color word made a sudden entrance as a given name. No single 1975 catalyst explains the jump.",""],
+[1976,"Tynisa",79,"A new Ty- construction with an early Northeast center: New York recorded 18 births and Pennsylvania 13.",""],
+[1977,"Kizzy",1117,"Kizzy from Roots — the single biggest baby-name debut on record.",""],
+[1978,"Enjoli",35,"The Enjoli perfume and its '8-hour' TV jingle.",""],
+[1979,"Chimere",78,"Related to the French chimère, meaning a dream or fantasy. Its births were widely distributed, with no clear single catalyst.",""],
+[1980,"Lerin",35,"Creative coinage. 'Le-' + '-rin' pattern. Small debut.",""],
+[1981,"Fallon",232,"Fallon Carrington of Dynasty, which premiered that January.",""],
+[1982,"Tyechia",71,"A new Ty- construction. No individual catalyst has surfaced.",""],
+[1983,"Mallori",35,"A respelling of Mallory, which was rising after Family Ties introduced Mallory Keaton in 1982.",""],
+[1984,"Nastassja",40,"The actress Nastassja Kinski.",""],
+[1985,"Sade",393,"The singer Sade, mid-'Smooth Operator' breakout.",""],
+[1986,"Myleka",38,"A newly recorded My- construction. No single catalyst is known.",""],
+[1987,"Jaleesa",116,"Jaleesa of A Different World.",""],
+[1988,"Jalesa",77,"A respelling of the same Different World character.",""],
+[1989,"Alexandr",301,"Not a real name — Alexandra truncated to 8 characters, the same 1989 data glitch.","art"],
+[1990,"Isamar",447,"The Venezuelan telenovela Isamar.",""],
+[1991,"Emilce",30,"A Spanish-language given name. No specific television or music catalyst has been established.",""],
+[1992,"Akeiba",49,"A new name with a clear Southern center: Georgia led, followed by Alabama, North Carolina, and Mississippi. The catalyst is unknown.",""],
+[1993,"Rosangelica",91,"A Spanish-language compound of Rosa and Angelica. No single media catalyst has been established.",""],
+[1994,"Ajee",185,"A short new A- name with a large first-year count. No single catalyst has surfaced.",""],
+[1995,"Yamilex",130,"A Spanish-language coinage ending in -lex. The immediate source remains unknown.",""],
+[1996,"Moesha",426,"The sitcom Moesha, starring Brandy.",""],
+[1997,"Erykah",279,"Erykah Badu's debut year.",""],
+[1998,"Naidelyn",78,"A Spanish-language coinage built with the productive -lyn ending. No single catalyst is known.",""],
+[1999,"Verania",62,"A Spanish-language given name. No specific telenovela or public figure has been established as the catalyst.",""],
+[2000,"Kelis",108,"The singer Kelis.",""],
+[2001,"Yaire",184,"California recorded 38 births and Texas 27, pointing to a Spanish-language cultural channel. The specific show, song, or public figure remains unidentified.",""],
+[2002,"Kaydence",70,"The Cadence/Kadence spelling wave.",""],
+[2003,"Trenyce",88,"Trenyce of American Idol season two.",""],
+[2004,"Eshal",38,"A name used in Muslim communities. No single 2004 catalyst has been established.",""],
+[2005,"Yarisbel",30,"A Spanish-language coinage. No specific screen or music source has been established.",""],
+[2006,"Lizania",35,"A Spanish-language coinage with no identified national catalyst.",""],
+[2007,"Leilene",81,"California recorded 28 births and Texas 11, suggesting Spanish-language media or community transmission. The specific catalyst remains unidentified.",""],
+[2008,"Aideliz",91,"Aideliz Hidalgo appeared on the 2008 season of Nuestra Belleza Latina. California and Texas led the name's debut.",""],
+[2009,"Greidys",187,"Greidys Gil won Nuestra Belleza Latina in 2009. The name debuted the same year, led by California and Texas.",""],
+[2010,"Tynlee",42,"A new construction using the increasingly productive -lee ending.",""],
+[2011,"Magaby",50,"California and Texas led this small debut, but no specific Spanish-language media catalyst has been established.",""],
+[2012,"Kimbella",52,"Kimbella Vanderhee joined Love & Hip Hop: New York in 2011. The name appeared on the national list the following year.",""],
+[2013,"Vanellope",63,"Vanellope von Schweetz of Wreck-It Ralph.",""],
+[2014,"Dalary",218,"Singer Larry Hernández introduced his daughter Dalary publicly before the name's 2014 debut. Texas, California, and Arizona led the first-year count.",""],
+[2015,"Kehlani",50,"The singer Kehlani.",""],
+[2016,"Rey",63,"Rey, the heroine of Star Wars: The Force Awakens.",""],
+[2017,"Camreigh",91,"A pure '-eigh' coinage — the spelling frontier.",""],
+[2018,"Zhavia",307,"Zhavia Ward, breakout of the show The Four.",""],
+[2019,"Sekani",67,"A broadly distributed debut with no established national catalyst.",""],
+[2020,"Dalett",96,"A sudden Spanish-language coinage with no identified public catalyst.",""],
+[2021,"Namaari",44,"Namaari of Disney's Raya and the Last Dragon.",""],
+[2022,"Jazaiyah",46,"A new Ja- construction using the increasingly familiar -aiyah ending. No single catalyst is known.",""],
+[2023,"Rumani",89,"A substantial first-year appearance with no established public catalyst.",""],
+[2024,"Yashna",170,"A large, broadly distributed debut. No single public figure, character, or event has yet explained it.",""],
+[2025,"Elanith",81,"A substantial first-year appearance with no established catalyst yet.",""]
+];
+
+var sex="M", activeDecade=null, activeYear=null, scrollAnimation=0;
+function data(){ return sex==="M"?DM:DF; }
+function maxc(){ return Math.max.apply(null,data().map(function(d){return d[2];})); }
+function fs(c){ var min=1.0,max=2.3,mx=maxc(); var t=Math.sqrt(c)/Math.sqrt(mx); return (min+(max-min)*t).toFixed(2)+"rem"; }
+function syncStickyOffsets(){
+  var toolbar=document.querySelector(".toolbar");
+  document.documentElement.style.setProperty("--toolbar-height",(toolbar?toolbar.offsetHeight:0)+"px");
+}
+function escapeText(value){
+  return String(value).replace(/[&<>"']/g,function(char){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char];});
+}
+function selectedEntry(year){
+  var D=data();
+  for(var i=0;i<D.length;i++) if(D[i][0]===year) return D[i];
+  return D[0];
+}
+function updateReadout(entry){
+  document.getElementById("chart-readout").innerHTML=
+    '<span class="chart-readout-year">'+entry[0]+'</span>'+
+    '<span class="chart-readout-main"><span class="chart-readout-name">'+escapeText(entry[1])+'</span>'+
+    '<span class="chart-readout-count">&times;'+entry[2].toLocaleString()+'</span>'+
+    '<span class="chart-readout-note">'+escapeText(entry[3])+'</span></span>';
+}
+function selectChartYear(year,quiet){
+  activeYear=year;
+  var entry=selectedEntry(year);
+  updateReadout(entry);
+  Array.prototype.forEach.call(document.querySelectorAll(".chart-hit"),function(dot){
+    var selected=Number(dot.getAttribute("data-year"))===year;
+    dot.classList.toggle("selected",selected);
+    dot.classList.toggle("dimmed",!selected);
+    dot.setAttribute("aria-pressed",selected?"true":"false");
+  });
+  var guide=document.querySelector(".chart-guide");
+  var dot=document.querySelector('.chart-hit[data-year="'+year+'"]');
+  if(guide&&dot){
+    var x=dot.getAttribute("cx"), y=dot.getAttribute("cy");
+    guide.setAttribute("x1",x);guide.setAttribute("x2",x);guide.setAttribute("y2",y);
+    guide.style.opacity="0.65";
+  }
+  if(!quiet){
+    Array.prototype.forEach.call(document.querySelectorAll(".row"),function(row){
+      row.classList.toggle("chart-selected",Number(row.getAttribute("data-year"))===year);
+    });
+  }
+}
+function renderChart(){
+  var D=data(), W=720, H=230, m={l:35,r:10,t:18,b:28}, minYear=D[0][0], maxYear=D[D.length-1][0];
+  var minCount=Math.max(5,Math.min.apply(null,D.map(function(d){return d[2];})));
+  var maxCount=Math.max.apply(null,D.map(function(d){return d[2];}));
+  var logMin=Math.log(minCount), logMax=Math.log(maxCount);
+  function x(year){return m.l+(year-minYear)/(maxYear-minYear)*(W-m.l-m.r);}
+  function y(count){return m.t+(logMax-Math.log(count))/(logMax-logMin)*(H-m.t-m.b);}
+  var grid=[10,100,1000].filter(function(v){return v>=minCount&&v<=maxCount;}).map(function(v){
+    var py=y(v); return '<line class="chart-grid" x1="'+m.l+'" x2="'+(W-m.r)+'" y1="'+py+'" y2="'+py+'"></line><text class="chart-axis-label" x="0" y="'+(py+3)+'">'+v.toLocaleString()+'</text>';
+  }).join("");
+  var decadeLines=decades().map(function(year,index){
+    var px=x(Math.max(minYear,year)), hide=index%2?" mobile-hide":"";
+    return '<line class="chart-decade" x1="'+px+'" x2="'+px+'" y1="'+m.t+'" y2="'+(H-m.b)+'"></line><text class="chart-axis-label'+hide+'" text-anchor="middle" x="'+px+'" y="'+(H-8)+'">'+year+'</text>';
+  }).join("");
+  var landmarks=sex==="M"?[1974,1977,1989]:[1977,1985,1990,1996];
+  var labels=D.filter(function(d){return landmarks.indexOf(d[0])!==-1;}).map(function(d){
+    var px=x(d[0]), py=y(d[2]), anchor=px>W-95?"end":"start", dx=anchor==="end"?-6:6;
+    var offsets=sex==="M"?{1974:-9,1977:13,1989:-9}:{1977:-9,1985:-9,1990:13,1996:-9};
+    return '<text class="chart-landmark" text-anchor="'+anchor+'" x="'+(px+dx)+'" y="'+Math.max(11,py+(offsets[d[0]]||-7))+'">'+escapeText(d[1])+'</text>';
+  }).join("");
+  var dots=D.map(function(d){
+    var artifact=d[4]==="art"?" artifact":"";
+    var label=d[0]+", "+d[1]+", "+d[2].toLocaleString()+" first-year births";
+    return '<circle class="chart-hit" cx="'+x(d[0])+'" cy="'+y(d[2])+'" r="12" tabindex="0" role="button" aria-label="'+escapeText(label)+'" aria-pressed="false" data-year="'+d[0]+'"></circle>'+
+      '<circle class="chart-dot'+artifact+'" cx="'+x(d[0])+'" cy="'+y(d[2])+'" r="3.4"></circle>';
+  }).join("");
+  document.getElementById("debut-chart").innerHTML=
+    '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Largest first-year baby-name debut for each year. Vertical position uses a logarithmic birth-count scale.">'+
+    grid+decadeLines+'<line class="chart-guide" x1="0" x2="0" y1="'+m.t+'" y2="'+(H-m.b)+'" style="opacity:0"></line>'+dots+labels+'</svg>';
+  var realEntries=D.filter(function(d){return d[4]!=="art";});
+  var initial=activeYear&&selectedEntry(activeYear)[0]===activeYear?activeYear:realEntries.reduce(function(best,d){return d[2]>best[2]?d:best;},realEntries[0])[0];
+  selectChartYear(initial,true);
+}
+function decades(){
+  var D=data(), first=Math.floor(D[0][0]/10)*10, last=Math.floor(D[D.length-1][0]/10)*10;
+  var out=[];
+  for(var year=first;year<=last;year+=10) out.push(year);
+  return out;
+}
+function decadeNav(){
+  document.getElementById("decnav").innerHTML=decades().map(function(x){
+    return '<a href="#debut-'+x+'" data-decade="'+x+'"'+(activeDecade===x?' class="on" aria-current="true"':'')+'>'+x+"s</a>";
+  }).join("");
+}
+function markDecade(decade){
+  activeDecade=decade;
+  Array.prototype.forEach.call(document.querySelectorAll("#decnav a"),function(link){
+    var on=Number(link.getAttribute("data-decade"))===decade;
+    link.classList.toggle("on",on);
+    if(on) link.setAttribute("aria-current","true"); else link.removeAttribute("aria-current");
+  });
+}
+function glideToDecade(decade){
+  var target=document.querySelector('.row[data-year="'+decade+'"]');
+  if(!target) return;
+  markDecade(decade);
+  history.replaceState(null,"","#debut-"+decade);
+  var reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var toolbar=document.querySelector(".toolbar");
+  var end=Math.max(0,target.getBoundingClientRect().top+window.scrollY-(toolbar?toolbar.offsetHeight:0)-14);
+  if(scrollAnimation) cancelAnimationFrame(scrollAnimation);
+  if(reduced){
+    window.scrollTo(0,end);
+    target.classList.remove("decade-arrival");
+    return;
+  }
+  var start=window.scrollY, distance=end-start, started=performance.now(), duration=Math.min(1100,Math.max(650,Math.abs(distance)*.22));
+  function frame(now){
+    var t=Math.min(1,(now-started)/duration);
+    var eased=1-Math.pow(1-t,5);
+    window.scrollTo(0,start+distance*eased);
+    if(t<1){scrollAnimation=requestAnimationFrame(frame);return;}
+    scrollAnimation=0;
+    target.classList.remove("decade-arrival");
+    void target.offsetWidth;
+    target.classList.add("decade-arrival");
+  }
+  scrollAnimation=requestAnimationFrame(frame);
+}
+function glideToYear(year){
+  var target=document.querySelector('.row[data-year="'+year+'"]');
+  if(!target) return;
+  selectChartYear(year,false);
+  history.replaceState(null,"","#debut-"+year);
+  var reduced=window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var toolbar=document.querySelector(".toolbar"), overview=document.querySelector(".overview");
+  var stickyHeight=(toolbar?toolbar.offsetHeight:0)+(overview?overview.offsetHeight:0);
+  var end=Math.max(0,target.getBoundingClientRect().top+window.scrollY-stickyHeight-18);
+  if(scrollAnimation) cancelAnimationFrame(scrollAnimation);
+  if(reduced){window.scrollTo(0,end);return;}
+  var start=window.scrollY, distance=end-start, started=performance.now(), duration=Math.min(1100,Math.max(650,Math.abs(distance)*.22));
+  function frame(now){
+    var t=Math.min(1,(now-started)/duration), eased=1-Math.pow(1-t,5);
+    window.scrollTo(0,start+distance*eased);
+    if(t<1){scrollAnimation=requestAnimationFrame(frame);return;}
+    scrollAnimation=0;
+    target.classList.remove("decade-arrival");
+    void target.offsetWidth;
+    target.classList.add("decade-arrival");
+  }
+  scrollAnimation=requestAnimationFrame(frame);
+}
+function rows(){
+  document.body.classList.toggle("fmode",sex==="F");
+  var D=data();
+  var list = D;
+  document.getElementById("ledger").innerHTML = list.map(function(d){
+    var art=d[4]==="art";
+    var cls="row "+(art?"art":"");
+    var note=d[3]?'<span class="note">'+d[3]+'</span>':'';
+    return '<div class="'+cls+'" data-year="'+d[0]+'" id="debut-'+d[0]+'"><div class="yr">'+d[0]+'</div>'+
+      '<div class="nm"><a href="https://nobodynamed.com/name/'+encodeURIComponent(d[1])+'/" target="_blank" rel="noopener" style="font-size:'+fs(d[2])+'">'+d[1]+'</a>'+
+      '<span class="ct">&times;'+d[2].toLocaleString()+'</span>'+note+'</div></div>';
+  }).join("");
+  document.getElementById("cn").textContent = list.length+" years";
+  decadeNav();
+  renderChart();
+  syncStickyOffsets();
+}
+Array.prototype.forEach.call(document.querySelectorAll("#seg-sex button"),function(b){
+  b.onclick=function(){ sex=b.getAttribute("data-s"); activeDecade=null;activeYear=null; Array.prototype.forEach.call(document.querySelectorAll("#seg-sex button"),function(x){x.classList.remove("on");x.setAttribute("aria-pressed","false");}); b.classList.add("on");b.setAttribute("aria-pressed","true");rows(); };
+});
+document.getElementById("debut-chart").addEventListener("pointerover",function(event){
+  var dot=event.target.closest(".chart-hit");
+  if(dot) selectChartYear(Number(dot.getAttribute("data-year")),true);
+});
+document.getElementById("debut-chart").addEventListener("focus",function(event){
+  var dot=event.target.closest(".chart-hit");
+  if(dot) selectChartYear(Number(dot.getAttribute("data-year")),true);
+},true);
+document.getElementById("debut-chart").addEventListener("click",function(event){
+  var dot=event.target.closest(".chart-hit");
+  if(dot) glideToYear(Number(dot.getAttribute("data-year")));
+});
+document.getElementById("debut-chart").addEventListener("keydown",function(event){
+  var dot=event.target.closest(".chart-hit");
+  if(!dot) return;
+  var year=Number(dot.getAttribute("data-year")), D=data(), index=D.findIndex(function(d){return d[0]===year;});
+  if(event.key==="ArrowRight"||event.key==="ArrowLeft"){
+    event.preventDefault();
+    var next=Math.max(0,Math.min(D.length-1,index+(event.key==="ArrowRight"?1:-1)));
+    var nextDot=document.querySelector('.chart-hit[data-year="'+D[next][0]+'"]');
+    if(nextDot){selectChartYear(D[next][0],true);nextDot.focus();}
+  }else if(event.key==="Enter"||event.key===" "){
+    event.preventDefault();glideToYear(year);
+  }
+});
+document.getElementById("ledger").addEventListener("pointerover",function(event){
+  var row=event.target.closest(".row[data-year]");
+  if(row) selectChartYear(Number(row.getAttribute("data-year")),false);
+});
+document.getElementById("ledger").addEventListener("focusin",function(event){
+  var row=event.target.closest(".row[data-year]");
+  if(row) selectChartYear(Number(row.getAttribute("data-year")),false);
+});
+document.getElementById("decnav").onclick=function(event){
+  var link=event.target.closest("a[data-decade]");
+  if(!link) return;
+  event.preventDefault();
+  glideToDecade(Number(link.getAttribute("data-decade")));
+};
+window.addEventListener("resize",syncStickyOffsets);
+rows();
+</script>
+</body>
+</html>

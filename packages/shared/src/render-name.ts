@@ -279,7 +279,24 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <button class="primary" data-share="card">Download share card</button>
       <button data-share="twitter">Share</button>
       <button data-share="copy">Copy link</button>
+      <button data-share="compare">Compare</button>
       <button data-share="twin">Find similar names</button>
+    </div>
+    <div class="compare-controls" id="compare-controls" style="display:none;">
+      <div class="compare-controls-header">
+        <strong>Compare ${escape(record.name)} with…</strong>
+        <button class="compare-close" data-share="compare-close" aria-label="Close comparison panel">×</button>
+      </div>
+      <div class="compare-input-row">
+        <input type="text" class="compare-input" placeholder="Type a name" maxlength="40" autocomplete="off">
+        <button class="compare-add" type="button">Add</button>
+      </div>
+      <div class="compare-suggestions" role="listbox" style="display:none;"></div>
+      <div class="compare-pills"></div>
+      <div class="compare-actions">
+        <button class="compare-go primary" type="button" disabled>Compare names</button>
+        <span class="compare-limit">Add up to 2 more names</span>
+      </div>
     </div>
     <div id="twin-result"></div>
     ${opts.affiliateTag
@@ -372,6 +389,8 @@ export function renderFullPage(
     var record = JSON.parse(el.textContent);
     var container = document.getElementById("view-name");
     NameVitals.attachShareHandlers(container, record);
+    if (NameVitals.attachSparklineTooltip) NameVitals.attachSparklineTooltip(container, record);
+    if (NameVitals.initCompareControls) NameVitals.initCompareControls(container, record);
     NameVitals.hydrateEnrichment(container, record);
     if (NameVitals.hydrateDiaspora) NameVitals.hydrateDiaspora(container, record);
   })();`,

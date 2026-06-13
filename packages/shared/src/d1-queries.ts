@@ -762,6 +762,14 @@ export interface DecadeTopRow {
   rank: number;
 }
 
+export interface DecadeTopSparkRow {
+  name: string;
+  sex: Sex;
+  decade_total: number;
+  rank: number;
+  spark: number[];
+}
+
 export interface InitialNameRow {
   name: string;
   sex: Sex;
@@ -970,6 +978,42 @@ export async function topByDecade(
     .bind(startYear, endYear, perSex)
     .all<DecadeTopRow>();
   return r.results ?? [];
+}
+
+// Top names aggregated across a calendar decade, including the normalized
+// spark_blob so the homepage tapestry can render real trend lines without
+// fetching each name's full time series. Ranks across sexes (coed).
+export async function topByDecadeWithSpark(
+  db: D1Database,
+  startYear: number,
+  endYear: number,
+  limit = 5,
+): Promise<DecadeTopSparkRow[]> {
+  const r = await db
+    .prepare(
+      `WITH ranked AS (
+         SELECT n.name, n.sex, SUM(ny.count) AS decade_total,
+                ROW_NUMBER() OVER (ORDER BY SUM(ny.count) DESC) AS rank,
+                n.spark_blob
+           FROM name_years ny
+           JOIN names n ON n.id = ny.name_id
+          WHERE ny.year >= ?1 AND ny.year <= ?2
+          GROUP BY n.id
+       )
+       SELECT name, sex, decade_total, rank, spark_blob
+         FROM ranked
+        WHERE rank <= ?3
+        ORDER BY rank`,
+    )
+    .bind(startYear, endYear, Math.max(1, limit))
+    .all<DecadeTopRow & { spark_blob: ArrayBuffer | null }>();
+  return (r.results ?? []).map((row) => ({
+    name: row.name,
+    sex: row.sex,
+    decade_total: row.decade_total,
+    rank: row.rank,
+    spark: row.spark_blob ? decodeSpark(row.spark_blob) : [],
+  }));
 }
 
 // Enrichment System: read the four precomputed dossier layers for one
