@@ -389,8 +389,8 @@ export function renderFullPage(
     var record = JSON.parse(el.textContent);
     var container = document.getElementById("view-name");
     NameVitals.attachShareHandlers(container, record);
-    NameVitals.attachSparklineTooltip(container, record);
-    NameVitals.initCompareControls(container, record);
+    if (NameVitals.attachSparklineTooltip) NameVitals.attachSparklineTooltip(container, record);
+    if (NameVitals.initCompareControls) NameVitals.initCompareControls(container, record);
     NameVitals.hydrateEnrichment(container, record);
     if (NameVitals.hydrateDiaspora) NameVitals.hydrateDiaspora(container, record);
   })();`,

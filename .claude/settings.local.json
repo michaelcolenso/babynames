@@ -18,5 +18,8 @@
       "mcp__Ahrefs__keywords-explorer-overview",
       "mcp__Ahrefs__keywords-explorer-matching-terms"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "postgresql"
+  ]
 }
