@@ -7,6 +7,9 @@ dist/
 *.log
 .DS_Store
 
+# Credentials
+*service-account*.json
+
 # Worker / D1 local state
 .mf/
 .miniflare/
