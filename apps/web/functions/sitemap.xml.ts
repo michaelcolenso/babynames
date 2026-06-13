@@ -23,6 +23,7 @@ const STATIC_PATHS: { path: string; priority: number }[] = [
   { path: "/viz/", priority: 0.6 },
   { path: "/viz/explore", priority: 0.5 },
   { path: "/viz/nobody-named-2025", priority: 0.5 },
+  { path: "/viz/debut-of-the-year", priority: 0.5 },
   { path: "/viz/boomer-names", priority: 0.5 },
   { path: "/viz/constellations", priority: 0.5 },
   { path: "/viz/empire", priority: 0.5 },
