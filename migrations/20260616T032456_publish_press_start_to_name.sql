@@ -6,7 +6,8 @@
 PRAGMA foreign_keys = ON;
 
 INSERT INTO blog_posts(slug, title, description, body_html, status, author, og_image, published_at, updated_at)
-VALUES ('press-start-to-name', 'Press Start to Name', 'Forty years of video games leaked onto real American birth certificates — often the exact year a game shipped. A character-select roster of every name t...', '<p>In January 2022, the game <em>Pokémon Legends: Arceus</em> shipped. That same year, for the first time in American history, the Social Security Administration recorded seven baby boys named <strong>Arceus</strong> — after the Pokémon universe''s literal creator-god. The name had never existed before. The release date <em>is</em> the birth date.</p>
+VALUES ('press-start-to-name', 'Press Start to Name', 'Forty years of video games leaked onto real American birth certificates — often the exact year a game shipped. A character-select roster of every name t...', '<figure class="post-hero"><img src="/assets/press-start-hero.png" alt="Press Start to Name — a Sega Genesis–style stack of cartridges standing on edge, labeled with video-game names that became baby names" style="width:100%;height:auto;border-radius:12px;display:block"></figure>
+<p>In January 2022, the game <em>Pokémon Legends: Arceus</em> shipped. That same year, for the first time in American history, the Social Security Administration recorded seven baby boys named <strong>Arceus</strong> — after the Pokémon universe''s literal creator-god. The name had never existed before. The release date <em>is</em> the birth date.</p>
 <p>That''s the pattern, over and over: a character lands, and within a year the name lands too. Take every distinctive video-game name and check the birth records, and you get a roster of fandom leaking into the nursery. Pick a fighter.</p>
 <div id="nv-pressstart"></div>
 <h2>Final Fantasy is the MVP</h2>
@@ -17,7 +18,7 @@ VALUES ('press-start-to-name', 'Press Start to Name', 'Forty years of video game
 <p>The biggest name on the board isn''t a coinage — it''s a rescue. <strong>Zelda</strong> belonged to Zelda Fitzgerald and was nearly extinct by mid-century, then <em>Breath of the Wild</em> (2017) brought it to an all-time peak. A video game didn''t just add a name; it brought a 1920s one back from the dead.</p>
 <h2>The impostors</h2>
 <p>Honesty check: some names <em>look</em> like a gamer''s pick but aren''t. <strong>Mario</strong>, <strong>Dante</strong>, and <strong>Lara</strong> are older than their games; <strong>Jinx</strong> peaked in 1950, not with <em>Arcane</em>; <strong>Zidane</strong> is the footballer, not Final Fantasy IX. Hit "reveal" in the roster above to see the nine we benched, and why. The genuine tally — names truly summoned by a game — is smaller, stranger, and a lot more fun.</p>
-<script src="/assets/blog-press-start.js"></script>', 'published', 'NobodyNamed', '/api/og/default', '2026-06-13T09:00:00.000Z', datetime('now'))
+<script src="/assets/blog-press-start.js"></script>', 'published', 'NobodyNamed', '/assets/press-start-hero.png', '2026-06-13T09:00:00.000Z', datetime('now'))
 ON CONFLICT(slug) DO UPDATE SET
   title=excluded.title,
   description=excluded.description,

@@ -4,10 +4,12 @@ date: "2026-06-13"
 description: "Forty years of video games leaked onto real American birth certificates — often the exact year a game shipped. A character-select roster of every name that made it in."
 author: "NobodyNamed"
 status: "published"
-og_image: "/api/og/default"
+og_image: "/assets/press-start-hero.png"
 ---
 
 # Press Start to Name
+
+<figure class="post-hero"><img src="/assets/press-start-hero.png" alt="Press Start to Name — a Sega Genesis–style stack of cartridges standing on edge, labeled with video-game names that became baby names" style="width:100%;height:auto;border-radius:12px;display:block"></figure>
 
 In January 2022, the game *Pokémon Legends: Arceus* shipped. That same year, for the first time in American history, the Social Security Administration recorded seven baby boys named **Arceus** — after the Pokémon universe's literal creator-god. The name had never existed before. The release date *is* the birth date.
 
