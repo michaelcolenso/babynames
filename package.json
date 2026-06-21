@@ -35,7 +35,7 @@
     "validate:pages": "tsx scripts/validate-name-pages.ts"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240909.0",
+    "@cloudflare/workers-types": "^4.20260621.1",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4",
     "wrangler": "^4.85.0"
