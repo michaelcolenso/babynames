@@ -101,6 +101,7 @@ export function renderYearPage(
     <p class="eyebrow">Birth year roster</p>
     <h1>Top names in ${year}</h1>
     <p class="lede">The names most likely to appear on ${year} birth certificates, ranked by SSA records.</p>
+    <p class="year-story">${topGirlName && topBoyName ? `${topGirlName} and ${topBoyName} led the ${year} baby-name charts, a pair that captures the naming culture of mid-century America — ${topGirlName === 'Mary' ? 'a timeless classic that had dominated since the 1880s' : `${topGirlName}, which rose to prominence in this era`} and ${topBoyName === 'Robert' || topBoyName === 'James' || topBoyName === 'Michael' || topBoyName === 'John' || topBoyName === 'David' ? `${topBoyName}, a perennial powerhouse that would anchor the decade` : `${topBoyName}, a name that defined its generation`}. The full top 25 below reveals which names defined the ${year} classroom and how many have since faded or endured.` : ""}</p>
     ${yearNav ? `<nav class="decade-nav" aria-label="Adjacent years">${yearNav}</nav>` : ""}
     <div class="year-result-grid">
       <div class="year-col">

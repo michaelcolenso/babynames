@@ -65,17 +65,17 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
     );
   }
 
-  const title = `${decade.label} Baby Names: ${topBoy ? escapeHtml(topBoy.name) : ""} & ${topGirl ? escapeHtml(topGirl.name) : ""} Led the Decade | NobodyNamed`;
-  const desc = `The most popular baby names of the ${decade.label}, ranked by SSA births. ${topGirl ? escapeHtml(topGirl.name) : ""} and ${topBoy ? escapeHtml(topBoy.name) : ""} led the decade — see the full top 25.`;
-  const url = new URL(ctx.request.url);
-  const origin = url.origin;
-  const canonical = `${origin}/names/${decade.label}/`;
-
   const girls = rows.filter((r) => r.sex === "F").slice(0, 25);
   const boys = rows.filter((r) => r.sex === "M").slice(0, 25);
   const topGirl = girls[0];
   const topBoy = boys[0];
   const classroom = [...girls.slice(0, 2), ...boys.slice(0, 2)].map((r) => r.name);
+
+  const title = `${decade.label} Baby Names: ${topBoy ? escapeHtml(topBoy.name) : ""} & ${topGirl ? escapeHtml(topGirl.name) : ""} Led the Decade | NobodyNamed`;
+  const desc = `The most popular baby names of the ${decade.label}, ranked by SSA births. ${topGirl ? escapeHtml(topGirl.name) : ""} and ${topBoy ? escapeHtml(topBoy.name) : ""} led the decade — see the full top 25.`;
+  const url = new URL(ctx.request.url);
+  const origin = url.origin;
+  const canonical = `${origin}/names/${decade.label}/`;
 
   const nameList = (list: typeof rows) =>
     list
@@ -126,8 +126,8 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
     <p class="eyebrow">Decade dossier</p>
     <h1>${decade.label} baby names</h1>
     <p class="lede">The names that defined the ${decade.label}: ${topBoy ? escapeHtml(topBoy.name) : ""} and ${topGirl ? escapeHtml(topGirl.name) : ""} led the decade, but the full roster tells a richer story.</p>
-    <p class="year-story">A ${decade.label} classroom probably included ${classroom.map((n) => `<a href="/name/${encodeURIComponent(n)}/">${escapeHtml(n)}</a>`).join(", ")}. Some became durable classics; others now read like timestamps. Browse the full decade rankings below.</p>
-    <nav class="decade-nav" aria-label="Adjacent decades">${decadeNav}</nav>
+    <p class="year-story">The ${decade.label} were defined by names that now read as cultural artifacts. ${escapeHtml(topBoy ? topBoy.name : "The era")} and ${escapeHtml(topGirl ? topGirl.name : "its leading names")} dominated the decade — names that crossed class lines and regional divides. Some have become vintage revival candidates; others remain frozen in time. Browse the full rankings below to see which names defined the ${decade.label} classroom.</p>
+    ${prevDecade || nextDecade ? `<nav class="decade-nav" aria-label="Adjacent decades">${decadeNav}</nav>` : ""}
     <div class="year-result-grid">
       <div class="year-col">
         <h3>Girls</h3>

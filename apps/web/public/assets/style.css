@@ -2367,3 +2367,21 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
     scroll-behavior: auto !important;
   }
 }
+
+/* Inline tag labels for explainer section */
+.inline-tag {
+  display: inline-block;
+  padding: 0.1em 0.45em;
+  border-radius: 3px;
+  font-size: 0.75em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-decoration: none;
+  vertical-align: baseline;
+}
+.tag-rising { background: #d4edda; color: #155724; }
+.tag-stable { background: #cce5ff; color: #004085; }
+.tag-endangered { background: #fff3cd; color: #856404; }
+.tag-extinct { background: #f8d7da; color: #721c24; }
+.inline-tag:hover { filter: brightness(0.92); text-decoration: underline; }

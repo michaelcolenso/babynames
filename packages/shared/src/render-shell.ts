@@ -172,6 +172,8 @@ export function pageShell(opts: PageShellOpts): string {
 ${ogImageMeta}
 ${ogImageAltMeta}
 <meta name="twitter:card" content="${twitterCard}">
+<meta name="twitter:title" content="${title}">
+<meta name="twitter:description" content="${desc}">
 ${twitterImageMeta}
 ${twitterImageAltMeta}
 <meta name="theme-color" content="${themeLight}" media="(prefers-color-scheme: light)">
