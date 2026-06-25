@@ -320,12 +320,12 @@ export function generateNameNarrative(
 
   // ── Meta ──────────────────────────────────────────────────────────────────
 
-  const metaTitle = `${name} Name Popularity: How Many People Are Named ${name}? | NobodyNamed`;
+  const metaTitle = `${name} — Name Popularity, History & Stats | NobodyNamed`;
 
   let metaDescription: string;
   if (hasReliableLiving) {
-    const statesNote = geography ? `, and strongest states` : ``;
-    metaDescription = `An estimated ${fmtLiving(age.estimatedLiving)} living Americans are named ${name}. See ${name}'s rarity, median age, popularity history, ${record.yM} births${statesNote}.`;
+    const geoPhrase = geography ? `, strongest in ${topAnomaly!.state.toLowerCase()}` : ``;
+    metaDescription = `See how ${name} fits into American naming culture — rarity, median age, history, ${record.yM} births${geoPhrase} and vital status since 1880.`;
   } else if (a.latestCount > 0) {
     metaDescription = `${name} is a ${wave} baby name with ${fmt(a.latestCount)} births in ${record.yM}. See its full popularity history, rarity, and peak year data.`;
   } else {

@@ -29,7 +29,7 @@ export function renderYearPage(
   const title = hasLeaders
     ? `Top Baby Names of ${year}: ${topGirlName} & ${topBoyName} Led the Year | NobodyNamed`
     : `Top Baby Names of ${year}: Most Popular Boys & Girls | NobodyNamed`;
-  const desc = `The most popular baby names of ${year}, ranked by Social Security Administration birth records.${hasLeaders ? ` ${topGirlName} and ${topBoyName} topped the list —` : ""} see the full top 25 boys and girls, with peak counts and how each name has aged since.`;
+  const desc = `Popular baby names of ${year}, ranked by SSA birth records.${hasLeaders ? ` ${topGirlName} & ${topBoyName} led —` : ''} See the full top 25 and how each name has aged since.`;
   const origin = opts.origin || new URL(opts.canonical).origin;
   const ogImageUrl = `${origin}/api/og/year/${year}`;
   const dataDate = `${year}-05-15`;
