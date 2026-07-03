@@ -84,7 +84,7 @@ export function siteFooter(variant: "full" | "minimal" = "full", opts: SiteFoote
     const range = opts.yearRange ? ` ${opts.yearRange}` : "";
     return `<footer class="site">
   <div>Based on SSA records${range}.</div>
-  <div><a href="/about">Methodology</a></div>
+  <div><a href="/about">Methodology</a> &middot; <a href="/press">Press</a></div>
 </footer>`;
   }
   return `<footer class="site">
@@ -92,7 +92,7 @@ export function siteFooter(variant: "full" | "minimal" = "full", opts: SiteFoote
     <div>NobodyNamed is a small data project about American first names.</div>
     <div class="footer-note">Data sourced from Social Security Administration birth records (1880–present).</div>
   </div>
-  <div><a href="/about">About</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
+  <div><a href="/about">About</a> &middot; <a href="/press">Press</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
 </footer>`;
 }
 

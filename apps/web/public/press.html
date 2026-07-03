@@ -530,12 +530,13 @@
         <div>NobodyNamed is a small data project about American first names.</div>
         <div class="footer-note">Data sourced from Social Security Administration birth records (1880–present).</div>
       </div>
-      <div><a href="/about">About</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
+      <div><a href="/about">About</a> &middot; <a href="/press">Press</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
     </footer>
   </div>
 
   <script src="/assets/app.js"></script>
   <script>
+  (() => {
     const fmt = (n) => n == null ? "—" : Number(n).toLocaleString("en-US");
 
     function changeTag(rankChange, prevRank) {
@@ -584,8 +585,6 @@
         <td class="num">${fmt(r.count)}</td>
       </tr>`;
     }
-
-    let currentMoversData = null;
 
     function switchMoversTab(tab) {
       document.querySelectorAll(".movers-tab").forEach(t => t.classList.remove("active"));
@@ -694,10 +693,12 @@
       btn.dataset.orig = btn.textContent;
     });
 
+    // Inline onclick handlers need these on the global object.
+    window.switchMoversTab = switchMoversTab;
+    window.copySnippet = copySnippet;
+
     loadPressPage();
-    if (window.NameVitals?.setupSearch) {
-      NameVitals.setupSearch(null, null, null);
-    }
+  })();
   </script>
 </body>
 </html>
