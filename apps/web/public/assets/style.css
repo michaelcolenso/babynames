@@ -2385,3 +2385,50 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 .tag-endangered { background: #fff3cd; color: #856404; }
 .tag-extinct { background: #f8d7da; color: #721c24; }
 .inline-tag:hover { filter: brightness(0.92); text-decoration: underline; }
+
+/* Cross-links between landing pages and the viz gallery */
+.viz-crosslink {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin: 1.1rem 0 1.6rem;
+  padding: 0.6rem 0.95rem 0.6rem 0.6rem;
+  max-width: 640px;
+  color: var(--ink);
+  background: rgba(251, 248, 241, 0.72);
+  border: 1px solid rgba(23, 21, 17, 0.16);
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+.viz-crosslink:hover { transform: translateY(-2px); border-color: rgba(23, 21, 17, 0.36); text-decoration: none; }
+.viz-crosslink img {
+  width: 124px;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1px solid var(--rule);
+  flex-shrink: 0;
+}
+.viz-crosslink span { font-family: var(--sans); font-size: 0.88rem; line-height: 1.4; color: var(--ink-soft); }
+.viz-crosslink strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+.viz-related {
+  margin: 2.5rem 0 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+.viz-related a { font-weight: 700; }
