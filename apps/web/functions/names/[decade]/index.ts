@@ -135,7 +135,7 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
     <h1>${decade.label} baby names</h1>
     <p class="lede">The names that defined the ${decade.label}: ${topBoy ? escapeHtml(topBoy.name) : ""} and ${topGirl ? escapeHtml(topGirl.name) : ""} led the decade, but the full roster tells a richer story.</p>
     <h2 class="year-story">What defined ${decade.label} baby names</h2>
-    <p>The ${decade.label} were defined by names that now read as cultural artifacts. ${escapeHtml(topBoy ? topBoy.name : "The era")} and ${escapeHtml(topGirl ? topGirl.name : "its leading names")} dominated the decade — names that crossed class lines and regional divides. Some have become vintage revival candidates; others remain frozen in time. Browse the full rankings below to see which names defined the ${decade.label} classroom.</p>
+    <p class="year-story">The ${decade.label} were defined by names that now read as cultural artifacts. ${escapeHtml(topBoy ? topBoy.name : "The era")} and ${escapeHtml(topGirl ? topGirl.name : "its leading names")} dominated the decade — names that crossed class lines and regional divides. Some have become vintage revival candidates; others remain frozen in time. Browse the full rankings below to see which names defined the ${decade.label} classroom.</p>
     ${prevDecade || nextDecade ? `<nav class="decade-nav" aria-label="Adjacent decades">${decadeNav}</nav>` : ""}
     <div class="year-result-grid">
       <div class="year-col">
@@ -147,7 +147,8 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
         <ul class="year-name-list">${nameList(boys)}</ul>
       </div>
     </div>
-    <h2>Explore more decades</h2>
+    ${allDecades.length > 1 ? `
+    <h2 class="year-story">Explore more decades</h2>
     <p>Compare naming trends across all decades, from the ${allDecades[0]} to the ${allDecades[allDecades.length - 1]}.</p>
     <nav class="decade-nav" aria-label="All decades">
       ${allDecades
@@ -158,6 +159,7 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
         )
         .join(" ")}
     </nav>
+    ` : ""}
   `,
     structuredData: [
       {
