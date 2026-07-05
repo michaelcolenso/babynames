@@ -1,0 +1,298 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 816" font-family="ui-sans-serif, system-ui, sans-serif">
+  <rect width="840" height="816" fill="#f8fafc"/>
+  <text x="24" y="40" font-size="26" font-weight="800" fill="#0f172a">America's most common baby name, by state (2023)</text>
+  <text x="24" y="66" font-size="14" fill="#475569">Three names — Liam, Oliver, Noah — top 43 of 51 jurisdictions. The map is far less diverse than it looks.</text>
+  <g>
+    <rect x="27" y="89" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="60" y="114" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">AK</text>
+    <text x="60" y="134" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="747" y="89" width="66" height="66" rx="9" fill="#7c3aed"/>
+    <text x="780" y="114" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">ME</text>
+    <text x="780" y="134" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Theodore</text>
+  </g>
+<g>
+    <rect x="675" y="161" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="708" y="186" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">VT</text>
+    <text x="708" y="206" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="747" y="161" width="66" height="66" rx="9" fill="#e11d48"/>
+    <text x="780" y="186" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">NH</text>
+    <text x="780" y="206" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Charlotte</text>
+  </g>
+<g>
+    <rect x="27" y="233" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="60" y="258" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">WA</text>
+    <text x="60" y="278" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="99" y="233" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="132" y="258" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">ID</text>
+    <text x="132" y="278" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="171" y="233" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="204" y="258" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">MT</text>
+    <text x="204" y="278" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="243" y="233" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="276" y="258" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">ND</text>
+    <text x="276" y="278" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="315" y="233" width="66" height="66" rx="9" fill="#7c3aed"/>
+    <text x="348" y="258" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">MN</text>
+    <text x="348" y="278" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Theodore</text>
+  </g>
+<g>
+    <rect x="387" y="233" width="66" height="66" rx="9" fill="#7c3aed"/>
+    <text x="420" y="258" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">WI</text>
+    <text x="420" y="278" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Theodore</text>
+  </g>
+<g>
+    <rect x="531" y="233" width="66" height="66" rx="9" fill="#f59e0b"/>
+    <text x="564" y="258" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">MI</text>
+    <text x="564" y="278" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Noah</text>
+  </g>
+<g>
+    <rect x="603" y="233" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="636" y="258" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">NY</text>
+    <text x="636" y="278" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="675" y="233" width="66" height="66" rx="9" fill="#f59e0b"/>
+    <text x="708" y="258" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">MA</text>
+    <text x="708" y="278" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Noah</text>
+  </g>
+<g>
+    <rect x="747" y="233" width="66" height="66" rx="9" fill="#f59e0b"/>
+    <text x="780" y="258" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">RI</text>
+    <text x="780" y="278" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Noah</text>
+  </g>
+<g>
+    <rect x="27" y="305" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="60" y="330" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">OR</text>
+    <text x="60" y="350" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="99" y="305" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="132" y="330" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">NV</text>
+    <text x="132" y="350" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="171" y="305" width="66" height="66" rx="9" fill="#9333ea"/>
+    <text x="204" y="330" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">WY</text>
+    <text x="204" y="350" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Evelyn</text>
+  </g>
+<g>
+    <rect x="243" y="305" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="276" y="330" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">SD</text>
+    <text x="276" y="350" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="315" y="305" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="348" y="330" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">IA</text>
+    <text x="348" y="350" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="387" y="305" width="66" height="66" rx="9" fill="#f59e0b"/>
+    <text x="420" y="330" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">IL</text>
+    <text x="420" y="350" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Noah</text>
+  </g>
+<g>
+    <rect x="459" y="305" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="492" y="330" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">IN</text>
+    <text x="492" y="350" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="531" y="305" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="564" y="330" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">OH</text>
+    <text x="564" y="350" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="603" y="305" width="66" height="66" rx="9" fill="#f59e0b"/>
+    <text x="636" y="330" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">PA</text>
+    <text x="636" y="350" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Noah</text>
+  </g>
+<g>
+    <rect x="675" y="305" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="708" y="330" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">NJ</text>
+    <text x="708" y="350" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="747" y="305" width="66" height="66" rx="9" fill="#f59e0b"/>
+    <text x="780" y="330" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">CT</text>
+    <text x="780" y="350" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Noah</text>
+  </g>
+<g>
+    <rect x="27" y="377" width="66" height="66" rx="9" fill="#f59e0b"/>
+    <text x="60" y="402" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">CA</text>
+    <text x="60" y="422" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Noah</text>
+  </g>
+<g>
+    <rect x="99" y="377" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="132" y="402" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">UT</text>
+    <text x="132" y="422" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="171" y="377" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="204" y="402" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">CO</text>
+    <text x="204" y="422" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="243" y="377" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="276" y="402" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">NE</text>
+    <text x="276" y="422" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="315" y="377" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="348" y="402" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">MO</text>
+    <text x="348" y="422" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="387" y="377" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="420" y="402" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">KY</text>
+    <text x="420" y="422" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="459" y="377" width="66" height="66" rx="9" fill="#16a34a"/>
+    <text x="492" y="402" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">WV</text>
+    <text x="492" y="422" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Oliver</text>
+  </g>
+<g>
+    <rect x="531" y="377" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="564" y="402" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">VA</text>
+    <text x="564" y="422" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="603" y="377" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="636" y="402" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">MD</text>
+    <text x="636" y="422" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="675" y="377" width="66" height="66" rx="9" fill="#f59e0b"/>
+    <text x="708" y="402" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">DE</text>
+    <text x="708" y="422" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Noah</text>
+  </g>
+<g>
+    <rect x="99" y="449" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="132" y="474" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">AZ</text>
+    <text x="132" y="494" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="171" y="449" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="204" y="474" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">NM</text>
+    <text x="204" y="494" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="243" y="449" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="276" y="474" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">KS</text>
+    <text x="276" y="494" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="315" y="449" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="348" y="474" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">AR</text>
+    <text x="348" y="494" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="387" y="449" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="420" y="474" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">TN</text>
+    <text x="420" y="494" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="459" y="449" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="492" y="474" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">NC</text>
+    <text x="492" y="494" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="531" y="449" width="66" height="66" rx="9" fill="#f59e0b"/>
+    <text x="564" y="474" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">SC</text>
+    <text x="564" y="494" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Noah</text>
+  </g>
+<g>
+    <rect x="603" y="449" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="636" y="474" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">DC</text>
+    <text x="636" y="494" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="243" y="521" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="276" y="546" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">OK</text>
+    <text x="276" y="566" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="315" y="521" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="348" y="546" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">LA</text>
+    <text x="348" y="566" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="387" y="521" width="66" height="66" rx="9" fill="#0891b2"/>
+    <text x="420" y="546" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">MS</text>
+    <text x="420" y="566" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">John</text>
+  </g>
+<g>
+    <rect x="459" y="521" width="66" height="66" rx="9" fill="#dc2626"/>
+    <text x="492" y="546" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">AL</text>
+    <text x="492" y="566" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">William</text>
+  </g>
+<g>
+    <rect x="531" y="521" width="66" height="66" rx="9" fill="#f59e0b"/>
+    <text x="564" y="546" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">GA</text>
+    <text x="564" y="566" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Noah</text>
+  </g>
+<g>
+    <rect x="27" y="593" width="66" height="66" rx="9" fill="#db2777"/>
+    <text x="60" y="618" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">HI</text>
+    <text x="60" y="638" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Isla</text>
+  </g>
+<g>
+    <rect x="171" y="593" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="204" y="618" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">TX</text>
+    <text x="204" y="638" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+<g>
+    <rect x="603" y="593" width="66" height="66" rx="9" fill="#2563eb"/>
+    <text x="636" y="618" text-anchor="middle" fill="#fff" font-weight="700" font-size="17">FL</text>
+    <text x="636" y="638" text-anchor="middle" fill="#fff" font-size="11" opacity="0.95">Liam</text>
+  </g>
+
+  <g>
+    <rect x="24" y="699" width="16" height="16" rx="4" fill="#2563eb"/>
+    <text x="48" y="712" font-size="14" fill="#0f172a">Liam — 20 states</text>
+  </g>
+<g>
+    <rect x="288" y="699" width="16" height="16" rx="4" fill="#16a34a"/>
+    <text x="312" y="712" font-size="14" fill="#0f172a">Oliver — 13 states</text>
+  </g>
+<g>
+    <rect x="552" y="699" width="16" height="16" rx="4" fill="#f59e0b"/>
+    <text x="576" y="712" font-size="14" fill="#0f172a">Noah — 10 states</text>
+  </g>
+<g>
+    <rect x="24" y="729" width="16" height="16" rx="4" fill="#7c3aed"/>
+    <text x="48" y="742" font-size="14" fill="#0f172a">Theodore — 3 states</text>
+  </g>
+<g>
+    <rect x="288" y="729" width="16" height="16" rx="4" fill="#e11d48"/>
+    <text x="312" y="742" font-size="14" fill="#0f172a">Charlotte — 1 state</text>
+  </g>
+<g>
+    <rect x="552" y="729" width="16" height="16" rx="4" fill="#9333ea"/>
+    <text x="576" y="742" font-size="14" fill="#0f172a">Evelyn — 1 state</text>
+  </g>
+<g>
+    <rect x="24" y="759" width="16" height="16" rx="4" fill="#db2777"/>
+    <text x="48" y="772" font-size="14" fill="#0f172a">Isla — 1 state</text>
+  </g>
+<g>
+    <rect x="288" y="759" width="16" height="16" rx="4" fill="#0891b2"/>
+    <text x="312" y="772" font-size="14" fill="#0f172a">John — 1 state</text>
+  </g>
+<g>
+    <rect x="552" y="759" width="16" height="16" rx="4" fill="#dc2626"/>
+    <text x="576" y="772" font-size="14" fill="#0f172a">William — 1 state</text>
+  </g>
+
+</svg>
