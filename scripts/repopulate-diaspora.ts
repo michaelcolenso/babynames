@@ -55,22 +55,31 @@ async function q<T = Record<string, unknown>>(
 }
 
 // Location-quotient denominators: total births per (state, year), plus the
-// national total per year under the "" sentinel key. Mirrors the worker's
-// loadStateYearTotals.
+// national total per year under the "" sentinel key. Same result as the
+// worker's loadStateYearTotals, but paged by year — the worker does it in one
+// GROUP BY (fine on the D1 binding), which times out over the D1 HTTP API.
 async function loadTotals(): Promise<StateYearTotals> {
-  const rows = await q<{ state: string; year: number; births: number }>(
-    "SELECT state, year, SUM(count) AS births FROM name_states GROUP BY state, year",
+  // Page by year: a single GROUP BY over all of name_states trips D1's
+  // storage-operation timeout (error 7429). One bounded query per year.
+  const years = await q<{ year: number }>(
+    "SELECT DISTINCT year FROM year_totals ORDER BY year",
   );
   const totals: StateYearTotals = new Map();
   const national = new Map<number, number>();
-  for (const row of rows) {
-    let byYear = totals.get(row.state);
-    if (!byYear) {
-      byYear = new Map();
-      totals.set(row.state, byYear);
+  for (const { year } of years) {
+    const rows = await q<{ state: string; births: number }>(
+      "SELECT state, SUM(count) AS births FROM name_states WHERE year = ?1 GROUP BY state",
+      [year],
+    );
+    for (const row of rows) {
+      let byYear = totals.get(row.state);
+      if (!byYear) {
+        byYear = new Map();
+        totals.set(row.state, byYear);
+      }
+      byYear.set(year, row.births);
+      national.set(year, (national.get(year) ?? 0) + row.births);
     }
-    byYear.set(row.year, row.births);
-    national.set(row.year, (national.get(row.year) ?? 0) + row.births);
   }
   totals.set(NATIONAL_KEY, national);
   return totals;
