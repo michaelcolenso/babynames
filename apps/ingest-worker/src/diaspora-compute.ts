@@ -235,6 +235,11 @@ export async function clearDiasporaStaging(db: D1Database): Promise<void> {
 // across all names, plus the national total per year under the "" sentinel key
 // (the LQ's national-share denominator). One scan; ~5.9k rows (51 states ×
 // ~115 years), trivially small to hold in memory and reuse across the chain.
+//
+// NOTE: this single GROUP BY over all of name_states is heavy. It runs fine on
+// the Worker's D1 binding, but the same query over the D1 HTTP API times out
+// (error 7429) — see the year-paged loadTotals() in scripts/repopulate-diaspora.ts,
+// which the backfill script uses instead.
 export async function loadStateYearTotals(db: D1Database): Promise<StateYearTotals> {
   const r = await db
     .prepare("SELECT state, year, SUM(count) AS births FROM name_states GROUP BY state, year")
