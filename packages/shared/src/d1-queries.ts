@@ -1076,6 +1076,35 @@ export async function getNameDiaspora(db: D1Database, nameLower: string, sex: Se
   };
 }
 
+// Reads a name's present-day "strongholds": the states where it is most
+// over-represented in the most RECENT era we have anomaly data for. Powers the
+// /name page's "Where it lives now" map for legacy (pre-1910) names. Distinct
+// from the enrichment bundle's regionalAnomalies, which keeps only the three
+// highest-LQ anomalies across ALL eras — so its newest entry can be decades old
+// and mislabel historical geography as present-day.
+export async function getNameStrongholds(
+  db: D1Database,
+  nameLower: string,
+  sex: Sex,
+): Promise<NameRegionalAnomaly[]> {
+  const r = await db
+    .prepare(
+      `SELECT state, era_start_year, location_quotient, name_births, historical_peak_year, anomaly_type
+         FROM name_regional_anomalies
+        WHERE name_lower = ?1 AND sex = ?2
+          AND era_start_year = (
+            SELECT MAX(era_start_year) FROM name_regional_anomalies
+             WHERE name_lower = ?1 AND sex = ?2
+          )
+          AND location_quotient >= 1.2
+        ORDER BY location_quotient DESC
+        LIMIT 12`,
+    )
+    .bind(nameLower, sex)
+    .all<NameRegionalAnomaly>();
+  return r.results ?? [];
+}
+
 function parseJsonArray<T>(raw: string): T[] {
   try {
     const parsed = JSON.parse(raw || "[]");
