@@ -86,3 +86,39 @@ export function playgroundDensity(latestPct: number, classroomSize = 30): number
   const others = Math.max(0, classroomSize - 1);
   return 1 - Math.pow(1 - p, others);
 }
+
+export interface RegionalAnomalyCandidate {
+  state: string;
+  eraStartYear: number;
+  lq: number;
+}
+
+/**
+ * Preserve the all-time top anomalies used by the historical enrichment
+ * dossier while also retaining the latest era's weaker rows for the
+ * "Where it lives now" map.
+ */
+export function selectStoredRegionalAnomalies<T extends RegionalAnomalyCandidate>(
+  rows: T[],
+  currentEra: number,
+  maxHistorical = 3,
+  maxCurrent = 12,
+): T[] {
+  const ordered = [...rows].sort(
+    (a, b) => b.lq - a.lq || a.state.localeCompare(b.state) || a.eraStartYear - b.eraStartYear,
+  );
+  const selected = ordered.slice(0, maxHistorical);
+  const seen = new Set(selected.map((row) => `${row.state}|${row.eraStartYear}`));
+  let currentCount = selected.filter((row) => row.eraStartYear === currentEra).length;
+
+  for (const row of ordered) {
+    if (currentCount >= maxCurrent) break;
+    if (row.eraStartYear !== currentEra) continue;
+    const key = `${row.state}|${row.eraStartYear}`;
+    if (seen.has(key)) continue;
+    selected.push(row);
+    seen.add(key);
+    currentCount++;
+  }
+  return selected;
+}
