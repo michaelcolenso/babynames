@@ -94,20 +94,20 @@ export interface RegionalAnomalyCandidate {
 }
 
 /**
- * Preserve the all-time top anomalies used by the historical enrichment
- * dossier while also retaining the latest era's weaker rows for the
+ * Preserve the all-time top anomalies used by the enrichment dossier while
+ * also retaining the latest era's weaker rows for the
  * "Where it lives now" map.
  */
 export function selectStoredRegionalAnomalies<T extends RegionalAnomalyCandidate>(
   rows: T[],
   currentEra: number,
-  maxHistorical = 3,
+  maxAllTime = 3,
   maxCurrent = 12,
 ): T[] {
   const ordered = [...rows].sort(
     (a, b) => b.lq - a.lq || a.state.localeCompare(b.state) || a.eraStartYear - b.eraStartYear,
   );
-  const selected = ordered.slice(0, maxHistorical);
+  const selected = ordered.slice(0, maxAllTime);
   const seen = new Set(selected.map((row) => `${row.state}|${row.eraStartYear}`));
   let currentCount = selected.filter((row) => row.eraStartYear === currentEra).length;
 
