@@ -762,14 +762,6 @@ export interface DecadeTopRow {
   rank: number;
 }
 
-export interface DecadeTopSparkRow {
-  name: string;
-  sex: Sex;
-  decade_total: number;
-  rank: number;
-  spark: number[];
-}
-
 export interface InitialNameRow {
   name: string;
   sex: Sex;
@@ -980,42 +972,6 @@ export async function topByDecade(
   return r.results ?? [];
 }
 
-// Top names aggregated across a calendar decade, including the normalized
-// spark_blob so the homepage tapestry can render real trend lines without
-// fetching each name's full time series. Ranks across sexes (coed).
-export async function topByDecadeWithSpark(
-  db: D1Database,
-  startYear: number,
-  endYear: number,
-  limit = 5,
-): Promise<DecadeTopSparkRow[]> {
-  const r = await db
-    .prepare(
-      `WITH ranked AS (
-         SELECT n.name, n.sex, SUM(ny.count) AS decade_total,
-                ROW_NUMBER() OVER (ORDER BY SUM(ny.count) DESC) AS rank,
-                n.spark_blob
-           FROM name_years ny
-           JOIN names n ON n.id = ny.name_id
-          WHERE ny.year >= ?1 AND ny.year <= ?2
-          GROUP BY n.id
-       )
-       SELECT name, sex, decade_total, rank, spark_blob
-         FROM ranked
-        WHERE rank <= ?3
-        ORDER BY rank`,
-    )
-    .bind(startYear, endYear, Math.max(1, limit))
-    .all<DecadeTopRow & { spark_blob: ArrayBuffer | null }>();
-  return (r.results ?? []).map((row) => ({
-    name: row.name,
-    sex: row.sex,
-    decade_total: row.decade_total,
-    rank: row.rank,
-    spark: row.spark_blob ? decodeSpark(row.spark_blob) : [],
-  }));
-}
-
 // Enrichment System: read the four precomputed dossier layers for one
 // (name_lower, sex) in a single round of parallel queries. All heavy
 // computation happens offline in scripts/build-enrichment.ts — this only
@@ -1118,6 +1074,34 @@ export async function getNameDiaspora(db: D1Database, nameLower: string, sex: Se
     totalStates: row.total_states,
     diffusionYears: row.diffusion_years,
   };
+}
+
+// Reads a name's present-day "strongholds": the states where it is most
+// over-represented in the dataset's latest era. Powers the /name page's "Where
+// it lives now" map for legacy (pre-1910) names. The enrichment build preserves
+// latest-era rows independently of its all-time top three; if this name has no
+// qualifying row in the global latest era, return no map instead of falling
+// back to historical geography.
+export async function getNameStrongholds(
+  db: D1Database,
+  nameLower: string,
+  sex: Sex,
+): Promise<NameRegionalAnomaly[]> {
+  const r = await db
+    .prepare(
+      `SELECT state, era_start_year, location_quotient, name_births, historical_peak_year, anomaly_type
+         FROM name_regional_anomalies
+        WHERE name_lower = ?1 AND sex = ?2
+          AND era_start_year = (
+            SELECT MAX(era_start_year) FROM name_regional_anomalies
+          )
+          AND location_quotient >= 1.2
+        ORDER BY location_quotient DESC
+        LIMIT 12`,
+    )
+    .bind(nameLower, sex)
+    .all<NameRegionalAnomaly>();
+  return r.results ?? [];
 }
 
 function parseJsonArray<T>(raw: string): T[] {
