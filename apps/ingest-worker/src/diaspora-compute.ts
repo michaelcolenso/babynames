@@ -67,15 +67,22 @@ export interface StateCountRow {
   count: number;
 }
 
-// state -> (year -> total births that state-year). Denominators for the
-// location quotient, built once from SUM(count) over name_states. A sentinel
-// "" key holds the national totals (sum across all states) per year.
+// (state, sex) -> (year -> total births) — the location-quotient denominators,
+// built from SUM(count) over name_states. Keyed by `${state}|${sex}` so
+// the LQ uses SEX-SPECIFIC denominators: a state's male/female birth ratio can
+// differ from the national one, so aggregating both sexes biases the quotient
+// and expected count for every sex-specific name. A sentinel state "" holds the
+// national totals per sex (sum across all states).
 export type StateYearTotals = Map<string, Map<number, number>>;
 
-const NATIONAL_KEY = "";
+const NATIONAL_STATE = "";
 
-function denomFor(totals: StateYearTotals, state: string, year: number): number {
-  return totals.get(state)?.get(year) ?? 0;
+function totalsKey(state: string, sex: string): string {
+  return state + "|" + sex;
+}
+
+function denomFor(totals: StateYearTotals, state: string, sex: string, year: number): number {
+  return totals.get(totalsKey(state, sex))?.get(year) ?? 0;
 }
 
 export interface DiasporaComputeResult {
@@ -105,6 +112,7 @@ export function computeDiasporaForName(
   rows: StateCountRow[],
   totals: StateYearTotals,
   firstYear: number,
+  sex: string,
 ): DiasporaComputeResult {
   // Legacy names (already national before state records begin) have no
   // observable origin — don't read noise off the 1910 data boundary.
@@ -130,8 +138,8 @@ export function computeDiasporaForName(
   // births divided by its national share that year. >1 means over-represented
   // there. Returns 0 when a denominator is missing so it can never win.
   const lq = (state: string, year: number, count: number): number => {
-    const stateDenom = denomFor(totals, state, year);
-    const nationalDenom = denomFor(totals, NATIONAL_KEY, year);
+    const stateDenom = denomFor(totals, state, sex, year);
+    const nationalDenom = denomFor(totals, NATIONAL_STATE, sex, year);
     const nameNational = nameNationalByYear.get(year) ?? 0;
     if (stateDenom <= 0 || nationalDenom <= 0 || nameNational <= 0) return 0;
     const stateShare = count / stateDenom;
@@ -140,11 +148,11 @@ export function computeDiasporaForName(
   };
 
   // Expected count of this name in (state, year) under the null hypothesis that
-  // the name is distributed in proportion to each state's births: the name's
-  // national share that year × the state's total births.
+  // the name is distributed in proportion to each state's same-sex births: the
+  // name's national share that year × the state's total births of that sex.
   const expected = (state: string, year: number): number => {
-    const stateDenom = denomFor(totals, state, year);
-    const nationalDenom = denomFor(totals, NATIONAL_KEY, year);
+    const stateDenom = denomFor(totals, state, sex, year);
+    const nationalDenom = denomFor(totals, NATIONAL_STATE, sex, year);
     const nameNational = nameNationalByYear.get(year) ?? 0;
     if (nationalDenom <= 0) return 0;
     return (nameNational / nationalDenom) * stateDenom;
@@ -156,7 +164,7 @@ export function computeDiasporaForName(
   // MIN_Z Poisson standard deviations (so it isn't sampling noise).
   const breaksOut = (state: string, year: number, count: number): boolean => {
     if (count < MIN_BREAKOUT_COUNT) return false;
-    const nationalDenom = denomFor(totals, NATIONAL_KEY, year);
+    const nationalDenom = denomFor(totals, NATIONAL_STATE, sex, year);
     const nameNational = nameNationalByYear.get(year) ?? 0;
     if (nationalDenom <= 0) return false;
     const nationalRate = (nameNational / nationalDenom) * 100_000;
@@ -231,10 +239,11 @@ export async function clearDiasporaStaging(db: D1Database): Promise<void> {
   await db.prepare("DELETE FROM name_diaspora_staging").run();
 }
 
-// Load the location-quotient denominators: total births per (state, year)
-// across all names, plus the national total per year under the "" sentinel key
-// (the LQ's national-share denominator). One scan; ~5.9k rows (51 states ×
-// ~115 years), trivially small to hold in memory and reuse across the chain.
+// Load the location-quotient denominators: total births per (state, sex, year)
+// across all names, plus the national total per (sex, year) under the "" state
+// sentinel (the LQ's national-share denominator). One scan; ~12k rows (51
+// states × 2 sexes × ~115 years), trivially small to hold in memory and reuse
+// across the chain.
 //
 // NOTE: this single GROUP BY over all of name_states is heavy. It runs fine on
 // the Worker's D1 binding, but the same query over the D1 HTTP API times out
@@ -242,21 +251,33 @@ export async function clearDiasporaStaging(db: D1Database): Promise<void> {
 // which the backfill script uses instead.
 export async function loadStateYearTotals(db: D1Database): Promise<StateYearTotals> {
   const r = await db
-    .prepare("SELECT state, year, SUM(count) AS births FROM name_states GROUP BY state, year")
-    .all<{ state: string; year: number; births: number }>();
+    .prepare("SELECT state, sex, year, SUM(count) AS births FROM name_states GROUP BY state, sex, year")
+    .all<{ state: string; sex: string; year: number; births: number }>();
   const totals: StateYearTotals = new Map();
-  const national = new Map<number, number>();
   for (const row of r.results ?? []) {
-    let byYear = totals.get(row.state);
+    addTotal(totals, row.state, row.sex, row.year, row.births);
+  }
+  return totals;
+}
+
+// Records `births` for (state, sex, year) and accumulates it into the national
+// (state "") total for that (sex, year). Shared by the worker and the backfill
+// script so the denominator layout stays identical.
+export function addTotal(
+  totals: StateYearTotals,
+  state: string,
+  sex: string,
+  year: number,
+  births: number,
+): void {
+  for (const key of [totalsKey(state, sex), totalsKey(NATIONAL_STATE, sex)]) {
+    let byYear = totals.get(key);
     if (!byYear) {
       byYear = new Map();
-      totals.set(row.state, byYear);
+      totals.set(key, byYear);
     }
-    byYear.set(row.year, row.births);
-    national.set(row.year, (national.get(row.year) ?? 0) + row.births);
+    byYear.set(year, (byYear.get(year) ?? 0) + births);
   }
-  totals.set(NATIONAL_KEY, national);
-  return totals;
 }
 
 // Process up to maxPages of (name, sex) pairs from `cursor`. Returns the next
@@ -367,7 +388,7 @@ function buildDiasporaStatements(
       const m = meta.get(agg.name + "|" + agg.sex);
       // No national row → can't establish emergence; treat as legacy (no origin).
       const firstYear = m?.firstYear ?? STATE_DATA_START_YEAR;
-      const d = computeDiasporaForName(agg.rows, totals, firstYear);
+      const d = computeDiasporaForName(agg.rows, totals, firstYear, agg.sex);
       const peak = m?.peakYear ?? null;
       values.push("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       binds.push(

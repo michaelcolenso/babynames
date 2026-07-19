@@ -25,6 +25,7 @@ import {
   ANALYSIS_YEAR,
   ageQuantiles,
   classifyWave,
+  selectStoredRegionalAnomalies,
   weightedStdDev,
 } from "../packages/shared/src/enrichment-compute";
 import type { CatalystType, Sex, WaveTopology } from "../packages/shared/src/schema";
@@ -38,8 +39,10 @@ const MANUAL_DIR = path.join(REPO, "data/manual");
 // Data-quality floors (spec §18).
 const MIN_TOTAL_COUNT = 100; // generate an actuarial profile only at/above this
 const MIN_REGION_BIRTHS = 50; // hard floor for any regional anomaly row
-const MIN_LQ = 1.5; // only over-indexing states count
-const MAX_ANOMALIES = 3; // top-N strongest per (name, sex)
+const MIN_LQ = 1.5; // historical anomaly threshold
+const MIN_CURRENT_LQ = 1.2; // lower display threshold for current strongholds
+const MAX_ANOMALIES = 3; // strongest all-time rows per (name, sex)
+const MAX_CURRENT_ANOMALIES = 12; // latest-era rows available to the map
 
 const args = process.argv.slice(2);
 const arg = (k: string): string | undefined => args.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3);
@@ -305,6 +308,7 @@ function computeAnomalies(stateZip: Uint8Array): Map<string, AnomalyRow[]> {
   // Pass A: national-from-state decade aggregates (consistent LQ baseline).
   const natNameDecade = new Map<string, number>(); // "name|sex|decade" -> count
   const natDecadeTotal = new Map<string, number>(); // "sex|decade" -> count
+  let latestStateYear = 0;
   const eachRow = (text: string, fn: (name: string, sex: Sex, year: number, count: number) => void) => {
     for (const rawLine of text.split("\n")) {
       const line = rawLine.trim();
@@ -322,6 +326,7 @@ function computeAnomalies(stateZip: Uint8Array): Map<string, AnomalyRow[]> {
 
   for (const sf of stateFiles) {
     eachRow(sf.text, (name, sex, year, count) => {
+      if (year > latestStateYear) latestStateYear = year;
       const d = decadeOf(year);
       const nk = name.toLowerCase() + "|" + sex + "|" + d;
       natNameDecade.set(nk, (natNameDecade.get(nk) ?? 0) + count);
@@ -329,6 +334,7 @@ function computeAnomalies(stateZip: Uint8Array): Map<string, AnomalyRow[]> {
       natDecadeTotal.set(tk, (natDecadeTotal.get(tk) ?? 0) + count);
     });
   }
+  const currentEra = decadeOf(latestStateYear);
 
   // Pass B: per-state LQ.
   const byName = new Map<string, AnomalyRow[]>(); // "nameLower|sex" -> rows
@@ -355,7 +361,8 @@ function computeAnomalies(stateZip: Uint8Array): Map<string, AnomalyRow[]> {
       const totNat = natDecadeTotal.get(sex + "|" + d) ?? 0;
       if (totState <= 0 || natName <= 0 || totNat <= 0) continue;
       const lq = (nameBirths / totState) / (natName / totNat);
-      if (lq <= MIN_LQ) continue;
+      const minLq = d === currentEra ? MIN_CURRENT_LQ : MIN_LQ;
+      if (lq < minLq) continue;
       const key = nl + "|" + sex;
       const peak = locPeak.get(nk);
       const arr = byName.get(key) ?? [];
@@ -373,10 +380,14 @@ function computeAnomalies(stateZip: Uint8Array): Map<string, AnomalyRow[]> {
     }
   }
 
-  // Keep top-N strongest per (name, sex).
+  // Keep the historical top-N and, independently, the true latest-era rows.
+  // Without the second set, a current concentration weaker than a historical
+  // peak is discarded before the request-time query can ever see it.
   for (const [key, arr] of byName) {
-    arr.sort((a, b) => b.lq - a.lq || a.state.localeCompare(b.state) || a.eraStartYear - b.eraStartYear);
-    byName.set(key, arr.slice(0, MAX_ANOMALIES));
+    byName.set(
+      key,
+      selectStoredRegionalAnomalies(arr, currentEra, MAX_ANOMALIES, MAX_CURRENT_ANOMALIES),
+    );
   }
   return byName;
 }

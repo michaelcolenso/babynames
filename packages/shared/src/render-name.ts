@@ -159,6 +159,9 @@ interface RenderReportOptions {
   // Precomputed geographic diffusion. When present, renders the diaspora map
   // in the main column below the trajectory chart. Absent → omitted entirely.
   diaspora?: DiasporaResponse;
+  // Present-day over-representation for the "Where it lives now" map shown on
+  // legacy (pre-1910) names. Must contain only the dataset's latest era.
+  strongholds?: NameRegionalAnomaly[];
   // Amazon Associates tracking ID. When unset or empty, the affiliate
   // link is omitted entirely rather than emitted with an empty `tag=`
   // (which earns no commission and looks unfinished).
@@ -322,6 +325,7 @@ export function renderFullPage(
     enrichmentSnippet?: string;
     enrichment?: NameEnrichmentBundle;
     diaspora?: DiasporaResponse;
+    strongholds?: NameRegionalAnomaly[];
     affiliateTag?: string;
   } = { canonical: "" },
 ): string {
@@ -375,6 +379,7 @@ export function renderFullPage(
       enrichmentSnippet: opts.enrichmentSnippet,
       enrichment: opts.enrichment,
       diaspora: opts.diaspora,
+      strongholds: opts.strongholds,
       affiliateTag: opts.affiliateTag,
       classifyResult,
       narrative,
@@ -550,7 +555,7 @@ function renderDiasporaMap(record: NameRecord, d?: DiasporaResponse): string {
 function renderGeography(record: NameRecord, a: ClassifyResult, opts: RenderReportOptions): string {
   const emergent = a.firstYear > STATE_DATA_FIRST_YEAR;
   if (emergent && opts.diaspora?.origin) return renderDiasporaMap(record, opts.diaspora);
-  return renderStrongholdsMap(record, opts.enrichment?.regionalAnomalies ?? []);
+  return renderStrongholdsMap(record, opts.strongholds ?? []);
 }
 
 // Location-quotient bands → the diaspora choropleth's existing tile classes, so
