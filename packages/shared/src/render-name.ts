@@ -160,8 +160,7 @@ interface RenderReportOptions {
   // in the main column below the trajectory chart. Absent → omitted entirely.
   diaspora?: DiasporaResponse;
   // Present-day over-representation for the "Where it lives now" map shown on
-  // legacy (pre-1910) names. Must be the name's LATEST-era anomalies (see
-  // getNameStrongholds) — the enrichment bundle's all-time top-3 can be stale.
+  // legacy (pre-1910) names. Must contain only the dataset's latest era.
   strongholds?: NameRegionalAnomaly[];
   // Amazon Associates tracking ID. When unset or empty, the affiliate
   // link is omitted entirely rather than emitted with an empty `tag=`
@@ -283,7 +282,24 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <button class="primary" data-share="card">Download share card</button>
       <button data-share="twitter">Share</button>
       <button data-share="copy">Copy link</button>
+      <button data-share="compare">Compare</button>
       <button data-share="twin">Find similar names</button>
+    </div>
+    <div class="compare-controls" id="compare-controls" style="display:none;">
+      <div class="compare-controls-header">
+        <strong>Compare ${escape(record.name)} with…</strong>
+        <button class="compare-close" data-share="compare-close" aria-label="Close comparison panel">×</button>
+      </div>
+      <div class="compare-input-row">
+        <input type="text" class="compare-input" placeholder="Type a name" maxlength="40" autocomplete="off">
+        <button class="compare-add" type="button">Add</button>
+      </div>
+      <div class="compare-suggestions" role="listbox" style="display:none;"></div>
+      <div class="compare-pills"></div>
+      <div class="compare-actions">
+        <button class="compare-go primary" type="button" disabled>Compare names</button>
+        <span class="compare-limit">Add up to 2 more names</span>
+      </div>
     </div>
     <div id="twin-result"></div>
     ${opts.affiliateTag
@@ -333,6 +349,20 @@ export function renderFullPage(
     diaspora: opts.diaspora,
   });
 
+  // FAQPage schema mirrors the visible "Quick answers" Q&A (renderNameAnswers),
+  // so the unique-data answers — living population, median age, rarity — are
+  // machine-readable for search and AI overviews, not just rendered as prose.
+  const baseStructuredData = buildStructuredData(record, classifyResult, {
+    canonical: opts.canonical,
+    title,
+    description: desc,
+    origin,
+  });
+  const faqStructuredData = buildFaqStructuredData(record.name, narrative);
+  const structuredData = faqStructuredData
+    ? [...baseStructuredData, faqStructuredData]
+    : baseStructuredData;
+
   return pageShell({
     title,
     description: desc,
@@ -354,12 +384,7 @@ export function renderFullPage(
       classifyResult,
       narrative,
     })}</div>`,
-    structuredData: buildStructuredData(record, classifyResult, {
-      canonical: opts.canonical,
-      title,
-      description: desc,
-      origin,
-    }),
+    structuredData,
     scripts: ["/assets/app.js"],
     jsonDataBlocks: [{ id: "nv-data", data: JSON.parse(dataJson) }],
     inlineScripts: [
@@ -369,6 +394,8 @@ export function renderFullPage(
     var record = JSON.parse(el.textContent);
     var container = document.getElementById("view-name");
     NameVitals.attachShareHandlers(container, record);
+    if (NameVitals.attachSparklineTooltip) NameVitals.attachSparklineTooltip(container, record);
+    if (NameVitals.initCompareControls) NameVitals.initCompareControls(container, record);
     NameVitals.hydrateEnrichment(container, record);
     if (NameVitals.hydrateDiaspora) NameVitals.hydrateDiaspora(container, record);
   })();`,
@@ -1001,6 +1028,36 @@ function buildStructuredData(
       },
     },
   ];
+}
+
+// Plain text for JSON-LD: some narrative answers embed anchor tags
+// (e.g. the "rising"/"extinct" trend links), which don't belong in schema text.
+function stripTags(s: string): string {
+  return s.replace(/<[^>]*>/g, "");
+}
+
+// FAQPage built from the same narrative.answers the page renders visibly in
+// renderNameAnswers(). Questions must match the on-page <h3>s exactly so the
+// structured data reflects content actually present on the page.
+function buildFaqStructuredData(name: string, narrative: NameNarrative): object | null {
+  const { answers } = narrative;
+  const qa: { q: string; a: string }[] = [];
+  if (answers.population) qa.push({ q: `How many people are named ${name}?`, a: answers.population });
+  qa.push({ q: `How rare is ${name}?`, a: answers.rarity });
+  if (answers.age) qa.push({ q: `How old is the typical ${name}?`, a: answers.age });
+  qa.push({ q: `Is ${name} still popular?`, a: answers.trend });
+  if (answers.geography) qa.push({ q: `Where is ${name} most common?`, a: answers.geography });
+  if (!qa.length) return null;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: qa.map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: { "@type": "Answer", text: stripTags(a) },
+    })),
+  };
 }
 
 function escape(s: string): string {
