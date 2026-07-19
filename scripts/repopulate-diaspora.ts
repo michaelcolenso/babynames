@@ -11,6 +11,7 @@
 //   add --dry-run to compute + report a sample without writing/swapping.
 
 import {
+  addTotal,
   computeDiasporaForName,
   STATE_DATA_START_YEAR,
   type StateCountRow,
@@ -22,7 +23,6 @@ const ACCT = process.env.CF_ACCOUNT_ID ?? "4e921a01da1f55b0ddb32bb38a5524ce";
 const DB = process.env.D1_DATABASE_ID ?? "fc4741db-1f6d-457c-b4e4-675a4ea3ebc2";
 const DRY_RUN = process.argv.includes("--dry-run");
 const NAMES_PAGE = 300;
-const NATIONAL_KEY = "";
 
 if (!TOKEN) {
   console.error("Set D1_TOKEN to a Cloudflare API token with D1 edit access.");
@@ -54,10 +54,11 @@ async function q<T = Record<string, unknown>>(
   return body.result?.[0]?.results ?? [];
 }
 
-// Location-quotient denominators: total births per (state, year), plus the
-// national total per year under the "" sentinel key. Same result as the
-// worker's loadStateYearTotals, but paged by year — the worker does it in one
-// GROUP BY (fine on the D1 binding), which times out over the D1 HTTP API.
+// Location-quotient denominators: total births per (state, sex, year), plus the
+// national total per (sex, year). Same result as the worker's
+// loadStateYearTotals, but paged by year — the worker does it in one GROUP BY
+// (fine on the D1 binding), which times out over the D1 HTTP API. Uses the
+// shared addTotal() so the (state|sex) key layout matches the worker exactly.
 async function loadTotals(): Promise<StateYearTotals> {
   // Page by year: a single GROUP BY over all of name_states trips D1's
   // storage-operation timeout (error 7429). One bounded query per year.
@@ -65,23 +66,13 @@ async function loadTotals(): Promise<StateYearTotals> {
     "SELECT DISTINCT year FROM year_totals ORDER BY year",
   );
   const totals: StateYearTotals = new Map();
-  const national = new Map<number, number>();
   for (const { year } of years) {
-    const rows = await q<{ state: string; births: number }>(
-      "SELECT state, SUM(count) AS births FROM name_states WHERE year = ?1 GROUP BY state",
+    const rows = await q<{ state: string; sex: string; births: number }>(
+      "SELECT state, sex, SUM(count) AS births FROM name_states WHERE year = ?1 GROUP BY state, sex",
       [year],
     );
-    for (const row of rows) {
-      let byYear = totals.get(row.state);
-      if (!byYear) {
-        byYear = new Map();
-        totals.set(row.state, byYear);
-      }
-      byYear.set(year, row.births);
-      national.set(year, (national.get(year) ?? 0) + row.births);
-    }
+    for (const row of rows) addTotal(totals, row.state, row.sex, year, row.births);
   }
-  totals.set(NATIONAL_KEY, national);
   return totals;
 }
 
@@ -155,7 +146,7 @@ async function insertBatch(aggs: NameAgg[], meta: Map<string, NameMeta>, totals:
     for (const agg of slice) {
       const m = meta.get(agg.name + "|" + agg.sex);
       const firstYear = m?.firstYear ?? STATE_DATA_START_YEAR;
-      const d = computeDiasporaForName(agg.rows, totals, firstYear);
+      const d = computeDiasporaForName(agg.rows, totals, firstYear, agg.sex);
       values.push("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
       binds.push(
         agg.name,
@@ -195,7 +186,7 @@ async function main() {
       for (const agg of page) {
         if (["Aiden", "Madison", "Harper", "Liam", "Mary", "Kehlani"].includes(agg.name)) {
           const m = meta.get(agg.name + "|" + agg.sex);
-          const d = computeDiasporaForName(agg.rows, totals, m?.firstYear ?? STATE_DATA_START_YEAR);
+          const d = computeDiasporaForName(agg.rows, totals, m?.firstYear ?? STATE_DATA_START_YEAR, agg.sex);
           sample.push({ name: agg.name, sex: agg.sex, firstYear: m?.firstYear, origin: d.originState, year: d.originYear, states: d.totalStates });
         }
       }
