@@ -2,6 +2,7 @@ export * from "./schema";
 export * from "./classify";
 export * from "./us-states-map";
 export * from "./sparkline";
+export * from "./mini-sparkline";
 export * from "./generate-narrative";
 export * from "./render-name";
 export * from "./render-compare";

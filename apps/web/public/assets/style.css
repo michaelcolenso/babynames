@@ -476,6 +476,37 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+.diagnosis-card-with-spark::after {
+  display: none;
+}
+.diagnosis-card-with-spark .mini-sparkline {
+  display: block;
+  width: 100%;
+  height: 40px;
+  margin-top: 0.7rem;
+  overflow: visible;
+  color: var(--accent-dark);
+}
+.diagnosis-card-with-spark .mini-sparkline-fill {
+  fill: currentColor;
+  opacity: 0.1;
+}
+.diagnosis-card-with-spark .mini-sparkline-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+.diagnosis-card-with-spark .mini-sparkline-year {
+  fill: var(--muted);
+  font-family: var(--mono);
+  font-size: 5px;
+  letter-spacing: 0.02em;
+}
+.diagnosis-card-with-spark:hover .mini-sparkline,
+.diagnosis-card-with-spark:focus-visible .mini-sparkline {
+  color: var(--accent);
+}
 .card-note {
   margin-top: 1.4rem;
   color: var(--ink-soft);
