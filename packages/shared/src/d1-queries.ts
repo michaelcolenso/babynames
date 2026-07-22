@@ -446,6 +446,43 @@ export async function listLandingWithSparks(
   return r.results ?? [];
 }
 
+export interface DominantNameWithSpark {
+  name: string;
+  name_lower: string;
+  sex: Sex;
+  total_count: number;
+  spark_blob: ArrayBuffer;
+}
+
+export async function listDominantNamesWithSparks(
+  db: D1Database,
+  names: string[],
+): Promise<DominantNameWithSpark[]> {
+  const normalizedNames = [...new Set(names.map((name) => name.toLowerCase()))];
+  if (normalizedNames.length === 0) return [];
+
+  const placeholders = normalizedNames.map((_, index) => `?${index + 1}`).join(", ");
+  const r = await db
+    .prepare(
+      `WITH ranked AS (
+         SELECT name, name_lower, sex, total_count, spark_blob, peak_count,
+                ROW_NUMBER() OVER (
+                  PARTITION BY name_lower
+                  ORDER BY total_count DESC, peak_count DESC, sex
+                ) AS rn
+           FROM names
+          WHERE name_lower IN (${placeholders})
+            AND spark_blob IS NOT NULL
+       )
+       SELECT name, name_lower, sex, total_count, spark_blob
+         FROM ranked
+        WHERE rn = 1`,
+    )
+    .bind(...normalizedNames)
+    .all<DominantNameWithSpark>();
+  return r.results ?? [];
+}
+
 export interface YearTotal {
   year: number;
   sex: Sex;
