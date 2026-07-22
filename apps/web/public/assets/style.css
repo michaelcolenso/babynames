@@ -485,18 +485,10 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   height: 40px;
   margin-top: 0.7rem;
   overflow: visible;
-  color: var(--accent-dark);
 }
-.diagnosis-card-with-spark .mini-sparkline-fill {
-  fill: currentColor;
-  opacity: 0.1;
-}
-.diagnosis-card-with-spark .mini-sparkline-line {
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  vector-effect: non-scaling-stroke;
-}
+/* Previous-release markup can remain edge-cached while this stylesheet updates. */
+.diagnosis-card-with-spark .mini-sparkline-fill { display: none; }
+.diagnosis-card-with-spark .mini-sparkline-line { fill: none; stroke: var(--accent); stroke-width: 1.35; }
 .diagnosis-card-with-spark .mini-sparkline-year {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -513,10 +505,6 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   font-variant-numeric: tabular-nums;
   line-height: 1;
   letter-spacing: 0.04em;
-}
-.diagnosis-card-with-spark:hover .mini-sparkline,
-.diagnosis-card-with-spark:focus-visible .mini-sparkline {
-  color: var(--accent);
 }
 .card-note {
   margin-top: 1.4rem;
@@ -923,7 +911,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 .table a { color: var(--ink); font-weight: 700; text-decoration: none; }
 .table .meta { color: var(--muted); font-family: var(--mono); font-size: 0.75rem; }
 .table .sparkcell svg { width: 120px; height: 28px; vertical-align: middle; }
-.table .sparkcell .line { fill: none; stroke: var(--accent); stroke-width: 1.35; }
+.spark .line { fill: none; stroke: var(--accent); stroke-width: 1.35; }
 
 .report {
   position: relative;

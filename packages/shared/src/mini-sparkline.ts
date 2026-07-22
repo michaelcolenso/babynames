@@ -35,15 +35,13 @@ export function buildMiniSparkline(values: number[], options: MiniSparklineOptio
     return `${index === 0 ? "M" : "L"}${formatNumber(x)},${formatNumber(y)}`;
   });
   const linePath = points.join("");
-  const fillPath = `${linePath}L${RIGHT},${BASELINE}L${LEFT},${BASELINE}Z`;
   const label = escapeAttribute(
     `Normalized popularity trend for ${options.name}, ${options.minYear}-${options.maxYear}`,
   );
 
   return `<svg class="mini-sparkline" width="100%" height="${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}">
-  <svg class="mini-sparkline-plot" x="0" y="0" width="100%" height="${PLOT_HEIGHT}" viewBox="0 0 ${WIDTH} ${PLOT_HEIGHT}" preserveAspectRatio="none" aria-hidden="true">
-    <path class="mini-sparkline-fill" d="${fillPath}"/>
-    <path class="mini-sparkline-line" d="${linePath}"/>
+  <svg class="mini-sparkline-plot spark" x="0" y="0" width="100%" height="${PLOT_HEIGHT}" viewBox="0 0 ${WIDTH} ${PLOT_HEIGHT}" preserveAspectRatio="none" aria-hidden="true">
+    <path class="mini-sparkline-line line" d="${linePath}"/>
   </svg>
   <text class="mini-sparkline-year" x="2" y="39" text-anchor="start" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-weight="700" letter-spacing="0.4" fill="currentColor" aria-hidden="true">${options.minYear}</text>
   <text class="mini-sparkline-year" x="100%" dx="-2" y="39" text-anchor="end" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-weight="700" letter-spacing="0.4" fill="currentColor" aria-hidden="true">${options.maxYear}</text>
