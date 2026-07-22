@@ -11,6 +11,7 @@ import {
   pageShell,
   renderLandingTableHTML,
   renderYearIndexHTML,
+  SPARK_BUCKETS,
   type LandingKind,
   type LandingRow,
   type LandingTableKind,
@@ -213,13 +214,22 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
       ]);
       const parsedMinYear = Number(minYearValue);
       const parsedMaxYear = Number(maxYearValue);
-      if (Number.isFinite(parsedMinYear) && parsedMinYear > 0) cardMinYear = parsedMinYear;
-      if (Number.isFinite(parsedMaxYear) && parsedMaxYear >= cardMinYear) cardMaxYear = parsedMaxYear;
+      if (
+        Number.isFinite(parsedMinYear)
+        && parsedMinYear > 0
+        && Number.isFinite(parsedMaxYear)
+        && parsedMaxYear > 0
+        && parsedMaxYear >= parsedMinYear
+      ) {
+        cardMinYear = parsedMinYear;
+        cardMaxYear = parsedMaxYear;
+      }
 
       const decoded = new Map<string, number[]>();
       for (const row of rows) {
         try {
-          decoded.set(row.name_lower.toLowerCase(), decodeSpark(row.spark_blob));
+          const values = decodeSpark(row.spark_blob);
+          if (values.length === SPARK_BUCKETS) decoded.set(row.name_lower.toLowerCase(), values);
         } catch {
           // A malformed optional spark row must not suppress the other cards.
         }

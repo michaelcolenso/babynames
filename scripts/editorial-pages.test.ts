@@ -27,7 +27,16 @@ function classicRows(names = CLASSIC_NAMES): ClassicSparkRow[] {
   }));
 }
 
-function routeDb(rows: ClassicSparkRow[], rejectSparkQuery = false) {
+interface RouteDbOptions {
+  rejectSparkQuery?: boolean;
+  minYearValue?: string | null;
+  maxYearValue?: string | null;
+}
+
+function routeDb(
+  rows: ClassicSparkRow[],
+  { rejectSparkQuery = false, minYearValue = "1880", maxYearValue = "2025" }: RouteDbOptions = {},
+) {
   let sparkQueryCount = 0;
   const db = {
     prepare(sql: string) {
@@ -37,7 +46,8 @@ function routeDb(rows: ClassicSparkRow[], rejectSparkQuery = false) {
             return {
               async first<T>() {
                 const key = String(values[0]);
-                return { value: key === "min_year" ? "1880" : "2025" } as T;
+                const value = key === "min_year" ? minYearValue : maxYearValue;
+                return (value === null ? null : { value }) as T;
               },
             };
           }
@@ -57,8 +67,8 @@ function routeDb(rows: ClassicSparkRow[], rejectSparkQuery = false) {
   return { db, getSparkQueryCount: () => sparkQueryCount };
 }
 
-async function renderClassicNames(rows: ClassicSparkRow[], rejectSparkQuery = false) {
-  const { db, getSparkQueryCount } = routeDb(rows, rejectSparkQuery);
+async function renderClassicNames(rows: ClassicSparkRow[], options: RouteDbOptions = {}) {
+  const { db, getSparkQueryCount } = routeDb(rows, options);
   const response = await onRequestGet({
     params: { slug: "classic-names" },
     request: new Request("https://example.com/classic-names"),
@@ -136,8 +146,48 @@ test("one missing classic name row leaves five charts but all six ordered linked
   assert.match(html, /href="\/name\/Mary\/"><span class="card-name">Mary<\/span><span class="card-status">Open dossier<\/span><\/a>/);
 });
 
+test("a malformed classic spark blob leaves five charts but all six ordered linked cards", async () => {
+  const rows = classicRows();
+  rows[0] = { ...rows[0]!, spark_blob: Uint8Array.from([1, 2]).buffer };
+
+  const { response, html } = await renderClassicNames(rows);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(cardLinks(html), CLASSIC_NAMES);
+  assert.equal((html.match(/<svg class="mini-sparkline"/g) ?? []).length, 5);
+  assert.doesNotMatch(html, /aria-label="Normalized popularity trend for James,/);
+});
+
+test("invalid metadata year pairs retain the complete non-inverted fallback range", async () => {
+  const fallbackMinYear = 1880;
+  const fallbackMaxYear = new Date().getFullYear() - 1;
+  const invalidPairs: RouteDbOptions[] = [
+    { minYearValue: null, maxYearValue: "2024" },
+    { minYearValue: "not-a-year", maxYearValue: "2024" },
+    { minYearValue: "1880", maxYearValue: "not-a-year" },
+    { minYearValue: "2026", maxYearValue: "2025" },
+  ];
+
+  for (const options of invalidPairs) {
+    const { html } = await renderClassicNames(classicRows(), options);
+    const labels = Array.from(
+      html.matchAll(/aria-label="Normalized popularity trend for [^"]+, (\d+)-(\d+)"/g),
+    );
+
+    assert.equal(labels.length, 6);
+    for (const label of labels) {
+      const minYear = Number(label[1]);
+      const maxYear = Number(label[2]);
+      assert.equal(minYear, fallbackMinYear);
+      assert.equal(maxYear, fallbackMaxYear);
+      assert.ok(maxYear >= minYear, `expected non-inverted year range, got ${minYear}-${maxYear}`);
+    }
+    assert.doesNotMatch(html, /2026-2025/);
+  }
+});
+
 test("classic spark query rejection returns all six linked cards and no charts", async () => {
-  const { response, html, getSparkQueryCount } = await renderClassicNames([], true);
+  const { response, html, getSparkQueryCount } = await renderClassicNames([], { rejectSparkQuery: true });
 
   assert.equal(response.status, 200);
   assert.equal(getSparkQueryCount(), 1);
