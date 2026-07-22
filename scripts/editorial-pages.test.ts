@@ -129,8 +129,8 @@ test("classic name cards render six ordered accessible SSR sparklines and preser
     assert.match(html, new RegExp(`aria-label="Normalized popularity trend for ${name}, 1880-2025"`));
     assert.match(html, new RegExp(`href="/name/${name}/"`));
   }
-  assert.equal((html.match(/>1880<\/text>/g) ?? []).length, 6);
-  assert.equal((html.match(/>2025<\/text>/g) ?? []).length, 6);
+  assert.equal((html.match(/<span class="mini-sparkline-years" aria-hidden="true"><span>1880<\/span><span>2025<\/span><\/span>/g) ?? []).length, 6);
+  assert.doesNotMatch(html, /<text class="mini-sparkline-year"/);
 
   const cardGrid = html.match(/<div class="diagnosis-grid">([\s\S]*?)<\/div>/)?.[1] ?? "";
   assert.equal((cardGrid.match(/<svg class="mini-sparkline"/g) ?? []).length, 6);
