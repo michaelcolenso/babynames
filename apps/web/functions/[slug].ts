@@ -1,9 +1,11 @@
 // Root-level editorial route aliases required for programmatic SEO.
 
 import {
+  buildMiniSparkline,
   decodeSpark,
   getMeta,
   listComeback,
+  listDominantNamesWithSparks,
   listLandingWithSparks,
   META_KEYS,
   pageShell,
@@ -129,6 +131,20 @@ export function getEditorialPageConfig(slug: string): Readonly<EditorialPageConf
   return PAGES[slug];
 }
 
+export function renderEditorialCards(
+  names: readonly string[],
+  sparks: ReadonlyMap<string, number[]> = new Map(),
+  minYear = 1880,
+  maxYear = new Date().getFullYear() - 1,
+): string {
+  return names.map((name) => {
+    const values = sparks.get(name.toLowerCase());
+    const chart = values ? buildMiniSparkline(values, { name, minYear, maxYear }) : "";
+    const chartClass = chart ? " diagnosis-card-with-spark" : "";
+    return `<a class="diagnosis-card${chartClass}" href="/name/${encodeURIComponent(name)}/"><span class="card-name">${name}</span>${chart}<span class="card-status">Open dossier</span></a>`;
+  }).join("");
+}
+
 export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   const slug = String(ctx.params.slug || "");
 
@@ -185,9 +201,36 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   const page = PAGES[slug];
   if (!page) return new Response("not found", { status: 404 });
 
-  const cards = page.names.map((name) =>
-    `<a class="diagnosis-card" href="/name/${encodeURIComponent(name)}/"><span class="card-name">${name}</span><span class="card-status">Open dossier</span></a>`,
-  ).join("");
+  let cardSparks: ReadonlyMap<string, number[]> = new Map();
+  let cardMinYear = 1880;
+  let cardMaxYear = new Date().getFullYear() - 1;
+  if (slug === "classic-names") {
+    try {
+      const [rows, minYearValue, maxYearValue] = await Promise.all([
+        listDominantNamesWithSparks(ctx.env.DB, page.names),
+        getMeta(ctx.env.DB, META_KEYS.minYear),
+        getMeta(ctx.env.DB, META_KEYS.maxYear),
+      ]);
+      const parsedMinYear = Number(minYearValue);
+      const parsedMaxYear = Number(maxYearValue);
+      if (Number.isFinite(parsedMinYear) && parsedMinYear > 0) cardMinYear = parsedMinYear;
+      if (Number.isFinite(parsedMaxYear) && parsedMaxYear >= cardMinYear) cardMaxYear = parsedMaxYear;
+
+      const decoded = new Map<string, number[]>();
+      for (const row of rows) {
+        try {
+          decoded.set(row.name_lower.toLowerCase(), decodeSpark(row.spark_blob));
+        } catch {
+          // A malformed optional spark row must not suppress the other cards.
+        }
+      }
+      cardSparks = decoded;
+    } catch {
+      // D1/meta enrichment is optional; preserve the original linked cards.
+    }
+  }
+
+  const cards = renderEditorialCards(page.names, cardSparks, cardMinYear, cardMaxYear);
   const table = page.table ? `<section class="section"><div id="t"></div></section>` : "";
   const tableScript = page.table ? `<script>renderLandingTable("${page.table}", document.getElementById("t"));</script>` : "";
   const editorialSections = page.sections?.map((section) => `
