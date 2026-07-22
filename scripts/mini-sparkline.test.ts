@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { buildMiniSparkline } from "../packages/shared/src/index";
@@ -6,7 +7,7 @@ import { buildMiniSparkline } from "../packages/shared/src/index";
 const options = { name: "James", minYear: 1880, maxYear: 2025 };
 
 function linePath(svg: string): string {
-  const match = svg.match(/<path class="mini-sparkline-line" d="([^"]+)"/);
+  const match = svg.match(/<path class="mini-sparkline-line(?: line)?" d="([^"]+)"/);
   assert.ok(match, "expected a mini-sparkline line path");
   return match[1]!;
 }
@@ -48,12 +49,28 @@ test("renders a fixed, accessible SVG with a responsive plot and self-contained 
   assert.match(svg, /^<svg class="mini-sparkline" width="100%" height="40"/);
   assert.match(svg, /role="img"/);
   assert.match(svg, /aria-label="Normalized popularity trend for James, 1880-2025"/);
-  assert.match(svg, /<svg class="mini-sparkline-plot" x="0" y="0" width="100%" height="30" viewBox="0 0 120 30" preserveAspectRatio="none" aria-hidden="true">/);
-  assert.match(svg, /<path class="mini-sparkline-fill" d="[^"]+Z"\/>/);
-  assert.match(svg, /<path class="mini-sparkline-line" d="[^"]+"\/>/);
+  assert.match(svg, /<svg class="mini-sparkline-plot spark" x="0" y="0" width="100%" height="30" viewBox="0 0 120 30" preserveAspectRatio="none" aria-hidden="true">/);
+  assert.match(svg, /<path class="mini-sparkline-line line" d="[^"]+"\/>/);
+  assert.doesNotMatch(svg, /mini-sparkline-fill/);
   assert.match(svg, /<text class="mini-sparkline-year" x="2" y="39" text-anchor="start" font-size="10"[^>]*>1880<\/text>/);
   assert.match(svg, /<text class="mini-sparkline-year" x="100%" dx="-2" y="39" text-anchor="end" font-size="10"[^>]*>2025<\/text>/);
   assert.doesNotMatch(svg, /<(?:script|style|animate)\b/i);
+});
+
+test("uses the same line-only visual treatment as the site's compact sparklines", () => {
+  const css = readFileSync(new URL("../apps/web/public/assets/style.css", import.meta.url), "utf8");
+
+  assert.match(css, /\.spark \.line \{ fill: none; stroke: var\(--accent\); stroke-width: 1\.35; \}/);
+});
+
+test("keeps previous-release sparkline markup safe during edge-cache rollout", () => {
+  const css = readFileSync(new URL("../apps/web/public/assets/style.css", import.meta.url), "utf8");
+
+  assert.match(css, /\.diagnosis-card-with-spark \.mini-sparkline-fill \{ display: none; \}/);
+  assert.match(
+    css,
+    /\.diagnosis-card-with-spark \.mini-sparkline-line \{ fill: none; stroke: var\(--accent\); stroke-width: 1\.35; \}/,
+  );
 });
 
 test("keeps year labels inside the SVG without a stylesheet-dependent HTML row", () => {
