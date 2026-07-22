@@ -26,6 +26,11 @@ test("returns no markup for negative series values", () => {
   assert.equal(buildMiniSparkline([0, -1, 10], options), "");
 });
 
+test("returns no markup for a sparse series", () => {
+  const sparse = [0, , 10] as number[];
+  assert.equal(buildMiniSparkline(sparse, options), "");
+});
+
 test("returns no markup for non-finite years", () => {
   for (const invalidYear of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
     assert.equal(buildMiniSparkline([0, 5, 10], { ...options, minYear: invalidYear }), "");
