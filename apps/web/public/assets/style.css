@@ -497,6 +497,11 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
+.diagnosis-card-with-spark .mini-sparkline-year {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* Rollout compatibility for edge-cached cards from the previous HTML release. */
 .diagnosis-card-with-spark .mini-sparkline-years {
   display: flex;
   align-items: center;

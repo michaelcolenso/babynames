@@ -5,7 +5,8 @@ export interface MiniSparklineOptions {
 }
 
 const WIDTH = 120;
-const HEIGHT = 30;
+const HEIGHT = 40;
+const PLOT_HEIGHT = 30;
 const LEFT = 2;
 const RIGHT = 118;
 const TOP = 2;
@@ -39,10 +40,14 @@ export function buildMiniSparkline(values: number[], options: MiniSparklineOptio
     `Normalized popularity trend for ${options.name}, ${options.minYear}-${options.maxYear}`,
   );
 
-  return `<svg class="mini-sparkline" viewBox="0 0 ${WIDTH} ${HEIGHT}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}">
-  <path class="mini-sparkline-fill" aria-hidden="true" d="${fillPath}"/>
-  <path class="mini-sparkline-line" d="${linePath}"/>
-</svg><span class="mini-sparkline-years" aria-hidden="true"><span>${options.minYear}</span><span>${options.maxYear}</span></span>`;
+  return `<svg class="mini-sparkline" width="100%" height="${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}">
+  <svg class="mini-sparkline-plot" x="0" y="0" width="100%" height="${PLOT_HEIGHT}" viewBox="0 0 ${WIDTH} ${PLOT_HEIGHT}" preserveAspectRatio="none" aria-hidden="true">
+    <path class="mini-sparkline-fill" d="${fillPath}"/>
+    <path class="mini-sparkline-line" d="${linePath}"/>
+  </svg>
+  <text class="mini-sparkline-year" x="2" y="39" text-anchor="start" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-weight="700" letter-spacing="0.4" fill="currentColor" aria-hidden="true">${options.minYear}</text>
+  <text class="mini-sparkline-year" x="100%" dx="-2" y="39" text-anchor="end" font-size="10" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-weight="700" letter-spacing="0.4" fill="currentColor" aria-hidden="true">${options.maxYear}</text>
+</svg>`;
 }
 
 function formatNumber(value: number): string {
