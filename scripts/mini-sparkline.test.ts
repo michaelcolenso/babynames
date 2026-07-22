@@ -42,26 +42,27 @@ test("returns no markup for an all-zero series", () => {
   assert.equal(buildMiniSparkline([0, 0, 0], options), "");
 });
 
-test("renders a fixed, accessible SVG with line and closed fill", () => {
+test("renders a fixed, accessible SVG with a responsive plot and self-contained year labels", () => {
   const svg = buildMiniSparkline([0, 5, 10, 5], options);
 
-  assert.match(svg, /^<svg class="mini-sparkline" viewBox="0 0 120 30" preserveAspectRatio="none"/);
+  assert.match(svg, /^<svg class="mini-sparkline" width="100%" height="40"/);
   assert.match(svg, /role="img"/);
   assert.match(svg, /aria-label="Normalized popularity trend for James, 1880-2025"/);
-  assert.match(svg, /<path class="mini-sparkline-fill" aria-hidden="true" d="[^"]+Z"\/>/);
+  assert.match(svg, /<svg class="mini-sparkline-plot" x="0" y="0" width="100%" height="30" viewBox="0 0 120 30" preserveAspectRatio="none" aria-hidden="true">/);
+  assert.match(svg, /<path class="mini-sparkline-fill" d="[^"]+Z"\/>/);
   assert.match(svg, /<path class="mini-sparkline-line" d="[^"]+"\/>/);
+  assert.match(svg, /<text class="mini-sparkline-year" x="2" y="39" text-anchor="start" font-size="10"[^>]*>1880<\/text>/);
+  assert.match(svg, /<text class="mini-sparkline-year" x="100%" dx="-2" y="39" text-anchor="end" font-size="10"[^>]*>2025<\/text>/);
   assert.doesNotMatch(svg, /<(?:script|style|animate)\b/i);
 });
 
-test("renders year labels in a dedicated HTML row outside the SVG", () => {
+test("keeps year labels inside the SVG without a stylesheet-dependent HTML row", () => {
   const markup = buildMiniSparkline([0, 5, 10, 5], options);
-  const svgEnd = markup.indexOf("</svg>");
-  const yearRow = markup.indexOf('class="mini-sparkline-years"');
 
-  assert.ok(svgEnd >= 0);
-  assert.ok(yearRow > svgEnd, "year labels should sit outside SVG scaling and inheritance");
-  assert.match(markup, /<span class="mini-sparkline-years"[^>]*><span>1880<\/span><span>2025<\/span><\/span>/);
-  assert.doesNotMatch(markup, /<text\b/);
+  assert.match(markup, /<text class="mini-sparkline-year"[^>]*>1880<\/text>/);
+  assert.match(markup, /<text class="mini-sparkline-year"[^>]*>2025<\/text>/);
+  assert.doesNotMatch(markup, /mini-sparkline-years|<span\b/);
+  assert.match(markup, /<\/svg>$/);
 });
 
 test("escapes the name used in the accessible SVG attribute", () => {
