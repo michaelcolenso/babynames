@@ -5,7 +5,7 @@ export interface MiniSparklineOptions {
 }
 
 const WIDTH = 120;
-const HEIGHT = 40;
+const HEIGHT = 30;
 const LEFT = 2;
 const RIGHT = 118;
 const TOP = 2;
@@ -39,12 +39,10 @@ export function buildMiniSparkline(values: number[], options: MiniSparklineOptio
     `Normalized popularity trend for ${options.name}, ${options.minYear}-${options.maxYear}`,
   );
 
-  return `<svg class="mini-sparkline" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}">
+  return `<svg class="mini-sparkline" viewBox="0 0 ${WIDTH} ${HEIGHT}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}">
   <path class="mini-sparkline-fill" aria-hidden="true" d="${fillPath}"/>
   <path class="mini-sparkline-line" d="${linePath}"/>
-  <text class="mini-sparkline-year" x="${LEFT}" y="39" text-anchor="start">${options.minYear}</text>
-  <text class="mini-sparkline-year" x="${RIGHT}" y="39" text-anchor="end">${options.maxYear}</text>
-</svg>`;
+</svg><span class="mini-sparkline-years" aria-hidden="true"><span>${options.minYear}</span><span>${options.maxYear}</span></span>`;
 }
 
 function formatNumber(value: number): string {
