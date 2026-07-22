@@ -31,6 +31,8 @@ const BROWSE_NAV: NavItem[] = [
   { label: "About", href: "/about" },
 ];
 
+const STYLESHEET_HREF = "/assets/style.css?v=15";
+
 function escape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
@@ -179,7 +181,7 @@ ${twitterImageAltMeta}
 <meta name="theme-color" content="${themeLight}" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="${themeDark}" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="${favicon}" type="image/svg+xml">
-<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="${STYLESHEET_HREF}">
 ${structuredDataMeta}
 ${headExtras}
 </head>
