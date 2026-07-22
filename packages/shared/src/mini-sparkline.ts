@@ -13,6 +13,13 @@ const BASELINE = 28;
 
 export function buildMiniSparkline(values: number[], options: MiniSparklineOptions): string {
   if (values.length < 2) return "";
+  if (
+    !Number.isFinite(options.minYear) ||
+    !Number.isFinite(options.maxYear) ||
+    values.some((value) => !Number.isFinite(value) || value < 0)
+  ) {
+    return "";
+  }
 
   const maxValue = Math.max(...values);
   if (maxValue === 0) return "";

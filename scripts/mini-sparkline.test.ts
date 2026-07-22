@@ -16,6 +16,23 @@ test("returns no markup for fewer than two values", () => {
   assert.equal(buildMiniSparkline([12], options), "");
 });
 
+test("returns no markup for non-finite series values", () => {
+  assert.equal(buildMiniSparkline([0, Number.NaN, 10], options), "");
+  assert.equal(buildMiniSparkline([0, Number.POSITIVE_INFINITY, 10], options), "");
+  assert.equal(buildMiniSparkline([0, Number.NEGATIVE_INFINITY, 10], options), "");
+});
+
+test("returns no markup for negative series values", () => {
+  assert.equal(buildMiniSparkline([0, -1, 10], options), "");
+});
+
+test("returns no markup for non-finite years", () => {
+  for (const invalidYear of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+    assert.equal(buildMiniSparkline([0, 5, 10], { ...options, minYear: invalidYear }), "");
+    assert.equal(buildMiniSparkline([0, 5, 10], { ...options, maxYear: invalidYear }), "");
+  }
+});
+
 test("returns no markup for an all-zero series", () => {
   assert.equal(buildMiniSparkline([0, 0, 0], options), "");
 });
