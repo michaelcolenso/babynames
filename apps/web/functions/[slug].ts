@@ -22,6 +22,23 @@ import type { PagesFunction } from "@cloudflare/workers-types";
 const LANDING_KINDS = new Set<LandingTableKind>(["extinct", "endangered", "rising", "comeback"]);
 const SSR_HUB_ROWS = 100;
 
+interface EditorialSection {
+  heading: string;
+  body: string;
+}
+
+interface EditorialPageConfig {
+  title: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  eyebrow: string;
+  lede: string;
+  names: string[];
+  body: string;
+  sections?: EditorialSection[];
+  table?: string;
+}
+
 function shapeLandingRows(
   kind: LandingTableKind,
   rows: (NameRow & { spark_blob: ArrayBuffer | null })[],
@@ -45,10 +62,7 @@ function shapeLandingRows(
 // and `seoDescription` (optional) drive the <title>/meta tags: they lead with
 // the page's signature names plus a hook, which earns clicks far better than a
 // bare "<X> Baby Names" on competitive SERPs.
-const PAGES: Record<
-  string,
-  { title: string; seoTitle?: string; seoDescription?: string; eyebrow: string; lede: string; names: string[]; body: string; table?: string }
-> = {
+const PAGES: Record<string, EditorialPageConfig> = {
   comebacks: {
     title: "Comeback Baby Names | NobodyNamed",
     seoTitle: "Comeback Baby Names: Why Theodore, Hazel & Eleanor Returned | NobodyNamed",
@@ -78,13 +92,27 @@ const PAGES: Record<
     body: "Gen Z naming patterns show sharper fashion cycles, more spelling variation, and a faster path from novelty to overexposure.",
   },
   "classic-names": {
-    title: "Classic Baby Names | NobodyNamed",
-    seoTitle: "Classic Baby Names: James, Elizabeth & Names That Never Date | NobodyNamed",
-    seoDescription: "Names that survived every fashion cycle — James, Elizabeth, William, Anna, John. See the classic baby names that stayed legible across a century of American births.",
+    title: "Classic Baby Names",
+    seoTitle: "Classic Baby Names — James, Anna & More | NobodyNamed",
+    seoDescription: "Explore classic baby names that survived every trend, including James, Anna, Elizabeth and William. See 145 years of popularity and generational data.",
     eyebrow: "Durability file",
-    lede: "Names that resisted the sharpest boom-and-bust cycles and remained legible across American generations.",
+    lede: "Classic baby names remain recognizable across generations without belonging to only one decade. The SSA record shows which names endured rather than merely returning after a long absence.",
     names: ["James", "Elizabeth", "William", "Anna", "John", "Mary"],
-    body: "Classic names derive power from repetition. They do not need a single peak moment because they carry institutional memory across eras.",
+    body: "NobodyNamed treats durability as a pattern in the data, not a claim about taste. A classic name appears across a long span of American births, avoids an irreversible collapse, and stays familiar even when its rank changes.",
+    sections: [
+      {
+        heading: "What makes a baby name classic?",
+        body: `A classic name survives several naming cycles. It can rise, decline, and change character without becoming trapped in one generation. <a href="/name/James/">James</a>, <a href="/name/Elizabeth/">Elizabeth</a>, <a href="/name/William/">William</a>, and <a href="/name/Anna/">Anna</a> all have different popularity curves, but each remained in active use while thousands of contemporary names disappeared. That continuity matters more than holding the number-one rank. A name can qualify as classic even when it spends years outside the top ten, provided parents continue choosing it in meaningful numbers and people of many ages still carry it. The result is a name that feels familiar without pointing to a single classroom, graduating class, or cultural moment.`,
+      },
+      {
+        heading: "Classic names are not the same as comeback names",
+        body: `Durability and revival describe different histories. <a href="/comeback">Comeback names</a> such as Hazel or Theodore fell sharply before a later generation rediscovered them. A durable classic never fully leaves the cultural vocabulary. Its curve may soften, but it keeps enough continuity to bridge grandparents, parents, and children. That difference is visible in the SSA series: a comeback has a valley followed by renewed growth, while a classic has a longer and steadier baseline. Some names can move between categories as new data arrives, so NobodyNamed treats these labels as descriptions of the recorded trajectory rather than permanent judgments about what parents should choose.`,
+      },
+      {
+        heading: "How American classics change across generations",
+        body: `Classic does not mean static. Mary dominated early records, James crossed nearly every era, and Anna repeatedly shifted between mainstream and vintage appeal. Compare the crowded rosters of the <a href="/names/1940s/">1940s</a> with the more fragmented choices of the <a href="/names/2020s/">2020s</a>: the same durable names occupy very different positions in each naming culture. Explore the dossiers above to see peak year, current births, median age, geographic strongholds, and the complete annual curve for each name. Together those measures show whether familiarity comes from uninterrupted use, broad geographic reach, repeated revivals, or sheer historical scale. They also reveal which present-day favorites may eventually earn classic status and which are still too closely tied to their moment.`,
+      },
+    ],
   },
   "future-grandparent-names": {
     title: "Future Grandparent Names | NobodyNamed",
@@ -96,6 +124,10 @@ const PAGES: Record<
     body: "Every cute contemporary name is also a future old-person name. That is not an insult; it is the entire lifecycle of cultural identity.",
   },
 };
+
+export function getEditorialPageConfig(slug: string): Readonly<EditorialPageConfig> | undefined {
+  return PAGES[slug];
+}
 
 export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   const slug = String(ctx.params.slug || "");
@@ -158,6 +190,11 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   ).join("");
   const table = page.table ? `<section class="section"><div id="t"></div></section>` : "";
   const tableScript = page.table ? `<script>renderLandingTable("${page.table}", document.getElementById("t"));</script>` : "";
+  const editorialSections = page.sections?.map((section) => `
+    <section class="section editorial-section">
+      <h2>${section.heading}</h2>
+      <p>${section.body}</p>
+    </section>`).join("") ?? "";
 
   const reqUrl = new URL(ctx.request.url);
   const pageCanonical = `${reqUrl.origin}/${slug}`;
@@ -195,6 +232,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
     <p class="lede">${page.lede}</p>
     <p class="archive-note">${page.body}</p>
     <div class="diagnosis-grid">${cards}</div>
+    ${editorialSections}
     ${table}
   `,
     structuredData: JSON.parse(structuredData),
