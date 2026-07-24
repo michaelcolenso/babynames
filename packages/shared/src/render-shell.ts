@@ -195,6 +195,7 @@ ${skipLink}
   </main>
   ${siteFooter(opts.footerVariant, { yearRange: opts.footerYearRange })}
 </div>
+<script src="/assets/analytics.js" defer></script>
 ${scriptTags}
 ${jsonBlocks}
 ${inlineScriptTags}
