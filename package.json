@@ -36,7 +36,8 @@
     "blog:apply:remote": "wrangler d1 execute name-vitals --remote --config apps/web/wrangler.toml --file",
     "blog:test": "tsx --test scripts/blog-publish.test.ts scripts/render-blog.test.ts",
     "test:narrative": "tsx scripts/test-narrative.ts",
-    "validate:pages": "tsx scripts/validate-name-pages.ts"
+    "validate:pages": "tsx scripts/validate-name-pages.ts",
+    "test:editorial-growth": "tsx --test scripts/editorial-growth.test.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260621.1",
