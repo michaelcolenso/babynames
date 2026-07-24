@@ -187,9 +187,14 @@ export interface ShadowMatch {
 }
 
 /**
- * Find the "shadow name" — the name in `shadowYear` whose birth count is
+ * Look up the "shadow name" — the name in `shadowYear` whose birth count is
  * closest to `nameLower`'s count in `birthYear`, restricted to the same sex.
- * Returns null if the input name has no data for the birth year.
+ * Precomputed offline by scripts/build-shadow-matches.ts into
+ * name_shadow_matches (one row per name_lower+sex, for whichever birthYear
+ * that table was last built for — see the migration for why this isn't
+ * computed live). Returns null if there's no precomputed row for this exact
+ * (nameLower, birthYear) — either the name has no data for that year, or
+ * this year wasn't the one the table was built for.
  */
 export async function getShadowName(
   db: D1Database,
@@ -197,14 +202,13 @@ export async function getShadowName(
   birthYear: number,
   shadowYear: number,
 ): Promise<ShadowMatch | null> {
-  // Step 1: get input name's count in the birth year.
-  const inputRow = await db
+  const row = await db
     .prepare(
-      `SELECT n.name AS input_name, n.name_lower AS input_lower, n.sex AS input_sex, ny.count AS input_count
-         FROM names n
-         JOIN name_years ny ON ny.name_id = n.id
-        WHERE n.name_lower = ?1
-          AND ny.year = ?2
+      `SELECT name AS input_name, name_lower AS input_lower, sex AS input_sex, input_count,
+              shadow_name, shadow_name_lower, shadow_sex, shadow_count, diff
+         FROM name_shadow_matches
+        WHERE name_lower = ?1 AND year = ?2
+        ORDER BY sex
         LIMIT 1`,
     )
     .bind(nameLower, birthYear)
@@ -213,44 +217,25 @@ export async function getShadowName(
       input_lower: string;
       input_sex: Sex;
       input_count: number;
-    }>();
-
-  if (!inputRow) return null;
-
-  // Step 2: find the name in shadowYear with the closest count, same sex.
-  const shadowRow = await db
-    .prepare(
-      `SELECT n.name AS shadow_name, n.name_lower AS shadow_lower, n.sex AS shadow_sex, ny.count AS shadow_count,
-              ABS(ny.count - ?1) AS diff
-         FROM names n
-         JOIN name_years ny ON ny.name_id = n.id
-        WHERE ny.year = ?2
-          AND n.sex = ?3
-          AND n.name_lower <> ?4
-        ORDER BY diff ASC, n.total_count DESC
-        LIMIT 1`,
-    )
-    .bind(inputRow.input_count, shadowYear, inputRow.input_sex, inputRow.input_lower)
-    .first<{
       shadow_name: string;
-      shadow_lower: string;
+      shadow_name_lower: string;
       shadow_sex: Sex;
       shadow_count: number;
       diff: number;
     }>();
 
-  if (!shadowRow) return null;
+  if (!row) return null;
 
   return {
-    inputName: inputRow.input_name,
-    inputNameLower: inputRow.input_lower,
-    inputSex: inputRow.input_sex,
-    inputCount: inputRow.input_count,
-    shadowName: shadowRow.shadow_name,
-    shadowNameLower: shadowRow.shadow_lower,
-    shadowCount: shadowRow.shadow_count,
-    shadowSex: shadowRow.shadow_sex,
-    diff: shadowRow.diff,
+    inputName: row.input_name,
+    inputNameLower: row.input_lower,
+    inputSex: row.input_sex,
+    inputCount: row.input_count,
+    shadowName: row.shadow_name,
+    shadowNameLower: row.shadow_name_lower,
+    shadowCount: row.shadow_count,
+    shadowSex: row.shadow_sex,
+    diff: row.diff,
     birthYear,
     shadowYear,
   };
