@@ -4,6 +4,7 @@
 //     hydrating from the embedded <script type="application/json">)
 
 import { classify, type ClassifyResult } from "./classify";
+import { contentId, contentIdentityMeta } from "./content-identity";
 import type { YearTopRow, YearTotal } from "./d1-queries";
 import { generateNameNarrative, type NameNarrative } from "./generate-narrative";
 import { playgroundDensity } from "./enrichment-compute";
@@ -217,7 +218,14 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
   </div>`
     : "";
 
-  return `<article class="report" data-name="${escape(record.name)}" data-sex="${record.sex}">
+  const identityMeta = contentIdentityMeta({
+    contentId: contentId("name-page", record.name),
+    contentType: "name-page",
+    slug: record.name,
+    primaryNames: [record.name],
+  });
+
+  return `<article class="report" data-name="${escape(record.name)}" data-sex="${record.sex}" ${identityMeta}>
   <div>
     <header class="dossier-head">
       <div class="sex">${record.sex === "M" ? "Masculine" : "Feminine"} dossier · first seen ${a.firstYear}</div>

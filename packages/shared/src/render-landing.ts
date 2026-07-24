@@ -6,6 +6,7 @@
 // with assets/landing.js so the SSR table and the (optional) client re-render
 // are visually identical.
 
+import { contentId, contentIdentityMeta } from "./content-identity";
 import type { LandingRow } from "./schema";
 
 export type LandingTableKind = "extinct" | "endangered" | "rising" | "comeback";
@@ -74,7 +75,12 @@ export function renderLandingTableHTML(
   yM: number,
 ): string {
   const body = rows.map((r) => renderRow(kind, r)).join("");
-  return `<table class="table"><thead>${HEADERS[kind](yM)}</thead><tbody>${body}</tbody></table>`;
+  const identityMeta = contentIdentityMeta({
+    contentId: contentId("article", kind),
+    contentType: "article",
+    slug: kind,
+  });
+  return `<table class="table" ${identityMeta}><thead>${HEADERS[kind](yM)}</thead><tbody>${body}</tbody></table>`;
 }
 
 // Crawlable index of every birth-year page, grouped by decade. Rendered into
@@ -93,7 +99,12 @@ export function renderYearIndexHTML(ym: number, yM: number): string {
       groups.push(`<div class="year-decade"><h3>${d}s</h3><div class="year-links">${links.join("")}</div></div>`);
     }
   }
-  return `<section class="year-index" aria-label="Browse every birth year">
+  const identityMeta = contentIdentityMeta({
+    contentId: contentId("article", "year"),
+    contentType: "article",
+    slug: "year",
+  });
+  return `<section class="year-index" aria-label="Browse every birth year" ${identityMeta}>
     <h2>Browse every year, ${ym}–${yM}</h2>
     <div class="year-index-grid">${groups.join("")}</div>
   </section>`;
