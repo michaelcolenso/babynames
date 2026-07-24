@@ -12,7 +12,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     try {
       await ctx.env.DB.prepare(`INSERT INTO newsletter_subscribers(email, status, source_content_id, source_placement, consented_at, updated_at)
         VALUES(?1, 'active', ?2, ?3, datetime('now'), datetime('now'))
-        ON CONFLICT(email) DO UPDATE SET status='active', source_content_id=COALESCE(excluded.source_content_id, newsletter_subscribers.source_content_id), source_placement=excluded.source_placement, updated_at=datetime('now')`)
+        ON CONFLICT(email) DO UPDATE SET status='active', source_content_id=COALESCE(excluded.source_content_id, newsletter_subscribers.source_content_id), source_placement=excluded.source_placement, consented_at=datetime('now'), unsubscribed_at=NULL, updated_at=datetime('now')`)
         .bind(normalized.email, sourceContentId, sourcePlacement).run();
     } catch {
       // Non-enumerating response: storage/provider failures should not leak subscriber state.

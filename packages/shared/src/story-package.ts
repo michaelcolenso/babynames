@@ -28,9 +28,16 @@ export function validateStoryPackage(story: StoryPackage, seenIds: Set<string> =
   if (story.schemaVersion !== 1) errors.push("Unsupported story schemaVersion");
   if (!story.id) errors.push("Story needs id");
   if (seenIds.has(story.id)) errors.push(`Duplicate story id: ${story.id}`);
+  else if (story.id) seenIds.add(story.id);
   if (story.status === "published" && !story.publishedAt) errors.push("Published stories need publishedAt");
   if (story.startYear && story.endYear && story.endYear < story.startYear) errors.push("Story endYear cannot precede startYear");
   const evidenceIds = new Set(story.evidence.map((item) => item.id));
+  for (const evidence of story.evidence) {
+    if (!evidence.id) errors.push("Evidence needs id");
+    if (!evidence.title.trim()) errors.push(`Evidence ${evidence.id || "(missing id)"} needs title`);
+    if (evidence.kind === "query" && !evidence.query?.trim()) errors.push(`Evidence ${evidence.id} needs query`);
+    if (evidence.kind === "source" && !evidence.url?.trim()) errors.push(`Evidence ${evidence.id} needs url`);
+  }
   for (const claim of story.claims) {
     if (!claim.evidenceIds.length) errors.push(`Claim ${claim.id} needs evidence`);
     for (const id of claim.evidenceIds) if (!evidenceIds.has(id)) errors.push(`Claim ${claim.id} references missing evidence ${id}`);
