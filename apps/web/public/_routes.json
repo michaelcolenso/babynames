@@ -23,6 +23,9 @@
     "/future-grandparent-names",
     "/blog",
     "/blog/*",
+    "/newsletter",
+    "/newsletter/*",
+    "/stories/*",
     "/shadow",
     "/shadow/*"
   ],

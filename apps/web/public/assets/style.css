@@ -2462,3 +2462,15 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   color: var(--muted);
 }
 .viz-related a { font-weight: 700; }
+
+.newsletter-signup {
+  margin: 2rem 0;
+  padding: 1.25rem;
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+}
+.newsletter-signup form { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; }
+.newsletter-signup label { display: grid; gap: 0.35rem; font-weight: 700; }
+.newsletter-signup input[type="email"] { min-width: min(22rem, 80vw); padding: 0.7rem 0.8rem; border: 1px solid var(--rule); border-radius: 10px; background: var(--bg); color: var(--fg); }
+.newsletter-signup button { padding: 0.75rem 1rem; border: 0; border-radius: 999px; background: var(--accent); color: white; font-weight: 800; cursor: pointer; }
