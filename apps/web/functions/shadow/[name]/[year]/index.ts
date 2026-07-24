@@ -27,6 +27,10 @@ export const onRequestGet: PagesFunction<Env, "name" | "year"> = async (ctx) => 
     return new Response("year must be 1880–present", { status: 400 });
   }
 
+  const sexParam = new URL(ctx.request.url).searchParams.get("sex");
+  const sex = sexParam === "M" || sexParam === "F" ? sexParam : undefined;
+  const sexQuery = sex ? `?sex=${sex}` : "";
+
   const [ymStr, yMStr] = await Promise.all([
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
@@ -46,7 +50,7 @@ export const onRequestGet: PagesFunction<Env, "name" | "year"> = async (ctx) => 
   if (canonicalName && canonicalName !== name) {
     return new Response(null, {
       status: 301,
-      headers: { Location: `/shadow/${encodeURIComponent(canonicalName)}/${year}/`, "Cache-Control": "public, s-maxage=86400" },
+      headers: { Location: `/shadow/${encodeURIComponent(canonicalName)}/${year}/${sexQuery}`, "Cache-Control": "public, s-maxage=86400" },
     });
   }
 
@@ -55,7 +59,7 @@ export const onRequestGet: PagesFunction<Env, "name" | "year"> = async (ctx) => 
     return notFound(`Shadow year ${shadowYear} is before the earliest data (${ym}). Try a later birth year.`);
   }
 
-  const match = await getShadowName(ctx.env.DB, name.toLowerCase(), year, shadowYear);
+  const match = await getShadowName(ctx.env.DB, name.toLowerCase(), year, shadowYear, sex);
   if (!match) {
     return notFound(
       `No data for ${name} in ${year}, or no matching shadow name found in ${shadowYear}.`,
@@ -75,7 +79,7 @@ export const onRequestGet: PagesFunction<Env, "name" | "year"> = async (ctx) => 
   }
 
   const url = new URL(ctx.request.url);
-  const canonical = `${url.origin}/shadow/${encodeURIComponent(match.inputName)}/${year}/`;
+  const canonical = `${url.origin}/shadow/${encodeURIComponent(match.inputName)}/${year}/${sexQuery}`;
 
   const html = renderShadowPage({
     input,

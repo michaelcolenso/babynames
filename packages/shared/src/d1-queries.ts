@@ -195,23 +195,35 @@ export interface ShadowMatch {
  * computed live). Returns null if there's no precomputed row for this exact
  * (nameLower, birthYear) — either the name has no data for that year, or
  * this year wasn't the one the table was built for.
+ *
+ * `sex` should be passed whenever the caller already knows which sex's page
+ * it's linking from (e.g. the /name/:name/ dossier), so a unisex name
+ * resolves to the same sex the visitor was just looking at rather than
+ * whichever row happens to sort first.
  */
 export async function getShadowName(
   db: D1Database,
   nameLower: string,
   birthYear: number,
   shadowYear: number,
+  sex?: Sex,
 ): Promise<ShadowMatch | null> {
   const row = await db
     .prepare(
-      `SELECT name AS input_name, name_lower AS input_lower, sex AS input_sex, input_count,
-              shadow_name, shadow_name_lower, shadow_sex, shadow_count, diff
-         FROM name_shadow_matches
-        WHERE name_lower = ?1 AND year = ?2
-        ORDER BY sex
-        LIMIT 1`,
+      sex
+        ? `SELECT name AS input_name, name_lower AS input_lower, sex AS input_sex, input_count,
+                  shadow_name, shadow_name_lower, shadow_sex, shadow_count, diff
+             FROM name_shadow_matches
+            WHERE name_lower = ?1 AND year = ?2 AND sex = ?3
+            LIMIT 1`
+        : `SELECT name AS input_name, name_lower AS input_lower, sex AS input_sex, input_count,
+                  shadow_name, shadow_name_lower, shadow_sex, shadow_count, diff
+             FROM name_shadow_matches
+            WHERE name_lower = ?1 AND year = ?2
+            ORDER BY sex
+            LIMIT 1`,
     )
-    .bind(nameLower, birthYear)
+    .bind(...(sex ? [nameLower, birthYear, sex] : [nameLower, birthYear]))
     .first<{
       input_name: string;
       input_lower: string;

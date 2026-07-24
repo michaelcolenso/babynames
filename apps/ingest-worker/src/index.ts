@@ -313,6 +313,14 @@ async function handleMessage(env: Env, msg: IngestMessage): Promise<void> {
           ym: msg.ym,
           yM: msg.yM,
         });
+        // NOTE: bumping max_year below immediately makes every /name/:name/
+        // page's "Meet your shadow" link point at msg.yM, but
+        // name_shadow_matches (and the enrichment tables) are precomputed
+        // offline and won't cover the new year until someone reruns
+        // `npm run build-shadow-matches && npm run seed-shadow-matches`
+        // (same manual-rerun requirement as build-enrichment/seed-enrichment).
+        // Until that runs, shadow links for the new year 404 gracefully —
+        // they don't error — but do rerun it after every SSA refresh.
         const dataVersion = crypto.randomUUID();
         await Promise.all([
           setMeta(env.DB, META_KEYS.minYear, String(msg.ym)),
