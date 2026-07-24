@@ -40,3 +40,6 @@ data/dist/*
 flat/
 extra/states/
 scripts/cache/
+
+# Agent worktree scratch space
+.claude/worktrees/
