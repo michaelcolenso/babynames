@@ -2474,6 +2474,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 .newsletter-signup label { font-weight: 700; flex-basis: 100%; margin-bottom: -0.4rem; }
 .newsletter-signup input[type="email"] { min-width: min(22rem, 80vw); flex: 1 1 22rem; padding: 0.7rem 0.8rem; border: 1px solid var(--rule); border-radius: 10px; background: var(--bg); color: var(--fg); }
 .newsletter-signup button { padding: 0.75rem 1rem; border: 0; border-radius: 999px; background: var(--accent); color: white; font-weight: 800; cursor: pointer; }
+.newsletter-signup form:only-of-type button { flex: 0 0 auto; }
 .newsletter-signup button[aria-disabled="true"] { opacity: 0.6; cursor: progress; }
 .newsletter-pitch { margin: 0.35rem 0 0.75rem; font-size: 0.9rem; opacity: 0.8; }
 .newsletter-status { margin: 0 0 0.75rem; padding: 0.6rem 0.8rem; border-radius: 10px; font-weight: 600; border: 1px solid var(--rule); }

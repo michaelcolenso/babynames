@@ -109,7 +109,10 @@
         // localStorage unavailable — skip return-visit tracking.
       }
 
-      if (location.search.indexOf("subscribed=1") !== -1) {
+      // A signup is "complete" only once the address is actually on the list:
+      // `subscribed=1` under single opt-in, or the confirmation click under
+      // double opt-in. `subscribe=pending` is mid-funnel, not a completion.
+      if (location.search.indexOf("subscribed=1") !== -1 || location.search.indexOf("subscribe=confirmed") !== -1) {
         var sourcePlacement = "unknown";
         try {
           sourcePlacement = sessionStorage.getItem("nv_newsletter_placement") || "unknown";

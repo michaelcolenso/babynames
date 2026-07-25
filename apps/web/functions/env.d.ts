@@ -22,4 +22,17 @@ interface Env extends Cloudflare.Env {
   // Used as a Bearer token fallback when Cloudflare Access is not in front
   // of the endpoint (e.g. local dev with wrangler dev).
   BLOG_ADMIN_SECRET?: string;
+  // ── Newsletter ─────────────────────────────────────────────────────────
+  //
+  // HMAC key for confirmation and unsubscribe links. Set as a Pages *secret*
+  // (`wrangler pages secret put NEWSLETTER_TOKEN_SECRET`). Rotating it
+  // invalidates every outstanding link, including unsubscribe links already
+  // sitting in subscribers' inboxes — rotate only if the key leaks.
+  NEWSLETTER_TOKEN_SECRET?: string;
+  // Resend API key. When this and NEWSLETTER_FROM are both set, signup uses
+  // double opt-in; with either missing it falls back to single opt-in.
+  NEWSLETTER_API_KEY?: string;
+  // Verified sender, e.g. "NobodyNamed <hello@nobodynamed.com>".
+  NEWSLETTER_FROM?: string;
+  NEWSLETTER_REPLY_TO?: string;
 }

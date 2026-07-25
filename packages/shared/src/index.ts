@@ -22,3 +22,6 @@ export * from "./content-identity";
 export * from "./analytics";
 export * from "./story-package";
 export * from "./newsletter";
+export * from "./newsletter-tokens";
+export * from "./newsletter-email";
+export * from "./newsletter-ratelimit";
