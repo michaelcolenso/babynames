@@ -109,13 +109,19 @@
         // localStorage unavailable — skip return-visit tracking.
       }
 
-      if (location.search.indexOf("subscribed=1") !== -1) {
-        var sourcePlacement = "unknown";
+      // A signup is "complete" only once the address is actually on the list:
+      // `subscribed=1` under single opt-in, or the confirmation click under
+      // double opt-in. `subscribe=pending` is mid-funnel, not a completion.
+      if (location.search.indexOf("subscribed=1") !== -1 || location.search.indexOf("subscribe=confirmed") !== -1) {
+        // The confirm redirect carries the placement recorded at signup, which
+        // is the only source that survives the email hop — the link often opens
+        // in a different tab, profile or device than the one that subscribed.
+        var sourcePlacement = new URLSearchParams(location.search).get("placement") || "";
         try {
-          sourcePlacement = sessionStorage.getItem("nv_newsletter_placement") || "unknown";
+          sourcePlacement = sourcePlacement || sessionStorage.getItem("nv_newsletter_placement") || "unknown";
           sessionStorage.removeItem("nv_newsletter_placement");
         } catch (e) {
-          // sessionStorage unavailable — fall back to "unknown".
+          sourcePlacement = sourcePlacement || "unknown";
         }
         nvTrack("newsletter_signup_complete", { sourcePlacement: sourcePlacement });
       }
@@ -147,9 +153,12 @@
 
     document.addEventListener("submit", function (event) {
       try {
-        var form = event.target.closest && event.target.closest(".newsletter-signup form");
+        // Scoped to the subscribe action itself. A ".newsletter-signup form"
+        // selector would also match the unsubscribe form, logging an
+        // unsubscribe as a signup start and relabelling its button.
+        var form = event.target.closest && event.target.closest('form[action="/api/newsletter/subscribe"]');
         if (!form) return;
-        var container = form.closest(".newsletter-signup");
+        var container = form.closest("[data-source-placement]");
         var sourcePlacement = (container && container.dataset.sourcePlacement) || "unknown";
         var sourceContentId = container && container.dataset.sourceContentId;
 

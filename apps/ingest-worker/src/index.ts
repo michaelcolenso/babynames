@@ -9,7 +9,7 @@
 // The staging-swap pattern means reads against /api/* keep seeing
 // consistent old data until the swap completes inside one transaction.
 
-import { META_KEYS, getMeta, setMeta, enrichName } from "@nv/shared";
+import { META_KEYS, getMeta, setMeta, enrichName, sweepRateLimits, sweepStalePending } from "@nv/shared";
 import type {
   ExecutionContext,
   MessageBatch,
@@ -41,6 +41,21 @@ declare global {
 
 export default {
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    // Newsletter housekeeping shares this cron because it shares the database.
+    // The subscribe endpoint sweeps opportunistically too, but that only fires
+    // when someone signs up — a pending row on a quiet week would otherwise
+    // outlive the confirmation window the email promises it won't.
+    ctx.waitUntil(
+      Promise.all([sweepStalePending(env.DB), sweepRateLimits(env.DB)]).catch((err) => {
+        console.error(
+          JSON.stringify({
+            message: "scheduled newsletter sweep failed",
+            error: err instanceof Error ? err.message : String(err),
+          }),
+        );
+      }),
+    );
+
     ctx.waitUntil(
       runIngest(env, /*force*/ false, /*r2Key*/ null).catch((err) => {
         console.error(
