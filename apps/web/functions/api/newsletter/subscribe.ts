@@ -7,6 +7,7 @@ import {
   normalizeEmail,
   sendConfirmationEmail,
   signToken,
+  releaseRateLimit,
   sweepRateLimits,
   sweepStalePending,
 } from "@nv/shared";
@@ -122,19 +123,28 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
       signToken(secret as string, "unsubscribe", normalized.email),
     ]);
     const unsub = encodeURIComponent(unsubscribeToken);
-    ctx.waitUntil(
-      sendConfirmationEmail(emailConfig, {
-        to: normalized.email,
-        confirmUrl: `${url.origin}/newsletter/confirm?token=${encodeURIComponent(confirmToken)}`,
-        // Human-clickable link: the page with the confirmation button.
-        unsubscribeUrl: `${url.origin}/newsletter/unsubscribe?token=${unsub}`,
-        // List-Unsubscribe target: mail providers POST here unattended, so it
-        // must be the query-aware API route, not the page.
-        oneClickUrl: `${url.origin}/api/newsletter/unsubscribe?token=${unsub}`,
-      }).then((result) => {
-        if (!result.ok) console.error(`newsletter: confirmation send failed (${result.reason})`);
-      }),
-    );
+    // Awaited, not fire-and-forget: "check your inbox" is a lie if the provider
+    // rejected the message, and the subscriber has no way to discover that.
+    const sent = await sendConfirmationEmail(emailConfig, {
+      to: normalized.email,
+      confirmUrl: `${url.origin}/newsletter/confirm?token=${encodeURIComponent(confirmToken)}`,
+      // Human-clickable link: the page with the confirmation button.
+      unsubscribeUrl: `${url.origin}/newsletter/unsubscribe?token=${unsub}`,
+      // List-Unsubscribe target: mail providers POST here unattended, so it
+      // must be the query-aware API route, not the page.
+      oneClickUrl: `${url.origin}/api/newsletter/unsubscribe?token=${unsub}`,
+    });
+
+    if (!sent.ok) {
+      console.error(`newsletter: confirmation send failed (${sent.reason})`);
+      // Hand back the per-address slot. It was claimed to guard a confirmation
+      // email that never arrived, and keeping it would lock a legitimate
+      // subscriber out of retrying for the rest of the day.
+      ctx.waitUntil(releaseRateLimit(ctx.env.DB, buckets, EMAIL_RULE, normalized.email));
+      // The row stays 'pending' and is swept if never confirmed; the caller is
+      // told to retry rather than to watch an inbox nothing is coming to.
+      return finish(url, acceptsHtml, "error", 503);
+    }
   }
 
   return finish(url, acceptsHtml, "pending", 200);

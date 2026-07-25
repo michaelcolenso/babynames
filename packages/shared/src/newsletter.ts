@@ -100,6 +100,24 @@ export function renderNewsletterSignup(
 }
 
 /**
+ * Confirmation is a two-step flow for the same reason unsubscribe is, and the
+ * stakes are higher: if a GET activated the subscription, a corporate gateway
+ * prefetching links in the incoming mail would complete the opt-in with the
+ * recipient never touching it — which is precisely the consent double opt-in
+ * exists to establish. The GET renders this form; only the POST activates.
+ */
+export function renderConfirmPrompt(token: string, email: string): string {
+  return `<section class="newsletter-unsubscribe">
+    <p class="eyebrow">Newsletter</p><h1>Confirm your subscription</h1>
+    <p class="newsletter-note">Confirm that <strong>${escapeHtml(email)}</strong> should receive the NobodyNamed newsletter — one short email a week.</p>
+    <form action="/newsletter/confirm" method="post">
+      <input type="hidden" name="token" value="${escapeHtml(token)}">
+      <button type="submit">Confirm subscription</button>
+    </form>
+  </section>`;
+}
+
+/**
  * Unsubscribe is a two-step flow on purpose: mail clients and security scanners
  * routinely prefetch every link in an email, so a GET that unsubscribes on
  * sight would silently drop subscribers who never clicked anything. The GET

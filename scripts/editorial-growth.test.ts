@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { CONFIRM_TOKEN_TTL_SECONDS, EMAIL_RULE, IP_RULE, checkRateLimit, contentId, eventFromContent, hashKey, normalizeEmail, sendConfirmationEmail, signToken, sweepStalePending, renderUnsubscribeConfirm, verifyToken, parseSubscribeStatus, renderNewsletterSignup, renderSubscribeStatus, validateAnalyticsEvent, validateStoryPackage, type StoryPackage } from "../packages/shared/src";
+import { CONFIRM_TOKEN_TTL_SECONDS, EMAIL_RULE, IP_RULE, checkRateLimit, contentId, eventFromContent, hashKey, normalizeEmail, releaseRateLimit, sendConfirmationEmail, signToken, sweepStalePending, renderUnsubscribeConfirm, verifyToken, parseSubscribeStatus, renderNewsletterSignup, renderSubscribeStatus, validateAnalyticsEvent, validateStoryPackage, type StoryPackage } from "../packages/shared/src";
 
 test("content identities are stable and analytics events are validated", () => {
   const identity = { contentId: contentId("franchise-hub", "American Name Atlas"), contentType: "franchise-hub" as const, slug: "american-name-atlas", franchiseId: "american-name-atlas" };
@@ -227,6 +227,10 @@ function fakeDb(options: { rows?: Record<string, { status: string }>; onRun?: (s
             },
             async run() {
               options.onRun?.(sql);
+              if (sql.includes("UPDATE newsletter_rate_limit")) {
+                const bucket = String(args[0]);
+                counters.set(bucket, Math.max((counters.get(bucket) ?? 0) - 1, 0));
+              }
               return { meta: { changes: rows[String(args[0])] ? 1 : 0 } };
             },
           };
@@ -284,20 +288,28 @@ test("subscribe holds the address pending and sends confirmation when configured
   let sql = "";
   const { db } = fakeDb({ onRun: (s) => { if (s.includes("newsletter_subscribers")) sql = s; } });
   const pending: Promise<unknown>[] = [];
-  const { onRequestPost } = await import("../apps/web/functions/api/newsletter/subscribe");
-  const res = await onRequestPost({
-    request: new Request("https://example.com/api/newsletter/subscribe", {
-      method: "POST",
-      body: new URLSearchParams({ email: "reader@example.com", sourcePlacement: "test" }),
-    }),
-    env: { DB: db, NEWSLETTER_API_KEY: "key", NEWSLETTER_FROM: "hi@example.com", NEWSLETTER_TOKEN_SECRET: SECRET },
-    waitUntil(p: Promise<unknown>) { pending.push(p); },
-  } as never);
+  const sends: string[] = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (url: string) => { sends.push(String(url)); return new Response("{}", { status: 200 }); }) as unknown as typeof fetch;
+  let res: Response;
+  try {
+    const { onRequestPost } = await import("../apps/web/functions/api/newsletter/subscribe");
+    res = await onRequestPost({
+      request: new Request("https://example.com/api/newsletter/subscribe", {
+        method: "POST",
+        body: new URLSearchParams({ email: "reader@example.com", sourcePlacement: "test" }),
+      }),
+      env: { DB: db, NEWSLETTER_API_KEY: "key", NEWSLETTER_FROM: "hi@example.com", NEWSLETTER_TOKEN_SECRET: SECRET },
+      waitUntil(p: Promise<unknown>) { pending.push(p); },
+    } as never);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
   assert.deepEqual(await res.json(), { ok: true, status: "pending" });
+  assert.equal(sends.length, 1, "one confirmation email");
   assert.match(sql, /'pending'/);
   // An existing active subscriber must not be demoted back to pending.
   assert.match(sql, /WHEN newsletter_subscribers\.status = 'active' THEN 'active'/);
-  assert.ok(pending.length >= 1);
 });
 
 test("subscribe rate-limits by IP with a Retry-After", async () => {
@@ -321,15 +333,28 @@ test("subscribe rate-limits by IP with a Retry-After", async () => {
   assert.ok(Number(last?.headers.get("retry-after")) > 0);
 });
 
-test("confirming a pending subscriber activates it; a bad link never mutates", async () => {
+test("confirming needs an explicit POST; prefetch and bad links never mutate", async () => {
   let ran = "";
   const { db } = fakeDb({ rows: { "reader@example.com": { status: "pending" } }, onRun: (s) => { ran = s; } });
-  const { onRequestGet } = await import("../apps/web/functions/newsletter/confirm");
+  const { onRequestGet, onRequestPost } = await import("../apps/web/functions/newsletter/confirm");
   const token = await signToken(SECRET, "confirm", "reader@example.com");
   const env = { DB: db, NEWSLETTER_TOKEN_SECRET: SECRET };
 
-  const ok = await onRequestGet({
+  // A prefetched GET renders a form and activates nobody — otherwise a gateway
+  // scanning the victim's mail would complete the opt-in on their behalf.
+  const prefetched = await onRequestGet({
     request: new Request(`https://example.com/newsletter/confirm?token=${encodeURIComponent(token)}`),
+    env,
+  } as never);
+  assert.equal(prefetched.status, 200);
+  assert.match(await prefetched.text(), /method="post"/);
+  assert.equal(ran, "", "a prefetched confirm link must not activate the subscription");
+
+  const ok = await onRequestPost({
+    request: new Request("https://example.com/newsletter/confirm", {
+      method: "POST",
+      body: new URLSearchParams({ token }),
+    }),
     env,
   } as never);
   assert.equal(ok.status, 303);
@@ -337,8 +362,11 @@ test("confirming a pending subscriber activates it; a bad link never mutates", a
   assert.match(ran, /status='active'/);
 
   ran = "";
-  const bad = await onRequestGet({
-    request: new Request("https://example.com/newsletter/confirm?token=nope"),
+  const bad = await onRequestPost({
+    request: new Request("https://example.com/newsletter/confirm", {
+      method: "POST",
+      body: new URLSearchParams({ token: "nope" }),
+    }),
     env,
   } as never);
   assert.equal(bad.headers.get("location"), "https://example.com/newsletter?subscribe=link-invalid");
@@ -346,11 +374,15 @@ test("confirming a pending subscriber activates it; a bad link never mutates", a
 
   // An unsubscribe token must not be usable to confirm.
   const wrongPurpose = await signToken(SECRET, "unsubscribe", "reader@example.com");
-  const rejected = await onRequestGet({
-    request: new Request(`https://example.com/newsletter/confirm?token=${encodeURIComponent(wrongPurpose)}`),
+  const rejected = await onRequestPost({
+    request: new Request("https://example.com/newsletter/confirm", {
+      method: "POST",
+      body: new URLSearchParams({ token: wrongPurpose }),
+    }),
     env,
   } as never);
   assert.equal(rejected.headers.get("location"), "https://example.com/newsletter?subscribe=link-invalid");
+  assert.equal(ran, "");
 });
 
 test("unsubscribe GET renders a confirmation form without mutating", async () => {
@@ -524,4 +556,44 @@ test("the unsubscribe form is not instrumented as a newsletter signup", () => {
   assert.ok(!html.includes("newsletter-signup"));
   assert.ok(!html.includes('action="/api/newsletter/subscribe"'));
   assert.match(renderNewsletterSignup("hub"), /action="\/api\/newsletter\/subscribe"/);
+});
+
+test("a failed confirmation send reports an error and refunds the address slot", async () => {
+  const seen: string[] = [];
+  const { db } = fakeDb({ onRun: (sql) => { seen.push(sql); } });
+  const failingFetch = (async () => new Response("nope", { status: 500 })) as unknown as typeof fetch;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = failingFetch;
+  try {
+    const pending: Promise<unknown>[] = [];
+    const { onRequestPost } = await import("../apps/web/functions/api/newsletter/subscribe");
+    const res = await onRequestPost({
+      request: new Request("https://example.com/api/newsletter/subscribe", {
+        method: "POST",
+        body: new URLSearchParams({ email: "reader@example.com", sourcePlacement: "test" }),
+      }),
+      env: { DB: db, NEWSLETTER_API_KEY: "key", NEWSLETTER_FROM: "hi@example.com", NEWSLETTER_TOKEN_SECRET: SECRET },
+      waitUntil(p: Promise<unknown>) { pending.push(p); },
+    } as never);
+    // Not "check your inbox" — nothing is coming.
+    assert.equal(res.status, 503);
+    assert.deepEqual(await res.json(), { ok: false, status: "error" });
+    await Promise.all(pending);
+    assert.ok(
+      seen.some((sql) => /UPDATE newsletter_rate_limit SET hits = MAX\(hits - 1, 0\)/.test(sql)),
+      "the per-address slot must be refunded so a retry is possible",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("releasing a rate-limit hit lets a caller retry within the same window", async () => {
+  const { db } = fakeDb();
+  const rule = { scope: "email", limit: 1, windowSeconds: 600 };
+  assert.equal((await checkRateLimit(db, SECRET, rule, "a@b.com")).allowed, true);
+  // Without the refund this second attempt would be denied for the whole window.
+  await releaseRateLimit(db, SECRET, rule, "a@b.com");
+  assert.equal((await checkRateLimit(db, SECRET, rule, "a@b.com")).allowed, true);
+  assert.equal((await checkRateLimit(db, SECRET, rule, "a@b.com")).allowed, false);
 });

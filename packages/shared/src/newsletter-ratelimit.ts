@@ -70,6 +70,31 @@ export async function sweepRateLimits(db: D1Database, now = Date.now()): Promise
 }
 
 /**
+ * Gives back a counted hit. Rate limits are claimed before the work they guard,
+ * so work that then fails — a confirmation email the provider rejected — would
+ * otherwise burn a slot the subscriber never got any benefit from, locking a
+ * legitimate address out for the rest of the window.
+ */
+export async function releaseRateLimit(
+  db: D1Database,
+  secret: string,
+  rule: RateLimitRule,
+  key: string,
+  now = Date.now(),
+): Promise<void> {
+  const windowIndex = Math.floor(now / 1000 / rule.windowSeconds);
+  const bucket = `${rule.scope}:${await hashKey(secret, key)}:${windowIndex}`;
+  try {
+    await db
+      .prepare(`UPDATE newsletter_rate_limit SET hits = MAX(hits - 1, 0) WHERE bucket = ?1`)
+      .bind(bucket)
+      .run();
+  } catch {
+    // Best-effort: worst case the caller waits out the window.
+  }
+}
+
+/**
  * Deletes pending signups whose confirmation window has closed. Once the
  * confirm token expires the row can never be activated, so retaining it means
  * holding an address that nobody ever completed a consent step for — and the

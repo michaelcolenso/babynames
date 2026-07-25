@@ -39,7 +39,8 @@ only if the key leaks.
 | Route | Method | Notes |
 | --- | --- | --- |
 | `/api/newsletter/subscribe` | POST | Same-origin only. Honeypot, per-IP and per-address rate limits. |
-| `/newsletter/confirm?token=` | GET | Idempotent; safe to prefetch. |
+| `/newsletter/confirm?token=` | GET | Renders a confirmation form. **Does not activate.** |
+| `/newsletter/confirm` | POST | The button on that form. Idempotent. |
 | `/newsletter/unsubscribe?token=` | GET | Renders a confirmation form. **Does not mutate.** |
 | `/newsletter/unsubscribe` | POST | The button on that form. Reads the token from the body, falling back to the query string. |
 | `/api/newsletter/unsubscribe` | POST | RFC 8058 one-click, called by Gmail/Outlook, and the URL named in the `List-Unsubscribe` header. Reads the token from either the query string or the body. Not same-origin gated — the signed token is the whole authorisation, and it only ever removes consent. |
@@ -59,6 +60,7 @@ clicked anything.
 - **Honeypot** `company` field — hidden from layout, tab order and the accessibility tree. A filled one gets a success response and stores nothing.
 - **Per-IP limit**: 5 subscribe attempts / 10 min. Stops scripted floods.
 - **Per-address limit**: 3 confirmation sends / 24 h. The honeypot and IP limit both key on the *sender*, which does nothing to stop a rotating address pool aiming the signup form at a victim's inbox. This one keys on the recipient.
+- **Confirmation delivery is awaited**, not fire-and-forget. If the provider rejects the message the caller gets an error rather than "check your inbox", and the per-address slot is refunded so they can retry immediately instead of waiting out the window.
 - **Stale pending rows** are deleted once their confirmation window closes — an expired token can never activate the row, so keeping it would retain an address nobody finished consenting to (and the confirmation email promises otherwise). Swept beside the rate-limit buckets.
 - Counters live in `newsletter_rate_limit`, keyed by HMAC of the caller identity — raw IPs are never written to disk. Expired rows are swept opportunistically in `waitUntil`, so no cron is needed. The limiter **fails open**: a counter outage degrades to the previous behaviour rather than taking signups down.
 

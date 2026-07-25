@@ -1,24 +1,47 @@
-import { verifyToken } from "@nv/shared";
+import { contentId, contentIdentityMeta, pageShell, renderConfirmPrompt, verifyToken } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 import { tokenSecret } from "../api/newsletter/subscribe";
 
-// GET /newsletter/confirm?token=… — closes the double opt-in loop.
+// GET /newsletter/confirm?token=… — renders a confirmation form.
 //
-// Confirming is idempotent and only ever moves a row forward, so unlike
-// unsubscribe it's safe for a mail client to prefetch: the worst case is that
-// the subscriber arrives to find themselves already confirmed.
+// Deliberately does not activate. Mail clients, link scanners and corporate
+// security gateways prefetch every URL in an incoming message, so a GET that
+// activated on sight would let someone submit a victim's address and have the
+// victim's own gateway complete the opt-in for them — establishing exactly the
+// consent that double opt-in exists to prove.
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
-  const token = url.searchParams.get("token") ?? "";
-  const secret = tokenSecret(ctx.env, url);
-  // No deployment secret means no token can be trusted, so none is honoured.
-  const result = secret
-    ? await verifyToken(secret, token, "confirm")
-    : ({ ok: false, reason: "bad-signature" } as const);
+  const result = await verify(ctx.env, url, url.searchParams.get("token") ?? "");
+  if (!result.ok) return redirect(url, result.reason === "expired" ? "link-expired" : "link-invalid");
 
-  if (!result.ok) {
-    return redirect(url, result.reason === "expired" ? "link-expired" : "link-invalid");
-  }
+  const identityMeta = contentIdentityMeta({
+    contentId: contentId("newsletter", "confirm"),
+    contentType: "newsletter",
+    slug: "confirm",
+  });
+  const html = pageShell({
+    title: "Confirm your subscription — NobodyNamed Newsletter",
+    description: "Confirm your NobodyNamed newsletter subscription.",
+    canonical: `${url.origin}/newsletter/confirm`,
+    currentPath: "/newsletter",
+    body: `<div ${identityMeta}>${renderConfirmPrompt(url.searchParams.get("token") ?? "", result.payload.email)}</div>`,
+  });
+  return new Response(html, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      // The URL carries a signed token; keep it out of search results.
+      "X-Robots-Tag": "noindex",
+    },
+  });
+};
+
+// POST /newsletter/confirm — the button on that form. Closes the opt-in loop.
+export const onRequestPost: PagesFunction<Env> = async (ctx) => {
+  const url = new URL(ctx.request.url);
+  const token = (await formToken(ctx.request)) || url.searchParams.get("token") || "";
+  const result = await verify(ctx.env, url, token);
+  if (!result.ok) return redirect(url, result.reason === "expired" ? "link-expired" : "link-invalid");
 
   try {
     const meta = await ctx.env.DB.prepare(
@@ -38,6 +61,21 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     return redirect(url, "error");
   }
 };
+
+async function verify(env: Env, url: URL, token: string) {
+  const secret = tokenSecret(env, url);
+  // No deployment secret means no token can be trusted, so none is honoured.
+  if (!secret) return { ok: false, reason: "bad-signature" } as const;
+  return verifyToken(secret, token, "confirm");
+}
+
+async function formToken(request: Request): Promise<string> {
+  try {
+    return String((await request.formData()).get("token") ?? "");
+  } catch {
+    return "";
+  }
+}
 
 function redirect(url: URL, status: string): Response {
   const target = new URL("/newsletter", url.origin);
