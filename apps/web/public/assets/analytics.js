@@ -160,6 +160,16 @@
           // post-redirect completion event, but the start event still fires.
         }
 
+        // Submit feedback: the form does a full-page POST, so without this the
+        // button looks inert for the whole round trip. aria-disabled rather
+        // than `disabled` — disabling a submit button mid-submit cancels the
+        // submission in some browsers.
+        var button = form.querySelector('button[type="submit"]');
+        if (button && button.getAttribute("aria-disabled") !== "true") {
+          button.setAttribute("aria-disabled", "true");
+          button.textContent = "Subscribing…";
+        }
+
         // send()'s beacon path already fires synchronously (no deferral),
         // which is what lets this survive the page unload caused by the
         // form's normal (non-prevented) navigation.
