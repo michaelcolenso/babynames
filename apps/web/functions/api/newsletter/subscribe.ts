@@ -8,6 +8,7 @@ import {
   sendConfirmationEmail,
   signToken,
   sweepRateLimits,
+  sweepStalePending,
 } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
@@ -37,26 +38,36 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return finish(url, acceptsHtml, "invalid", 400);
   }
 
-  const secret = tokenSecret(ctx.env);
-  const byIp = await checkRateLimit(ctx.env.DB, secret, IP_RULE, clientKey(ctx.request));
+  const secret = tokenSecret(ctx.env, url);
+  const buckets = bucketSecret(ctx.env);
+  const byIp = await checkRateLimit(ctx.env.DB, buckets, IP_RULE, clientKey(ctx.request));
   if (!byIp.allowed) return finish(url, acceptsHtml, "rate-limited", 429, byIp.retryAfter);
 
   // Keyed on the recipient rather than the sender: without it, a rotating IP
   // pool could use this form to bury a third party's inbox in confirmations.
-  const byEmail = await checkRateLimit(ctx.env.DB, secret, EMAIL_RULE, normalized.email);
+  const byEmail = await checkRateLimit(ctx.env.DB, buckets, EMAIL_RULE, normalized.email);
   if (!byEmail.allowed) return finish(url, acceptsHtml, "rate-limited", 429, byEmail.retryAfter);
 
   ctx.waitUntil(sweepRateLimits(ctx.env.DB));
+  // Makes the confirmation email's "the address is removed automatically" true:
+  // a pending row whose confirm token has expired is unconfirmable, so keeping
+  // it would be retaining an address nobody ever consented to.
+  ctx.waitUntil(sweepStalePending(ctx.env.DB));
 
   const emailConfig = {
     apiKey: ctx.env.NEWSLETTER_API_KEY,
     from: ctx.env.NEWSLETTER_FROM,
     replyTo: ctx.env.NEWSLETTER_REPLY_TO,
   };
-  // Double opt-in requires an email provider to close the loop. Until one is
-  // configured, activating immediately is strictly better than parking people
-  // in a 'pending' state no confirmation email can ever release them from.
-  const doubleOptIn = isEmailConfigured(emailConfig);
+  // Double opt-in needs both halves: a provider to send the confirmation, and a
+  // real signing secret so the link it carries actually authorises anything.
+  // Missing either one falls back to single opt-in, which is strictly better
+  // than parking people in a 'pending' state nothing can release them from —
+  // and far better than issuing links signed with a repo-public constant.
+  if (isEmailConfigured(emailConfig) && !secret) {
+    console.error("newsletter: NEWSLETTER_TOKEN_SECRET is unset; double opt-in disabled");
+  }
+  const doubleOptIn = isEmailConfigured(emailConfig) && secret !== null;
 
   let existingStatus: string | null = null;
   try {
@@ -105,15 +116,21 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   // response is identical either way: whether an address is on the list is not
   // something an unauthenticated caller gets to probe for.
   if (existingStatus !== "active") {
+    // `secret` is non-null here: doubleOptIn requires it.
     const [confirmToken, unsubscribeToken] = await Promise.all([
-      signToken(secret, "confirm", normalized.email),
-      signToken(secret, "unsubscribe", normalized.email),
+      signToken(secret as string, "confirm", normalized.email),
+      signToken(secret as string, "unsubscribe", normalized.email),
     ]);
+    const unsub = encodeURIComponent(unsubscribeToken);
     ctx.waitUntil(
       sendConfirmationEmail(emailConfig, {
         to: normalized.email,
         confirmUrl: `${url.origin}/newsletter/confirm?token=${encodeURIComponent(confirmToken)}`,
-        unsubscribeUrl: `${url.origin}/newsletter/unsubscribe?token=${encodeURIComponent(unsubscribeToken)}`,
+        // Human-clickable link: the page with the confirmation button.
+        unsubscribeUrl: `${url.origin}/newsletter/unsubscribe?token=${unsub}`,
+        // List-Unsubscribe target: mail providers POST here unattended, so it
+        // must be the query-aware API route, not the page.
+        oneClickUrl: `${url.origin}/api/newsletter/unsubscribe?token=${unsub}`,
       }).then((result) => {
         if (!result.ok) console.error(`newsletter: confirmation send failed (${result.reason})`);
       }),
@@ -139,14 +156,32 @@ function finish(url: URL, acceptsHtml: boolean, status: Status, code: number, re
   return Response.json({ ok: status === "subscribed" || status === "pending", status }, { status: code, headers });
 }
 
+const DEV_SECRET = "nv-newsletter-dev-secret";
+
 /**
- * Falls back to a build-stable string so local dev and tests work unconfigured.
- * Tokens signed with the fallback are still unforgeable *within* a deployment;
- * setting NEWSLETTER_TOKEN_SECRET in production is what makes them unforgeable
- * by anyone reading this repository.
+ * Signing key for confirm/unsubscribe links, or null when there isn't a usable
+ * one. Fails closed on purpose: the dev fallback is a constant published in
+ * this repository, so honouring it off localhost would let anyone mint a valid
+ * token for any address and confirm or unsubscribe it at will. Outside local
+ * development an unset NEWSLETTER_TOKEN_SECRET disables signed links entirely
+ * rather than pretending to authorise them.
  */
-export function tokenSecret(env: Env): string {
-  return env.NEWSLETTER_TOKEN_SECRET || "nv-newsletter-dev-secret";
+export function tokenSecret(env: Env, url: URL): string | null {
+  if (env.NEWSLETTER_TOKEN_SECRET) return env.NEWSLETTER_TOKEN_SECRET;
+  return isLocalDev(url) ? DEV_SECRET : null;
+}
+
+/**
+ * Key for rate-limit bucket hashing. Unlike token signing this is a privacy
+ * measure, not an authorisation one — the hash only keeps raw IPs off disk, and
+ * a predictable key costs nothing — so it always resolves.
+ */
+export function bucketSecret(env: Env): string {
+  return env.NEWSLETTER_TOKEN_SECRET || DEV_SECRET;
+}
+
+function isLocalDev(url: URL): boolean {
+  return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname.endsWith(".localhost");
 }
 
 function isSameOrigin(request: Request, url: URL): boolean {

@@ -150,9 +150,12 @@
 
     document.addEventListener("submit", function (event) {
       try {
-        var form = event.target.closest && event.target.closest(".newsletter-signup form");
+        // Scoped to the subscribe action itself. A ".newsletter-signup form"
+        // selector would also match the unsubscribe form, logging an
+        // unsubscribe as a signup start and relabelling its button.
+        var form = event.target.closest && event.target.closest('form[action="/api/newsletter/subscribe"]');
         if (!form) return;
-        var container = form.closest(".newsletter-signup");
+        var container = form.closest("[data-source-placement]");
         var sourcePlacement = (container && container.dataset.sourcePlacement) || "unknown";
         var sourceContentId = container && container.dataset.sourceContentId;
 

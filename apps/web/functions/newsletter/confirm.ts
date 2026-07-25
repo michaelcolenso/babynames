@@ -10,7 +10,11 @@ import { tokenSecret } from "../api/newsletter/subscribe";
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
   const token = url.searchParams.get("token") ?? "";
-  const result = await verifyToken(tokenSecret(ctx.env), token, "confirm");
+  const secret = tokenSecret(ctx.env, url);
+  // No deployment secret means no token can be trusted, so none is honoured.
+  const result = secret
+    ? await verifyToken(secret, token, "confirm")
+    : ({ ok: false, reason: "bad-signature" } as const);
 
   if (!result.ok) {
     return redirect(url, result.reason === "expired" ? "link-expired" : "link-invalid");

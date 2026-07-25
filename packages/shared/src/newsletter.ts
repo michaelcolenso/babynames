@@ -106,14 +106,17 @@ export function renderNewsletterSignup(
  * renders this form; only the POST mutates.
  */
 export function renderUnsubscribeConfirm(token: string, email: string): string {
-  return `<section class="newsletter-signup">
+  // Deliberately NOT .newsletter-signup: that class is what the analytics
+  // submit listener keys on, and reusing it here would log an unsubscribe as a
+  // newsletter_signup_start and relabel the button "Subscribing…".
+  return `<section class="newsletter-unsubscribe">
     <p class="eyebrow">Newsletter</p><h1>Unsubscribe</h1>
-    <p class="newsletter-pitch">Confirm that you want to stop receiving the NobodyNamed newsletter at <strong>${escapeHtml(email)}</strong>.</p>
+    <p class="newsletter-note">Confirm that you want to stop receiving the NobodyNamed newsletter at <strong>${escapeHtml(email)}</strong>.</p>
     <form action="/newsletter/unsubscribe" method="post">
       <input type="hidden" name="token" value="${escapeHtml(token)}">
       <button type="submit">Unsubscribe me</button>
     </form>
-    <p class="newsletter-pitch"><a href="/newsletter">Changed your mind? Keep the subscription.</a></p>
+    <p class="newsletter-note"><a href="/newsletter">Changed your mind? Keep the subscription.</a></p>
   </section>`;
 }
 

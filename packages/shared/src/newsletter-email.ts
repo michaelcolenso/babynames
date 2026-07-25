@@ -18,7 +18,14 @@ export type SendResult = { ok: true } | { ok: false; reason: "unconfigured" | "f
 export interface ConfirmationEmail {
   to: string;
   confirmUrl: string;
+  /** Human-clickable link in the body: a page with a confirmation button. */
   unsubscribeUrl: string;
+  /**
+   * List-Unsubscribe target. Mail providers POST here unattended with no user
+   * present, so it must be the API route that reads the token from the query
+   * string — not the page, whose POST expects a form body and would reject it.
+   */
+  oneClickUrl: string;
 }
 
 export function isEmailConfigured(config: EmailConfig): boolean {
@@ -42,7 +49,7 @@ export async function sendConfirmationEmail(config: EmailConfig, email: Confirma
         headers: {
           // RFC 8058: lets mail clients offer a native unsubscribe button that
           // POSTs, instead of teaching people to hit "spam" to get off a list.
-          "List-Unsubscribe": `<${email.unsubscribeUrl}>`,
+          "List-Unsubscribe": `<${email.oneClickUrl}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },
       }),

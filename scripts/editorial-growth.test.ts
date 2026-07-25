@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { CONFIRM_TOKEN_TTL_SECONDS, EMAIL_RULE, IP_RULE, checkRateLimit, contentId, eventFromContent, hashKey, normalizeEmail, sendConfirmationEmail, signToken, verifyToken, parseSubscribeStatus, renderNewsletterSignup, renderSubscribeStatus, validateAnalyticsEvent, validateStoryPackage, type StoryPackage } from "../packages/shared/src";
+import { CONFIRM_TOKEN_TTL_SECONDS, EMAIL_RULE, IP_RULE, checkRateLimit, contentId, eventFromContent, hashKey, normalizeEmail, sendConfirmationEmail, signToken, sweepStalePending, renderUnsubscribeConfirm, verifyToken, parseSubscribeStatus, renderNewsletterSignup, renderSubscribeStatus, validateAnalyticsEvent, validateStoryPackage, type StoryPackage } from "../packages/shared/src";
 
 test("content identities are stable and analytics events are validated", () => {
   const identity = { contentId: contentId("franchise-hub", "American Name Atlas"), contentType: "franchise-hub" as const, slug: "american-name-atlas", franchiseId: "american-name-atlas" };
@@ -80,7 +80,7 @@ test("newsletter status banner renders only for known statuses", () => {
 
 test("newsletter subscribe rejects cross-origin posts and bot-filled honeypots", async () => {
   let inserted = 0;
-  const { db } = fakeDb({ onRun: (sql) => { if (sql.includes("newsletter_subscribers")) inserted++; } });
+  const { db } = fakeDb({ onRun: (sql) => { if (sql.startsWith("INSERT INTO newsletter_subscribers")) inserted++; } });
   const { onRequestPost } = await import("../apps/web/functions/api/newsletter/subscribe");
   const post = (init: RequestInit, headers: Record<string, string> = {}) =>
     onRequestPost({
@@ -410,14 +410,118 @@ test("confirmation email carries List-Unsubscribe one-click headers", async () =
   }) as unknown as typeof fetch;
   const result = await sendConfirmationEmail(
     { apiKey: "k", from: "hi@example.com" },
-    { to: "reader@example.com", confirmUrl: "https://example.com/c", unsubscribeUrl: "https://example.com/u" },
+    { to: "reader@example.com", confirmUrl: "https://example.com/c", unsubscribeUrl: "https://example.com/u", oneClickUrl: "https://example.com/api/u" },
     fakeFetch,
   );
   assert.equal(result.ok, true);
   const headers = payload.headers as Record<string, string>;
-  assert.equal(headers["List-Unsubscribe"], "<https://example.com/u>");
+  assert.equal(headers["List-Unsubscribe"], "<https://example.com/api/u>");
   assert.equal(headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
 
-  const unconfigured = await sendConfirmationEmail({}, { to: "a@b.com", confirmUrl: "x", unsubscribeUrl: "y" });
+  const unconfigured = await sendConfirmationEmail({}, { to: "a@b.com", confirmUrl: "x", unsubscribeUrl: "y", oneClickUrl: "z" });
   assert.deepEqual(unconfigured, { ok: false, reason: "unconfigured" });
+});
+
+// ── Review follow-ups (#105) ─────────────────────────────────────────────
+
+test("signed links fail closed when no deployment secret is set", async () => {
+  const { db } = fakeDb();
+  const { tokenSecret } = await import("../apps/web/functions/api/newsletter/subscribe");
+  // A dev fallback exists, but only on localhost — the constant is public.
+  assert.equal(tokenSecret({} as never, new URL("https://nobodynamed.com/x")), null);
+  assert.ok(tokenSecret({} as never, new URL("http://localhost:8788/x")));
+  assert.equal(tokenSecret({ NEWSLETTER_TOKEN_SECRET: "real" } as never, new URL("https://nobodynamed.com/x")), "real");
+
+  // A token minted with the public dev constant must not work in production.
+  const forged = await signToken("nv-newsletter-dev-secret", "unsubscribe", "victim@example.com");
+  let ran = "";
+  const { onRequestPost } = await import("../apps/web/functions/api/newsletter/unsubscribe");
+  const res = await onRequestPost({
+    request: new Request(`https://nobodynamed.com/api/newsletter/unsubscribe?token=${encodeURIComponent(forged)}`, { method: "POST" }),
+    env: { DB: fakeDb({ onRun: (s) => { ran = s; } }).db },
+  } as never);
+  assert.equal(res.status, 400);
+  assert.equal(ran, "");
+
+  // …and with the provider configured but no secret, signup must not issue
+  // links at all: it falls back to single opt-in instead.
+  let sql = "";
+  const sub = await (await import("../apps/web/functions/api/newsletter/subscribe")).onRequestPost({
+    request: new Request("https://nobodynamed.com/api/newsletter/subscribe", {
+      method: "POST",
+      body: new URLSearchParams({ email: "reader@example.com", sourcePlacement: "test" }),
+    }),
+    env: { DB: fakeDb({ onRun: (s) => { if (s.includes("newsletter_subscribers")) sql = s; } }).db,
+           NEWSLETTER_API_KEY: "key", NEWSLETTER_FROM: "hi@example.com" },
+    waitUntil() {},
+  } as never);
+  assert.deepEqual(await sub.json(), { ok: true, status: "subscribed" });
+  assert.match(sql, /'active'/);
+  assert.ok(db);
+});
+
+test("List-Unsubscribe points at the one-click API route, not the page", async () => {
+  let payload: Record<string, unknown> = {};
+  const fakeFetch = (async (_url: string, init: RequestInit) => {
+    payload = JSON.parse(String(init.body));
+    return new Response("{}", { status: 200 });
+  }) as unknown as typeof fetch;
+  await sendConfirmationEmail(
+    { apiKey: "k", from: "hi@example.com" },
+    {
+      to: "reader@example.com",
+      confirmUrl: "https://example.com/newsletter/confirm?token=c",
+      unsubscribeUrl: "https://example.com/newsletter/unsubscribe?token=u",
+      oneClickUrl: "https://example.com/api/newsletter/unsubscribe?token=u",
+    },
+    fakeFetch,
+  );
+  const headers = payload.headers as Record<string, string>;
+  assert.equal(headers["List-Unsubscribe"], "<https://example.com/api/newsletter/unsubscribe?token=u>");
+  // The body still links the friendly page, so a human clicking gets a button.
+  assert.match(String(payload.html), /\/newsletter\/unsubscribe\?token=u/);
+});
+
+test("a provider POSTing the List-Unsubscribe URL with no body still unsubscribes", async () => {
+  const token = await signToken(SECRET, "unsubscribe", "reader@example.com");
+  for (const [label, path, load] of [
+    ["api route", "/api/newsletter/unsubscribe", () => import("../apps/web/functions/api/newsletter/unsubscribe")],
+    ["page route", "/newsletter/unsubscribe", () => import("../apps/web/functions/newsletter/unsubscribe")],
+  ] as const) {
+    let ran = "";
+    const { db } = fakeDb({ onRun: (s) => { ran = s; } });
+    const { onRequestPost } = await load();
+    await onRequestPost({
+      request: new Request(`https://example.com${path}?token=${encodeURIComponent(token)}`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "List-Unsubscribe=One-Click",
+      }),
+      env: { DB: db, NEWSLETTER_TOKEN_SECRET: SECRET },
+    } as never);
+    assert.match(ran, /status='unsubscribed'/, label);
+  }
+});
+
+test("expired pending signups are swept so the email's promise holds", async () => {
+  let sql = "";
+  let bound: unknown[] = [];
+  const db = {
+    prepare(value: string) {
+      return { bind(...args: unknown[]) { sql = value; bound = args; return { async run() {} }; } };
+    },
+  } as unknown as D1Database;
+  await sweepStalePending(db);
+  assert.match(sql, /DELETE FROM newsletter_subscribers/);
+  assert.match(sql, /status = 'pending'/);
+  assert.equal(bound[0], `-${CONFIRM_TOKEN_TTL_SECONDS} seconds`);
+});
+
+test("the unsubscribe form is not instrumented as a newsletter signup", () => {
+  const html = renderUnsubscribeConfirm("tok", "reader@example.com");
+  // analytics.js keys its submit listener on the subscribe action; the
+  // unsubscribe form must match neither that nor the signup container class.
+  assert.ok(!html.includes("newsletter-signup"));
+  assert.ok(!html.includes('action="/api/newsletter/subscribe"'));
+  assert.match(renderNewsletterSignup("hub"), /action="\/api\/newsletter\/subscribe"/);
 });

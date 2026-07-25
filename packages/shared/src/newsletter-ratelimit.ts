@@ -5,7 +5,7 @@
 // protects. Buckets are keyed by HMAC of the caller identity (never the raw IP)
 // and swept opportunistically, so the table stays small without a cron.
 
-import { hashKey } from "./newsletter-tokens";
+import { CONFIRM_TOKEN_TTL_SECONDS, hashKey } from "./newsletter-tokens";
 import type { D1Database } from "@cloudflare/workers-types";
 
 export interface RateLimitRule {
@@ -64,6 +64,27 @@ export async function checkRateLimit(
 export async function sweepRateLimits(db: D1Database, now = Date.now()): Promise<void> {
   try {
     await db.prepare(`DELETE FROM newsletter_rate_limit WHERE expires_at < ?1`).bind(Math.floor(now / 1000)).run();
+  } catch {
+    // Best-effort housekeeping.
+  }
+}
+
+/**
+ * Deletes pending signups whose confirmation window has closed. Once the
+ * confirm token expires the row can never be activated, so retaining it means
+ * holding an address that nobody ever completed a consent step for — and the
+ * confirmation email explicitly promises it gets removed. Runs opportunistically
+ * beside the rate-limit sweep, so no cron is required.
+ */
+export async function sweepStalePending(db: D1Database): Promise<void> {
+  try {
+    await db
+      .prepare(
+        `DELETE FROM newsletter_subscribers
+         WHERE status = 'pending' AND consented_at < datetime('now', ?1)`,
+      )
+      .bind(`-${CONFIRM_TOKEN_TTL_SECONDS} seconds`)
+      .run();
   } catch {
     // Best-effort housekeeping.
   }

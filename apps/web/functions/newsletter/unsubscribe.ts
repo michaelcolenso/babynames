@@ -10,7 +10,11 @@ import { tokenSecret } from "../api/newsletter/subscribe";
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
   const token = url.searchParams.get("token") ?? "";
-  const result = await verifyToken(tokenSecret(ctx.env), token, "unsubscribe");
+  const secret = tokenSecret(ctx.env, url);
+  // No deployment secret means no token can be trusted, so none is honoured.
+  const result = secret
+    ? await verifyToken(secret, token, "unsubscribe")
+    : ({ ok: false, reason: "bad-signature" } as const);
   if (!result.ok) return redirect(url, "link-invalid");
 
   const identityMeta = contentIdentityMeta({
@@ -38,9 +42,14 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
 // POST /newsletter/unsubscribe — the button on that form.
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
-  const form = await ctx.request.formData();
-  const token = String(form.get("token") ?? "");
-  const result = await verifyToken(tokenSecret(ctx.env), token, "unsubscribe");
+  // Body first (our own form), query second: some mail providers POST the
+  // List-Unsubscribe URL verbatim, query string and all.
+  const token = (await formToken(ctx.request)) || url.searchParams.get("token") || "";
+  const secret = tokenSecret(ctx.env, url);
+  // No deployment secret means no token can be trusted, so none is honoured.
+  const result = secret
+    ? await verifyToken(secret, token, "unsubscribe")
+    : ({ ok: false, reason: "bad-signature" } as const);
   if (!result.ok) return redirect(url, "link-invalid");
 
   try {
@@ -60,6 +69,14 @@ export async function unsubscribe(db: Env["DB"], email: string): Promise<void> {
     )
     .bind(email)
     .run();
+}
+
+async function formToken(request: Request): Promise<string> {
+  try {
+    return String((await request.formData()).get("token") ?? "");
+  } catch {
+    return "";
+  }
 }
 
 function redirect(url: URL, status: string): Response {

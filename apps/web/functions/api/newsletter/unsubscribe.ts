@@ -16,7 +16,11 @@ import { unsubscribe } from "../../newsletter/unsubscribe";
 // a forged request can do is what its holder could already do by clicking.
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   const token = await extractToken(ctx.request);
-  const result = await verifyToken(tokenSecret(ctx.env), token, "unsubscribe");
+  const secret = tokenSecret(ctx.env, new URL(ctx.request.url));
+  // No deployment secret means no token can be trusted, so none is honoured.
+  const result = secret
+    ? await verifyToken(secret, token, "unsubscribe")
+    : ({ ok: false, reason: "bad-signature" } as const);
   if (!result.ok) {
     return Response.json({ ok: false, status: "link-invalid" }, { status: 400, headers: { "Cache-Control": "no-store" } });
   }
