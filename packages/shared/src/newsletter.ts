@@ -37,6 +37,7 @@ export type SubscribeStatus =
   | "unsubscribed"
   | "invalid"
   | "rate-limited"
+  | "rate-limited-address"
   | "link-expired"
   | "link-invalid"
   | "error";
@@ -49,6 +50,10 @@ const STATUS_COPY: Record<SubscribeStatus, { tone: "ok" | "error"; message: stri
   unsubscribed: { tone: "ok", message: "You're unsubscribed. We won't email that address again." },
   invalid: { tone: "error", message: "That email address doesn't look right. Check it and try again." },
   "rate-limited": { tone: "error", message: "Too many attempts from here. Give it a few minutes and try again." },
+  // A separate message because the windows differ by two orders of magnitude:
+  // telling someone blocked for the day to "try again in a few minutes" just
+  // buys three more failures and burns their IP allowance doing it.
+  "rate-limited-address": { tone: "error", message: "We've already sent several confirmation emails to that address today. Check your inbox and spam folder, or try again tomorrow." },
   "link-expired": { tone: "error", message: "That confirmation link has expired. Subscribe again and we'll send a fresh one." },
   "link-invalid": { tone: "error", message: "That link isn't valid. Subscribe again to get a working one." },
   error: { tone: "error", message: "Something went wrong on our end and you were not subscribed. Please try again in a moment." },

@@ -47,7 +47,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   // Keyed on the recipient rather than the sender: without it, a rotating IP
   // pool could use this form to bury a third party's inbox in confirmations.
   const byEmail = await checkRateLimit(ctx.env.DB, buckets, EMAIL_RULE, normalized.email);
-  if (!byEmail.allowed) return finish(url, acceptsHtml, "rate-limited", 429, byEmail.retryAfter);
+  if (!byEmail.allowed) return finish(url, acceptsHtml, "rate-limited-address", 429, byEmail.retryAfter);
 
   ctx.waitUntil(sweepRateLimits(ctx.env.DB));
   // Makes the confirmation email's "the address is removed automatically" true:
@@ -148,7 +148,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   return finish(url, acceptsHtml, "pending", 200);
 };
 
-type Status = "subscribed" | "pending" | "invalid" | "rate-limited" | "error";
+type Status = "subscribed" | "pending" | "invalid" | "rate-limited" | "rate-limited-address" | "error";
 
 function finish(url: URL, acceptsHtml: boolean, status: Status, code: number, retryAfter?: number): Response {
   const headers: Record<string, string> = { "Cache-Control": "no-store" };

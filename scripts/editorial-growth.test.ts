@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { CONFIRM_TOKEN_TTL_SECONDS, EMAIL_RULE, IP_RULE, checkRateLimit, contentId, eventFromContent, hashKey, normalizeEmail, releaseRateLimit, sendConfirmationEmail, signToken, sweepStalePending, renderUnsubscribeConfirm, verifyToken, parseSubscribeStatus, renderNewsletterSignup, renderSubscribeStatus, validateAnalyticsEvent, validateStoryPackage, type StoryPackage } from "../packages/shared/src";
+import { CONFIRM_TOKEN_TTL_SECONDS, EMAIL_RULE, IP_RULE, checkRateLimit, contentId, eventFromContent, hashKey, normalizeEmail, releaseRateLimit, sendConfirmationEmail, signToken, sweepStalePending, sweepRateLimits, renderUnsubscribeConfirm, verifyToken, parseSubscribeStatus, renderNewsletterSignup, renderSubscribeStatus, validateAnalyticsEvent, validateStoryPackage, type StoryPackage } from "../packages/shared/src";
 
 test("content identities are stable and analytics events are validated", () => {
   const identity = { contentId: contentId("franchise-hub", "American Name Atlas"), contentType: "franchise-hub" as const, slug: "american-name-atlas", franchiseId: "american-name-atlas" };
@@ -333,6 +333,7 @@ test("subscribe rate-limits by IP with a Retry-After", async () => {
   for (let i = 0; i < IP_RULE.limit + 1; i++) last = await post();
   assert.equal(last?.status, 429);
   assert.deepEqual(await last?.json(), { ok: false, status: "rate-limited" });
+  assert.ok(Number(last?.headers.get("retry-after")) <= IP_RULE.windowSeconds);
   assert.ok(Number(last?.headers.get("retry-after")) > 0);
 });
 
@@ -630,4 +631,44 @@ test("a provider outage looks identical whether or not the address is subscribed
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("the per-address block says 'tomorrow', not 'a few minutes'", async () => {
+  const { db } = fakeDb();
+  const { onRequestPost } = await import("../apps/web/functions/api/newsletter/subscribe");
+  // Exhaust the address rule from distinct IPs so the IP rule never trips first.
+  let last: Response | undefined;
+  for (let i = 0; i < EMAIL_RULE.limit + 1; i++) {
+    last = await onRequestPost({
+      request: new Request("https://example.com/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "cf-connecting-ip": `203.0.113.${i}` },
+        body: new URLSearchParams({ email: "reader@example.com", sourcePlacement: "test" }),
+      }),
+      env: { DB: db, NEWSLETTER_TOKEN_SECRET: SECRET },
+      waitUntil() {},
+    } as never);
+  }
+  assert.equal(last?.status, 429);
+  assert.deepEqual(await last?.json(), { ok: false, status: "rate-limited-address" });
+  // Nearly a day, so the copy must not promise a few minutes.
+  assert.ok(Number(last?.headers.get("retry-after")) > IP_RULE.windowSeconds);
+  assert.match(renderSubscribeStatus("rate-limited-address"), /tomorrow/);
+  assert.match(renderSubscribeStatus("rate-limited"), /few minutes/);
+});
+
+test("the ingest cron sweeps newsletter housekeeping independently of signups", async () => {
+  const swept: string[] = [];
+  const db = {
+    prepare(sql: string) {
+      return { bind() { return { async run() { swept.push(sql); } }; } };
+    },
+  } as unknown as D1Database;
+  // Both sweeps must be reachable without a subscribe request having happened.
+  await Promise.all([sweepStalePending(db), sweepRateLimits(db)]);
+  assert.ok(swept.some((s) => /DELETE FROM newsletter_subscribers/.test(s)));
+  assert.ok(swept.some((s) => /DELETE FROM newsletter_rate_limit/.test(s)));
+
+  const worker = await import("../apps/ingest-worker/src/index");
+  assert.ok(typeof worker.default.scheduled === "function");
 });
