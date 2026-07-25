@@ -217,6 +217,9 @@ function fakeDb(options: { rows?: Record<string, { status: string }>; onRun?: (s
         bind(...args: unknown[]) {
           return {
             async first() {
+              if (sql.includes("RETURNING source_placement")) {
+                return rows[String(args[0])] ? { source_placement: "newsletter-archive" } : null;
+              }
               if (sql.includes("newsletter_rate_limit")) {
                 const bucket = String(args[0]);
                 const hits = (counters.get(bucket) ?? 0) + 1;
@@ -358,8 +361,12 @@ test("confirming needs an explicit POST; prefetch and bad links never mutate", a
     env,
   } as never);
   assert.equal(ok.status, 303);
-  assert.equal(ok.headers.get("location"), "https://example.com/newsletter?subscribe=confirmed");
-  assert.match(ran, /status='active'/);
+  // Attribution rides the redirect, not sessionStorage, so it survives the
+  // confirmation link opening in another tab, profile or device.
+  assert.equal(
+    ok.headers.get("location"),
+    "https://example.com/newsletter?subscribe=confirmed&placement=newsletter-archive",
+  );
 
   ran = "";
   const bad = await onRequestPost({
@@ -371,6 +378,7 @@ test("confirming needs an explicit POST; prefetch and bad links never mutate", a
   } as never);
   assert.equal(bad.headers.get("location"), "https://example.com/newsletter?subscribe=link-invalid");
   assert.equal(ran, "", "an invalid token must not touch the database");
+  assert.ok(db);
 
   // An unsubscribe token must not be usable to confirm.
   const wrongPurpose = await signToken(SECRET, "unsubscribe", "reader@example.com");
@@ -596,4 +604,30 @@ test("releasing a rate-limit hit lets a caller retry within the same window", as
   await releaseRateLimit(db, SECRET, rule, "a@b.com");
   assert.equal((await checkRateLimit(db, SECRET, rule, "a@b.com")).allowed, true);
   assert.equal((await checkRateLimit(db, SECRET, rule, "a@b.com")).allowed, false);
+});
+
+test("a provider outage looks identical whether or not the address is subscribed", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response("down", { status: 500 })) as unknown as typeof fetch;
+  try {
+    const { onRequestPost } = await import("../apps/web/functions/api/newsletter/subscribe");
+    const attempt = (existing: Record<string, { status: string }>) =>
+      onRequestPost({
+        request: new Request("https://example.com/api/newsletter/subscribe", {
+          method: "POST",
+          body: new URLSearchParams({ email: "reader@example.com", sourcePlacement: "test" }),
+        }),
+        env: { DB: fakeDb({ rows: existing }).db, NEWSLETTER_API_KEY: "key", NEWSLETTER_FROM: "hi@example.com", NEWSLETTER_TOKEN_SECRET: SECRET },
+        waitUntil() {},
+      } as never);
+
+    const known = await attempt({ "reader@example.com": { status: "active" } });
+    const unknown = await attempt({});
+    // Differing responses here would let an unauthenticated caller enumerate
+    // subscribers during an outage.
+    assert.equal(known.status, unknown.status);
+    assert.deepEqual(await known.json(), await unknown.json());
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

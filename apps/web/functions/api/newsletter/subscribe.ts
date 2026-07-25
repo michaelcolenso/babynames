@@ -70,13 +70,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   }
   const doubleOptIn = isEmailConfigured(emailConfig) && secret !== null;
 
-  let existingStatus: string | null = null;
   try {
-    const existing = await ctx.env.DB.prepare(`SELECT status FROM newsletter_subscribers WHERE email = ?1`)
-      .bind(normalized.email)
-      .first<{ status: string }>();
-    existingStatus = existing?.status ?? null;
-
     if (doubleOptIn) {
       // An already-active subscriber re-submitting the form must not be knocked
       // back to 'pending' — that would unsubscribe them until they re-confirm.
@@ -113,10 +107,14 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   if (!doubleOptIn) return finish(url, acceptsHtml, "subscribed", 200);
 
-  // Someone already confirmed doesn't need another confirmation email, but the
-  // response is identical either way: whether an address is on the list is not
-  // something an unauthenticated caller gets to probe for.
-  if (existingStatus !== "active") {
+  // Sent unconditionally, including to an address that is already active.
+  // Skipping the send for known subscribers would make the response depend on
+  // whether the address is on the list — during a provider outage the skipped
+  // branch returns 200 while everyone else gets a 503, which is exactly the
+  // subscriber oracle this endpoint is supposed to deny. Re-confirming an
+  // active subscriber is a no-op, and the per-address rate limit bounds the
+  // extra mail.
+  {
     // `secret` is non-null here: doubleOptIn requires it.
     const [confirmToken, unsubscribeToken] = await Promise.all([
       signToken(secret as string, "confirm", normalized.email),

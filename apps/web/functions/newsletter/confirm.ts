@@ -44,19 +44,25 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   if (!result.ok) return redirect(url, result.reason === "expired" ? "link-expired" : "link-invalid");
 
   try {
-    const meta = await ctx.env.DB.prepare(
+    // RETURNING the stored placement carries signup attribution across the
+    // email hop. sessionStorage can't: the confirmation link routinely opens in
+    // a different tab, browser profile or device, which would leave every
+    // double opt-in completion attributed to "unknown".
+    const row = await ctx.env.DB.prepare(
       `UPDATE newsletter_subscribers
        SET status='active', confirmed_at=datetime('now'), unsubscribed_at=NULL, updated_at=datetime('now')
-       WHERE email = ?1 AND status = 'pending'`,
+       WHERE email = ?1 AND status = 'pending'
+       RETURNING source_placement`,
     )
       .bind(result.payload.email)
-      .run();
+      .first<{ source_placement: string }>();
     // No pending row: either already confirmed, or unsubscribed and now
     // re-confirming from an old link. Neither is an error worth alarming
     // someone about, and a confirmed-vs-unknown distinction would turn this
     // endpoint into a subscriber oracle.
-    const changed = meta.meta?.changes ?? 0;
-    return redirect(url, changed > 0 ? "confirmed" : "already-confirmed");
+    return row
+      ? redirect(url, "confirmed", row.source_placement)
+      : redirect(url, "already-confirmed");
   } catch {
     return redirect(url, "error");
   }
@@ -77,8 +83,9 @@ async function formToken(request: Request): Promise<string> {
   }
 }
 
-function redirect(url: URL, status: string): Response {
+function redirect(url: URL, status: string, placement?: string): Response {
   const target = new URL("/newsletter", url.origin);
   target.searchParams.set("subscribe", status);
+  if (placement) target.searchParams.set("placement", placement);
   return new Response(null, { status: 303, headers: { Location: target.toString(), "Cache-Control": "no-store" } });
 }
