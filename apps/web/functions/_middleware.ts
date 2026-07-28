@@ -241,6 +241,7 @@ function canonicalizePath(pathname: string): string | null {
   }
   if (/^\/names\/[a-z]$/.test(pathname)) return `${pathname}/`;
   if (/^\/names\/(?:18|19|20)\d{2}s$/.test(pathname)) return `${pathname}/`;
+  if (/^\/names\/(?:18|19|20)\d{2}s\/(?:methodology|classroom|spelling-families)$/.test(pathname)) return `${pathname}/`;
   if (/^\/names\/ending\/[A-Z]\/?$/.test(pathname)) {
     return ensureTrailingSlash(pathname.toLowerCase());
   }
