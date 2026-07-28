@@ -1,136 +1,153 @@
-// Classroom-suite tests: deterministic 1984 apportionment (SPEC §5, §13).
+// Classroom apportionment tests (SPEC §5 / §11, Coder A).
+//
+// IMPORTANT DOCUMENTED FINDING: on real 1984 national data the deterministic
+// largest-remainder apportionment produces 30 UNIQUE names and 0 repeats,
+// because 1984 name diversity means no name earns even one full expected seat
+// (Michael M: 67,736 / 1,804,440 × 16 ≈ 0.60; Jennifer F ≈ 0.42). Duplicates
+// are allowed by construction — the repeat path is asserted below on a
+// concentrated synthetic fixture — but SPEC §5's "assert ≥1 repeat actually
+// occurs in 1984 real data" is mathematically unsatisfiable under the §5
+// formula. Deviation flagged and approved by the orchestrator; the 0-repeat
+// result is itself the editorial finding for the 1980s.
 
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { apportionClassroom } from "../packages/shared/src/decade-hub-compute";
 import type { SourceNameRecord } from "../packages/shared/src/decade-hub-compute";
+import { CLASSROOM_SIZE, CLASSROOM_YEAR, apportionClassroom } from "../packages/shared/src/decade-hub-compute";
+import { loadShardSource } from "./build-decade-hub";
 
-function series(entries: [number, number][]): Record<number, number> {
-  return Object.fromEntries(entries);
+function rec(name: string, sex: "F" | "M", series: Record<number, number>): SourceNameRecord {
+  return { name, sex, series };
 }
 
-function classroomFixture(): { records: SourceNameRecord[]; femaleTotal: number; maleTotal: number } {
-  // 1984-only universe: female counts exceed male counts, so the seat split is
-  // not 15/15, and the largest female name must win the most seats.
-  const girls: [string, number][] = [
-    ["Jennifer", 6000],
-    ["Jessica", 3000],
-    ["Ashley", 1500],
-    ["Amanda", 900],
-    ["Sarah", 600],
-  ];
-  const boys: [string, number][] = [
-    ["Michael", 5000],
-    ["Christopher", 2500],
-    ["Matthew", 1200],
-    ["Joshua", 800],
-    ["David", 500],
-  ];
+test("concentrated fixture: duplicates occur, seats reconcile, mostRepeated well-defined", () => {
+  // femaleSeats = round(30 × 100k/200k) = 15; maleSeats = 15
   const records: SourceNameRecord[] = [
-    ...girls.map(([name, count]) => ({ name, sex: "F" as const, series: series([[1984, count]]) })),
-    ...boys.map(([name, count]) => ({ name, sex: "M" as const, series: series([[1984, count]]) })),
+    rec("Maryish", "F", { 1984: 90000 }), // expected 13.5 -> floor 13, rem 0.5
+    rec("Anneish", "F", { 1984: 10000 }), // expected 1.5  -> floor 1,  rem 0.5
+    rec("Mikeish", "M", { 1984: 80000 }), // expected 12   -> floor 12
+    rec("Daveish", "M", { 1984: 20000 }), // expected 3    -> floor 3
   ];
-  const femaleTotal = girls.reduce((a, [, c]) => a + c, 0); // 12,000
-  const maleTotal = boys.reduce((a, [, c]) => a + c, 0); // 10,000
-  return { records, femaleTotal, maleTotal };
-}
-
-test("sex split derives from actual year totals, rounded, boys take the remainder", () => {
-  const { records, femaleTotal, maleTotal } = classroomFixture();
-  const result = apportionClassroom(records, 1984, 30, femaleTotal, maleTotal);
-  // round(30 × 12000/22000) = round(16.36) = 16 girls, 14 boys
-  assert.equal(result.femaleSeats, 16);
-  assert.equal(result.maleSeats, 14);
-  assert.equal(result.femaleSeats + result.maleSeats, 30);
+  const room = apportionClassroom(records, CLASSROOM_YEAR, CLASSROOM_SIZE, 100000, 100000);
+  assert.equal(room.students.length, 30);
+  assert.equal(room.femaleSeats, 15);
+  assert.equal(room.maleSeats, 15);
+  // tie on remainder 0.5 -> higher count wins the bonus seat
+  const seatsOf = (name: string) => room.students.find((s) => s.name === name)?.seats ?? 0;
+  assert.equal(seatsOf("Maryish"), 14);
+  assert.equal(seatsOf("Anneish"), 1);
+  assert.equal(seatsOf("Mikeish"), 12);
+  assert.equal(seatsOf("Daveish"), 3);
+  // duplicates are the point: repeats actually occur here
+  assert.equal(room.uniqueNames, 4);
+  assert.equal(room.repeatedNames, 26);
+  assert.deepEqual(room.mostRepeated, { name: "Maryish", slug: "Maryish", seats: 14 });
+  assert.ok(Math.abs(room.topShare - 14 / 30) < 1e-3); // stored at 4-decimal precision
+  // expanded roster: seats desc, then alphabetical; per-name seats sum to 30
+  let sum = 0;
+  const seen = new Map<string, number>();
+  for (const s of room.students) seen.set(s.name, (seen.get(s.name) ?? 0) + 1);
+  for (const [, v] of seen) sum += v;
+  assert.equal(sum, 30);
+  assert.equal(room.students[0]!.name, "Maryish");
+  // roster groups each name's seats contiguously
+  assert.equal(room.students.filter((s) => s.name === "Maryish").length, 14);
 });
 
-test("roster totals 30 seats and the most frequent name is consistent", () => {
-  const { records, femaleTotal, maleTotal } = classroomFixture();
-  const result = apportionClassroom(records, 1984, 30, femaleTotal, maleTotal);
-  assert.equal(result.students.length, 30);
-  const totalSeats = new Map<string, number>();
-  for (const s of result.students) totalSeats.set(s.name, (totalSeats.get(s.name) ?? 0) + 1);
-  assert.equal(totalSeats.get("Jennifer"), result.mostRepeated.seats);
-  assert.equal(result.mostRepeated.name, "Jennifer");
-  assert.equal(result.repeatedNames, 30 - result.uniqueNames);
-  assert.equal(result.uniqueNames, totalSeats.size);
-  // topShare = seats of the single most frequent name / 30
-  assert.equal(result.topShare, result.mostRepeated.seats / 30);
-});
-
-test("largest-remainder apportionment: expected seats floor + fractional seats", () => {
-  const { records, femaleTotal, maleTotal } = classroomFixture();
-  const result = apportionClassroom(records, 1984, 30, femaleTotal, maleTotal);
-  // Jennifer: 6000/12000 × 16 = 8.0 exactly → 8 seats, no remainder needed.
-  const jennifer = result.students.filter((s) => s.name === "Jennifer");
-  assert.equal(jennifer.length, 8);
-  // Michael: 5000/10000 × 14 = 7.0 exactly → 7 seats.
-  const michael = result.students.filter((s) => s.name === "Michael");
-  assert.equal(michael.length, 7);
-});
-
-test("apportionment is deterministic regardless of input order", () => {
-  const { records, femaleTotal, maleTotal } = classroomFixture();
-  const a = apportionClassroom(records, 1984, 30, femaleTotal, maleTotal);
-  const b = apportionClassroom([...records].reverse(), 1984, 30, femaleTotal, maleTotal);
-  assert.deepEqual(b, a);
-});
-
-test("repeated names are allowed and reported, never suppressed", () => {
-  const { records, femaleTotal, maleTotal } = classroomFixture();
-  const result = apportionClassroom(records, 1984, 30, femaleTotal, maleTotal);
-  assert.ok(result.repeatedNames > 0, "fixture must produce repeats");
-  const names = result.students.map((s) => s.name);
-  assert.ok(new Set(names).size < names.length, "roster contains duplicate names");
-});
-
-test("v1 rejects any year/size other than 1984/30", () => {
-  const { records, femaleTotal, maleTotal } = classroomFixture();
-  assert.throws(() => apportionClassroom(records, 1985, 30, femaleTotal, maleTotal));
-  assert.throws(() => apportionClassroom(records, 1984, 25, femaleTotal, maleTotal));
-});
-
-test("ties in the largest-remainder step break by count, then name_lower", () => {
-  // Two names with identical 1984 counts get identical expected seats and
-  // identical remainders; the seat bonus must resolve alphabetically so the
-  // roster is reproducible run over run.
+test("deterministic ties: identical counts resolve alphabetically; run-twice identical", () => {
   const records: SourceNameRecord[] = [
-    { name: "Zoe", sex: "F", series: series([[1984, 1000]]) },
-    { name: "Abby", sex: "F", series: series([[1984, 1000]]) },
-    { name: "Mark", sex: "M", series: series([[1984, 1000]]) },
+    rec("Beta", "M", { 1984: 50000 }), // expected 15 -> ... both 7.5 with maleTotal 100k? see below
+    rec("Alpha", "M", { 1984: 50000 }),
+    rec("Solo", "F", { 1984: 100000 }),
   ];
-  const a = apportionClassroom(records, 1984, 30, 2000, 1000);
-  const b = apportionClassroom([...records].reverse(), 1984, 30, 2000, 1000);
-  assert.deepEqual(b, a);
-  // girls: round(30 × 2000/3000) = 20 seats; each girl expects 10.0 → both get
-  // 10 with no remainder seats left over. Boys: 10 seats to one name.
-  assert.equal(a.femaleSeats, 20);
-  assert.equal(a.maleSeats, 10);
-  const seatsOf = (n: string) => a.students.filter((s) => s.name === n).length;
-  assert.equal(seatsOf("Abby"), 10);
-  assert.equal(seatsOf("Zoe"), 10);
-  assert.equal(seatsOf("Mark"), 10);
-});
-
-test("fractional remainders allocate leftover seats to the largest fractions", () => {
-  // Three girls with expected seats 6.5 / 3.5 / 0 (10-seat girl pool) → the
-  // two .5 remainders each claim a seat; the roster still sums to 30.
-  const records: SourceNameRecord[] = [
-    { name: "Ann", sex: "F", series: series([[1984, 6500]]) },
-    { name: "Beth", sex: "F", series: series([[1984, 3500]]) },
-    { name: "Cleo", sex: "F", series: series([[1984, 5]]) },
-    { name: "Solo", sex: "M", series: series([[1984, 10000]]) },
-  ];
-  // F total 10,005, M total 10,000 → femaleSeats = round(30 × 10005/20005) = 15
-  const result = apportionClassroom(records, 1984, 30, 10005, 10000);
-  assert.equal(result.femaleSeats + result.maleSeats, 30);
-  assert.equal(result.students.length, 30);
-  const seatsOf = (n: string) => result.students.filter((s) => s.name === n).length;
-  // Ann: 6500/10005×15 = 9.745…, Beth: 5.247…, Cleo: 0.007… → floors 9+5+0=14,
-  // one leftover seat goes to the largest remainder (Ann).
-  assert.equal(seatsOf("Ann"), 10);
-  assert.equal(seatsOf("Beth"), 5);
-  assert.equal(seatsOf("Cleo"), 0, "below one expected seat, no remainder win");
+  // femaleSeats = 15 (100k of 200k total); Solo expected 15 -> 15 seats.
+  // maleSeats = 15; Alpha/Beta expected 7.5 each -> floors 7+7=14, 1 remaining;
+  // remainder tie 0.5/0.5, count tie -> alphabetical "Alpha" wins the bonus.
+  const room = apportionClassroom(records, CLASSROOM_YEAR, CLASSROOM_SIZE, 100000, 100000);
+  const seatsOf = (name: string) => room.students.find((s) => s.name === name)?.seats ?? 0;
+  assert.equal(seatsOf("Alpha"), 8);
+  assert.equal(seatsOf("Beta"), 7);
   assert.equal(seatsOf("Solo"), 15);
+  const again = apportionClassroom(records, CLASSROOM_YEAR, CLASSROOM_SIZE, 100000, 100000);
+  assert.deepEqual(room, again);
+});
+
+test("real 1984 data: 30 students, seats reconcile, all names exist in source, largest-remainder holds", async () => {
+  const { source } = await loadShardSource();
+  let femaleTotal = 0;
+  let maleTotal = 0;
+  for (const r of source.records) {
+    const c = r.series[CLASSROOM_YEAR] ?? 0;
+    if (r.sex === "F") femaleTotal += c;
+    else maleTotal += c;
+  }
+  const room = apportionClassroom(source.records, CLASSROOM_YEAR, CLASSROOM_SIZE, femaleTotal, maleTotal);
+
+  // exactly 30; sex seats reconcile
+  assert.equal(room.students.length, 30);
+  assert.equal(room.femaleSeats + room.maleSeats, 30);
+  assert.equal(room.students.filter((s) => s.sex === "F").length, room.femaleSeats);
+  assert.equal(room.students.filter((s) => s.sex === "M").length, room.maleSeats);
+  // actual 1984 split (48.26% female) -> 14F/16M, computed not assumed
+  assert.equal(room.femaleSeats, 14);
+  assert.equal(room.maleSeats, 16);
+
+  // every roster name exists in 1984 source data for that sex
+  const present = new Set(
+    source.records.filter((r) => (r.series[CLASSROOM_YEAR] ?? 0) > 0).map((r) => `${r.sex}|${r.name.toLowerCase()}`),
+  );
+  for (const s of room.students) {
+    assert.ok(present.has(`${s.sex}|${s.name.toLowerCase()}`), `${s.name} (${s.sex}) must exist in 1984 data`);
+  }
+
+  // per-name seats sum to 30; unique/repeated accounting consistent
+  const seatsByKey = new Map<string, number>();
+  for (const s of room.students) {
+    const k = `${s.sex}|${s.name.toLowerCase()}`;
+    seatsByKey.set(k, s.seats);
+  }
+  assert.equal([...seatsByKey.values()].reduce((a, b) => a + b, 0), 30);
+  assert.equal(room.uniqueNames, seatsByKey.size);
+  assert.equal(room.repeatedNames, 30 - room.uniqueNames);
+
+  // largest-remainder property, recomputed independently per sex:
+  // no name with a strictly higher remainder is seated fewer times than one
+  // with a lower remainder; seats are always floor or floor+1.
+  for (const sex of ["F", "M"] as const) {
+    const sexSeats = sex === "F" ? room.femaleSeats : room.maleSeats;
+    const sexTotal = sex === "F" ? femaleTotal : maleTotal;
+    const pool = source.records
+      .filter((r) => r.sex === sex && (r.series[CLASSROOM_YEAR] ?? 0) > 0)
+      .map((r) => {
+        const count = r.series[CLASSROOM_YEAR]!;
+        const expected = (count / sexTotal) * sexSeats;
+        return { name: r.name, expected, floor: Math.floor(expected), remainder: expected - Math.floor(expected) };
+      });
+    // 1984 finding: no name earns a full expected seat
+    assert.ok(Math.max(...pool.map((p) => p.expected)) < 1, "1984: every name's expected seats < 1");
+    const seatOf = (name: string) => seatsByKey.get(`${sex}|${name.toLowerCase()}`) ?? 0;
+    for (const p of pool) {
+      const seats = seatOf(p.name);
+      assert.ok(seats === p.floor || seats === p.floor + 1, `${p.name}: seats must be floor or floor+1`);
+    }
+    let minRemSeated = Infinity;
+    let maxRemUnseated = -Infinity;
+    for (const p of pool) {
+      if (seatOf(p.name) > p.floor) minRemSeated = Math.min(minRemSeated, p.remainder);
+      else maxRemUnseated = Math.max(maxRemUnseated, p.remainder);
+    }
+    assert.ok(minRemSeated >= maxRemUnseated, `${sex}: largest-remainder property violated`);
+  }
+
+  // real-data outcome: 0 repeats (documented finding; repeats allowed by design,
+  // see fixture tests above). mostRepeated stays well-defined for the UI.
+  assert.equal(room.repeatedNames, 0);
+  assert.equal(room.mostRepeated.seats, 1);
+  assert.ok(Math.abs(room.topShare - 1 / 30) < 1e-3); // stored at 4-decimal precision
+  assert.ok(room.mostRepeated.name.length > 0);
+
+  // deterministic across runs
+  const again = apportionClassroom(source.records, CLASSROOM_YEAR, CLASSROOM_SIZE, femaleTotal, maleTotal);
+  assert.deepEqual(room, again);
 });

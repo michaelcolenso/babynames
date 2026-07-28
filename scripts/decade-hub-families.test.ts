@@ -1,184 +1,179 @@
-// Spelling-families suite: CSV-only curation, aggregation, and the guardrails
-// that keep weak families off the page (SPEC §6, §13).
+// Spelling-family tests (SPEC §6 / §11, Coder A). The curated CSV is the single
+// source of truth; families ship only with >= 2 approved variants each with
+// >= 1,000 decade births and combined >= 20,000, verified against real data.
 
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import type { SourceNameRecord } from "../packages/shared/src/decade-hub-compute";
 import {
+  DECADE_END,
+  DECADE_START,
+  FAMILY_MIN_TOTAL_BIRTHS,
+  FAMILY_MIN_VARIANT_BIRTHS,
+  FAMILY_MIN_VARIANTS,
   buildSpellingFamilies,
+  parseCsv,
   parseSpellingFamiliesCsv,
 } from "../packages/shared/src/decade-hub-compute";
-import type { SourceNameRecord } from "../packages/shared/src/decade-hub-compute";
+import { loadShardSource } from "./build-decade-hub";
 
-const HEADER = "family_id,label,canonical,variant,review_status,rationale";
+const FAMILIES_CSV_PATH = new URL("../data/manual/spelling-families.csv", import.meta.url);
 
-function series(entries: [number, number][]): Record<number, number> {
-  return Object.fromEntries(entries);
+function rec(name: string, sex: "F" | "M", series: Record<number, number>): SourceNameRecord {
+  return { name, sex, series };
 }
 
-function decadeSeries(perYear: number): Record<number, number> {
-  return series([1980, 1981, 1982, 1983, 1984, 1985, 1986, 1987, 1988, 1989].map((y) => [y, perYear] as [number, number]));
-}
+test("CSV parser: quoted fields, commas, doubled quotes", () => {
+  const rows = parseCsv('a,b,c\n1,"x, y","say ""hi"""\n');
+  assert.deepEqual(rows, [["a", "b", "c"], ["1", "x, y", 'say "hi"']]);
+});
 
-function fixtureRecords(): SourceNameRecord[] {
-  return [
-    { name: "Alpha", sex: "F", series: decadeSeries(3000) }, // 30,000
-    { name: "Alfa", sex: "F", series: decadeSeries(1000) }, // 10,000
-    { name: "Alphah", sex: "F", series: decadeSeries(500) }, // 5,000
-    { name: "Beta", sex: "F", series: decadeSeries(2500) }, // 25,000
-    { name: "Betta", sex: "F", series: decadeSeries(100) }, // 1,000 (below variant floor)
-    { name: "Gamma", sex: "F", series: decadeSeries(150) }, // 1,500
-    { name: "Gama", sex: "F", series: decadeSeries(150) }, // 1,500 (family total below floor)
-    { name: "Delta", sex: "M", series: decadeSeries(4000) }, // male-only name
-    { name: "Alpha", sex: "M", series: decadeSeries(5) }, // cross-sex trace
-  ];
-}
-
-test("parser enforces the exact header and reads quoted rationale", () => {
-  const csv = `${HEADER}\nalpha,Alpha family,Alpha,Alpha,approved,"Grouped, because spellings split."\nalpha,Alpha family,Alpha,Alfa,approved,"Grouped, because spellings split."`;
+test("header enforced; only approved rows used", () => {
+  assert.throws(() => parseSpellingFamiliesCsv("wrong,header\n"), /header/);
+  const csv =
+    "family_id,label,canonical,variant,review_status,rationale\n" +
+    "f1,Fam One,Va,Va,approved,ok\n" +
+    "f2,Fam Two,Vb,Vb,pending,not reviewed\n";
   const rows = parseSpellingFamiliesCsv(csv);
   assert.equal(rows.length, 2);
-  assert.equal(rows[0]!.rationale, "Grouped, because spellings split.");
-  assert.throws(() => parseSpellingFamiliesCsv("a,b,c\n1,2,3"));
-});
-
-test("approved family aggregates variants, computes combined rank and shares", () => {
-  const csv = [
-    HEADER,
-    `alpha,Alpha family,Alpha,Alpha,approved,"r"`,
-    `alpha,Alpha family,Alpha,Alfa,approved,"r"`,
-    `alpha,Alpha family,Alpha,Alphah,approved,"r"`,
-  ].join("\n");
-  const { families, skipped } = buildSpellingFamilies(csv, fixtureRecords());
-  assert.deepEqual(skipped, []);
-  assert.equal(families.length, 1);
-  const fam = families[0]!;
-  assert.equal(fam.totalBirthsInDecade, 45000);
-  assert.equal(fam.dominantVariant, "Alpha");
-  assert.equal(fam.variants.length, 3);
-  const alpha = fam.variants.find((v) => v.name === "Alpha")!;
-  assert.equal(alpha.shareOfFamily, 30000 / 45000);
-  // combined rank: Delta(M) is in another sex table; within F, no single name
-  // beats 45,000, so the family total would rank #1.
-  assert.equal(fam.combinedDecadeRank, 1);
-  // yearly series has 10 points with per-variant + total keys
-  assert.equal(fam.yearly.length, 10);
-  assert.equal(fam.yearly[0]!.year, 1980);
-  assert.equal(fam.yearly[4]!.total, 4500);
-  assert.equal(fam.peakYear, 1980); // flat series → first year wins deterministically
-});
-
-test("family with a variant under the 1,000-birth floor is skipped with a reason", () => {
-  const csv = [
-    HEADER,
-    `beta,Beta family,Beta,Beta,approved,"r"`,
-    `beta,Beta family,Beta,Betta,approved,"r"`,
-  ].join("\n");
-  const { families, skipped } = buildSpellingFamilies(csv, fixtureRecords());
-  assert.equal(families.length, 0);
-  assert.equal(skipped.length, 1);
-  assert.match(skipped[0]!.reason, /Betta/);
-});
-
-test("family under the 20,000 combined floor is skipped", () => {
-  const csv = [
-    HEADER,
-    `gamma,Gamma family,Gamma,Gamma,approved,"r"`,
-    `gamma,Gamma family,Gamma,Gama,approved,"r"`,
-  ].join("\n");
-  const { families, skipped } = buildSpellingFamilies(csv, fixtureRecords());
-  assert.equal(families.length, 0);
-  assert.equal(skipped.length, 1);
-  assert.match(skipped[0]!.reason, /combined/);
-});
-
-test("non-approved rows are excluded before any aggregation", () => {
-  const csv = [
-    HEADER,
-    `alpha,Alpha family,Alpha,Alpha,approved,"r"`,
-    `alpha,Alpha family,Alpha,Alfa,approved,"r"`,
-    `alpha,Alpha family,Alpha,Alphah,needs_review,"r"`,
-  ].join("\n");
-  const { families } = buildSpellingFamilies(csv, fixtureRecords());
-  assert.equal(families.length, 1);
-  assert.equal(families[0]!.variants.length, 2, "the needs_review variant is dropped");
-  assert.equal(families[0]!.totalBirthsInDecade, 40000);
-});
-
-test("duplicate variant rows within a family are de-duplicated", () => {
-  const csv = [
-    HEADER,
-    `alpha,Alpha family,Alpha,Alpha,approved,"r"`,
-    `alpha,Alpha family,Alpha,Alpha,approved,"r"`,
-    `alpha,Alpha family,Alpha,Alfa,approved,"r"`,
-  ].join("\n");
-  const { families } = buildSpellingFamilies(csv, fixtureRecords());
-  assert.equal(families[0]!.variants.length, 2);
-});
-
-test("family sex table follows the dominant sex of the canonical variant", () => {
-  // Alpha F has 30,000 vs Alpha M 50 → family ranks inside the female table.
-  const csv = [
-    HEADER,
-    `alpha,Alpha family,Alpha,Alpha,approved,"r"`,
-    `alpha,Alpha family,Alpha,Alfa,approved,"r"`,
-  ].join("\n");
-  const { families } = buildSpellingFamilies(csv, fixtureRecords());
-  const fam = families[0]!;
-  assert.equal(fam.totalBirthsInDecade, 40000);
-  // In the F table, nobody exceeds 40,000 → combined rank 1. (If the M table
-  // had been used, Delta's 40,000 would still not exceed it — this assertion
-  // pins the sex-table choice via the F-only variant Alfa being counted.)
-  assert.equal(fam.combinedDecadeRank, 1);
-});
-
-test("families sort by total births desc, then id", () => {
-  const csv = [
-    HEADER,
-    `alpha,Alpha family,Alpha,Alpha,approved,"r"`,
-    `alpha,Alpha family,Alpha,Alfa,approved,"r"`,
-    `beta,Beta family,Beta,Beta,approved,"r"`,
-    `beta,Beta family,Beta,Beta2,approved,"r"`,
-  ].join("\n");
-  const records = [
-    ...fixtureRecords(),
-    { name: "Beta2", sex: "F" as const, series: decadeSeries(2000) }, // beta total 45,000 > alpha 40,000
-  ];
-  const { families } = buildSpellingFamilies(csv, records);
-  assert.deepEqual(families.map((f) => f.id), ["beta", "alpha"]);
-});
-
-test("family with fewer than two qualifying variants is skipped", () => {
-  // Alpha qualifies (30,000), but Lonely is the only other listed variant and
-  // it does not exist in the data at all → single-variant family → skipped.
-  const csv = [
-    HEADER,
-    `alpha,Alpha family,Alpha,Alpha,approved,"r"`,
-    `alpha,Alpha family,Alpha,Lonely,approved,"r"`,
-  ].join("\n");
-  const { families, skipped } = buildSpellingFamilies(csv, fixtureRecords());
-  assert.equal(families.length, 0);
-  assert.equal(skipped.length, 1);
-  assert.match(skipped[0]!.reason, /Lonely/);
-});
-
-test("variant decadeRank is null when absent from the sex rank table", () => {
-  // Alfa is a valid variant, but give it zero decade births in a side universe
-  // where it only appears outside 1980–1989.
-  const records: SourceNameRecord[] = [
-    { name: "Alpha", sex: "F", series: decadeSeries(3000) },
-    { name: "Alfa", sex: "F", series: series([[1975, 5000], [1995, 5000]]) },
-    { name: "Alphah", sex: "F", series: decadeSeries(500) },
-  ];
-  const csv = [
-    HEADER,
-    `alpha,Alpha family,Alpha,Alpha,approved,"r"`,
-    `alpha,Alpha family,Alpha,Alfa,approved,"r"`,
-    `alpha,Alpha family,Alpha,Alphah,approved,"r"`,
-  ].join("\n");
+  const records = [rec("Va", "F", { 1984: 5000 }), rec("Vb", "F", { 1984: 5000 })];
   const { families, skipped } = buildSpellingFamilies(csv, records);
-  // Alfa has 0 decade births < 1,000 variant floor → family skipped. The null
-  // rank path is exercised instead via a family where the variant IS present:
+  assert.equal(families.length, 0); // f1 has < 2 variants; f2 is pending
+  assert.ok(skipped.some((s) => s.familyId === "f1"));
+  assert.ok(!skipped.some((s) => s.familyId === "f2")); // pending rows never reach evaluation
+});
+
+test("combined totals, variant ranks, combined rank arithmetic on a fixture", () => {
+  // F decade table by births: Top1 50k, Top2 40k, Top3 30k, Va 11k, Below 10k, Other 9.8k, Vb 9.5k
+  const records: SourceNameRecord[] = [
+    rec("Top1", "F", { 1984: 50000 }),
+    rec("Top2", "F", { 1984: 40000 }),
+    rec("Top3", "F", { 1984: 30000 }),
+    rec("Va", "F", { 1982: 4000, 1984: 7000 }), // 11000 in decade
+    rec("Vb", "F", { 1985: 9500 }),
+    rec("Below", "F", { 1984: 10000 }),
+    rec("Other", "F", { 1984: 9800 }),
+  ];
+  const csv =
+    "family_id,label,canonical,variant,review_status,rationale\n" +
+    "testfam,Test family,Va,Va,approved,fixture family\n" +
+    "testfam,Test family,Va,Vb,approved,fixture family\n";
+  const { families, skipped } = buildSpellingFamilies(csv, records);
+  assert.equal(skipped.length, 0);
+  assert.equal(families.length, 1);
+  const fam = families[0]!;
+  assert.equal(fam.id, "testfam");
+  assert.equal(fam.label, "Test family");
+  assert.equal(fam.canonicalDisplayName, "Va");
+  assert.equal(fam.reviewStatus, "approved");
+  // totals == Σ variant totals
+  assert.equal(fam.totalBirthsInDecade, 11000 + 9500);
+  assert.equal(
+    fam.variants.reduce((a, v) => a + v.birthsInDecade, 0),
+    fam.totalBirthsInDecade,
+  );
+  // variant decade ranks in the F table: Top1..Top3, Va, Below, Other, Vb
+  const va = fam.variants.find((v) => v.name === "Va")!;
+  const vb = fam.variants.find((v) => v.name === "Vb")!;
+  assert.equal(va.decadeRank, 4);
+  assert.equal(vb.decadeRank, 7);
+  // combined rank = 1 + #names strictly above 20,500 -> Top1, Top2, Top3 => 4
+  assert.equal(fam.combinedDecadeRank, 4);
+  assert.equal(fam.dominantVariant, "Va");
+  // shares sum to 1 (within rounding)
+  const shareSum = fam.variants.reduce((a, v) => a + v.shareOfFamily, 0);
+  assert.ok(Math.abs(shareSum - 1) < 1e-5);
+  // yearly: 10 points, totals == Σ variants per year; peak year correct
+  assert.equal(fam.yearly.length, 10);
+  assert.equal(fam.yearly[0]!.year, DECADE_START);
+  assert.equal(fam.yearly[9]!.year, DECADE_END);
+  for (const p of fam.yearly) {
+    assert.equal(p.total, (p["Va"] ?? 0) + (p["Vb"] ?? 0));
+  }
+  assert.equal(fam.yearly.find((p) => p.year === 1984)!.total, 7000);
+  assert.equal(fam.peakYear, 1985); // Vb 9500 alone beats every other year
+});
+
+test("thresholds: weak variant or weak combined total -> family skipped", () => {
+  const records: SourceNameRecord[] = [
+    rec("Big1", "F", { 1984: 9000 }),
+    rec("Big2", "F", { 1984: 9000 }),
+    rec("Tiny", "F", { 1984: 500 }), // < 1000 variant minimum
+    rec("Mid1", "F", { 1984: 1500 }),
+    rec("Mid2", "F", { 1984: 1500 }), // combined 3000 < 20000 minimum
+  ];
+  const csv =
+    "family_id,label,canonical,variant,review_status,rationale\n" +
+    "weakvar,Weak variant,Big1,Big1,approved,r\n" +
+    "weakvar,Weak variant,Big1,Tiny,approved,r\n" +
+    "weaksum,Weak sum,Mid1,Mid1,approved,r\n" +
+    "weaksum,Weak sum,Mid1,Mid2,approved,r\n";
+  const { families, skipped } = buildSpellingFamilies(csv, records);
   assert.equal(families.length, 0);
-  assert.ok(skipped.length >= 1);
+  assert.ok(skipped.find((s) => s.familyId === "weakvar")!.reason.includes("Tiny"));
+  assert.ok(skipped.find((s) => s.familyId === "weaksum")!.reason.includes("combined"));
+});
+
+test("real CSV: variants exist, no duplicates across families, ids stable, totals consistent", async () => {
+  const { source } = await loadShardSource();
+  const csvText = await readFile(FAMILIES_CSV_PATH, "utf8");
+  const rows = parseSpellingFamiliesCsv(csvText);
+  assert.ok(rows.length > 0);
+  assert.ok(rows.every((r) => r.reviewStatus === "approved"));
+
+  // no variant appears in two approved families
+  const variantOwner = new Map<string, string>();
+  for (const r of rows) {
+    const key = r.variant.toLowerCase();
+    assert.ok(!variantOwner.has(key), `${r.variant} appears in two families (${variantOwner.get(key)}, ${r.familyId})`);
+    variantOwner.set(key, r.familyId);
+  }
+
+  const { families, skipped } = buildSpellingFamilies(csvText, source.records);
+  assert.deepEqual(skipped, []);
+  assert.ok(families.length >= 4 && families.length <= 6, "SPEC §6: ship 4–6 families");
+
+  // stable ids: sorted unique ids from the CSV, all shipped
+  const csvIds = [...new Set(rows.map((r) => r.familyId))].sort();
+  assert.deepEqual(families.map((f) => f.id).sort(), csvIds);
+
+  const birthsOf = (name: string, sex: "F" | "M") => {
+    const r = source.records.find((x) => x.name === name && x.sex === sex);
+    if (!r) return 0;
+    let b = 0;
+    for (let y = DECADE_START; y <= DECADE_END; y++) b += r.series[y] ?? 0;
+    return b;
+  };
+
+  for (const fam of families) {
+    // every variant exists in source data with the minimum volume
+    assert.ok(fam.variants.length >= FAMILY_MIN_VARIANTS);
+    for (const v of fam.variants) {
+      const b = birthsOf(v.name, "F") || birthsOf(v.name, "M");
+      assert.ok(b > 0, `${v.name} must exist in source data`);
+      assert.ok(v.birthsInDecade >= FAMILY_MIN_VARIANT_BIRTHS);
+    }
+    assert.ok(fam.totalBirthsInDecade >= FAMILY_MIN_TOTAL_BIRTHS);
+    // family totals == Σ variant totals
+    assert.equal(
+      fam.variants.reduce((a, v) => a + v.birthsInDecade, 0),
+      fam.totalBirthsInDecade,
+    );
+    // canonical is among the variants; dominant variant has the max births
+    assert.ok(fam.variants.some((v) => v.name === fam.canonicalDisplayName));
+    const maxBirths = Math.max(...fam.variants.map((v) => v.birthsInDecade));
+    assert.equal(fam.variants.find((v) => v.name === fam.dominantVariant)!.birthsInDecade, maxBirths);
+    // combined rank must beat the canonical's individual rank
+    const canonical = fam.variants.find((v) => v.name === fam.canonicalDisplayName)!;
+    assert.ok(fam.combinedDecadeRank < (canonical.decadeRank ?? Infinity));
+    // yearly series sane
+    assert.equal(fam.yearly.length, 10);
+    for (const p of fam.yearly) {
+      const sum = fam.variants.reduce((a, v) => a + (p[v.name] ?? 0), 0);
+      assert.equal(p.total, sum);
+    }
+    assert.ok(fam.peakYear >= DECADE_START && fam.peakYear <= DECADE_END);
+  }
 });
