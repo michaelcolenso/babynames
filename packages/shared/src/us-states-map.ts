@@ -31,3 +31,32 @@ export const US_TILE_GRID: Record<string, readonly [number, number]> = {
   OK: [6, 3], LA: [6, 4], MS: [6, 5], AL: [6, 6], GA: [6, 7],
   HI: [7, 0], TX: [7, 2], FL: [7, 8],
 };
+
+// Display names for the 51 abbreviations above. Lives here rather than in a
+// renderer so collection pages, name pages, and the build scripts all read one
+// map — an abbreviation rendered as "WV" in one place and "West Virginia" in
+// another reads as a bug to users.
+export const STATE_NAMES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia",
+  FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois",
+  IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana",
+  ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan",
+  MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana",
+  NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
+  NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota",
+  OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania",
+  RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee",
+  TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington",
+  WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+};
+
+/** Full state name for a two-letter abbreviation, falling back to the input. */
+export function stateName(abbr: string): string {
+  return STATE_NAMES[abbr] ?? abbr;
+}
+
+/** URL-safe slug fragment for a state: "WV" -> "west-virginia". */
+export function stateSlug(abbr: string): string {
+  return stateName(abbr).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}

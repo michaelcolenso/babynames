@@ -10,7 +10,7 @@ import { generateNameNarrative, type NameNarrative } from "./generate-narrative"
 import { playgroundDensity } from "./enrichment-compute";
 import { pageShell } from "./render-shell";
 import { buildSparkline } from "./sparkline";
-import { ALL_STATES, TILE_COLS, TILE_ROWS, US_TILE_GRID } from "./us-states-map";
+import { ALL_STATES, stateName, TILE_COLS, TILE_ROWS, US_TILE_GRID } from "./us-states-map";
 import type {
   DiasporaResponse,
   DiasporaSpreadPoint,
@@ -422,20 +422,6 @@ const LEGACY_MEDIAN_AGE = 72;
 // Mirrors STATE_DATA_START_YEAR in the ingest worker's diaspora-compute.
 const STATE_DATA_FIRST_YEAR = 1910;
 
-const STATE_NAMES: Record<string, string> = {
-  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
-  CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia",
-  FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois",
-  IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana",
-  ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan",
-  MN: "Minnesota", MS: "Mississippi", MO: "Missouri", MT: "Montana",
-  NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
-  NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota",
-  OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania",
-  RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee",
-  TX: "Texas", UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington",
-  WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
-};
 
 const WAVE_COPY: Record<WaveTopology, string> = {
   "Flash Flood": "A concentrated generational spike rather than a slow classic.",
@@ -445,9 +431,7 @@ const WAVE_COPY: Record<WaveTopology, string> = {
   Plateau: "A name with moderate spread and no sharp recent move.",
 };
 
-function stateName(abbr: string): string {
-  return STATE_NAMES[abbr] ?? abbr;
-}
+
 
 // Diffusion tier for a state, by years elapsed since the origin year.
 // Mirrored in app.js hydrateDiaspora() for the animated time-lapse.
