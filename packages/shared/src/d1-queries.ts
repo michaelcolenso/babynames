@@ -19,8 +19,12 @@ import type {
   NameEnrichmentBundle,
   NameEnrichmentProfile,
   NameHistoricalProfile,
+  NameFacts,
   NameRegionalAnomaly,
   NameRow,
+  CollectionMemberRow,
+  CollectionMembership,
+  VariantSibling,
   RelatedName,
   SearchHit,
   Sex,
@@ -1190,4 +1194,126 @@ function parseJsonArray<T>(raw: string): T[] {
   } catch {
     return [];
   }
+}
+
+// ---------------------------------------------------------------------------
+// Rare-name facts and editorial collections (migrations/0021_name_facts.sql).
+//
+// All five of these are single indexed lookups. The name page issues the first
+// two inside its existing Promise.all; listSpellingVariants is a dependent
+// second hop and is skipped entirely when a name has no relatives, which is the
+// common case.
+// ---------------------------------------------------------------------------
+
+/** Precomputed story metrics for one name. Null when facts have not been seeded. */
+export async function getNameFacts(
+  db: D1Database,
+  nameLower: string,
+  sex: Sex,
+): Promise<NameFacts | null> {
+  return await db
+    .prepare("SELECT * FROM name_facts WHERE name_lower = ?1 AND sex = ?2")
+    .bind(nameLower, sex)
+    .first<NameFacts>();
+}
+
+/** Which editorial collections this name belongs to. Covered by
+ *  idx_name_collections_name, so this is a index-only range scan. */
+export async function listNameCollections(
+  db: D1Database,
+  nameLower: string,
+  sex: Sex,
+  limit = 8,
+): Promise<CollectionMembership[]> {
+  const r = await db
+    .prepare(
+      `SELECT slug, rank_in, metric_label
+         FROM name_collections
+        WHERE name_lower = ?1 AND sex = ?2
+        ORDER BY rank_in
+        LIMIT ?3`,
+    )
+    .bind(nameLower, sex, Math.max(1, Math.min(limit, 25)))
+    .all<CollectionMembership>();
+  return r.results ?? [];
+}
+
+/**
+ * Other spellings in the same family. Equality on the indexed variant_key —
+ * deliberately not a LIKE or an edit-distance scan, which would be a table walk
+ * on every name page.
+ */
+export async function listSpellingVariants(
+  db: D1Database,
+  variantKeyValue: string,
+  excludeLower: string,
+  sex: Sex,
+  limit = 6,
+): Promise<VariantSibling[]> {
+  if (!variantKeyValue) return [];
+  const r = await db
+    .prepare(
+      `SELECT f.name, f.sex, n.total_count, n.status, n.peak_year
+         FROM name_facts f
+         JOIN names n ON n.name_lower = f.name_lower AND n.sex = f.sex
+        WHERE f.variant_key = ?1 AND f.sex = ?2 AND f.name_lower <> ?3
+        ORDER BY n.total_count DESC
+        LIMIT ?4`,
+    )
+    .bind(variantKeyValue, sex, excludeLower, Math.max(1, Math.min(limit, 12)))
+    .all<VariantSibling>();
+  return r.results ?? [];
+}
+
+/** One page of a collection's table. Joins `names` for the sparkline blob so
+ *  collection rows render with the same mini-sparkline as the landing hubs. */
+export async function listCollectionMembers(
+  db: D1Database,
+  slug: string,
+  limit = 100,
+  offset = 0,
+): Promise<CollectionMemberRow[]> {
+  const r = await db
+    .prepare(
+      `SELECT c.name, c.sex, c.rank_in, c.metric_label, c.metric_value,
+              n.peak_year, n.peak_count, n.total_count, n.latest_count,
+              n.first_year, n.last_year, n.status, n.spark_blob
+         FROM name_collections c
+         JOIN names n ON n.name_lower = c.name_lower AND n.sex = c.sex
+        WHERE c.slug = ?1
+        ORDER BY c.rank_in
+        LIMIT ?2 OFFSET ?3`,
+    )
+    .bind(slug, Math.max(1, Math.min(limit, 250)), Math.max(0, offset))
+    .all<CollectionMemberRow>();
+  return r.results ?? [];
+}
+
+export async function countCollectionMembers(db: D1Database, slug: string): Promise<number> {
+  const r = await db
+    .prepare("SELECT COUNT(*) AS n FROM name_collections WHERE slug = ?1")
+    .bind(slug)
+    .first<{ n: number }>();
+  return r?.n ?? 0;
+}
+
+export interface CollectionSummary {
+  slug: string;
+  member_count: number;
+  /** Comma-separated sample names, for the hub cards. */
+  sample: string | null;
+}
+
+/** Every populated collection with its size and a few example names — one
+ *  query for the whole hub page. */
+export async function listCollectionSummaries(db: D1Database): Promise<CollectionSummary[]> {
+  const r = await db
+    .prepare(
+      `SELECT slug, COUNT(*) AS member_count,
+              GROUP_CONCAT(CASE WHEN rank_in <= 3 THEN name END) AS sample
+         FROM name_collections
+        GROUP BY slug`,
+    )
+    .all<CollectionSummary>();
+  return r.results ?? [];
 }
