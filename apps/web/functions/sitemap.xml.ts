@@ -70,6 +70,14 @@ function decadeUrls(origin: string, ym: number, yM: number): SitemapUrl[] {
   return out;
 }
 
+// 1980s decade-hub child routes (flagship). Same data vintage as the decade
+// pages, so lastmod follows the dataset's max year.
+function decadeHubUrls(origin: string, yM: number): SitemapUrl[] {
+  return ["/names/1980s/methodology/", "/names/1980s/classroom/", "/names/1980s/spelling-families/"].map(
+    (path) => ({ loc: absoluteUrl(origin, path), lastmod: `${yM}-05-15`, priority: 0.5 }),
+  );
+}
+
 function initialUrls(origin: string, yM: number): SitemapUrl[] {
   return "abcdefghijklmnopqrstuvwxyz".split("").map((letter) => ({
     loc: absoluteUrl(origin, `/names/${letter}/`),
@@ -114,6 +122,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   }));
   const years = yearUrls(url.origin, ym, yM);
   const decades = decadeUrls(url.origin, ym, yM);
+  const decadeHub = decadeHubUrls(url.origin, yM);
   const initials = initialUrls(url.origin, yM);
   const endings = endingUrls(url.origin, yM);
   const blogUrls: SitemapUrl[] = blogPosts.map((post) => ({
@@ -121,7 +130,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     lastmod: post.publishedAt ? post.publishedAt.slice(0, 10) : undefined,
     priority: 0.7,
   }));
-  const reserved = staticUrls.length + years.length + decades.length + initials.length + endings.length + blogUrls.length;
+  const reserved = staticUrls.length + years.length + decades.length + decadeHub.length + initials.length + endings.length + blogUrls.length;
   const nameLimit = Math.max(0, MAX_SITEMAP_URLS - reserved);
 
   const nameUrls: SitemapUrl[] = names.slice(0, nameLimit).map((name) => ({
@@ -134,6 +143,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     ...staticUrls,
     ...years,
     ...decades,
+    ...decadeHub,
     ...initials,
     ...endings,
     ...blogUrls,

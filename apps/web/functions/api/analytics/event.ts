@@ -2,6 +2,8 @@ import { validateAnalyticsEvent } from "@nv/shared";
 import type { AnalyticsEvent, AnalyticsEventName } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
+// Closed vocabulary — keep identical to AnalyticsEventName in
+// packages/shared/src/analytics.ts.
 const EVENT_NAMES: readonly AnalyticsEventName[] = [
   "landing",
   "meaningful_content_view",
@@ -10,6 +12,25 @@ const EVENT_NAMES: readonly AnalyticsEventName[] = [
   "newsletter_signup_start",
   "newsletter_signup_complete",
   "return_visit",
+  // 1980s decade hub (SPEC §10).
+  "decade_hub_view",
+  "decade_hub_scroll_depth",
+  "decade_hub_engaged_time",
+  "decade_hub_internal_click",
+  "decade_hub_share",
+  "decade_hub_copy_link",
+  "ownership_tab_changed",
+  "ownership_sort_changed",
+  "ownership_name_clicked",
+  "ownership_methodology_clicked",
+  "classroom_loaded",
+  "classroom_name_clicked",
+  "classroom_duplicate_clicked",
+  "classroom_completed",
+  "spelling_family_expanded",
+  "spelling_family_chart_interacted",
+  "spelling_variant_clicked",
+  "spelling_methodology_clicked",
 ];
 
 type IncomingEvent = AnalyticsEvent & { sessionId?: string };

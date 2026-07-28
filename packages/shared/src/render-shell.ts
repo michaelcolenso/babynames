@@ -32,7 +32,7 @@ const BROWSE_NAV: NavItem[] = [
   { label: "About", href: "/about" },
 ];
 
-const STYLESHEET_HREF = "/assets/style.css?v=17";
+const STYLESHEET_HREF = "/assets/style.css?v=18";
 
 function escape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");

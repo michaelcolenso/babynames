@@ -4,7 +4,7 @@
 // Example: /names/a/ shows popular baby names starting with A.
 // Follows the same shell + embedded-data pattern as /era/:year/.
 
-import { getMeta, pageShell, topByDecade, topByInitial, META_KEYS } from "@nv/shared";
+import { getMeta, pageShell, topByDecade, topByInitial, META_KEYS, fetchDecadeHubProfile, renderDecadeHub } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 function parseDecade(raw: string): { label: string; start: number; end: number } | null {
@@ -40,6 +40,25 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
   const decade = parseDecade(raw);
   if (!decade) {
     return new Response("names segment must be a letter or decade like 1980s", { status: 400 });
+  }
+
+  // 1980s decade hub flagship: when the precomputed decade_hub row exists,
+  // render the new hub and skip the legacy page entirely (including its dead
+  // window.renderDecadeTable hydration hook). Any miss/failure falls through
+  // to the legacy implementation unchanged.
+  if (decade.label === "1980s") {
+    const profile = await fetchDecadeHubProfile(ctx.env.DB);
+    if (profile) {
+      const origin = new URL(ctx.request.url).origin;
+      const canonical = `${origin}/names/1980s/`;
+      return new Response(renderDecadeHub(profile, { origin }), {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
+          Link: `<${canonical}>; rel="canonical"`,
+        },
+      });
+    }
   }
 
   const [rows, yMStr, ymStr] = await Promise.all([
