@@ -24,7 +24,39 @@ const CANONICAL_PAGES = new Set([
 ]);
 
 export const onRequest: PagesFunction = async (ctx) => {
+  const startedAt = Date.now();
+  const requestId = crypto.randomUUID();
   const url = new URL(ctx.request.url);
+
+  try {
+    const response = await handleRequest(ctx, url);
+    return withResponseHeaders(response, requestId);
+  } catch (error) {
+    const normalized = normalizeError(error);
+    const rayId = ctx.request.headers.get("CF-Ray");
+
+    console.error(
+      JSON.stringify({
+        event: "pages_function_unhandled_error",
+        requestId,
+        rayId,
+        method: ctx.request.method,
+        pathname: url.pathname,
+        queryKeys: [...new Set(url.searchParams.keys())].sort(),
+        userAgent: ctx.request.headers.get("User-Agent"),
+        referrerOrigin: getReferrerOrigin(ctx.request.headers.get("Referer")),
+        elapsedMs: Date.now() - startedAt,
+        errorName: normalized.name,
+        errorMessage: normalized.message,
+        errorStack: normalized.stack,
+      }),
+    );
+
+    return temporaryFailureResponse(ctx.request, requestId);
+  }
+};
+
+async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promise<Response> {
   const legacyName = url.pathname === "/" ? url.searchParams.get("name")?.trim() : "";
   if (legacyName) {
     const target = new URL(`/name/${encodeURIComponent(legacyName)}/`, url.origin);
@@ -43,7 +75,7 @@ export const onRequest: PagesFunction = async (ctx) => {
   }
 
   if (url.pathname === "/sitemap.xml") {
-    return withSecurityHeaders(await ctx.next());
+    return ctx.next();
   }
 
   if (ctx.request.method !== "GET") {
@@ -67,26 +99,119 @@ export const onRequest: PagesFunction = async (ctx) => {
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
-  const res = withSecurityHeaders(await ctx.next());
-  const cc = res.headers.get("Cache-Control");
-  if (cc && /s-maxage=\d+/.test(cc) && res.ok) {
-    ctx.waitUntil(cache.put(cacheKey, res.clone()));
+  const response = await ctx.next();
+  const cacheControl = response.headers.get("Cache-Control");
+  if (cacheControl && /s-maxage=\d+/.test(cacheControl) && response.ok) {
+    ctx.waitUntil(cache.put(cacheKey, response.clone()));
   }
-  return res;
-};
+  return response;
+}
 
-// Baseline security headers for every Pages Function response. The `_headers`
-// file only applies to static assets, so Function-rendered pages (homepage,
-// /name/:name, hubs, sitemap, …) would otherwise ship without these. Existing
-// header values are preserved.
-function withSecurityHeaders(res: Response): Response {
-  const h = new Headers(res.headers);
-  if (!h.has("Strict-Transport-Security")) {
-    h.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+// Baseline security and correlation headers for every Pages Function response.
+// The `_headers` file only applies to static assets, so Function-rendered pages
+// (homepage, /name/:name, hubs, sitemap, …) would otherwise ship without these.
+// Existing header values are preserved.
+function withResponseHeaders(response: Response, requestId: string): Response {
+  const headers = new Headers(response.headers);
+  if (!headers.has("Strict-Transport-Security")) {
+    headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   }
-  if (!h.has("X-Content-Type-Options")) h.set("X-Content-Type-Options", "nosniff");
-  if (!h.has("Referrer-Policy")) h.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+  if (!headers.has("X-Content-Type-Options")) headers.set("X-Content-Type-Options", "nosniff");
+  if (!headers.has("Referrer-Policy")) {
+    headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  }
+  if (!headers.has("X-Request-Id")) headers.set("X-Request-Id", requestId);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+function temporaryFailureResponse(request: Request, requestId: string): Response {
+  const headers = new Headers({
+    "Cache-Control": "no-store, max-age=0",
+    "Retry-After": "60",
+    "X-Robots-Tag": "noindex, nofollow",
+    "X-Request-Id": requestId,
+  });
+
+  const acceptsJson =
+    new URL(request.url).pathname.startsWith("/api/") ||
+    (request.headers.get("Accept") ?? "").includes("application/json");
+
+  if (acceptsJson) {
+    headers.set("Content-Type", "application/json; charset=utf-8");
+    return withResponseHeaders(
+      new Response(
+        JSON.stringify({
+          error: "temporarily_unavailable",
+          message: "This request could not be completed. Please retry shortly.",
+          requestId,
+        }),
+        { status: 503, headers },
+      ),
+      requestId,
+    );
+  }
+
+  headers.set("Content-Type", "text/html; charset=utf-8");
+  return withResponseHeaders(
+    new Response(
+      `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Temporarily unavailable | NobodyNamed</title>
+</head>
+<body>
+  <main>
+    <h1>Temporarily unavailable</h1>
+    <p>This page could not be loaded. Please try again shortly.</p>
+    <p><small>Request ID: ${requestId}</small></p>
+  </main>
+</body>
+</html>`,
+      { status: 503, headers },
+    ),
+    requestId,
+  );
+}
+
+function normalizeError(error: unknown): { name: string; message: string; stack: string | null } {
+  if (error instanceof Error) {
+    return {
+      name: error.name || "Error",
+      message: error.message || "Unknown error",
+      stack: error.stack ?? null,
+    };
+  }
+
+  return {
+    name: "NonErrorThrown",
+    message: safeStringify(error),
+    stack: null,
+  };
+}
+
+function safeStringify(value: unknown): string {
+  try {
+    const serialized = JSON.stringify(value);
+    return serialized ?? String(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function getReferrerOrigin(referrer: string | null): string | null {
+  if (!referrer) return null;
+  try {
+    return new URL(referrer).origin;
+  } catch {
+    return null;
+  }
 }
 
 function canonicalizePath(pathname: string): string | null {
