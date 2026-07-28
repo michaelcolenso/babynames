@@ -1,7 +1,11 @@
 {
-  "name": "name-vitals",
+  "name": "nobodynamed",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "apps/web",
+    "packages/shared"
+  ],
   "scripts": {
     "dev": "npm run dev -w @nv/web",
     "build": "npm run build -w @nv/web",
@@ -10,9 +14,11 @@
     "ingest:blog": "tsx scripts/ingest-blog.ts",
     "seed": "tsx scripts/seed.ts",
     "seed:d1": "tsx scripts/seed-d1.ts",
-    "test": "tsx --test scripts/analytics.test.ts scripts/enrich.test.ts scripts/regions.test.ts scripts/ingest-ssa.test.ts scripts/seed-d1.test.ts scripts/blog-package.test.ts scripts/content-identity.test.ts scripts/story-package.test.ts scripts/newsletter.test.ts scripts/newsletter-tokens.test.ts scripts/newsletter-email.test.ts scripts/newsletter-ratelimit.test.ts scripts/turnstile.test.ts scripts/d1-queries.test.ts scripts/render-name.test.ts scripts/render-compare.test.ts scripts/render-landing.test.ts scripts/render-year.test.ts scripts/editorial-pages.test.ts scripts/indexes.test.ts scripts/affiliate-slug.test.ts scripts/render-blog.test.ts scripts/catalysts.test.ts scripts/search-suggest.test.ts scripts/name-links.test.ts scripts/sparkline.test.ts scripts/decade-hub.test.ts scripts/decade-hub-classroom.test.ts scripts/decade-hub-families.test.ts scripts/decade-hub-routes.test.ts scripts/decade-hub-payload.test.ts",
+    "migrations:apply": "wrangler d1 migrations apply nobodynamed --local",
     "decade-hub:build": "tsx scripts/build-decade-hub.ts",
-    "decade-hub:sensitivity": "tsx scripts/decade-hub-sensitivity.ts"
+    "decade-hub:sensitivity": "tsx scripts/decade-hub-sensitivity.ts",
+    "test": "tsx --test scripts/analytics.test.ts scripts/enrich.test.ts scripts/regions.test.ts scripts/ingest-ssa.test.ts scripts/seed-d1.test.ts scripts/blog-package.test.ts scripts/content-identity.test.ts scripts/story-package.test.ts scripts/newsletter.test.ts scripts/newsletter-tokens.test.ts scripts/newsletter-email.test.ts scripts/newsletter-ratelimit.test.ts scripts/turnstile.test.ts scripts/d1-queries.test.ts scripts/render-name.test.ts scripts/render-compare.test.ts scripts/render-landing.test.ts scripts/render-year.test.ts scripts/editorial-pages.test.ts scripts/indexes.test.ts scripts/affiliate-slug.test.ts scripts/render-blog.test.ts scripts/catalysts.test.ts scripts/search-suggest.test.ts scripts/name-links.test.ts scripts/sparkline.test.ts scripts/decade-hub.test.ts scripts/decade-hub-classroom.test.ts scripts/decade-hub-families.test.ts scripts/decade-hub-routes.test.ts scripts/decade-hub-payload.test.ts",
+    "test:decade-hub": "tsx --test scripts/decade-hub.test.ts scripts/decade-hub-classroom.test.ts scripts/decade-hub-families.test.ts scripts/decade-hub-routes.test.ts scripts/decade-hub-payload.test.ts"
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20240909.0",

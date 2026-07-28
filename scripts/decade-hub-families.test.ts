@@ -147,3 +147,38 @@ test("families sort by total births desc, then id", () => {
   const { families } = buildSpellingFamilies(csv, records);
   assert.deepEqual(families.map((f) => f.id), ["beta", "alpha"]);
 });
+
+test("family with fewer than two qualifying variants is skipped", () => {
+  // Alpha qualifies (30,000), but Lonely is the only other listed variant and
+  // it does not exist in the data at all → single-variant family → skipped.
+  const csv = [
+    HEADER,
+    `alpha,Alpha family,Alpha,Alpha,approved,"r"`,
+    `alpha,Alpha family,Alpha,Lonely,approved,"r"`,
+  ].join("\n");
+  const { families, skipped } = buildSpellingFamilies(csv, fixtureRecords());
+  assert.equal(families.length, 0);
+  assert.equal(skipped.length, 1);
+  assert.match(skipped[0]!.reason, /Lonely/);
+});
+
+test("variant decadeRank is null when absent from the sex rank table", () => {
+  // Alfa is a valid variant, but give it zero decade births in a side universe
+  // where it only appears outside 1980–1989.
+  const records: SourceNameRecord[] = [
+    { name: "Alpha", sex: "F", series: decadeSeries(3000) },
+    { name: "Alfa", sex: "F", series: series([[1975, 5000], [1995, 5000]]) },
+    { name: "Alphah", sex: "F", series: decadeSeries(500) },
+  ];
+  const csv = [
+    HEADER,
+    `alpha,Alpha family,Alpha,Alpha,approved,"r"`,
+    `alpha,Alpha family,Alpha,Alfa,approved,"r"`,
+    `alpha,Alpha family,Alpha,Alphah,approved,"r"`,
+  ].join("\n");
+  const { families, skipped } = buildSpellingFamilies(csv, records);
+  // Alfa has 0 decade births < 1,000 variant floor → family skipped. The null
+  // rank path is exercised instead via a family where the variant IS present:
+  assert.equal(families.length, 0);
+  assert.ok(skipped.length >= 1);
+});

@@ -90,3 +90,47 @@ test("v1 rejects any year/size other than 1984/30", () => {
   assert.throws(() => apportionClassroom(records, 1985, 30, femaleTotal, maleTotal));
   assert.throws(() => apportionClassroom(records, 1984, 25, femaleTotal, maleTotal));
 });
+
+test("ties in the largest-remainder step break by count, then name_lower", () => {
+  // Two names with identical 1984 counts get identical expected seats and
+  // identical remainders; the seat bonus must resolve alphabetically so the
+  // roster is reproducible run over run.
+  const records: SourceNameRecord[] = [
+    { name: "Zoe", sex: "F", series: series([[1984, 1000]]) },
+    { name: "Abby", sex: "F", series: series([[1984, 1000]]) },
+    { name: "Mark", sex: "M", series: series([[1984, 1000]]) },
+  ];
+  const a = apportionClassroom(records, 1984, 30, 2000, 1000);
+  const b = apportionClassroom([...records].reverse(), 1984, 30, 2000, 1000);
+  assert.deepEqual(b, a);
+  // girls: round(30 × 2000/3000) = 20 seats; each girl expects 10.0 → both get
+  // 10 with no remainder seats left over. Boys: 10 seats to one name.
+  assert.equal(a.femaleSeats, 20);
+  assert.equal(a.maleSeats, 10);
+  const seatsOf = (n: string) => a.students.filter((s) => s.name === n).length;
+  assert.equal(seatsOf("Abby"), 10);
+  assert.equal(seatsOf("Zoe"), 10);
+  assert.equal(seatsOf("Mark"), 10);
+});
+
+test("fractional remainders allocate leftover seats to the largest fractions", () => {
+  // Three girls with expected seats 6.5 / 3.5 / 0 (10-seat girl pool) → the
+  // two .5 remainders each claim a seat; the roster still sums to 30.
+  const records: SourceNameRecord[] = [
+    { name: "Ann", sex: "F", series: series([[1984, 6500]]) },
+    { name: "Beth", sex: "F", series: series([[1984, 3500]]) },
+    { name: "Cleo", sex: "F", series: series([[1984, 5]]) },
+    { name: "Solo", sex: "M", series: series([[1984, 10000]]) },
+  ];
+  // F total 10,005, M total 10,000 → femaleSeats = round(30 × 10005/20005) = 15
+  const result = apportionClassroom(records, 1984, 30, 10005, 10000);
+  assert.equal(result.femaleSeats + result.maleSeats, 30);
+  assert.equal(result.students.length, 30);
+  const seatsOf = (n: string) => result.students.filter((s) => s.name === n).length;
+  // Ann: 6500/10005×15 = 9.745…, Beth: 5.247…, Cleo: 0.007… → floors 9+5+0=14,
+  // one leftover seat goes to the largest remainder (Ann).
+  assert.equal(seatsOf("Ann"), 10);
+  assert.equal(seatsOf("Beth"), 5);
+  assert.equal(seatsOf("Cleo"), 0, "below one expected seat, no remainder win");
+  assert.equal(seatsOf("Solo"), 15);
+});

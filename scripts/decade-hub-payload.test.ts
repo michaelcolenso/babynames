@@ -80,6 +80,48 @@ test("real artifact spelling families: exactly the approved six, ordered by tota
 });
 
 test("real fixture extract matches the artifact's per-sex top-100 ownership rows", () => {
+  assert.equal(artifact.ownershipRankings.female.length >= 100, true);
+  assert.equal(artifact.ownershipRankings.male.length >= 100, true);
   assert.deepEqual(artifact.ownershipRankings.female.slice(0, 100), realFixture.femaleTop100);
   assert.deepEqual(artifact.ownershipRankings.male.slice(0, 100), realFixture.maleTop100);
+});
+
+test("real fixture top-100 rows carry the exact DecadeHub OwnershipResult shape", () => {
+  const requiredKeys = [
+    "name",
+    "slug",
+    "sex",
+    "birthsInDecade",
+    "lifetimeBirths",
+    "ownershipRank",
+    "ownershipScore",
+    "popularityRank",
+    "rankedYearsInDecade",
+    "decadeShare",
+    "adjustedConcentration",
+    "normalizedConcentration",
+    "normalizedProminence",
+    "peakYear",
+    "peakCount",
+    "firstYear",
+    "lastYear",
+    "status",
+  ];
+  for (const row of [...realFixture.femaleTop100, ...realFixture.maleTop100] as Record<string, unknown>[]) {
+    for (const key of requiredKeys) {
+      assert.ok(key in row, `missing key ${key} in row ${row.name}`);
+    }
+  }
+  // sex separation is exact: 100 F rows and 100 M rows, no cross-contamination
+  assert.ok((realFixture.femaleTop100 as { sex: string }[]).every((r) => r.sex === "F"));
+  assert.ok((realFixture.maleTop100 as { sex: string }[]).every((r) => r.sex === "M"));
+  // ownership ranks are a complete 1..100 sequence in each sex set
+  const fRanks = (realFixture.femaleTop100 as { ownershipRank: number }[]).map((r) => r.ownershipRank).sort((a, b) => a - b);
+  const mRanks = (realFixture.maleTop100 as { ownershipRank: number }[]).map((r) => r.ownershipRank).sort((a, b) => a - b);
+  assert.deepEqual(fRanks, Array.from({ length: 100 }, (_, i) => i + 1));
+  assert.deepEqual(mRanks, Array.from({ length: 100 }, (_, i) => i + 1));
+});
+
+test("real artifact generatedAt is present and ISO-8601", () => {
+  assert.match(artifact.generatedAt, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
 });

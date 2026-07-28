@@ -193,3 +193,25 @@ test("per-sex priors are reported alongside the pooled prior", () => {
       priorDecadeSharePooled <= Math.max(priorDecadeShareFemale, priorDecadeShareMale),
   );
 });
+
+test("shipped DECADE_HUB_ALPHA is the sensitivity-selected value (2500)", () => {
+  assert.equal(DECADE_HUB_ALPHA, 2500);
+});
+
+test("eligibility via the top-1000 prong: <5000 births but ranked in >=5 years", () => {
+  // BigFish dominates every year, so SmallFish never crosses 5,000 decade
+  // births but still lands in the top-1000 every single year → eligible.
+  const records: SourceNameRecord[] = [
+    { name: "BigFish", sex: "F", series: series([[1980, 90000], [1981, 90000], [1982, 90000], [1983, 90000], [1984, 90000], [1985, 90000], [1986, 90000], [1987, 90000], [1988, 90000], [1989, 90000]]) },
+    { name: "SmallFish", sex: "F", series: series([[1980, 400], [1981, 400], [1982, 400], [1983, 400], [1984, 400], [1985, 400], [1986, 400], [1987, 400], [1988, 400], [1989, 400]]) },
+    { name: "OneHitWonder", sex: "F", series: series([[1984, 4000], [1985, 500]]) },
+  ];
+  const source: DecadeHubSource = { minYear: 1880, maxYear: 2017, records };
+  const stats = source.records.map((r) => summarizeRecord(r, source.maxYear));
+  const top1000 = computeTop1000Years(source.records);
+  const { female } = computeOwnership(stats, top1000, DECADE_HUB_ALPHA);
+  const names = female.map((r) => r.name);
+  assert.ok(names.includes("SmallFish"), "top-1000-in-10-years prong admits SmallFish despite 4,000 births");
+  assert.ok(!names.includes("OneHitWonder"), "4,500 births + 2 ranked years is not enough");
+  assert.ok(names.includes("BigFish"));
+});
