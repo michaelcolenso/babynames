@@ -10,9 +10,12 @@ import {
   enrichName,
   getMeta,
   getNameDiaspora,
+  getNameFacts,
   getNameDiscoveryClusters,
   getNameEnrichmentBundle,
   getNameStrongholds,
+  listNameCollections,
+  listSpellingVariants,
   getNameWithSeries,
   getTopNamesForYear,
   getYearTotalsForYears,
@@ -97,7 +100,18 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   };
   const cls = classify({ series: record.series, yM: record.yM })!;
   const primaryRow = rows.find((r) => r.row.sex === primary.sex) ?? rows[0]!;
-  const [relatedNames, discovery, peerNames, yearTotals, enrichment, enrichmentBundle, diaspora, strongholds] = await Promise.all([
+  const [
+    relatedNames,
+    discovery,
+    peerNames,
+    yearTotals,
+    enrichment,
+    enrichmentBundle,
+    diaspora,
+    strongholds,
+    facts,
+    collections,
+  ] = await Promise.all([
     listRelatedNames(ctx.env.DB, lower, primaryRow.row.sex, primaryRow.row.status, primaryRow.row.peak_year, 6),
     getNameDiscoveryClusters(ctx.env.DB, {
       currentNameLower: lower,
@@ -112,13 +126,28 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     getNameEnrichmentBundle(ctx.env.DB, lower, primaryRow.row.sex).catch(() => null),
     getNameDiaspora(ctx.env.DB, lower, primaryRow.row.sex).catch(() => null),
     getNameStrongholds(ctx.env.DB, lower, primaryRow.row.sex).catch(() => []),
+    getNameFacts(ctx.env.DB, lower, primaryRow.row.sex).catch(() => null),
+    listNameCollections(ctx.env.DB, lower, primaryRow.row.sex, 8).catch(() => []),
   ]);
+
+  // Spelling relatives depend on facts.variant_key, so this is a second hop
+  // rather than part of the batch above. Most names have no relatives, so the
+  // guard skips it entirely for the majority of requests.
+  const variants =
+    facts && facts.variant_count > 1
+      ? await listSpellingVariants(ctx.env.DB, facts.variant_key, lower, primaryRow.row.sex, 6).catch(
+          () => [],
+        )
+      : [];
   const url = new URL(ctx.request.url);
   const canonical = `${url.origin}/name/${encodeURIComponent(record.name)}/`;
 
   const html = renderFullPage(record, cls, {
     canonical,
     relatedNames,
+    facts,
+    variants,
+    collections,
     discovery,
     peerNames,
     yearTotals,

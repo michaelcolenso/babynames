@@ -14,6 +14,11 @@ export interface NameNarrative {
     age?: string;          // omitted if series too sparse
     trend: string;
     geography?: string;    // omitted if no anomaly data with LQ ≥ 1.5
+    // Facts-derived answers, filled by renderFullPage from name_facts rather
+    // than by generateNameNarrative — they need the precomputed geography and
+    // lifecycle metrics, which this module does not receive.
+    whereFrom?: string;    // strongest state and its share
+    whenLast?: string;     // last recorded year, or current volume
   };
   // <title> and <meta name="description"> values.
   metaTitle: string;

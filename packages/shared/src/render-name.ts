@@ -11,7 +11,9 @@ import { playgroundDensity } from "./enrichment-compute";
 import { pageShell } from "./render-shell";
 import { buildSparkline } from "./sparkline";
 import { ALL_STATES, stateName, TILE_COLS, TILE_ROWS, US_TILE_GRID } from "./us-states-map";
+import { getCollection } from "./collections";
 import type {
+  CollectionMembership,
   DiasporaResponse,
   DiasporaSpreadPoint,
   NameCatalyst,
@@ -22,8 +24,10 @@ import type {
   NameEnrichmentProfile,
   NameHistoricalProfile,
   NameRecord,
+  NameFacts,
   NameRegionalAnomaly,
   RelatedName,
+  VariantSibling,
   Status,
   WaveTopology,
 } from "./schema";
@@ -149,6 +153,14 @@ function describeStatus(
 
 interface RenderReportOptions {
   relatedNames?: RelatedName[];
+  // Precomputed rare-name story metrics (name_facts). Drives the story strip
+  // above the fold. Absent → the strip is omitted and the page renders as
+  // before, so the renderer can ship ahead of the data.
+  facts?: NameFacts | null;
+  // Other spellings in the same family. Only fetched when facts.variant_count > 1.
+  variants?: VariantSibling[];
+  // Editorial collections this name belongs to, ordered by its rank in each.
+  collections?: CollectionMembership[];
   discovery?: NameDiscoveryModule;
   peerNames?: YearTopRow[];
   yearTotals?: YearTotal[];
@@ -197,6 +209,14 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
     ? `In ${record.yM}, only <strong>${fmt(a.latestCount)}</strong> ${sexLabel} were given the name.`
     : `No ${sexLabel} were recorded with this name in ${record.yM} — at least not five of them (the SSA's reporting floor).`;
 
+  const storyStrip = renderStoryStrip(
+    record,
+    a,
+    opts.facts,
+    opts.variants ?? [],
+    opts.collections ?? [],
+    sexLabel,
+  );
   const narrativeExtras = renderNarrativeInsights(record, a, opts, sexLabel);
   const nameAnswers = renderNameAnswers(record.name, narrative);
   const declineSentence =
@@ -204,7 +224,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       ? ""
       : `<p>Down <strong>${a.declinePct ?? 0}%</strong> from its peak.</p>`;
   const totalSentence = `<p>In all, the Social Security Administration has recorded about <strong>${fmt(a.totalCount)}</strong> Americans named ${escape(record.name)} since ${a.firstYear}.</p>`;
-  const exploreLinks = renderExploreLinks(record, a);
+  const exploreLinks = renderExploreLinks(record, a, opts.facts, opts.collections ?? []);
   const geographySection = renderGeography(record, a, opts);
   const relatedNames = renderRelatedNames(opts.relatedNames ?? []);
   const discoveryModule = renderDiscoveryModule(opts.discovery);
@@ -239,10 +259,12 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <div class="dossier-grid">
         <div class="dossier-metric"><div class="label">Peak era</div><div class="value">${a.peakYear}</div></div>
         <div class="dossier-metric"><div class="label">Peak births</div><div class="value">${fmt(a.peakCount)}</div></div>
-        <div class="dossier-metric"><div class="label">Current vitality</div><div class="value">${dossier.vitality}</div></div>
-        <div class="dossier-metric"><div class="label">Peak generation</div><div class="value">${generationForYear(a.peakYear)}</div></div>
+        ${storyStrip ? "" : `<div class="dossier-metric"><div class="label">Current vitality</div><div class="value">${dossier.vitality}</div></div>
+        <div class="dossier-metric"><div class="label">Peak generation</div><div class="value">${generationForYear(a.peakYear)}</div></div>`}
       </div>
     </header>
+
+    ${storyStrip}
 
     ${nameAnswers}
 
@@ -327,6 +349,9 @@ export function renderFullPage(
     canonical: string;
     siteName?: string;
     relatedNames?: RelatedName[];
+    facts?: NameFacts | null;
+    variants?: VariantSibling[];
+    collections?: CollectionMembership[];
     discovery?: NameDiscoveryModule;
     peerNames?: YearTopRow[];
     yearTotals?: YearTotal[];
@@ -341,7 +366,12 @@ export function renderFullPage(
   const resolvedAnomaly = topAnomalyRaw
     ? { state: stateName(topAnomalyRaw.state), lq: topAnomalyRaw.location_quotient }
     : undefined;
-  const narrative = generateNameNarrative(record, classifyResult, resolvedAnomaly);
+  const narrative = augmentNarrativeWithFacts(
+    generateNameNarrative(record, classifyResult, resolvedAnomaly),
+    record,
+    classifyResult,
+    opts.facts,
+  );
   const desc = narrative.metaDescription;
   const title = narrative.metaTitle;
   const statusLabel = displayStatus(classifyResult, record.yM);
@@ -365,6 +395,7 @@ export function renderFullPage(
     title,
     description: desc,
     origin,
+    facts: opts.facts,
   });
   const faqStructuredData = buildFaqStructuredData(record.name, narrative);
   const structuredData = faqStructuredData
@@ -381,6 +412,9 @@ export function renderFullPage(
     currentPath: undefined,
     body: `<div id="view-name">${renderReportWithOptions(record, {
       relatedNames: opts.relatedNames,
+      facts: opts.facts,
+      variants: opts.variants,
+      collections: opts.collections,
       discovery: opts.discovery,
       peerNames: opts.peerNames,
       yearTotals: opts.yearTotals,
@@ -828,11 +862,229 @@ function renderNameAnswers(name: string, narrative: NameNarrative): string {
   if (answers.geography) {
     items.push(`<h3>Where is ${safeName} most common?</h3>\n  <p>${answers.geography}</p>`);
   }
+  if (answers.whereFrom) {
+    items.push(`<h3>Which state uses ${safeName} the most?</h3>\n  <p>${answers.whereFrom}</p>`);
+  }
+  if (answers.whenLast) {
+    items.push(`<h3>When was ${safeName} last recorded?</h3>\n  <p>${answers.whenLast}</p>`);
+  }
 
   return `<section class="name-answers" aria-labelledby="name-answers-heading">
   <h2 id="name-answers-heading">Quick answers about ${safeName}</h2>
   ${items.join("\n  ")}
 </section>`;
+}
+
+// ---------------------------------------------------------------------------
+// Story strip — the rare-name facts, above the fold.
+//
+// This is the page's differentiator. Generic meaning-and-origin prose is
+// available on a hundred other sites; the actual American usage record is not.
+// Every cell is a number or a date from the SSA file. Cells with no data are
+// omitted entirely rather than rendered as an em dash, because a grid of
+// placeholders reads as a broken page.
+// ---------------------------------------------------------------------------
+
+interface StoryCell {
+  label: string;
+  value: string;
+  detail?: string;
+}
+
+/** Ordinal-free rarity phrasing. The percentile is more legible than the rank
+ *  for rare names, where the rank itself is a meaningless five-digit number. */
+function rarityCell(facts: NameFacts, sexLabel: string): StoryCell | null {
+  if (!facts.rarity_total_sex) return null;
+  const pct = facts.rarity_pct_sex;
+  const value =
+    pct >= 99.9
+      ? `Rarer than 99.9% of ${sexLabel}' names`
+      : pct >= 50
+        ? `Rarer than ${pct.toFixed(1)}% of ${sexLabel}' names`
+        : `More common than ${(100 - pct).toFixed(1)}% of ${sexLabel}' names`;
+  return {
+    label: "Rarity",
+    value,
+    detail: `${labelBand(facts.rarity_band)} · rank ${fmt(facts.rarity_rank_sex)} of ${fmt(facts.rarity_total_sex)}`,
+  };
+}
+
+function labelBand(band: NameFacts["rarity_band"]): string {
+  return band.replace(/-/g, " ").replace(/^./, (c) => c.toUpperCase());
+}
+
+function storyCells(
+  record: NameRecord,
+  a: ClassifyResult,
+  facts: NameFacts,
+  sexLabel: string,
+): StoryCell[] {
+  const cells: StoryCell[] = [];
+  const rarity = rarityCell(facts, sexLabel);
+  if (rarity) cells.push(rarity);
+
+  cells.push({
+    label: "Peak year",
+    value: String(a.peakYear),
+    detail: `${fmt(a.peakCount)} births · ${generationForYear(a.peakYear)}`,
+  });
+
+  cells.push({
+    label: "First recorded",
+    value: String(facts.first_year),
+    detail: `${fmt(facts.years_recorded)} year${facts.years_recorded === 1 ? "" : "s"} on record`,
+  });
+
+  cells.push({
+    label: "Last recorded",
+    value: a.latestCount > 0 ? `Still recorded` : String(facts.last_year),
+    detail: a.latestCount > 0 ? `${fmt(a.latestCount)} in ${record.yM}` : `Nothing since`,
+  });
+
+  if (facts.top_state && facts.top_state_share) {
+    cells.push({
+      label: "Strongest state",
+      value: stateName(facts.top_state),
+      detail: `${Math.round(facts.top_state_share * 100)}% of recorded births`,
+    });
+  }
+
+  cells.push({ label: "Trajectory", value: displayStatus(a, record.yM), detail: trajectoryDetail(a) });
+
+  if (facts.gap_years_max >= 10 && facts.gap_start_year && facts.gap_end_year) {
+    cells.push({
+      label: "Dormancy",
+      value: `${facts.gap_years_max} years`,
+      detail: `Absent ${facts.gap_start_year}–${facts.gap_end_year}`,
+    });
+  }
+
+  if (facts.spike_year && facts.spike_ratio && facts.spike_ratio >= 2) {
+    cells.push({
+      label: "Inflection",
+      value: String(facts.spike_year),
+      detail: `${facts.spike_ratio.toFixed(1)}× its own baseline`,
+    });
+  }
+
+  if (facts.catalyst_year && facts.catalyst_title) {
+    cells.push({
+      label: "Catalyst",
+      value: String(facts.catalyst_year),
+      detail: facts.catalyst_title,
+    });
+  }
+
+  return cells;
+}
+
+function trajectoryDetail(a: ClassifyResult): string {
+  if (a.status === "rising" && a.growthX) return `${a.growthX}× the previous decade`;
+  if ((a.declinePct ?? 0) > 0) return `Down ${a.declinePct}% from peak`;
+  return `${fmt(a.totalCount)} recorded in total`;
+}
+
+/**
+ * One sentence assembled entirely from the numbers. Also feeds the meta
+ * description for rare names, where the rarity fact earns far more clicks than
+ * a generic peak sentence.
+ */
+export function storySentence(record: NameRecord, a: ClassifyResult, facts: NameFacts): string {
+  const name = record.name;
+  const parts: string[] = [];
+
+  if (facts.is_one_and_done) {
+    parts.push(
+      `${name} appears in exactly one year of the American birth record: ${facts.first_year}, when ${fmt(facts.max_annual)} were born`,
+    );
+  } else if (facts.is_sub_ten) {
+    parts.push(
+      `${name} has been recorded in ${fmt(facts.years_recorded)} of the ${fmt(record.yM - record.ym + 1)} years since ${record.ym}, never more than ${fmt(facts.max_annual)} in any single year`,
+    );
+  } else {
+    parts.push(
+      `${name} has been recorded in ${fmt(facts.years_recorded)} of the ${fmt(record.yM - record.ym + 1)} years since ${record.ym}, peaking at ${fmt(a.peakCount)} births in ${a.peakYear}`,
+    );
+  }
+
+  if (facts.comeback_gap && facts.comeback_year) {
+    parts.push(`it returned in ${facts.comeback_year} after ${facts.comeback_gap} years of silence`);
+  } else if (a.latestCount > 0) {
+    parts.push(`${fmt(a.latestCount)} were born in ${record.yM}`);
+  } else {
+    parts.push(`it was last recorded in ${facts.last_year}`);
+  }
+
+  if (facts.top_state && (facts.top_state_share ?? 0) >= 0.2) {
+    parts.push(
+      `${Math.round((facts.top_state_share ?? 0) * 100)}% of those births were in ${stateName(facts.top_state)}`,
+    );
+  }
+
+  return parts.join(", and ") + ".";
+}
+
+/** Collection chips. `limit` caps the strip copy; the explore rail shows all. */
+function renderCollectionLinks(
+  memberships: readonly CollectionMembership[],
+  limit = Infinity,
+): string {
+  const chips = memberships
+    .map((m) => ({ m, def: getCollection(m.slug) }))
+    .filter((x): x is { m: CollectionMembership; def: NonNullable<ReturnType<typeof getCollection>> } =>
+      Boolean(x.def),
+    )
+    // The collections where this name ranks highest are the most defensible
+    // claims about it, so they lead.
+    .sort((x, y) => x.m.rank_in - y.m.rank_in)
+    .slice(0, limit === Infinity ? undefined : limit)
+    .map(
+      ({ def }) => `<a href="/collections/${def.slug}/">${escape(def.title)}</a>`,
+    );
+  return chips.join("");
+}
+
+function renderSpellingRelatives(record: NameRecord, variants: readonly VariantSibling[]): string {
+  if (!variants.length) return "";
+  const links = variants
+    .slice(0, 5)
+    .map((v) => `<a href="/name/${encodeURIComponent(v.name)}/">${escape(v.name)}</a>`)
+    .join('<span class="sep"> · </span>');
+  return `<p class="story-relatives"><span class="label">Spelling relatives</span> ${links}</p>`;
+}
+
+function renderStoryStrip(
+  record: NameRecord,
+  a: ClassifyResult,
+  facts: NameFacts | null | undefined,
+  variants: readonly VariantSibling[],
+  memberships: readonly CollectionMembership[],
+  sexLabel: string,
+): string {
+  if (!facts) return "";
+  const cells = storyCells(record, a, facts, sexLabel);
+  if (!cells.length) return "";
+
+  const grid = cells
+    .map(
+      (c) => `<div class="story-fact">
+      <dt>${escape(c.label)}</dt>
+      <dd>${escape(c.value)}${c.detail ? `<span class="story-detail">${escape(c.detail)}</span>` : ""}</dd>
+    </div>`,
+    )
+    .join("");
+
+  const chips = renderCollectionLinks(memberships, 3);
+  const collections = chips
+    ? `<nav class="story-collections" aria-label="Collections containing ${escape(record.name)}">${chips}</nav>`
+    : "";
+
+  return `<section class="story-strip" aria-label="${escape(record.name)} at a glance">
+    <dl class="story-facts">${grid}</dl>
+    <p class="story-line">${escape(storySentence(record, a, facts))}</p>
+    ${renderSpellingRelatives(record, variants)}
+    ${collections}
+  </section>`;
 }
 
 function reportNumber(name: string, sex: string): string {
@@ -845,7 +1097,19 @@ function reportNumber(name: string, sex: string): string {
   return String(Math.abs(hash) % 100000).padStart(5, "0");
 }
 
-function editorialLink(a: ClassifyResult): [string, string] | null {
+function editorialLink(a: ClassifyResult, facts?: NameFacts | null): [string, string] | null {
+  // A precise cluster beats the generic hub: an extinct 1920s name belongs on
+  // /collections/lost-names-of-the-1920s/, not on /extinct with 500 others.
+  if (facts) {
+    if (facts.exclusive_state) {
+      const def = getCollection(`only-in-${stateName(facts.exclusive_state).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`);
+      if (def) return [def.title, `/collections/${def.slug}/`];
+    }
+    if (a.status === "extinct") {
+      const def = getCollection(`lost-names-of-the-${Math.floor(a.peakYear / 10) * 10}s`);
+      if (def) return [def.title, `/collections/${def.slug}/`];
+    }
+  }
   if (a.status === "rising") return ["Rising names", "/rising"];
   if (a.status === "extinct") return ["Extinct names", "/extinct"];
   if (a.status === "endangered") return ["Endangered names", "/endangered"];
@@ -855,7 +1119,12 @@ function editorialLink(a: ClassifyResult): [string, string] | null {
   return null;
 }
 
-function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
+function renderExploreLinks(
+  record: NameRecord,
+  a: ClassifyResult,
+  facts: NameFacts | null | undefined,
+  memberships: readonly CollectionMembership[],
+): string {
   const cohort: Partial<Record<Status, [string, string]>> = {
     extinct: ["More extinct names", "/extinct"],
     endangered: ["More endangered names", "/endangered"],
@@ -866,7 +1135,7 @@ function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   if (statusLink) {
     links.push(`<a href="${statusLink[1]}">${statusLink[0]}</a>`);
   }
-  const ed = editorialLink(a);
+  const ed = editorialLink(a, facts);
   if (ed && ed[1] !== (statusLink?.[1] ?? "")) {
     links.push(`<a href="${ed[1]}">${ed[0]}</a>`);
   }
@@ -877,7 +1146,11 @@ function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/">Names like ${escape(record.name)}</a>`);
   links.push(`<a href="/shadow/${encodeURIComponent(record.name)}/${record.yM}/?sex=${record.sex}">Meet your shadow</a>`);
 
-  return `<nav class="report-links" aria-label="Explore more name data">${links.join("")}</nav>`;
+  // Collection backlinks go last but are the most specific claims on the page,
+  // so they are never truncated here the way the strip's are.
+  const collectionLinks = renderCollectionLinks(memberships);
+
+  return `<nav class="report-links" aria-label="Explore more name data">${links.join("")}${collectionLinks}</nav>`;
 }
 
 function renderRelatedNames(relatedNames: RelatedName[]): string {
@@ -977,9 +1250,16 @@ function buildMetaDescription(record: NameRecord, a: ClassifyResult): string {
 function buildStructuredData(
   record: NameRecord,
   a: ClassifyResult,
-  opts: { canonical: string; title: string; description: string; origin: string },
+  opts: {
+    canonical: string;
+    title: string;
+    description: string;
+    origin: string;
+    facts?: NameFacts | null;
+  },
 ): object[] {
   const origin = opts.origin || opts.canonical;
+  const facts = opts.facts;
   return [
     {
       "@context": "https://schema.org",
@@ -1016,7 +1296,25 @@ function buildStructuredData(
           { "@type": "PropertyValue", name: "Peak count", value: a.peakCount },
           { "@type": "PropertyValue", name: "Latest count", value: a.latestCount },
           { "@type": "PropertyValue", name: "Vital status", value: a.status },
+          ...(facts
+            ? [
+                { "@type": "PropertyValue", name: "First recorded year", value: facts.first_year },
+                { "@type": "PropertyValue", name: "Last recorded year", value: facts.last_year },
+                {
+                  "@type": "PropertyValue",
+                  name: "Rarity percentile within sex",
+                  value: facts.rarity_pct_sex,
+                  description: "0 is the most common name recorded; 100 is the rarest.",
+                },
+              ]
+            : []),
+          ...(facts?.top_state
+            ? [{ "@type": "PropertyValue", name: "Strongest state", value: stateName(facts.top_state) }]
+            : []),
         ],
+        ...(facts?.top_state
+          ? { spatialCoverage: { "@type": "Place", name: stateName(facts.top_state) } }
+          : {}),
       },
     },
   ];
@@ -1031,6 +1329,48 @@ function stripTags(s: string): string {
 // FAQPage built from the same narrative.answers the page renders visibly in
 // renderNameAnswers(). Questions must match the on-page <h3>s exactly so the
 // structured data reflects content actually present on the page.
+/**
+ * Folds name_facts into the generated narrative: two extra Q&As, and — for
+ * genuinely rare names — a meta description that leads with the rarity fact.
+ * On a long-tail query "Marvel" is competing with a comic-book publisher, so
+ * the snippet has to say something only this dataset can say.
+ */
+function augmentNarrativeWithFacts(
+  narrative: NameNarrative,
+  record: NameRecord,
+  a: ClassifyResult,
+  facts: NameFacts | null | undefined,
+): NameNarrative {
+  if (!facts) return narrative;
+
+  const answers = { ...narrative.answers };
+
+  if (facts.top_state && facts.top_state_share) {
+    const share = Math.round(facts.top_state_share * 100);
+    answers.whereFrom =
+      `${stateName(facts.top_state)} accounts for ${share}% of every recorded ${record.name} birth` +
+      (facts.exclusive_state
+        ? `, effectively the only state where the name is used.`
+        : `, more than any other state.`);
+  }
+
+  answers.whenLast =
+    a.latestCount > 0
+      ? `${record.name} was recorded most recently in ${record.yM}, with ${fmt(a.latestCount)} births.`
+      : `${record.name} was last recorded in ${facts.last_year}. It has not appeared in the Social Security data since — meaning fewer than five American babies a year have been given the name.`;
+
+  let metaDescription = narrative.metaDescription;
+  if (facts.is_one_and_done) {
+    metaDescription = `${record.name} appears in exactly one year of American birth records: ${facts.first_year}. See the full Social Security history behind one of the rarest recorded names.`;
+  } else if (facts.is_sub_ten) {
+    metaDescription = `${record.name} has never been given to as many as ten American babies in a single year, yet appears across ${facts.years_recorded} years of Social Security records. See the full usage history.`;
+  } else if (facts.rarity_pct_sex >= 98 && facts.total_count < 100_000) {
+    metaDescription = `${record.name} is rarer than ${facts.rarity_pct_sex.toFixed(1)}% of recorded American names. Peak ${a.peakYear}, ${fmt(a.peakCount)} births. See the complete popularity history.`;
+  }
+
+  return { ...narrative, answers, metaDescription };
+}
+
 function buildFaqStructuredData(name: string, narrative: NameNarrative): object | null {
   const { answers } = narrative;
   const qa: { q: string; a: string }[] = [];
@@ -1039,6 +1379,11 @@ function buildFaqStructuredData(name: string, narrative: NameNarrative): object 
   if (answers.age) qa.push({ q: `How old is the typical ${name}?`, a: answers.age });
   qa.push({ q: `Is ${name} still popular?`, a: answers.trend });
   if (answers.geography) qa.push({ q: `Where is ${name} most common?`, a: answers.geography });
+  // These two mirror the <h3>s added by renderNameAnswers. The strings must
+  // stay byte-identical to the visible headings — a FAQPage whose questions do
+  // not appear on the page is a structured-data violation.
+  if (answers.whereFrom) qa.push({ q: `Which state uses ${name} the most?`, a: answers.whereFrom });
+  if (answers.whenLast) qa.push({ q: `When was ${name} last recorded?`, a: answers.whenLast });
   if (!qa.length) return null;
 
   return {

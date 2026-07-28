@@ -1,0 +1,213 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { onRequestGet as collectionGet } from "../apps/web/functions/collections/[slug]/index";
+import { onRequestGet as hubGet } from "../apps/web/functions/collections/index";
+import { getCollection, MIN_PUBLISHABLE_MEMBERS } from "../packages/shared/src/collections";
+import type { CollectionMemberRow } from "../packages/shared/src/schema";
+
+const SLUG = "one-year-wonders";
+
+function sparkBlob(seed: number): ArrayBuffer {
+  return Uint8Array.from({ length: 60 }, (_, i) => ((i + seed) % 59) + 1).buffer;
+}
+
+function member(name: string, i: number): CollectionMemberRow {
+  return {
+    name,
+    sex: "F",
+    rank_in: i + 1,
+    metric_label: `${40 - i} births, 19${48 + i}`,
+    metric_value: 40 - i,
+    peak_year: 1948 + i,
+    peak_count: 40 - i,
+    total_count: 40 - i,
+    latest_count: 0,
+    first_year: 1948 + i,
+    last_year: 1948 + i,
+    status: "extinct",
+    spark_blob: sparkBlob(i),
+  };
+}
+
+const MEMBERS = ["Bethzy", "Elzada", "Marvel", "Ottilie", "Zetta"].map(member);
+
+interface DbOptions {
+  members?: CollectionMemberRow[];
+  total?: number;
+  failMembers?: boolean;
+  summaries?: { slug: string; member_count: number; sample: string | null }[];
+}
+
+function fakeDb({ members = MEMBERS, total = members.length, failMembers = false, summaries }: DbOptions = {}) {
+  return {
+    prepare(sql: string) {
+      const stmt = {
+        bind: () => stmt,
+        async first<T>(): Promise<T | null> {
+          if (sql.includes("COUNT(*) AS n FROM name_collections")) return { n: total } as T;
+          if (sql.includes("FROM meta")) {
+            const key = sql.includes("?1") ? "" : "";
+            void key;
+            return { value: "1880" } as T;
+          }
+          return null;
+        },
+        async all<T>(): Promise<{ results: T[] }> {
+          if (sql.includes("FROM name_collections c")) {
+            if (failMembers) throw new Error("D1 unavailable");
+            return { results: members as unknown as T[] };
+          }
+          if (sql.includes("GROUP BY slug")) {
+            return { results: (summaries ?? []) as unknown as T[] };
+          }
+          return { results: [] };
+        },
+      };
+      return stmt;
+    },
+  };
+}
+
+function ctx(url: string, db: ReturnType<typeof fakeDb>, params: Record<string, string> = {}) {
+  return {
+    request: new Request(url),
+    env: { DB: db },
+    params,
+  } as never;
+}
+
+async function get(url: string, db = fakeDb(), slug = SLUG): Promise<Response> {
+  return (await collectionGet(ctx(url, db, { slug }))) as Response;
+}
+
+test("a known slug renders 200 with crawlable name links in the initial HTML", async () => {
+  const res = await get(`https://nobodynamed.com/collections/${SLUG}/`);
+  assert.equal(res.status, 200);
+  assert.match(res.headers.get("Content-Type") ?? "", /text\/html/);
+
+  const html = await res.text();
+  for (const row of MEMBERS) {
+    assert.ok(
+      html.includes(`href="/name/${row.name}/"`),
+      `${row.name} is missing a crawlable /name/ link`,
+    );
+  }
+  assert.ok(html.includes(getCollection(SLUG)!.seoTitle));
+  assert.ok(html.includes("<h1>Names That Appeared Once and Vanished</h1>"));
+});
+
+test("an unknown slug 404s and points at the index", async () => {
+  const res = await get("https://nobodynamed.com/collections/not-a-thing/", fakeDb(), "not-a-thing");
+  assert.equal(res.status, 404);
+  assert.match(await res.text(), /\/collections\//);
+});
+
+test("structured data carries a CollectionPage, an ItemList, and breadcrumbs", async () => {
+  const html = await (await get(`https://nobodynamed.com/collections/${SLUG}/`)).text();
+  const block = /<script type="application\/ld\+json">(.+?)<\/script>/s.exec(html);
+  assert.ok(block, "no JSON-LD emitted");
+  const data = JSON.parse(block[1]!.replace(/\\u003c/g, "<"));
+  assert.ok(Array.isArray(data));
+
+  const collectionPage = data.find((d: { "@type": string }) => d["@type"] === "CollectionPage");
+  assert.ok(collectionPage, "missing CollectionPage");
+  assert.equal(collectionPage.mainEntity["@type"], "ItemList");
+  assert.equal(collectionPage.mainEntity.numberOfItems, MEMBERS.length);
+  assert.equal(collectionPage.mainEntity.itemListElement.length, MEMBERS.length);
+  assert.match(collectionPage.mainEntity.itemListElement[0].url, /\/name\/Bethzy\//);
+
+  const crumbs = data.find((d: { "@type": string }) => d["@type"] === "BreadcrumbList");
+  assert.ok(crumbs, "missing BreadcrumbList");
+  assert.equal(crumbs.itemListElement.length, 2);
+});
+
+test("page one is indexable; later pages are noindex,follow", async () => {
+  const first = await (await get(`https://nobodynamed.com/collections/${SLUG}/`)).text();
+  assert.ok(!first.includes('name="robots"'), "page 1 must not be noindexed");
+
+  const many = Array.from({ length: 100 }, (_, i) => member(`N${i}`, i));
+  const second = await get(`https://nobodynamed.com/collections/${SLUG}/?page=2`, fakeDb({ members: many, total: 250 }));
+  const html = await second.text();
+  assert.match(html, /<meta name="robots" content="noindex,follow">/);
+  assert.match(html, /<link rel="prev"/);
+  assert.match(html, /<link rel="next"/);
+});
+
+test("the canonical of a paginated page points at itself, not at page one", async () => {
+  const many = Array.from({ length: 100 }, (_, i) => member(`N${i}`, i));
+  const res = await get(`https://nobodynamed.com/collections/${SLUG}/?page=2`, fakeDb({ members: many, total: 250 }));
+  assert.match(res.headers.get("Link") ?? "", /\?page=2>; rel="canonical"/);
+  assert.match(await res.text(), /<link rel="canonical" href="[^"]*\?page=2">/);
+});
+
+test("a page past the end 404s rather than rendering an empty table", async () => {
+  const res = await get(`https://nobodynamed.com/collections/${SLUG}/?page=9`, fakeDb({ members: [], total: 5 }));
+  assert.equal(res.status, 404);
+});
+
+test("an empty collection still renders, with an explanation", async () => {
+  const res = await get(`https://nobodynamed.com/collections/${SLUG}/`, fakeDb({ members: [], total: 0 }));
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /No names currently qualify/);
+  assert.ok(!html.includes("<tbody></tbody>"), "should not emit an empty table shell");
+});
+
+test("cache headers are keyed so an ingest does not needlessly bust collections", async () => {
+  const res = await get(`https://nobodynamed.com/collections/${SLUG}/`);
+  assert.match(res.headers.get("Cache-Control") ?? "", /s-maxage=86400/);
+  assert.match(res.headers.get("ETag") ?? "", new RegExp(`coll-${SLUG}-1-`));
+});
+
+test("related collections are rendered as links and all resolve", async () => {
+  const html = await (await get(`https://nobodynamed.com/collections/${SLUG}/`)).text();
+  for (const slug of getCollection(SLUG)!.related) {
+    assert.ok(html.includes(`href="/collections/${slug}/"`), `missing related link to ${slug}`);
+  }
+});
+
+test("a D1 failure surfaces rather than rendering a silently empty page", async () => {
+  await assert.rejects(() => get(`https://nobodynamed.com/collections/${SLUG}/`, fakeDb({ failMembers: true })));
+});
+
+test("HEAD returns the GET headers with no body", async () => {
+  const { onRequestHead } = await import("../apps/web/functions/collections/[slug]/index");
+  const res = (await onRequestHead(
+    ctx(`https://nobodynamed.com/collections/${SLUG}/`, fakeDb(), { slug: SLUG }),
+  )) as Response;
+  assert.equal(res.status, 200);
+  assert.equal(await res.text(), "");
+  assert.match(res.headers.get("ETag") ?? "", /coll-/);
+});
+
+// ---------------------------------------------------------------------------
+// Hub
+// ---------------------------------------------------------------------------
+
+test("the hub lists only collections that clear the publish threshold", async () => {
+  const db = fakeDb({
+    summaries: [
+      { slug: "one-year-wonders", member_count: 200, sample: "Bethzy,Elzada,Marvel" },
+      { slug: "only-in-vermont", member_count: 12, sample: "Elzada" },
+      { slug: "only-in-alaska", member_count: MIN_PUBLISHABLE_MEMBERS - 1, sample: "Tiny" },
+    ],
+  });
+  const res = (await hubGet(ctx("https://nobodynamed.com/collections/", db))) as Response;
+  assert.equal(res.status, 200);
+
+  const html = await res.text();
+  assert.ok(html.includes('href="/collections/one-year-wonders/"'));
+  assert.ok(html.includes('href="/collections/only-in-vermont/"'));
+  assert.ok(
+    !html.includes('href="/collections/only-in-alaska/"'),
+    "a collection below the threshold must not be advertised",
+  );
+  assert.ok(html.includes("Bethzy"), "sample names should appear on the card");
+});
+
+test("the hub degrades to an explanation when facts have not been seeded", async () => {
+  const res = (await hubGet(ctx("https://nobodynamed.com/collections/", fakeDb({ summaries: [] })))) as Response;
+  assert.equal(res.status, 200);
+  assert.match(await res.text(), /build-name-facts/);
+});

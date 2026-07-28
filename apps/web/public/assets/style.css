@@ -2484,3 +2484,124 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 /* Honeypot: removed from layout, tab order and the accessibility tree, but
    still filled in by form bots that parse the markup rather than render it. */
 .newsletter-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+/* ── Story strip ────────────────────────────────────────────────────────────
+   The rare-name facts, directly under the name-page header. Uses a <dl> so the
+   label/value pairing survives with styles off and reads correctly to a screen
+   reader. Cells are only emitted when they have data (see renderStoryStrip),
+   so the grid never contains placeholder dashes and auto-fit is safe. */
+.story-strip {
+  margin-top: clamp(1.1rem, 3vw, 1.6rem);
+  padding: clamp(0.9rem, 2.5vw, 1.35rem);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.story-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+  gap: 0.85rem 1.25rem;
+  margin: 0;
+}
+.story-fact dt {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+.story-fact dd {
+  margin: 0.2rem 0 0;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.story-detail {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+.story-line {
+  margin: 1.1rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+.story-relatives {
+  margin: 0.6rem 0 0;
+  font-size: 0.9rem;
+}
+.story-relatives .label {
+  margin-right: 0.4rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+.story-relatives .sep { color: var(--brand-faded-contrast); }
+.story-collections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.85rem;
+}
+.story-collections a {
+  padding: 0.28rem 0.6rem;
+  background: var(--surface-2);
+  border-radius: 999px;
+  color: var(--accent-dark);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+.story-collections a:hover { background: var(--paper-deep); color: var(--accent); }
+
+/* ── Collection pages ─────────────────────────────────────────────────────── */
+/* Table headers that are visual noise but still need to be announced. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.breadcrumb {
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.collection-table { margin-top: clamp(1.2rem, 3vw, 1.8rem); }
+/* Collection tables carry more columns than the landing hubs, so they scroll
+   inside their own container rather than forcing the page to scroll sideways. */
+.collection-table .table { display: block; overflow-x: auto; white-space: nowrap; }
+.collection-body { margin-top: clamp(1.5rem, 4vw, 2.2rem); max-width: 62ch; }
+.collection-body p + p { margin-top: 0.9rem; }
+.collection-group + .collection-group { margin-top: clamp(1.8rem, 4vw, 2.6rem); }
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.1rem;
+}
+.empty-state {
+  padding: 1.2rem;
+  background: var(--surface);
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+}

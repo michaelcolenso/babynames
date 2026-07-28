@@ -29,7 +29,7 @@
     "build-shadow-matches": "tsx scripts/build-shadow-matches.ts",
     "seed-shadow-matches": "tsx scripts/seed-shadow-matches.ts",
     "seed-shadow-matches:local": "tsx scripts/seed-shadow-matches.ts --local",
-    "test": "tsc -b apps/ingest-worker packages/shared && npm run test:mini-sparkline && npm run test:dominant-name-sparks && npm run test:editorial && npm run test:variant-key && npm run test:facts-compute && npm run test:collections && npm run test:name-facts-build && npm run test:editorial-growth && npm run verify-diaspora && npm run verify-strongholds",
+    "test": "tsc -b apps/ingest-worker packages/shared && npm run test:mini-sparkline && npm run test:dominant-name-sparks && npm run test:editorial && npm run test:variant-key && npm run test:facts-compute && npm run test:collections && npm run test:name-facts-build && npm run test:collections-pages && npm run test:story-strip && npm run test:editorial-growth && npm run verify-diaspora && npm run verify-strongholds",
     "test:mini-sparkline": "tsx --test scripts/mini-sparkline.test.ts",
     "test:dominant-name-sparks": "tsx --test scripts/dominant-name-sparks.test.ts",
     "test:editorial": "tsx --test scripts/editorial-pages.test.ts",
@@ -49,7 +49,9 @@
     "seed-name-facts": "tsx scripts/seed-name-facts.ts",
     "seed-name-facts:local": "tsx scripts/seed-name-facts.ts --local",
     "verify-name-facts": "tsx scripts/verify-name-facts.ts",
-    "test:name-facts-build": "tsx --test scripts/name-facts-build.test.ts"
+    "test:name-facts-build": "tsx --test scripts/name-facts-build.test.ts",
+    "test:collections-pages": "tsx --test scripts/collections-pages.test.ts",
+    "test:story-strip": "tsx --test scripts/story-strip.test.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260621.1",
