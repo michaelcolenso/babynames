@@ -34,12 +34,15 @@ function facts(overrides: Partial<NameFacts> = {}): NameFacts {
     gap_start_year: null,
     gap_end_year: null,
     is_one_and_done: 0,
+    is_current_debut: 0,
     is_sub_ten: 0,
     is_verge: 0,
     spike_year: null,
     spike_ratio: null,
     spike_baseline: null,
     spike_post_ratio: null,
+    spike_fellback_year: null,
+    spike_fellback_ratio: null,
     comeback_gap: null,
     comeback_year: null,
     comeback_strength: null,
@@ -144,6 +147,9 @@ test("one-year-wonders takes only single-year names, biggest year first", () => 
     facts({ name: "Small", is_one_and_done: 1, max_annual: 6, first_year: 1931 }),
     facts({ name: "Large", is_one_and_done: 1, max_annual: 40, first_year: 1948 }),
     facts({ name: "Persistent", is_one_and_done: 0, max_annual: 40 }),
+    // Debuted in the corpus's latest year: one recorded year, but it has not
+    // vanished — there has been no year since in which it could.
+    facts({ name: "Debut", is_one_and_done: 1, is_current_debut: 1, max_annual: 90, first_year: 2025 }),
   ]);
   assert.deepEqual(picked.map((p) => p.row.name), ["Large", "Small"]);
   assert.equal(picked[0]!.metricLabel, "40 births, 1948");
@@ -163,13 +169,19 @@ test("state collections only take names whose exclusivity cleared the floor", ()
 test("one-hit-spikes requires the spike to have fallen back", () => {
   const def = getCollection("one-hit-spikes")!;
   const picked = def.select([
-    facts({ name: "OneHit", spike_year: 1962, spike_ratio: 8, spike_post_ratio: 0.2 }),
-    // A sustained step up: the jump is real, the fall never happened.
-    facts({ name: "SteppedUp", spike_year: 1960, spike_ratio: 5, spike_post_ratio: 0.98 }),
+    facts({ name: "OneHit", spike_year: 1962, spike_ratio: 8, spike_fellback_year: 1962, spike_fellback_ratio: 8 }),
+    // A sustained step up: the jump is real, the fall never happened, so there
+    // is no fell-back spike to claim.
+    facts({ name: "SteppedUp", spike_year: 1960, spike_ratio: 5, spike_fellback_year: null }),
     // Too recent to judge; the collection must not claim it fell back.
-    facts({ name: "TooRecent", spike_year: 2024, spike_ratio: 9, spike_post_ratio: null }),
+    facts({ name: "TooRecent", spike_year: 2024, spike_ratio: 9, spike_fellback_year: null }),
+    // Strongest inflection is a permanent step; the transient one is smaller
+    // and is what the collection must describe.
+    facts({ name: "StepThenSpike", spike_year: 1955, spike_ratio: 20, spike_fellback_year: 1990, spike_fellback_ratio: 4.2 }),
   ]);
-  assert.deepEqual(picked.map((p) => p.row.name), ["OneHit"]);
+  assert.deepEqual(picked.map((p) => p.row.name), ["OneHit", "StepThenSpike"]);
+  // The label describes the event that fell back, not the larger inflection.
+  assert.equal(picked[1]!.metricLabel, "4.2× baseline in 1990");
 });
 
 test("lost-names is scoped to its own decade and to names actually gone", () => {

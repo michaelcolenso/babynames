@@ -106,41 +106,44 @@ test("comeback rejects a short dormancy", () => {
 
 test("spike: one dramatic year against its own baseline", () => {
   const s = series([...flat(1955, 1961, 20), [1962, 400], ...flat(1963, 1970, 30)]);
-  const spike = computeSpike(s);
-  assert.ok(spike);
-  assert.equal(spike.year, 1962);
-  assert.ok(spike.ratio >= SPIKE_DRAMATIC_RATIO, `ratio was ${spike.ratio}`);
-  assert.equal(spike.baseline, 20);
+  const { strongest, fellBack } = computeSpike(s, YM);
+  assert.ok(strongest);
+  assert.equal(strongest.year, 1962);
+  assert.ok(strongest.ratio >= SPIKE_DRAMATIC_RATIO, `ratio was ${strongest.ratio}`);
+  assert.equal(strongest.baseline, 20);
+  // Here the same event is both, which is the common case.
+  assert.equal(fellBack?.year, 1962);
 });
 
 test("spike ignores tiny counts so noise cannot fake a jump", () => {
   // 4 births against a baseline of 1 would be a 4x ratio without the floor.
-  assert.equal(computeSpike(series([[1900, 1], [1901, 1], [1902, 1], [1903, 4]])), null);
+  const { strongest } = computeSpike(series([[1900, 1], [1901, 1], [1902, 1], [1903, 4]]), YM);
+  assert.equal(strongest, null);
 });
 
 test("a steadily popular name registers no dramatic spike", () => {
-  const spike = computeSpike(series(flat(1950, 2000, 500)));
-  assert.ok(spike);
-  assert.ok(spike.ratio < SPIKE_DRAMATIC_RATIO, `ratio was ${spike.ratio}`);
+  const { strongest } = computeSpike(series(flat(1950, 2000, 500)), YM);
+  assert.ok(strongest);
+  assert.ok(strongest.ratio < SPIKE_DRAMATIC_RATIO, `ratio was ${strongest.ratio}`);
 });
 
 test("a sustained step up is not a one-hit spike", () => {
   // 20 a year, then 100 a year forever. The jump is real (5x) but the name
   // never came back down, so it must not read as a spike that fell back.
   const step = computeSpike(series([...flat(1950, 1959, 20), ...flat(1960, 1990, 100)]), YM);
-  assert.ok(step);
-  assert.equal(step.year, 1960);
-  assert.ok(step.ratio >= SPIKE_DRAMATIC_RATIO);
+  assert.ok(step.strongest);
+  assert.equal(step.strongest.year, 1960);
+  assert.ok(step.strongest.ratio >= SPIKE_DRAMATIC_RATIO);
   assert.ok(
-    (step.postRatio ?? 0) > SPIKE_FELL_BACK_RATIO,
-    `sustained rise reported postRatio ${step.postRatio}`,
+    (step.strongest.postRatio ?? 0) > SPIKE_FELL_BACK_RATIO,
+    `sustained rise reported postRatio ${step.strongest.postRatio}`,
   );
+  assert.equal(step.fellBack, null, "a sustained rise has no fell-back spike");
 
   // A genuine one-year event falls back hard.
   const oneHit = computeSpike(series([...flat(1955, 1961, 20), [1962, 400], ...flat(1963, 1970, 25)]), YM);
-  assert.ok(oneHit);
-  assert.equal(oneHit.year, 1962);
-  assert.ok((oneHit.postRatio ?? 1) <= SPIKE_FELL_BACK_RATIO, `postRatio was ${oneHit.postRatio}`);
+  assert.equal(oneHit.fellBack?.year, 1962);
+  assert.ok((oneHit.fellBack?.postRatio ?? 1) <= SPIKE_FELL_BACK_RATIO);
 });
 
 test("a transient spike is not hidden behind a larger permanent step up", () => {
@@ -153,18 +156,24 @@ test("a transient spike is not hidden behind a larger permanent step up", () => 
     [1990, 420],
     ...flat(1991, 2000, 100),
   ]);
-  const spike = computeSpike(s, YM);
-  assert.ok(spike);
-  assert.equal(spike.year, 1990, `selected ${spike.year} instead of the transient spike`);
-  assert.ok((spike.postRatio ?? 1) <= SPIKE_FELL_BACK_RATIO);
+  const { strongest, fellBack } = computeSpike(s, YM);
+  // The collection gets the transient spike…
+  assert.equal(fellBack?.year, 1990, `fellBack picked ${fellBack?.year}`);
+  assert.ok((fellBack?.postRatio ?? 1) <= SPIKE_FELL_BACK_RATIO);
+  // …and the name page still reports the larger inflection, which is what the
+  // curve actually shows. Collapsing these into one field made one of the two
+  // consumers wrong no matter which was chosen.
+  assert.equal(strongest?.year, 1955, `strongest picked ${strongest?.year}`);
+  assert.ok((strongest?.ratio ?? 0) > (fellBack?.ratio ?? 0));
 });
 
 test("a spike too recent to judge reports an unknown post-ratio", () => {
   // Nothing after it yet, so whether it fell back is not knowable — and the
   // collection must not claim that it did.
-  const recent = computeSpike(series([...flat(YM - 5, YM - 1, 20), [YM, 400]]), YM);
-  assert.ok(recent);
-  assert.equal(recent.postRatio, null);
+  const { strongest, fellBack } = computeSpike(series([...flat(YM - 5, YM - 1, 20), [YM, 400]]), YM);
+  assert.ok(strongest);
+  assert.equal(strongest.postRatio, null);
+  assert.equal(fellBack, null, "an unjudgeable spike must not be claimed to have fallen back");
 });
 
 test("verge: single digits now, after a real peak, falling fast", () => {

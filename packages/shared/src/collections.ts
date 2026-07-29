@@ -126,7 +126,10 @@ const BASE: readonly CollectionDef[] = [
     select: (facts) =>
       take(
         facts,
-        (f) => f.is_one_and_done === 1,
+        // A name whose single year is the corpus's latest has debuted, not
+        // vanished — 61 of the top 200 were current-year debuts, each carrying
+        // the claim that it was used fewer than five times "every year since".
+        (f) => f.is_one_and_done === 1 && f.is_current_debut === 0,
         (a, b) => b.max_annual - a.max_annual || a.name.localeCompare(b.name),
         (f) => `${f.max_annual} births, ${f.first_year}`,
         (f) => f.max_annual,
@@ -180,14 +183,15 @@ const BASE: readonly CollectionDef[] = [
         // The fall-back requirement is what makes the collection's claim true:
         // a step change from 20 a year to 100 a year forever is a 5x jump but
         // is not a name that "returned to something like its old level".
-        (f) =>
-          (f.spike_ratio ?? 0) >= SPIKE_DRAMATIC_RATIO &&
-          f.spike_year !== null &&
-          f.spike_post_ratio !== null &&
-          f.spike_post_ratio <= SPIKE_FELL_BACK_RATIO,
-        (a, b) => (b.spike_ratio ?? 0) - (a.spike_ratio ?? 0) || a.name.localeCompare(b.name),
-        (f) => `${(f.spike_ratio ?? 0).toFixed(1)}× baseline in ${f.spike_year}`,
-        (f) => f.spike_ratio ?? 0,
+        // Reads the fell-back spike, not the strongest one. For a name that
+        // steps up permanently and later spikes transiently they are different
+        // events, and only the latter can be described as returning to baseline.
+        (f) => f.spike_fellback_year !== null && (f.spike_fellback_ratio ?? 0) >= SPIKE_DRAMATIC_RATIO,
+        (a, b) =>
+          (b.spike_fellback_ratio ?? 0) - (a.spike_fellback_ratio ?? 0) ||
+          a.name.localeCompare(b.name),
+        (f) => `${(f.spike_fellback_ratio ?? 0).toFixed(1)}× baseline in ${f.spike_fellback_year}`,
+        (f) => f.spike_fellback_ratio ?? 0,
         DEFAULT_MAX_MEMBERS,
       ),
   },

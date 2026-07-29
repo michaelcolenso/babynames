@@ -44,6 +44,9 @@ CREATE TABLE IF NOT EXISTS name_facts (
   gap_start_year      INTEGER,
   gap_end_year        INTEGER,
   is_one_and_done     INTEGER NOT NULL DEFAULT 0,
+  -- First (and so far only) appearance is the corpus's latest year. Such a name
+  -- has debuted, not vanished, and cannot yet be called a one-year wonder.
+  is_current_debut    INTEGER NOT NULL DEFAULT 0,
   is_sub_ten          INTEGER NOT NULL DEFAULT 0,
   is_verge            INTEGER NOT NULL DEFAULT 0,
 
@@ -54,6 +57,11 @@ CREATE TABLE IF NOT EXISTS name_facts (
   -- Post-spike level as a fraction of the spike year. NULL when the spike is
   -- too recent to judge. A sustained step up is not a one-hit spike.
   spike_post_ratio    REAL,
+  -- The strongest spike that also fell back, which is often a different and
+  -- smaller event than spike_year above. The name page reports the strongest
+  -- inflection of any shape; only the collection needs one that came back down.
+  spike_fellback_year  INTEGER,
+  spike_fellback_ratio REAL,
 
   -- Revival after a long dormancy.
   comeback_gap        INTEGER,

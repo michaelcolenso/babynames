@@ -272,6 +272,8 @@ export interface NameFacts {
   gap_start_year: number | null;
   gap_end_year: number | null;
   is_one_and_done: 0 | 1;
+  /** The one recorded year is the corpus's latest: a debut, not a disappearance. */
+  is_current_debut: 0 | 1;
   is_sub_ten: 0 | 1;
   is_verge: 0 | 1;
 
@@ -281,6 +283,9 @@ export interface NameFacts {
   spike_baseline: number | null;
   /** Post-spike level as a fraction of the spike year; null when unknowable. */
   spike_post_ratio: number | null;
+  /** Strongest spike that also fell back — often a different, smaller event. */
+  spike_fellback_year: number | null;
+  spike_fellback_ratio: number | null;
 
   // Revival after a long dormancy.
   comeback_gap: number | null;

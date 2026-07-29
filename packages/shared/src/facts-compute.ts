@@ -78,6 +78,21 @@ export interface SpikeResult {
   postRatio: number | null;
 }
 
+/**
+ * Two spikes, because the two consumers want different things and collapsing
+ * them into one field made each wrong in turn.
+ *
+ * `strongest` is the most dramatic jump of any shape — what the name page's
+ * "Inflection" cell reports. `fellBack` is the most dramatic one that also came
+ * back down, the only kind one-hit-spikes can honestly claim. They are often
+ * the same event; when a name makes a large permanent step and later a smaller
+ * transient one, they are not.
+ */
+export interface SpikeFacts {
+  strongest: SpikeResult | null;
+  fellBack: SpikeResult | null;
+}
+
 export interface ComebackResult {
   gap: number;
   year: number;
@@ -102,7 +117,7 @@ export interface SeriesFacts {
   spanYears: number;
   maxAnnual: number;
   gap: GapResult | null;
-  spike: SpikeResult | null;
+  spike: SpikeFacts;
   comeback: ComebackResult | null;
   isOneAndDone: boolean;
   isSubTen: boolean;
@@ -156,13 +171,12 @@ export function computeLongestGap(series: Record<number, number>): GapResult | n
  * was steadily popular does not register a spike just for wobbling, and a name
  * with no prior usage is not counted at all.
  */
-export function computeSpike(series: Record<number, number>, yM?: number): SpikeResult | null {
+export function computeSpike(series: Record<number, number>, yM?: number): SpikeFacts {
   const lastYear = yM ?? Math.max(...years(series), 0);
-  // Two candidates are tracked. `best` is the most dramatic jump of any shape,
-  // which is what the name page's "Inflection" cell reports. `bestFellBack` is
-  // the most dramatic one that also came back down, which is the only kind the
-  // one-hit-spikes collection can honestly claim. Keeping only the former would
-  // lose a genuine transient spike behind a larger permanent step up.
+  // Both are returned. Returning only one made the other consumer wrong:
+  // keeping the strongest lost genuine transient spikes behind a permanent step
+  // up, and preferring the fell-back one put a smaller event in the name page's
+  // "Inflection" cell than the curve actually shows.
   let best: SpikeResult | null = null;
   let bestFellBack: SpikeResult | null = null;
   for (const y of years(series)) {
@@ -205,10 +219,7 @@ export function computeSpike(series: Record<number, number>, yM?: number): Spike
       bestFellBack = candidate;
     }
   }
-  // Prefer a spike that demonstrably fell back; it satisfies both consumers.
-  // Otherwise report the largest jump, which the collection filter will reject
-  // on its post-ratio.
-  return bestFellBack ?? best;
+  return { strongest: best, fellBack: bestFellBack };
 }
 
 /** Every run of zero years strictly inside the recorded span, longest first. */
