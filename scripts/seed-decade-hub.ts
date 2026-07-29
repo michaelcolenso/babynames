@@ -54,6 +54,34 @@ async function main() {
     `artifact:    ${decade} ${profile.sourceVersion} generated ${profile.generatedAt} (${payload.length} bytes)`,
   );
 
+  // Refuse to downgrade. `resolveSource()` deliberately falls back to the
+  // frozen 2017 shards when D1 credentials and both zip sources are all
+  // unavailable, so an offline build leaves a stale artifact on disk that looks
+  // exactly like a fresh one. Without this check, seeding it would quietly
+  // replace a newer production row with a shard payload the guide says must
+  // never ship.
+  if (before) {
+    const vintage = (v: string) => Number(/(\d{4})$/.exec(v)?.[1] ?? NaN);
+    const artifactYear = vintage(profile.sourceVersion);
+    const liveYear = vintage(before.source_version);
+    if (!Number.isFinite(artifactYear) || !Number.isFinite(liveYear)) {
+      throw new Error(
+        `cannot compare vintages (artifact ${profile.sourceVersion}, live ${before.source_version}); rebuild or seed by hand`,
+      );
+    }
+    if (artifactYear < liveYear) {
+      throw new Error(
+        `refusing to downgrade ${decade}: artifact is ${profile.sourceVersion} but the live row is ${before.source_version}. ` +
+          "Rebuild with `--source=d1` (or a current SSA zip) — an offline build falls back to the 2017 shards.",
+      );
+    }
+    if (artifactYear === liveYear && profile.generatedAt < before.generated_at) {
+      console.error(
+        `note: same vintage as the live row, but this artifact is older (${profile.generatedAt} < ${before.generated_at}).`,
+      );
+    }
+  }
+
   if (!apply) {
     console.error("\ndry run — pass --apply to write this row.");
     return;

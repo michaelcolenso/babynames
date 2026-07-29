@@ -225,6 +225,13 @@ export async function d1Query<Row>(sql: string, params: string[] = []): Promise<
   return body.result?.[0]?.results ?? [];
 }
 
+/** meta.data_version — a UUID the ingest rewrites on every staging->live swap. */
+export async function readDataVersion(): Promise<string> {
+  const [row] = await d1Query<{ value: string }>("SELECT value FROM meta WHERE key = 'data_version'");
+  if (!row?.value) throw new Error("D1 meta.data_version is missing; refusing to read a database of unknown vintage");
+  return row.value;
+}
+
 /**
  * Loads every (name, sex) series from the live D1 database.
  *
@@ -233,6 +240,14 @@ export async function d1Query<Row>(sql: string, params: string[] = []): Promise<
  * range rather than LIMIT/OFFSET so each request reads only its own slice.
  */
 export async function loadD1Source(): Promise<LoadedSource> {
+  // The scan spans many requests over several minutes, and the annual ingest
+  // finalizes by renaming names_staging -> names in one transaction, which
+  // regenerates ids. A swap mid-scan would silently tear the read: early id
+  // ranges from the old table, later ones from the new, dropping or
+  // duplicating names in a way the year_totals check cannot catch. meta's
+  // data_version UUID changes on every finalize, so bracket the scan with it.
+  const dataVersionBefore = await readDataVersion();
+
   const [bounds] = await d1Query<{ min_id: number; max_id: number; min_year: number; max_year: number }>(
     "SELECT MIN(id) AS min_id, MAX(id) AS max_id, (SELECT MIN(year) FROM name_years) AS min_year, (SELECT MAX(year) FROM name_years) AS max_year FROM names",
   );
@@ -263,6 +278,14 @@ export async function loadD1Source(): Promise<LoadedSource> {
     console.error(`  d1: ids ${lo}–${hi} → ${records.length} records so far`);
   }
   if (!records.length) throw new Error("no (name, sex) records loaded from D1");
+
+  const dataVersionAfter = await readDataVersion();
+  if (dataVersionAfter !== dataVersionBefore) {
+    throw new Error(
+      `D1 data_version changed mid-scan (${dataVersionBefore} -> ${dataVersionAfter}): an ingest finalized while paging, ` +
+        "so this read may be torn across two vintages. Re-run the build.",
+    );
+  }
 
   // internal consistency: per-year series sums must match the year_totals table
   const totals = await d1Query<{ year: number; sex: string; total: number }>("SELECT year, sex, total FROM year_totals");
