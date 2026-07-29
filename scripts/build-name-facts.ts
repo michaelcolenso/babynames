@@ -363,11 +363,17 @@ function memberTuple(m: CollectionMemberInsert): string {
 export function corpusFingerprint(rows: readonly NameFacts[]): string {
   let maxYear = 0;
   let totalBirths = 0;
+  let withGeography = 0;
   for (const r of rows) {
     if (r.last_year > maxYear) maxYear = r.last_year;
     totalBirths += r.total_count;
+    if (r.top_state) withGeography++;
   }
-  return `ssa:${maxYear}:${totalBirths}`;
+  // The geography marker matters as much as the national numbers: a --no-state
+  // build produces a complete-looking seed in which every geographic fact is
+  // null and every only-in-* membership is absent. Without this the national
+  // figures still match and nothing notices the feature has been removed.
+  return `ssa:${maxYear}:${totalBirths}:geo=${withGeography > 0 ? "yes" : "no"}`;
 }
 
 export function emitSql(
@@ -528,6 +534,17 @@ async function main(): Promise<void> {
   );
   console.error(`Catalysts: ${catalysts.size} (name,sex) pairs`);
 
+  // --no-state is a local convenience. Combined with a real data version it
+  // would emit a full production seed with the geography silently stripped, so
+  // the two are mutually exclusive; the fingerprint records the choice as well.
+  if (flag("no-state") && !/^(local|fixture|test)/i.test(dataVersion)) {
+    console.error(
+      `--no-state builds omit every geographic fact and all only-in-* collections.\n` +
+        `Refusing to stamp one with --data-version=${dataVersion}. Use a data version\n` +
+        `beginning "local" for throwaway builds, or drop --no-state.`,
+    );
+    process.exit(2);
+  }
   const stateData = flag("no-state")
     ? undefined
     : accumulateStateTotals(await fetchZip(STATE_URL, arg("state-zip"), "state"));

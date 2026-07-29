@@ -3,18 +3,21 @@ import test from "node:test";
 
 import { variantBase, variantKey, VARIANT_STEPS, VARIANT_KEY_VERSION } from "../packages/shared/src/variant-key";
 
-// Families that must share a key. These are the acceptance criteria for the
-// "spelling relatives" rail on name pages — if one of these splits, the rail
-// silently loses its most useful entries.
+// Families that must share a key: the acceptance criteria for the "spelling
+// relatives" rail. These are pure orthographic variants — one sound spelled two
+// ways. Families that differ by an INSERTED vowel (Caitlin/Katelyn, Aiden/Aidan)
+// are deliberately absent: no deterministic rule merges those without also
+// merging Colleen with Kaylin, and a wrong relative is worse than a missing one.
 const FAMILIES: Record<string, string[]> = {
-  aiden: ["Aiden", "Ayden", "Aidan", "Aden", "Aaden"],
-  caitlin: ["Caitlin", "Kaitlyn", "Katelyn", "Katelynn", "Caitlyn"],
   sarah: ["Sarah", "Sara"],
   jaxon: ["Jaxon", "Jackson", "Jaxson"],
   sophia: ["Sophia", "Sofia"],
   hannah: ["Hannah", "Hanna", "Hana"],
   nicholas: ["Nicholas", "Nikolas"],
   chris: ["Chris", "Kris"],
+  aiden: ["Aiden", "Ayden"],
+  addilyn: ["Addilyn", "Adilyn", "Addilynn"],
+  caitlin: ["Caitlin", "Kaitlyn", "Caitlyn"],
 };
 
 test("variant families collapse to one key", () => {
@@ -38,6 +41,14 @@ const MUST_NOT_MERGE: [string, string][] = [
   ["Lee", "Leo"],
   ["Ella", "Ollie"],
   ["Ian", "Ann"],
+  // Every one of these was merged by the consonant-skeleton key this replaced,
+  // measured against the real SSA corpus. They are the reason it was replaced.
+  ["Colleen", "Kaylin"],
+  ["Michelle", "Makayla"],
+  ["Michelle", "Michaela"],
+  ["Barney", "Berania"],
+  ["Caelan", "Colleen"],
+  ["Kailani", "Colleen"],
 ];
 
 test("distinct names keep distinct keys", () => {
@@ -55,9 +66,39 @@ test("keys are stable across casing, spacing and punctuation", () => {
 test("short and empty names degrade safely", () => {
   assert.equal(variantKey(""), "");
   assert.equal(variantKey("123"), "");
-  // Too short for a skeleton, so the vowel-bearing base is the key.
   assert.equal(variantKey("Lee"), variantBase("Lee"));
   assert.ok(variantKey("Bo").length > 0);
+});
+
+// A sample of the real corpus drawn from the clusters the previous key handled
+// worst. Whatever the rule, a "spelling relatives" group has to stay small
+// enough that a reader recognises every member as their own name.
+const REAL_SAMPLE = [
+  "Caelainn", "Caelan", "Caelani", "Caelen", "Caelin", "Caelyn", "Cailan", "Cailani",
+  "Caileen", "Cailen", "Colleen", "Collene", "Kaylin", "Kaylyn", "Kailani", "Kalani",
+  "Kaylan", "Kellen", "Kellan", "Killian", "Cullen", "Coleen", "Calan", "Chalon",
+  "Bareen", "Barin", "Barney", "Barnie", "Berania", "Beren", "Berina", "Berna",
+  "Bernie", "Brian", "Bryan", "Brianne", "Brynn", "Braun", "Brenna", "Brianna",
+  "Michelle", "Makayla", "Michaela", "Mikayla", "Micaela", "Michael", "Mikael",
+  "Eileen", "Eilene", "Elena", "Ellen", "Elaine", "Alana", "Aileen", "Ilene",
+];
+
+test("no spelling family grows large enough to contain strangers", () => {
+  const groups = new Map<string, string[]>();
+  for (const name of REAL_SAMPLE) {
+    const k = variantKey(name);
+    const list = groups.get(k);
+    if (list) list.push(name);
+    else groups.set(k, [name]);
+  }
+  const largest = [...groups.entries()].sort((a, b) => b[1].length - a[1].length)[0]!;
+  assert.ok(
+    largest[1].length <= 4,
+    `group ${largest[0]} holds ${largest[1].length}: ${largest[1].join(", ")}`,
+  );
+  // The specific collapse that motivated the rewrite.
+  assert.notEqual(variantKey("Colleen"), variantKey("Kailani"));
+  assert.notEqual(variantKey("Barney"), variantKey("Berania"));
 });
 
 test("the pipeline is a pure ordered list of named steps", () => {

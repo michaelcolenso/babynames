@@ -87,13 +87,18 @@ test("rarity rank is a global sort, and the percentile inverts it", () => {
 
 test("spelling families are grouped and the dominant spelling is marked primary", () => {
   const rows = build();
-  const family = rows.filter((r) => ["Caitlin", "Katelyn", "Kaitlyn"].includes(r.name));
+  // Caitlin and Kaitlyn are the same name spelled two ways and group together.
+  // Katelyn does not: it differs by an inserted vowel, and the key preserves
+  // vowels deliberately — see variant-key.ts for why recall was traded away.
+  const family = rows.filter((r) => ["Caitlin", "Kaitlyn"].includes(r.name));
   assert.equal(new Set(family.map((r) => r.variant_key)).size, 1, "family split across keys");
-  for (const row of family) assert.equal(row.variant_count, 3);
+  for (const row of family) assert.equal(row.variant_count, 2);
   assert.deepEqual(
     family.filter((r) => r.variant_is_primary === 1).map((r) => r.name),
     ["Caitlin"],
   );
+  const katelyn = rows.find((r) => r.name === "Katelyn")!;
+  assert.notEqual(katelyn.variant_key, family[0]!.variant_key);
   // A name with no relatives is its own primary, family of one.
   const solo = rows.find((r) => r.name === "Bethzy")!;
   assert.equal(solo.variant_count, 1);
@@ -198,7 +203,12 @@ test("the corpus fingerprint is recomputable from the names table", () => {
   // than the database holds cannot match, whatever --data-version claimed.
   const maxYear = Math.max(...rows.map((r) => r.last_year));
   const totalBirths = rows.reduce((n, r) => n + r.total_count, 0);
-  assert.equal(fp, `ssa:${maxYear}:${totalBirths}`);
+  assert.equal(fp, `ssa:${maxYear}:${totalBirths}:geo=yes`);
+
+  // A build that skipped the state corpus must be distinguishable, or a
+  // --no-state seed would look complete while every only-in-* page is empty.
+  const noGeo = build().map((r) => ({ ...r, top_state: null }));
+  assert.match(corpusFingerprint(noGeo), /:geo=no$/);
 
   // A different corpus produces a different fingerprint.
   const other = buildFactsRows(new Map([["Solo|F", new Map([[2000, 40]])]]), YM, {

@@ -14,11 +14,7 @@
 // Bump `VARIANT_KEY_VERSION` whenever the pipeline changes — it is written to
 // `meta.variant_key_version` and a mismatch means name_facts must be rebuilt.
 
-export const VARIANT_KEY_VERSION = 1;
-
-/** Minimum consonant-skeleton length. Below this the skeleton is too lossy
- *  (Lee, Leo, Lia would all collapse to "l"), so we keep the vowel form. */
-export const SKELETON_MIN_LENGTH = 3;
+export const VARIANT_KEY_VERSION = 2;
 
 /** Minimum length before a trailing "e" is treated as silent. */
 export const TRAILING_E_MIN_LENGTH = 4;
@@ -101,14 +97,20 @@ export function variantBase(name: string): string {
  * Grouping key for spelling variants. Deterministic and idempotent-safe to
  * store; names sharing a key are surfaced to each other as spelling relatives.
  *
- * The key is the consonant skeleton with the initial letter preserved even when
- * it is a vowel — that initial is what keeps Erin ("ern") apart from Aaron
- * ("arn") and Alan ("aln") apart from Ellen ("eln"). When the skeleton is too
- * short to discriminate, the vowel-bearing base is used instead.
+ * Vowels are preserved. An earlier version reduced the name to a consonant
+ * skeleton, which merged far more families — but measured against the real
+ * corpus it produced 181 groups of more than twenty names, the largest holding
+ * 172: `brn` put Barney with Berania, `kln` put Colleen with Kaylin and
+ * Kailani, `mkl` put Michelle with Makayla. The page asserts these are
+ * alternate spellings of each other, so precision has to win over recall; a
+ * wrong relative is a visible error, a missing one is only a missed link.
+ *
+ * The cost is real and worth stating: Caitlin and Katelyn no longer group, nor
+ * Aiden and Aidan. Those differ by an inserted vowel rather than a substituted
+ * one, and no simple deterministic rule separates that case from Colleen and
+ * Kaylin. What still groups is the orthographic core — Sarah/Sara,
+ * Sophia/Sofia, Jaxon/Jackson/Jaxson, Nicholas/Nikolas, Aiden/Ayden.
  */
 export function variantKey(name: string): string {
-  const base = variantBase(name);
-  if (!base) return "";
-  const skeleton = base[0] + base.slice(1).replace(/[aeiou]/g, "");
-  return skeleton.length >= SKELETON_MIN_LENGTH ? skeleton : base;
+  return variantBase(name);
 }

@@ -896,17 +896,33 @@ interface StoryCell {
 function rarityCell(facts: NameFacts, sexLabel: string): StoryCell | null {
   if (!facts.rarity_total_sex) return null;
   const pct = facts.rarity_pct_sex;
+  const rank = facts.rarity_rank_sex;
+  const total = facts.rarity_total_sex;
+
+  // `rarity_pct_sex` is the share of names strictly MORE common, so 100 - pct
+  // is not the share that are less common: it also counts this name and every
+  // name tied with it. For the leading name that produced "More common than
+  // 100.0%", which cannot be true of a name compared with itself. Common names
+  // therefore state their exact rank — a number that needs no complement —
+  // and only the rarer half uses a percentage, where the quantity is the one
+  // actually stored.
   const value =
-    pct >= 99.9
-      ? `Rarer than 99.9% of ${sexLabel}' names`
-      : pct >= 50
-        ? `Rarer than ${pct.toFixed(1)}% of ${sexLabel}' names`
-        : `More common than ${(100 - pct).toFixed(1)}% of ${sexLabel}' names`;
-  return {
-    label: "Rarity",
-    value,
-    detail: `${labelBand(facts.rarity_band)} · rank ${fmt(facts.rarity_rank_sex)} of ${fmt(facts.rarity_total_sex)}`,
-  };
+    rank === 1
+      ? `The most common ${sexLabel}' name on record`
+      : pct < 50
+        ? `#${fmt(rank)} most common of ${fmt(total)} ${sexLabel}' names`
+        : pct >= 99.9
+          ? `Rarer than 99.9% of ${sexLabel}' names`
+          : `Rarer than ${pct.toFixed(1)}% of ${sexLabel}' names`;
+
+  // The rank is already in the headline for common names; repeating it there
+  // would read as a stutter.
+  const detail =
+    rank === 1 || pct < 50
+      ? labelBand(facts.rarity_band)
+      : `${labelBand(facts.rarity_band)} · rank ${fmt(rank)} of ${fmt(total)}`;
+
+  return { label: "Rarity", value, detail };
 }
 
 function labelBand(band: NameFacts["rarity_band"]): string {

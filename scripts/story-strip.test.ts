@@ -128,6 +128,23 @@ test("the strip surfaces the facts that make the page distinctive", () => {
   assert.match(s, /34% of births since state records began/);
 });
 
+test("common names never claim to be more common than 100% of names", () => {
+  // rarity_pct_sex is the share strictly MORE common, so 100 - pct silently
+  // includes this name and its ties. At rank 1 that produced the impossible
+  // "More common than 100.0%".
+  const top = strip(render({ facts: facts({ rarity_rank_sex: 1, rarity_pct_sex: 0, rarity_band: "ubiquitous" }) }));
+  assert.ok(!/More common than 100/.test(top), top);
+  assert.match(top, /The most common girls' name on record/);
+
+  // Any common name states its exact rank rather than a derived complement.
+  const common = strip(render({ facts: facts({ rarity_rank_sex: 12, rarity_pct_sex: 0.02, rarity_band: "common" }) }));
+  assert.match(common, /#12 most common of 22,000 girls' names/);
+  assert.ok(!/More common than/.test(common));
+
+  // A rare name still reports the percentile that is actually stored.
+  assert.match(strip(render()), /Rarer than 95\.5% of girls' names/);
+});
+
 test("the strip is omitted entirely when facts are unavailable", () => {
   const html = render({ facts: null });
   assert.equal(strip(html), "", "strip should not render without facts");
