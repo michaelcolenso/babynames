@@ -83,7 +83,7 @@ const PAGES: Record<string, EditorialPageConfig> = {
     eyebrow: "Generation dossier",
     lede: "The classroom names of the 1980s and 1990s: high-volume, unmistakable, and now aging into cultural memory.",
     names: ["Michael", "Jessica", "Ashley", "Christopher", "Amanda", "Matthew"],
-    body: "Millennial names are defined by saturation. Many were not merely popular; they were ambient facts of school rosters and suburban life.",
+    body: `Millennial names are defined by saturation. Many were not merely popular; they were ambient facts of school rosters and suburban life. The <a href="/names/1980s/">1980s decade hub</a> measures exactly which of those names truly belonged to the decade, and even reconstructs an average 1984 classroom from the same records.`,
   },
   "gen-z-names": {
     title: "Gen Z Baby Names | NobodyNamed",

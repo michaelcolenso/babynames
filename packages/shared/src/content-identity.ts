@@ -1,4 +1,4 @@
-export type ContentType = "name-page" | "article" | "visualization" | "newsletter" | "franchise-hub" | "state-page";
+export type ContentType = "name-page" | "article" | "visualization" | "newsletter" | "franchise-hub" | "state-page" | "decade-hub";
 
 export interface ContentIdentity {
   contentId: string;

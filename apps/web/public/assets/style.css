@@ -2485,6 +2485,418 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
    still filled in by form bots that parse the markup rather than render it. */
 .newsletter-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
+/* === decade hub (dh-*) ===
+   The 1980s decade hub flagship and its child routes (/names/1980s/…).
+   Editorial, restrained, data-led — warm paper, serif headlines, no nostalgia
+   kitsch. All selectors are dh-* scoped; uses the global tokens above. */
+
+.dh-page h1 {
+  font-size: clamp(2rem, 4.5vw, 3.1rem);
+  line-height: 1.08;
+  margin: 0.2rem 0 0.9rem;
+  max-width: 20ch;
+}
+.dh-page h2 {
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  margin: 2.75rem 0 0.75rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--rule);
+}
+.dh-page h3 { margin: 1.5rem 0 0.4rem; }
+.dh-hero .lede { max-width: 46rem; }
+
+.dh-thesis {
+  max-width: 44rem;
+  margin: 1.5rem 0 2rem;
+}
+.dh-thesis h2 {
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 0.5rem;
+}
+
+/* Scorecard / stat grid */
+.dh-scorecard {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+.dh-stat {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 0.8rem 0.9rem;
+}
+.dh-stat dt {
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.3rem;
+}
+.dh-stat dd {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.dh-stat-champion dd { font-family: var(--serif); }
+.dh-stat-note {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
+/* Share / copy controls (revealed by decade-hub.js; hidden without JS) */
+.dh-share {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1.25rem 0 0.5rem;
+  font-family: var(--sans);
+}
+.dh-share[hidden] { display: none; }
+.dh-share-btn {
+  background: var(--share-bg);
+  color: var(--share-fg);
+  border: 0;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.dh-share-btn:hover { background: var(--accent-dark); }
+.dh-share-status { font-size: 0.8rem; color: var(--muted); }
+
+.dh-hero-links { font-family: var(--sans); font-size: 0.9rem; }
+
+/* Ownership explainer + tabs */
+.dh-explainer {
+  max-width: 46rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0;
+}
+.dh-explainer p { margin: 0.35rem 0; }
+.dh-explainer-note {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.dh-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 1.5rem 0 0;
+  font-family: var(--sans);
+}
+.dh-tab {
+  display: inline-block;
+  padding: 0.45rem 0.95rem;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.dh-tab:hover { color: var(--ink); border-color: var(--muted); }
+.dh-tab[aria-selected="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-fg);
+}
+.dh-panel { margin-top: 1.25rem; }
+.dh-panel[hidden] { display: none; }
+.dh-view-note {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--muted);
+  max-width: 46rem;
+  margin: 0 0 0.75rem;
+}
+
+/* Tables */
+.dh-table { width: 100%; }
+.dh-table caption {
+  text-align: left;
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding-bottom: 0.4rem;
+}
+.dh-table th[data-dh-sort] { white-space: nowrap; }
+.dh-table th[data-dh-sort] button {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+.dh-table th[data-dh-sort] button::after {
+  content: "↕";
+  margin-left: 0.3em;
+  font-size: 0.75em;
+  color: var(--muted);
+}
+.dh-table th[data-dh-sort][aria-sort="ascending"] button::after { content: "↑"; color: var(--accent); }
+.dh-table th[data-dh-sort][aria-sort="descending"] button::after { content: "↓"; color: var(--accent); }
+
+/* Classroom */
+.dh-label {
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent-dark);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--rule));
+  border-radius: var(--radius);
+  padding: 0.5rem 0.8rem;
+  display: inline-block;
+}
+.dh-roster-grid {
+  list-style: none;
+  margin: 1.25rem 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.6rem;
+}
+.dh-student {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.95rem;
+}
+.dh-student a { font-weight: 600; }
+.dh-student-sex {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+/* Repeat marker: a left rule AND a ×N badge — never color alone. */
+.dh-student--repeat { border-left: 4px solid var(--accent); }
+.dh-seat-badge {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent-fg);
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
+.dh-seat-table { margin: 1rem 0; }
+.dh-classroom-method ol { max-width: 44rem; }
+.dh-classroom-method code, .dh-method-section code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+/* Spelling families */
+.dh-family-summary-list {
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 0.6rem;
+}
+.dh-family-summary {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.9rem;
+}
+.dh-family-summary a { font-weight: 700; }
+.dh-family-total {
+  display: block;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+.dh-family {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin: 1rem 0;
+  padding: 0.25rem 1rem;
+}
+.dh-family > summary {
+  cursor: pointer;
+  padding: 0.8rem 0.25rem;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+}
+.dh-family > summary::before {
+  content: "▸";
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+.dh-family[open] > summary::before { content: "▾"; }
+.dh-family > summary::-webkit-details-marker { display: none; }
+.dh-family > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.dh-family-label { font-weight: 700; font-size: 1.1rem; }
+.dh-family-body { padding-bottom: 1rem; }
+.dh-family-callout {
+  max-width: 44rem;
+  border-left: 4px solid var(--accent);
+  padding-left: 1rem;
+}
+.dh-family-rationale {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  max-width: 44rem;
+}
+
+/* Charts — fixed aspect box so nothing shifts while rendering */
+.dh-chart { margin: 1.25rem 0; }
+.dh-chart-frame {
+  aspect-ratio: 680 / 300;
+  max-width: 46rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.5rem;
+}
+.dh-chart-frame svg { width: 100%; height: 100%; display: block; }
+.dh-series { fill: none; stroke-width: 2; }
+.dh-series-total { stroke-width: 3.25; }
+.dh-axis { stroke: var(--muted); stroke-width: 1; }
+.dh-grid { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 4; }
+.dh-axis-text {
+  font-family: var(--mono);
+  font-size: 10px;
+  fill: var(--muted);
+}
+.dh-legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.1rem;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.dh-legend li { display: inline-flex; align-items: center; gap: 0.4rem; }
+.dh-legend-swatch {
+  display: inline-block;
+  width: 1.4rem;
+  border-top: 3px solid var(--accent);
+}
+.dh-legend-line { width: 1.4rem; height: 4px; }
+.dh-legend-line line { stroke-width: 2.5; }
+.dh-chart-data { margin-top: 0.75rem; max-width: 46rem; }
+
+/* Methodology */
+.dh-method-section { max-width: 46rem; }
+.dh-metrics { margin: 1rem 0; }
+.dh-metric {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+  margin: 0.75rem 0;
+}
+.dh-metric dt {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin-bottom: 0.3rem;
+}
+.dh-metric dd { margin: 0 0 0.4rem; }
+.dh-formula code {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.8rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+/* Data coverage badge */
+.dh-coverage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.75rem;
+  margin: 2.5rem 0 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-family: var(--sans);
+}
+.dh-coverage-item dt {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dh-coverage-item dd { margin: 0.15rem 0 0; font-size: 0.85rem; }
+.dh-coverage code { font-size: 0.78rem; }
+
+.dh-methodology-callout {
+  max-width: 46rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.25rem 1.25rem 1rem;
+  margin-top: 2.5rem;
+}
+.dh-methodology-callout h2 { border-top: 0; padding-top: 0.5rem; }
+
+.dh-year-links { margin: 1rem 0; }
+.dh-sentinel { height: 1px; }
+
+@media (max-width: 640px) {
+  .dh-scorecard { grid-template-columns: repeat(2, 1fr); }
+  .dh-stat dd { font-size: 1.15rem; }
+  .dh-roster-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dh-page * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .dh-family > summary::before { transition: none; }
+}
 /* ── Story strip ────────────────────────────────────────────────────────────
    The rare-name facts, directly under the name-page header. Uses a <dl> so the
    label/value pairing survives with styles off and reads correctly to a screen

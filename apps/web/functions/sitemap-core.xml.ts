@@ -74,6 +74,14 @@ function decadeUrls(origin: string, ym: number, yM: number): SitemapUrl[] {
   return out;
 }
 
+// 1980s decade-hub child routes (flagship). Same data vintage as the decade
+// pages, so lastmod follows the dataset's max year.
+function decadeHubUrls(origin: string, yM: number): SitemapUrl[] {
+  return ["/names/1980s/methodology/", "/names/1980s/classroom/", "/names/1980s/spelling-families/"].map(
+    (path) => ({ loc: absoluteUrl(origin, path), lastmod: `${yM}-05-15`, priority: 0.5 }),
+  );
+}
+
 function letterUrls(origin: string, yM: number, prefix: string, priority: number): SitemapUrl[] {
   return "abcdefghijklmnopqrstuvwxyz".split("").map((letter) => ({
     loc: absoluteUrl(origin, `${prefix}${letter}/`),
@@ -99,6 +107,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     { loc: absoluteUrl(url.origin, "/collections/"), priority: 0.7 },
     ...yearUrls(url.origin, ym, yM),
     ...decadeUrls(url.origin, ym, yM),
+    ...decadeHubUrls(url.origin, yM),
     ...letterUrls(url.origin, yM, "/names/", 0.4),
     ...letterUrls(url.origin, yM, "/names/ending/", 0.4),
     ...blogPosts.map((post) => ({
