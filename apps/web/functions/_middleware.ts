@@ -6,33 +6,60 @@
 
 import type { D1Database, PagesFunction } from "@cloudflare/workers-types";
 
-// meta.facts_build changes on every facts build. facts_version deliberately
-// does NOT — it is the SSA data version, so a rebuild from the same corpus
-// (a corrected threshold, a new variant algorithm, added catalyst rows) leaves
-// it untouched and would reproduce the previous cache key exactly.
+// The content version folded into cache keys for every route whose body is
+// derived from D1. Two independent things can change it:
+//
+//   meta.data_version — a new SSA ingest (names, name_years).
+//   meta.facts_build  — a name_facts / name_collections rebuild. facts_version
+//                       deliberately does NOT serve here: it is the SSA data
+//                       version, so a rebuild from the same corpus (a corrected
+//                       threshold, a new variant algorithm, added catalyst rows)
+//                       leaves it untouched and would reproduce the previous key.
 //
 // One lookup per isolate per TTL is ample. The TTL is deliberately short: the
 // window between a seed and the caches following it should be seconds.
-const FACTS_VERSION_TTL_MS = 30_000;
-let factsVersionCache: { value: string | null; at: number } | null = null;
+const CONTENT_VERSION_TTL_MS = 30_000;
+let contentVersionCache: { value: string | null; at: number } | null = null;
 
-async function factsBuildFor(db: D1Database | undefined): Promise<string | null> {
+/** Exported for tests: clears the per-isolate memo. */
+export function __resetContentVersionCache(): void {
+  contentVersionCache = null;
+}
+
+async function contentVersionFor(db: D1Database | undefined): Promise<string | null> {
   if (!db) return null;
   const now = Date.now();
-  if (factsVersionCache && now - factsVersionCache.at < FACTS_VERSION_TTL_MS) {
-    return factsVersionCache.value;
+  if (contentVersionCache && now - contentVersionCache.at < CONTENT_VERSION_TTL_MS) {
+    return contentVersionCache.value;
   }
   try {
-    const row = await db
-      .prepare("SELECT value FROM meta WHERE key = 'facts_build'")
-      .first<{ value: string }>();
-    factsVersionCache = { value: row?.value ?? null, at: now };
+    const rows = await db
+      .prepare("SELECT key, value FROM meta WHERE key IN ('data_version', 'facts_build')")
+      .all<{ key: string; value: string }>();
+    const map = new Map((rows.results ?? []).map((r) => [r.key, r.value]));
+    const data = map.get("data_version") ?? "";
+    const facts = map.get("facts_build") ?? "";
+    contentVersionCache = { value: data || facts ? `${data}:${facts}` : null, at: now };
   } catch {
     // A meta lookup failure must never take the page down; fall back to an
-    // unversioned key, which is exactly today's behaviour.
-    factsVersionCache = { value: null, at: now };
+    // unversioned key, which is exactly the pre-versioning behaviour.
+    contentVersionCache = { value: null, at: now };
   }
-  return factsVersionCache.value;
+  return contentVersionCache.value;
+}
+
+// Routes whose body is assembled from name_facts / name_collections. caches.default
+// keys on the request URL and cache.match never consults an ETag, so a response
+// cached before a facts seed survives the seed for its full TTL: an empty
+// collections sitemap, an empty collection page, a hub advertising nothing. The
+// fix is to make the version participate in the key.
+function isVersionedRoute(pathname: string): boolean {
+  return (
+    /^\/sitemap-[a-z]+\.xml$/.test(pathname) ||
+    pathname === "/collections" ||
+    pathname.startsWith("/collections/") ||
+    pathname.startsWith("/name/")
+  );
 }
 
 const CANONICAL_PAGES = new Set([
@@ -103,23 +130,9 @@ async function handleRequest(ctx: Parameters<PagesFunction<Env>>[0], url: URL): 
     }
   }
 
-  // Routes whose content comes from name_facts / name_collections, plus every
-  // sitemap. caches.default keys on the request URL, and cache.match never
-  // consults an ETag, so a response cached before a facts seed survives the
-  // seed for its full TTL: an empty collections sitemap, an empty collection
-  // page, or a hub advertising nothing. A version can only invalidate a cache
-  // whose key it participates in, and it does not participate in this one.
-  //
-  // These bypass the Cache API rather than folding a version into the key,
-  // which would cost a D1 read on every request to look the version up. The
-  // responses still carry Cache-Control, so Cloudflare's own edge cache
-  // continues to serve them; only this extra layer is skipped.
-  if (
-    url.pathname === "/sitemap.xml" ||
-    /^\/sitemap-[a-z]+\.xml$/.test(url.pathname) ||
-    url.pathname === "/collections" ||
-    url.pathname.startsWith("/collections/")
-  ) {
+  // The sitemap index is three static child URLs; it has never been worth a
+  // cache entry and is left uncached as it always has been.
+  if (url.pathname === "/sitemap.xml") {
     return ctx.next();
   }
 
@@ -140,18 +153,16 @@ async function handleRequest(ctx: Parameters<PagesFunction<Env>>[0], url: URL): 
   const keyUrl = new URL(ctx.request.url);
   keyUrl.searchParams.set("__nv_variant", wantsMarkdown ? "md" : "html");
 
-  // Name pages render name_facts and name_collections, so a page cached before
-  // a facts seed keeps its missing story strip for the full TTL. An ETag cannot
-  // fix that — cache.match never reads one — so the facts build id goes into
-  // the key itself and any rebuild lands on a different key.
-  //
-  // Bypassing instead, as the collection routes do, would drop the Cache API
-  // for the busiest route on the site to fix a once-a-year transition. The
-  // build id is memoized per isolate (see factsBuildFor) so the common path
-  // adds no D1 read.
-  if (url.pathname.startsWith("/name/")) {
-    const build = await factsBuildFor(ctx.env.DB);
-    if (build) keyUrl.searchParams.set("__nv_facts", build);
+  // Facts-backed routes get the content version in the key rather than
+  // bypassing the cache. Bypassing looks harmless — the responses carry
+  // Cache-Control — but a Pages Function response is not placed in Cloudflare's
+  // edge cache merely because it says so, so skipping this wrapper means every
+  // hit reruns the handler and its D1 queries, `listIndexableNames` over ~50k
+  // rows included. The version is memoized per isolate (see contentVersionFor),
+  // so the common path adds no D1 read, and a seed lands on a fresh key.
+  if (isVersionedRoute(url.pathname)) {
+    const version = await contentVersionFor(ctx.env.DB);
+    if (version) keyUrl.searchParams.set("__nv_ver", version);
   }
   const cacheKey = new Request(keyUrl.toString(), { method: "GET" });
 
