@@ -192,6 +192,24 @@ test("the summary sentence is built from numbers, and adapts to the name's shape
   assert.match(once, /appears in exactly one year of the American birth record: 1998/);
 });
 
+test("the story sentence reads as one sentence, not a chain of conjunctions", () => {
+  // The three-clause form (record + last-seen + geography) once joined every
+  // clause with ", and ", producing two "and"s in a single sentence. The unit
+  // tests missed it because they only asserted on the leading clause.
+  const line = /<p class="story-line">(.*?)<\/p>/.exec(strip(render()))?.[1] ?? "";
+  assert.ok(line, "no story line rendered");
+  assert.equal((line.match(/\band\b/g) ?? []).length, 1, `too many conjunctions: ${line}`);
+  assert.match(line, /1974, and 34% of those births were in West Virginia\.$/);
+
+  // Two clauses keep the plain "A, and B" form.
+  const twoClause =
+    /<p class="story-line">(.*?)<\/p>/.exec(
+      strip(render({ facts: facts({ top_state: null, top_state_share: null }) })),
+    )?.[1] ?? "";
+  assert.equal((twoClause.match(/\band\b/g) ?? []).length, 1);
+  assert.ok(twoClause.endsWith("."));
+});
+
 test("the strip never drifts into meaning-and-origin prose", () => {
   // The whole point of the page is the usage record. Etymology filler is what
   // every competing site already has, and it is what this guard prevents.
