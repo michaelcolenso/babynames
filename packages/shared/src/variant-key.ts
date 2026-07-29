@@ -14,7 +14,7 @@
 // Bump `VARIANT_KEY_VERSION` whenever the pipeline changes — it is written to
 // `meta.variant_key_version` and a mismatch means name_facts must be rebuilt.
 
-export const VARIANT_KEY_VERSION = 4;
+export const VARIANT_KEY_VERSION = 5;
 
 /** Minimum length before a trailing "e" is treated as silent. */
 export const TRAILING_E_MIN_LENGTH = 4;
@@ -77,10 +77,29 @@ function dropTrailingH(s: string): string {
   return VOWELS.includes(s[s.length - 2] ?? "") ? s.slice(0, -1) : s;
 }
 
-// Silent terminal e: Anne -> ann, Claire -> clair. Guarded by length so
-// two-and three-letter names (Abe, Eve) keep their vowel.
+// Silent terminal e: Anne -> ann, Claire -> clair, Brooke -> brook.
+//
+// A terminal e is only droppable when it is genuinely inert. Two shapes where
+// it is not, both of which an unconditional drop merged wrongly:
+//
+//   Magic e — the consonant-vowel-consonant-e pattern, where the e is what
+//   lengthens the vowel before it. Dropping it made Jake into Jack, and would
+//   equally make Kate/Kat, Jane/Jan, Cole/Col, Pete/Pet, Luke/Luk.
+//
+//   Vowel + e — where the e is its own syllable or half a digraph. Dropping it
+//   made Marie into Mary: 540k Maries told they are a respelling of 4.1M Marys.
+//
+// So: keep the e when the letter before it is a vowel, and keep it when the
+// name ends in a single vowel between two consonants. Everything else — a
+// doubled consonant (Anne), a two-vowel nucleus (Brooke, Claire), a consonant
+// cluster (Elle) — really is inert, and still collapses.
 function dropTrailingE(s: string): string {
   if (s.length < TRAILING_E_MIN_LENGTH || !s.endsWith("e")) return s;
+  const before = s[s.length - 2] ?? "";
+  if (VOWELS.includes(before)) return s;
+  const nucleus = s[s.length - 3] ?? "";
+  const onset = s[s.length - 4] ?? "";
+  if (VOWELS.includes(nucleus) && !VOWELS.includes(onset)) return s;
   return s.slice(0, -1);
 }
 

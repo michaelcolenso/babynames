@@ -64,6 +64,17 @@ const MUST_NOT_MERGE: [string, string][] = [
   ["Aria", "Ariah"],
   ["Amia", "Amiah"],
   ["Nya", "Nyah"],
+  // Terminal e is phonemic in two shapes. Magic e (consonant-vowel-consonant-e)
+  // is what lengthens the vowel before it, so dropping it turns Jake into Jack;
+  // a vowel before the e makes it its own syllable, so dropping it turns Marie
+  // into Mary — 540k Maries against 4.1M Marys.
+  ["Mary", "Marie"],
+  ["Jack", "Jake"],
+  ["Kate", "Kat"],
+  ["Jane", "Jan"],
+  ["Cole", "Col"],
+  ["Pete", "Pet"],
+  ["Rose", "Ros"],
 ];
 
 test("distinct names keep distinct keys", () => {
@@ -105,6 +116,23 @@ test("the -iah exclusion costs the -ia links it is documented to cost", () => {
   // separates the two endings, it does not shatter either one.
   assert.equal(variantKey("Mariah"), variantKey("Maryah"));
   assert.equal(variantKey("Aaliyah"), variantKey("Aliyah"));
+});
+
+// The e exclusions are as narrow as the h one: where the letter really is
+// inert — a doubled consonant, a two-vowel nucleus, a consonant cluster — it
+// still goes.
+test("silent terminal e still collapses everywhere it is inert", () => {
+  const INERT: [string, string][] = [
+    ["Anne", "Ann"],
+    ["Brooke", "Brook"],
+    ["Claire", "Clair"],
+    ["Elle", "Ell"],
+    ["Lynne", "Lynn"],
+    ["Jayne", "Jayn"],
+  ];
+  for (const [a, b] of INERT) {
+    assert.equal(variantKey(a), variantKey(b), `${a} and ${b} should still group`);
+  }
 });
 
 test("keys are stable across casing, spacing and punctuation", () => {
