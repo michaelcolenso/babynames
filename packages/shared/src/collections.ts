@@ -11,6 +11,7 @@
 // name's meaning or origin. If a cluster cannot be expressed as a predicate
 // over `NameFacts`, it does not belong here.
 
+import { SPIKE_DRAMATIC_RATIO, SPIKE_FELL_BACK_RATIO } from "./facts-compute";
 import type { NameFacts } from "./schema";
 import { ALL_STATES, stateName, stateSlug } from "./us-states-map";
 
@@ -171,7 +172,14 @@ const BASE: readonly CollectionDef[] = [
     select: (facts) =>
       take(
         facts,
-        (f) => (f.spike_ratio ?? 0) >= 4 && f.spike_year !== null,
+        // The fall-back requirement is what makes the collection's claim true:
+        // a step change from 20 a year to 100 a year forever is a 5x jump but
+        // is not a name that "returned to something like its old level".
+        (f) =>
+          (f.spike_ratio ?? 0) >= SPIKE_DRAMATIC_RATIO &&
+          f.spike_year !== null &&
+          f.spike_post_ratio !== null &&
+          f.spike_post_ratio <= SPIKE_FELL_BACK_RATIO,
         (a, b) => (b.spike_ratio ?? 0) - (a.spike_ratio ?? 0) || a.name.localeCompare(b.name),
         (f) => `${(f.spike_ratio ?? 0).toFixed(1)}× baseline in ${f.spike_year}`,
         (f) => f.spike_ratio ?? 0,
@@ -198,7 +206,11 @@ const BASE: readonly CollectionDef[] = [
         facts,
         (f) => (f.comeback_gap ?? 0) >= 50,
         (a, b) => (b.comeback_gap ?? 0) - (a.comeback_gap ?? 0) || a.name.localeCompare(b.name),
-        (f) => `Absent ${f.gap_start_year}–${f.gap_end_year} (${f.comeback_gap} years)`,
+        // Derived from the comeback, not from gap_start_year/gap_end_year: those
+        // describe the LONGEST gap, which is not necessarily the one that
+        // produced the revival. Mixing them prints a window and a duration that
+        // contradict each other.
+        (f) => `Absent ${(f.comeback_year ?? 0) - (f.comeback_gap ?? 0)}–${(f.comeback_year ?? 0) - 1} (${f.comeback_gap} years)`,
         (f) => f.comeback_gap ?? 0,
         DEFAULT_MAX_MEMBERS,
       ),

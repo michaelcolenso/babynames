@@ -56,6 +56,7 @@ function facts(overrides: Partial<NameFacts> = {}): NameFacts {
     spike_year: null,
     spike_ratio: null,
     spike_baseline: null,
+    spike_post_ratio: null,
     comeback_gap: null,
     comeback_year: null,
     comeback_strength: null,

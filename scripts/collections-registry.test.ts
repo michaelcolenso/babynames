@@ -39,6 +39,7 @@ function facts(overrides: Partial<NameFacts> = {}): NameFacts {
     spike_year: null,
     spike_ratio: null,
     spike_baseline: null,
+    spike_post_ratio: null,
     comeback_gap: null,
     comeback_year: null,
     comeback_strength: null,
@@ -158,6 +159,18 @@ test("state collections only take names whose exclusivity cleared the floor", ()
   assert.equal(picked[0]!.metricLabel, "94% of births since 1910");
 });
 
+test("one-hit-spikes requires the spike to have fallen back", () => {
+  const def = getCollection("one-hit-spikes")!;
+  const picked = def.select([
+    facts({ name: "OneHit", spike_year: 1962, spike_ratio: 8, spike_post_ratio: 0.2 }),
+    // A sustained step up: the jump is real, the fall never happened.
+    facts({ name: "SteppedUp", spike_year: 1960, spike_ratio: 5, spike_post_ratio: 0.98 }),
+    // Too recent to judge; the collection must not claim it fell back.
+    facts({ name: "TooRecent", spike_year: 2024, spike_ratio: 9, spike_post_ratio: null }),
+  ]);
+  assert.deepEqual(picked.map((p) => p.row.name), ["OneHit"]);
+});
+
 test("lost-names is scoped to its own decade and to names actually gone", () => {
   const def = getCollection("lost-names-of-the-1920s")!;
   const picked = def.select([
@@ -168,6 +181,24 @@ test("lost-names is scoped to its own decade and to names actually gone", () => 
   ]);
   assert.deepEqual(picked.map((p) => p.row.name), ["Gone"]);
   assert.equal(picked[0]!.metricLabel, "Last seen 1961");
+});
+
+test("the comeback label describes the gap that actually produced the revival", () => {
+  const def = getCollection("fifty-year-comebacks")!;
+  // Longest gap is 1881-1940; the revival came out of the LATER 1942-1991 gap.
+  // Reading the window off gap_start_year/gap_end_year would print
+  // "Absent 1881-1940 (50 years)" — a window and a duration that disagree.
+  const picked = def.select([
+    facts({
+      name: "Returned",
+      gap_years_max: 60,
+      gap_start_year: 1881,
+      gap_end_year: 1940,
+      comeback_gap: 50,
+      comeback_year: 1992,
+    }),
+  ]);
+  assert.equal(picked[0]!.metricLabel, "Absent 1942–1991 (50 years)");
 });
 
 test("unusual-spellings excludes the dominant spelling of its own family", () => {

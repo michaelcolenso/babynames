@@ -51,6 +51,9 @@ CREATE TABLE IF NOT EXISTS name_facts (
   spike_year          INTEGER,
   spike_ratio         REAL,
   spike_baseline      INTEGER,
+  -- Post-spike level as a fraction of the spike year. NULL when the spike is
+  -- too recent to judge. A sustained step up is not a one-hit spike.
+  spike_post_ratio    REAL,
 
   -- Revival after a long dormancy.
   comeback_gap        INTEGER,

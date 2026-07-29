@@ -27,6 +27,12 @@ export const SPIKE_BASELINE_FLOOR = 3;
 export const SPIKE_BASELINE_WINDOW = 3;
 /** At or above this ratio the spike is "dramatic" enough for the collection. */
 export const SPIKE_DRAMATIC_RATIO = 4;
+/** Years after the spike used to check whether it actually fell back. */
+export const SPIKE_POST_WINDOW = 3;
+/** A one-hit spike must fall to at most this fraction of its peak year.
+ *  Without it, a step change — 20 a year, then 100 a year forever — reads as a
+ *  5x "spike" and a sustained rise gets filed under names that fell back. */
+export const SPIKE_FELL_BACK_RATIO = 0.5;
 
 /** Comeback: dormant at least this long, then genuinely used again. */
 export const COMEBACK_MIN_GAP = 50;
@@ -63,6 +69,10 @@ export interface SpikeResult {
   year: number;
   ratio: number;
   baseline: number;
+  /** Mean of the following years as a fraction of the spike year. Null when the
+   *  spike is too recent to have a post-window, in which case whether it fell
+   *  back is simply not yet knowable. */
+  postRatio: number | null;
 }
 
 export interface ComebackResult {
@@ -143,7 +153,8 @@ export function computeLongestGap(series: Record<number, number>): GapResult | n
  * was steadily popular does not register a spike just for wobbling, and a name
  * with no prior usage is not counted at all.
  */
-export function computeSpike(series: Record<number, number>): SpikeResult | null {
+export function computeSpike(series: Record<number, number>, yM?: number): SpikeResult | null {
+  const lastYear = yM ?? Math.max(...years(series), 0);
   let best: SpikeResult | null = null;
   for (const y of years(series)) {
     const count = series[y] ?? 0;
@@ -160,7 +171,12 @@ export function computeSpike(series: Record<number, number>): SpikeResult | null
     const baseline = median(prior);
     const ratio = count / Math.max(baseline, SPIKE_BASELINE_FLOOR);
     if (!best || ratio > best.ratio) {
-      best = { year: y, ratio: Number(ratio.toFixed(2)), baseline: Math.round(baseline) };
+      // Did it come back down? Measured over the years after the spike, so a
+      // permanent step up is distinguishable from a one-year event.
+      const postEnd = y + SPIKE_POST_WINDOW;
+      const postRatio =
+        postEnd <= lastYear ? Number((meanOver(series, y + 1, postEnd) / count).toFixed(3)) : null;
+      best = { year: y, ratio: Number(ratio.toFixed(2)), baseline: Math.round(baseline), postRatio };
     }
   }
   return best;
@@ -295,7 +311,7 @@ export function computeSeriesFacts(series: Record<number, number>, yM: number): 
     spanYears: lastYear - firstYear + 1,
     maxAnnual,
     gap: computeLongestGap(series),
-    spike: computeSpike(series),
+    spike: computeSpike(series, yM),
     comeback: computeComeback(series),
     isOneAndDone: ys.length === 1,
     isSubTen: maxAnnual < SUB_TEN_MAX_ANNUAL,

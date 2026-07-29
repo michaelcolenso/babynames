@@ -74,7 +74,11 @@ async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promi
     }
   }
 
-  if (url.pathname === "/sitemap.xml") {
+  // Every sitemap, not just the index. caches.default keys on the request URL,
+  // so a child sitemap fetched before a facts seed would serve its empty urlset
+  // for the full week-long TTL no matter what the ETag says — the version can
+  // only invalidate a cache whose key it participates in, and it does not.
+  if (url.pathname === "/sitemap.xml" || /^\/sitemap-[a-z]+\.xml$/.test(url.pathname)) {
     return ctx.next();
   }
 

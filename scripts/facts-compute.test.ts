@@ -5,6 +5,7 @@ import {
   COMEBACK_MIN_GAP,
   EXCLUSIVE_MIN_BIRTHS,
   SPIKE_DRAMATIC_RATIO,
+  SPIKE_FELL_BACK_RATIO,
   SUB_TEN_MAX_ANNUAL,
   computeComeback,
   computeLongestGap,
@@ -107,6 +108,33 @@ test("a steadily popular name registers no dramatic spike", () => {
   const spike = computeSpike(series(flat(1950, 2000, 500)));
   assert.ok(spike);
   assert.ok(spike.ratio < SPIKE_DRAMATIC_RATIO, `ratio was ${spike.ratio}`);
+});
+
+test("a sustained step up is not a one-hit spike", () => {
+  // 20 a year, then 100 a year forever. The jump is real (5x) but the name
+  // never came back down, so it must not read as a spike that fell back.
+  const step = computeSpike(series([...flat(1950, 1959, 20), ...flat(1960, 1990, 100)]), YM);
+  assert.ok(step);
+  assert.equal(step.year, 1960);
+  assert.ok(step.ratio >= SPIKE_DRAMATIC_RATIO);
+  assert.ok(
+    (step.postRatio ?? 0) > SPIKE_FELL_BACK_RATIO,
+    `sustained rise reported postRatio ${step.postRatio}`,
+  );
+
+  // A genuine one-year event falls back hard.
+  const oneHit = computeSpike(series([...flat(1955, 1961, 20), [1962, 400], ...flat(1963, 1970, 25)]), YM);
+  assert.ok(oneHit);
+  assert.equal(oneHit.year, 1962);
+  assert.ok((oneHit.postRatio ?? 1) <= SPIKE_FELL_BACK_RATIO, `postRatio was ${oneHit.postRatio}`);
+});
+
+test("a spike too recent to judge reports an unknown post-ratio", () => {
+  // Nothing after it yet, so whether it fell back is not knowable — and the
+  // collection must not claim that it did.
+  const recent = computeSpike(series([...flat(YM - 5, YM - 1, 20), [YM, 400]]), YM);
+  assert.ok(recent);
+  assert.equal(recent.postRatio, null);
 });
 
 test("verge: single digits now, after a real peak, falling fast", () => {

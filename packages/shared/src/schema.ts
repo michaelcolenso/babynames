@@ -275,6 +275,8 @@ export interface NameFacts {
   spike_year: number | null;
   spike_ratio: number | null;
   spike_baseline: number | null;
+  /** Post-spike level as a fraction of the spike year; null when unknowable. */
+  spike_post_ratio: number | null;
 
   // Revival after a long dormancy.
   comeback_gap: number | null;
