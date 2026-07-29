@@ -242,6 +242,18 @@ test("the canonical sex is the one /name/:name/ resolves to", () => {
   assert.equal(rows.find((r) => r.sex === "F")!.is_canonical_sex, 1);
   assert.equal(rows.find((r) => r.sex === "M")!.is_canonical_sex, 0);
 
+  // Ties go to male, matching `total(m) >= total(f)` in the name route. 124
+  // spellings in the live corpus have equal totals, and source ordering puts
+  // the female row first — so an insertion-order tie-break would attach every
+  // one of their claims to the sex the page does not display.
+  const tied: NameFacts[] = [
+    { ...base, name: "Jaime", name_lower: "jaime", sex: "F", total_count: 500 },
+    { ...base, name: "Jaime", name_lower: "jaime", sex: "M", total_count: 500 },
+  ];
+  markCanonicalSex(tied);
+  assert.equal(tied.find((r) => r.sex === "M")!.is_canonical_sex, 1);
+  assert.equal(tied.find((r) => r.sex === "F")!.is_canonical_sex, 0);
+
   // …and the minority-sex row must not carry a collection claim, since the
   // link would open a page about a name with 11,160 births.
   const picked = assembleCollections(rows, { minYear: 1880, maxYear: YM });

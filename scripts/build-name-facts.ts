@@ -231,7 +231,13 @@ export function markCanonicalSex(rows: NameFacts[]): void {
   }
   for (const list of byName.values()) {
     let best = list[0]!;
-    for (const row of list) if (row.total_count > best.total_count) best = row;
+    for (const row of list) {
+      if (row.total_count > best.total_count) best = row;
+      // Ties go to male, matching `total(m) >= total(f)` in the name route.
+      // Without this the tie-break falls to source ordering and 124 spellings
+      // would attach their claims to the sex the page does not display.
+      else if (row.total_count === best.total_count && row.sex === "M") best = row;
+    }
     for (const row of list) row.is_canonical_sex = row === best ? 1 : 0;
   }
 }

@@ -129,6 +129,22 @@ test("a sustained step up is not a one-hit spike", () => {
   assert.ok((oneHit.postRatio ?? 1) <= SPIKE_FELL_BACK_RATIO, `postRatio was ${oneHit.postRatio}`);
 });
 
+test("a transient spike is not hidden behind a larger permanent step up", () => {
+  // 5 -> 100 sustained forever (a 20x step), then a later 4x one-year jump that
+  // returns to baseline. Reporting only the highest ratio keeps the step, its
+  // post-ratio fails the collection filter, and the genuine spike is lost.
+  const s = series([
+    ...flat(1950, 1954, 5),
+    ...flat(1955, 1989, 100),
+    [1990, 420],
+    ...flat(1991, 2000, 100),
+  ]);
+  const spike = computeSpike(s, YM);
+  assert.ok(spike);
+  assert.equal(spike.year, 1990, `selected ${spike.year} instead of the transient spike`);
+  assert.ok((spike.postRatio ?? 1) <= SPIKE_FELL_BACK_RATIO);
+});
+
 test("a spike too recent to judge reports an unknown post-ratio", () => {
   // Nothing after it yet, so whether it fell back is not knowable — and the
   // collection must not claim that it did.

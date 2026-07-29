@@ -1101,19 +1101,11 @@ function reportNumber(name: string, sex: string): string {
   return String(Math.abs(hash) % 100000).padStart(5, "0");
 }
 
-function editorialLink(a: ClassifyResult, facts?: NameFacts | null): [string, string] | null {
-  // A precise cluster beats the generic hub: an extinct 1920s name belongs on
-  // /collections/lost-names-of-the-1920s/, not on /extinct with 500 others.
-  if (facts) {
-    if (facts.exclusive_state) {
-      const def = getCollection(`only-in-${stateName(facts.exclusive_state).toLowerCase().replace(/[^a-z0-9]+/g, "-")}`);
-      if (def) return [def.title, `/collections/${def.slug}/`];
-    }
-    if (a.status === "extinct") {
-      const def = getCollection(`lost-names-of-the-${Math.floor(a.peakYear / 10) * 10}s`);
-      if (def) return [def.title, `/collections/${def.slug}/`];
-    }
-  }
+function editorialLink(a: ClassifyResult): [string, string] | null {
+  // Deliberately generic. Precise collection links come from the materialized
+  // name_collections rows (renderCollectionLinks); deriving them from status
+  // and peak year would ignore the collection's own volume floor and member
+  // cap, and link names to tables they do not appear in.
   if (a.status === "rising") return ["Rising names", "/rising"];
   if (a.status === "extinct") return ["Extinct names", "/extinct"];
   if (a.status === "endangered") return ["Endangered names", "/endangered"];
@@ -1139,7 +1131,7 @@ function renderExploreLinks(
   if (statusLink) {
     links.push(`<a href="${statusLink[1]}">${statusLink[0]}</a>`);
   }
-  const ed = editorialLink(a, facts);
+  const ed = editorialLink(a);
   if (ed && ed[1] !== (statusLink?.[1] ?? "")) {
     links.push(`<a href="${ed[1]}">${ed[0]}</a>`);
   }

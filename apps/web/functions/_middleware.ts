@@ -74,11 +74,23 @@ async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promi
     }
   }
 
-  // Every sitemap, not just the index. caches.default keys on the request URL,
-  // so a child sitemap fetched before a facts seed would serve its empty urlset
-  // for the full week-long TTL no matter what the ETag says — the version can
-  // only invalidate a cache whose key it participates in, and it does not.
-  if (url.pathname === "/sitemap.xml" || /^\/sitemap-[a-z]+\.xml$/.test(url.pathname)) {
+  // Routes whose content comes from name_facts / name_collections, plus every
+  // sitemap. caches.default keys on the request URL, and cache.match never
+  // consults an ETag, so a response cached before a facts seed survives the
+  // seed for its full TTL: an empty collections sitemap, an empty collection
+  // page, or a hub advertising nothing. A version can only invalidate a cache
+  // whose key it participates in, and it does not participate in this one.
+  //
+  // These bypass the Cache API rather than folding a version into the key,
+  // which would cost a D1 read on every request to look the version up. The
+  // responses still carry Cache-Control, so Cloudflare's own edge cache
+  // continues to serve them; only this extra layer is skipped.
+  if (
+    url.pathname === "/sitemap.xml" ||
+    /^\/sitemap-[a-z]+\.xml$/.test(url.pathname) ||
+    url.pathname === "/collections" ||
+    url.pathname.startsWith("/collections/")
+  ) {
     return ctx.next();
   }
 

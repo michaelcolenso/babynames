@@ -155,7 +155,13 @@ export function computeLongestGap(series: Record<number, number>): GapResult | n
  */
 export function computeSpike(series: Record<number, number>, yM?: number): SpikeResult | null {
   const lastYear = yM ?? Math.max(...years(series), 0);
+  // Two candidates are tracked. `best` is the most dramatic jump of any shape,
+  // which is what the name page's "Inflection" cell reports. `bestFellBack` is
+  // the most dramatic one that also came back down, which is the only kind the
+  // one-hit-spikes collection can honestly claim. Keeping only the former would
+  // lose a genuine transient spike behind a larger permanent step up.
   let best: SpikeResult | null = null;
+  let bestFellBack: SpikeResult | null = null;
   for (const y of years(series)) {
     const count = series[y] ?? 0;
     if (count < SPIKE_MIN_COUNT) continue;
@@ -170,16 +176,36 @@ export function computeSpike(series: Record<number, number>, yM?: number): Spike
     if (!prior.length) continue;
     const baseline = median(prior);
     const ratio = count / Math.max(baseline, SPIKE_BASELINE_FLOOR);
-    if (!best || ratio > best.ratio) {
-      // Did it come back down? Measured over the years after the spike, so a
-      // permanent step up is distinguishable from a one-year event.
-      const postEnd = y + SPIKE_POST_WINDOW;
-      const postRatio =
-        postEnd <= lastYear ? Number((meanOver(series, y + 1, postEnd) / count).toFixed(3)) : null;
-      best = { year: y, ratio: Number(ratio.toFixed(2)), baseline: Math.round(baseline), postRatio };
+    // Did it come back down? Measured over the years after the spike, so a
+    // permanent step up is distinguishable from a one-year event.
+    const postEnd = y + SPIKE_POST_WINDOW;
+    const postRatio =
+      postEnd <= lastYear ? Number((meanOver(series, y + 1, postEnd) / count).toFixed(3)) : null;
+    const candidate: SpikeResult = {
+      year: y,
+      ratio: Number(ratio.toFixed(2)),
+      baseline: Math.round(baseline),
+      postRatio,
+    };
+
+    if (!best || candidate.ratio > best.ratio) best = candidate;
+    // The fall-back candidate has to be a dramatic jump in its own right.
+    // Without the ratio floor, the tail of a series that simply stops reads as
+    // a fall (nothing follows it, so postRatio is 0) and an unremarkable year
+    // would outrank the actual spike.
+    if (
+      candidate.ratio >= SPIKE_DRAMATIC_RATIO &&
+      postRatio !== null &&
+      postRatio <= SPIKE_FELL_BACK_RATIO &&
+      (!bestFellBack || candidate.ratio > bestFellBack.ratio)
+    ) {
+      bestFellBack = candidate;
     }
   }
-  return best;
+  // Prefer a spike that demonstrably fell back; it satisfies both consumers.
+  // Otherwise report the largest jump, which the collection filter will reject
+  // on its post-ratio.
+  return bestFellBack ?? best;
 }
 
 /** Every run of zero years strictly inside the recorded span, longest first. */
