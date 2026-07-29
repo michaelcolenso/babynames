@@ -7,6 +7,7 @@
 // step stay in sync. Readers live in d1-queries.ts.
 
 import type { D1Database } from "@cloudflare/workers-types";
+import { META_KEYS } from "./schema";
 
 // Ranks deeper than this are not stored. Every current caller asks for far
 // less (meta: 10, /api/year: 25, river: 30); the cap keeps the table at
@@ -51,6 +52,11 @@ const REBUILD_YEAR_BATCH = 12;
 
 // Rebuilds the rankings for the given years. Safe to re-run: each year is
 // deleted and re-inserted inside the same batch.
+//
+// A rebuild is NOT atomic — years land batch by batch. Callers that make the
+// table visible to readers must go through publishRankings() so a half-built
+// table is never served (a partially populated table would let /api/meta return
+// only the years written so far, and that response is edge-cached for a week).
 export async function rebuildRankings(
   db: D1Database,
   years: number[],
@@ -69,4 +75,81 @@ export async function rebuildRankings(
     done += slice.length;
   }
   return done;
+}
+
+// Readiness marker. The rankings table is a derived cache with no staging-swap
+// equivalent, so visibility is gated on a meta key instead: readers trust the
+// table only while `rankings_version` equals the live `data_version`.
+//
+// Retiring the marker first and re-publishing it last means every window in
+// which the table is incomplete — the initial backfill, and every ingest
+// rebuild — reads as "not ready", and readers transparently fall back to the
+// live ranking query. Publishing is a single meta write, so the flip is atomic
+// from a reader's point of view.
+export async function retireRankings(db: D1Database): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO meta(key, value) VALUES(?1, '')
+         ON CONFLICT(key) DO UPDATE SET value = ''`,
+    )
+    .bind(META_KEYS.rankingsVersion)
+    .run();
+}
+
+export async function publishRankings(
+  db: D1Database,
+  years: number[],
+  dataVersion: string,
+  perSex = RANKINGS_PER_SEX_LIMIT,
+): Promise<number> {
+  if (!dataVersion) throw new Error("publishRankings requires a non-empty dataVersion");
+  await retireRankings(db);
+  const done = await rebuildRankings(db, years, perSex);
+  await db
+    .prepare(
+      `INSERT INTO meta(key, value) VALUES(?1, ?2)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    )
+    .bind(META_KEYS.rankingsVersion, dataVersion)
+    .run();
+  return done;
+}
+
+// True when the table is fully built for the dataset currently being served.
+// Both values must be non-empty: a database that has never recorded a
+// data_version must not match an empty marker.
+export async function rankingsReady(db: D1Database): Promise<boolean> {
+  const r = await db
+    .prepare(`SELECT key, value FROM meta WHERE key IN (?1, ?2)`)
+    .bind(META_KEYS.dataVersion, META_KEYS.rankingsVersion)
+    .all<{ key: string; value: string }>();
+  let dataVersion = "";
+  let rankingsVersion = "";
+  for (const row of r.results ?? []) {
+    if (row.key === META_KEYS.dataVersion) dataVersion = row.value ?? "";
+    else rankingsVersion = row.value ?? "";
+  }
+  return !!dataVersion && dataVersion === rankingsVersion;
+}
+
+// Carries a valid rankings cache across a data_version bump that did not touch
+// name_years — the diaspora recompute paths bump data_version purely to bust
+// edge caches. Without this, those bumps would strand the marker on the old
+// version and force every ranking read back onto the live query until the next
+// SSA ingest, potentially a year away.
+//
+// Call before writing the new data_version: stamping the marker first can only
+// produce a brief marker-ahead-of-data mismatch, which readers treat as "not
+// ready" and serve from the live query. The reverse order would briefly present
+// a stale cache as current.
+export async function revalidateRankings(db: D1Database, newDataVersion: string): Promise<void> {
+  if (!newDataVersion) throw new Error("revalidateRankings requires a non-empty dataVersion");
+  if (!(await rankingsReady(db))) return;
+  await db
+    .prepare(
+      `INSERT INTO meta(key, value) VALUES(?1, ?2)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    )
+    .bind(META_KEYS.rankingsVersion, newDataVersion)
+    .run();
 }

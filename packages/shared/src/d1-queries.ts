@@ -3,7 +3,7 @@
 // any further shaping (cache wrapping, JSON serialization).
 
 import type { D1Database } from "@cloudflare/workers-types";
-import { RANKINGS_PER_SEX_LIMIT } from "./rankings";
+import { RANKINGS_PER_SEX_LIMIT, rankingsReady } from "./rankings";
 import type {
   BlogPost,
   BlogPostSummary,
@@ -514,17 +514,21 @@ const YEAR_BATCH = 24;
 // Reads of `name_rankings_by_year` (migration 0022). The table is a cache of
 // the window-function queries below, so every reader degrades to the live query
 // when it cannot be served: the table may be absent (migration not applied),
-// empty (backfill not run yet) or too shallow (caller wants a deeper rank than
-// RANKINGS_PER_SEX_LIMIT). Returning null means "fall back".
+// not yet published for the live dataset (backfill not run, or a rebuild in
+// flight), or too shallow (caller wants a deeper rank than
+// RANKINGS_PER_SEX_LIMIT).
+//
+// The readiness marker matters as much as the table's existence: a rebuild
+// writes years in batches, and serving a half-built table would let /api/meta
+// return only the years written so far — into a response that is then
+// edge-cached for seven days. rankingsReady() only reports true once a rebuild
+// has been published in full for the current data_version.
 async function rankingsUsable(db: D1Database, perBucket: number): Promise<boolean> {
   if (perBucket > RANKINGS_PER_SEX_LIMIT) return false;
   try {
-    const row = await db
-      .prepare("SELECT 1 AS ok FROM name_rankings_by_year LIMIT 1")
-      .first<{ ok: number }>();
-    return !!row;
+    return await rankingsReady(db);
   } catch {
-    // Table does not exist on this database yet.
+    // meta or the rankings table does not exist on this database yet.
     return false;
   }
 }

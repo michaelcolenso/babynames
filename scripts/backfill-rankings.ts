@@ -10,6 +10,12 @@
 // Idempotent: each year is deleted and re-inserted, so re-running is safe and
 // a partial run can simply be repeated.
 //
+// Readers gate on the `rankings_version` meta key rather than on the table's
+// contents, so the half-built table this script walks through is never served:
+// the marker is cleared up front and only stamped with the live `data_version`
+// once every year has landed. A crashed run therefore leaves readers on the
+// live query, not on partial rankings.
+//
 // Why not one big statement? Ranking every year in a single window function
 // materializes all ~1.9M name_years rows at once and exceeds the memory budget
 // D1 runs queries under (Cloudflare Error 1101). One statement per year keeps
@@ -20,6 +26,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { rankingsRebuildSql, RANKINGS_PER_SEX_LIMIT } from "../packages/shared/src/rankings";
+import { META_KEYS } from "../packages/shared/src/schema";
 
 const REPO = path.resolve(import.meta.dirname ?? __dirname, "..");
 const CONFIG = path.join(REPO, "apps/web/wrangler.toml");
@@ -88,6 +95,27 @@ function listYears(): number[] {
   return years.filter((n) => Number.isInteger(n));
 }
 
+function setMarker(value: string) {
+  const escaped = value.replace(/'/g, "''");
+  execute(
+    `INSERT INTO meta(key, value) VALUES('${META_KEYS.rankingsVersion}', '${escaped}') ` +
+      `ON CONFLICT(key) DO UPDATE SET value = excluded.value;`,
+    false,
+  );
+}
+
+function liveDataVersion(): string {
+  const out = execute(`SELECT value FROM meta WHERE key = '${META_KEYS.dataVersion}'`, true);
+  const start = out.search(/[[{]/);
+  if (start < 0) throw new Error(`Unexpected wrangler output:\n${out}`);
+  const parsed = JSON.parse(out.slice(start));
+  const blocks = Array.isArray(parsed) ? parsed : [parsed];
+  for (const b of blocks) {
+    for (const row of b.results ?? []) if (row.value) return String(row.value);
+  }
+  return "";
+}
+
 function main() {
   const years = listYears();
   if (!years.length) {
@@ -98,6 +126,18 @@ function main() {
     `Backfilling rankings for ${years.length} years (${years[0]}–${years[years.length - 1]}), ` +
       `top ${RANKINGS_PER_SEX_LIMIT} per sex, into ${DB} (${target}) …`,
   );
+
+  // Partial-year backfills must not re-publish the marker: the rest of the
+  // table is whatever the last full run left behind.
+  const partial = !!yearsArg;
+  const dataVersion = partial ? "" : liveDataVersion();
+  if (!partial && !dataVersion) {
+    console.error(
+      "meta.data_version is empty — run an ingest first, or readers will never trust the cache.",
+    );
+    process.exit(1);
+  }
+  if (!partial) setMarker("");
 
   const { del, ins } = rankingsRebuildSql();
   for (let i = 0; i < years.length; i += YEARS_PER_CALL) {
@@ -114,7 +154,14 @@ function main() {
     execute(sql, false);
     console.error(`  … ${slice[0]}–${slice[slice.length - 1]} done`);
   }
-  console.error("Done.");
+  if (partial) {
+    console.error(
+      "Done (partial run — readiness marker untouched; run without --years to publish a full rebuild).",
+    );
+  } else {
+    setMarker(dataVersion);
+    console.error(`Done — published for data_version ${dataVersion}.`);
+  }
 }
 
 main();

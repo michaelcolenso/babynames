@@ -231,6 +231,10 @@ export const META_KEYS = {
   lastStateSsaEtag: "last_state_ssa_etag",
   schemaVersion: "schema_version",
   dataVersion: "data_version",
+  // The data_version that name_rankings_by_year was last fully built for.
+  // Readers only trust the table when this matches data_version — see
+  // rankings.ts.
+  rankingsVersion: "rankings_version",
 } as const;
 
 // Diaspora — per-name geographic diffusion (see name_diaspora table).

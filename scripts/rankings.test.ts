@@ -6,19 +6,41 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { D1Database } from "@cloudflare/workers-types";
-import { rebuildRankings, RANKINGS_PER_SEX_LIMIT } from "../packages/shared/src/rankings";
+import {
+  publishRankings,
+  rebuildRankings,
+  rankingsReady,
+  retireRankings,
+  revalidateRankings,
+  RANKINGS_PER_SEX_LIMIT,
+} from "../packages/shared/src/rankings";
 import { topByYear, topBySpecificYear, riverNames } from "../packages/shared/src/d1-queries";
+
+// node:sqlite ships in Node 22+. The repo still targets Node 20 (see
+// .github/workflows/deploy-cloudflare.yml), where importing it throws
+// ERR_UNKNOWN_BUILTIN_MODULE — so resolve it lazily and skip rather than
+// failing the whole `npm test` run on the older runtime.
+type SqliteDb = {
+  exec(sql: string): void;
+  prepare(sql: string): { all(...p: never[]): unknown[]; get(...p: never[]): unknown; run(...p: never[]): unknown };
+};
+let DatabaseSync: (new (p: string) => SqliteDb) | null = null;
+try {
+  ({ DatabaseSync } = require("node:sqlite"));
+} catch {
+  DatabaseSync = null;
+}
+const skip = DatabaseSync ? false : "requires node:sqlite (Node 22+)";
 
 const REPO = path.resolve(import.meta.dirname ?? __dirname, "..");
 const MIGRATION = path.join(REPO, "migrations/0022_name_rankings.sql");
 
 // Just enough of the D1 surface for the queries under test: prepare/bind and
 // all/first/run, plus batch() executed sequentially.
-function makeDb(sqlite: DatabaseSync): D1Database {
+function makeDb(sqlite: SqliteDb): D1Database {
   const stmt = (sql: string, binds: unknown[]) => ({
     bind: (...args: unknown[]) => stmt(sql, args),
     all: async () => ({ results: sqlite.prepare(sql).all(...(binds as never[])) }),
@@ -41,8 +63,8 @@ function makeDb(sqlite: DatabaseSync): D1Database {
 
 // Deterministic fixture: 3 years, 4 names, counts chosen so ranks differ per
 // year and per sex.
-function seed(withRankingsTable: boolean): DatabaseSync {
-  const sqlite = new DatabaseSync(":memory:");
+function seed(withRankingsTable: boolean): SqliteDb {
+  const sqlite = new DatabaseSync!(":memory:");
   sqlite.exec(`
     CREATE TABLE names (
       id INTEGER PRIMARY KEY, name TEXT NOT NULL, name_lower TEXT NOT NULL,
@@ -55,6 +77,8 @@ function seed(withRankingsTable: boolean): DatabaseSync {
     CREATE TABLE year_totals (
       year INTEGER NOT NULL, sex TEXT NOT NULL, total INTEGER NOT NULL,
       PRIMARY KEY (year, sex));
+    CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    INSERT INTO meta (key, value) VALUES ('data_version', 'v1');
     INSERT INTO names (id, name, name_lower, sex, first_year, last_year, peak_year, peak_count, total_count) VALUES
       (1,'Ava','ava','F',2000,2002,2001,900,1700),
       (2,'Mia','mia','F',2000,2002,2000,800,1500),
@@ -72,7 +96,7 @@ function seed(withRankingsTable: boolean): DatabaseSync {
   return sqlite;
 }
 
-test("rebuildRankings writes one rank sequence per (year, sex)", async () => {
+test("rebuildRankings writes one rank sequence per (year, sex)", { skip }, async () => {
   const sqlite = seed(true);
   const db = makeDb(sqlite);
   const done = await rebuildRankings(db, [2000, 2001, 2002]);
@@ -102,7 +126,7 @@ test("rebuildRankings writes one rank sequence per (year, sex)", async () => {
   );
 });
 
-test("rebuildRankings is idempotent and clears ranks that no longer exist", async () => {
+test("rebuildRankings is idempotent and clears ranks that no longer exist", { skip }, async () => {
   const sqlite = seed(true);
   const db = makeDb(sqlite);
   await rebuildRankings(db, [2000]);
@@ -124,9 +148,9 @@ test("rebuildRankings is idempotent and clears ranks that no longer exist", asyn
   );
 });
 
-test("readers agree whether or not the rankings table is populated", async () => {
+test("readers agree whether or not the rankings table is published", { skip }, async () => {
   const populated = seed(true);
-  await rebuildRankings(makeDb(populated), [2000, 2001, 2002]);
+  await publishRankings(makeDb(populated), [2000, 2001, 2002], "v1");
   const withTable = makeDb(populated);
   // No rankings table at all — every reader must fall back to the live query.
   const withoutTable = makeDb(seed(false));
@@ -153,10 +177,10 @@ test("readers agree whether or not the rankings table is populated", async () =>
   );
 });
 
-test("a request deeper than the stored cap falls back to the live query", async () => {
+test("a request deeper than the stored cap falls back to the live query", { skip }, async () => {
   const sqlite = seed(true);
   const db = makeDb(sqlite);
-  await rebuildRankings(db, [2001], 1); // store only rank 1
+  await publishRankings(db, [2001], "v1", 1); // store only rank 1
   const deep = await topBySpecificYear(db, 2001, RANKINGS_PER_SEX_LIMIT + 1);
   // The live query still returns both ranks per sex despite the shallow table.
   assert.deepEqual(
@@ -168,4 +192,62 @@ test("a request deeper than the stored cap falls back to the live query", async 
       ["M", 2, "Max"],
     ],
   );
+});
+
+test("a half-built table is not served until it is published", { skip }, async () => {
+  const sqlite = seed(true);
+  const db = makeDb(sqlite);
+  // Simulate a backfill (or ingest rebuild) that has only reached 2000: rows
+  // exist, but no marker was published.
+  await rebuildRankings(db, [2000]);
+  assert.equal(await rankingsReady(db), false);
+
+  // The reader must not serve the one year that happens to be present — that
+  // truncated response would be edge-cached for a week.
+  const top = await topByYear(db, 1);
+  assert.deepEqual(
+    top.map((r) => r.year),
+    [2000, 2000, 2001, 2001, 2002, 2002],
+  );
+
+  await publishRankings(db, [2000, 2001, 2002], "v1");
+  assert.equal(await rankingsReady(db), true);
+  assert.deepEqual(await topByYear(db, 1), top);
+});
+
+test("an in-flight rebuild retires the cache for the duration", { skip }, async () => {
+  const sqlite = seed(true);
+  const db = makeDb(sqlite);
+  await publishRankings(db, [2000, 2001, 2002], "v1");
+  assert.equal(await rankingsReady(db), true);
+
+  await retireRankings(db);
+  assert.equal(await rankingsReady(db), false);
+});
+
+test("a data_version bump invalidates the cache unless it is carried over", { skip }, async () => {
+  const bumped = seed(true);
+  const a = makeDb(bumped);
+  await publishRankings(a, [2000, 2001, 2002], "v1");
+  // A bump that changed the underlying data must strand the old marker.
+  bumped.exec("UPDATE meta SET value = 'v2' WHERE key = 'data_version'");
+  assert.equal(await rankingsReady(a), false);
+
+  // A bump that did not touch name_years (the diaspora recompute) carries the
+  // marker forward instead of stranding a still-valid cache.
+  const carried = seed(true);
+  const b = makeDb(carried);
+  await publishRankings(b, [2000, 2001, 2002], "v1");
+  await revalidateRankings(b, "v2");
+  carried.exec("UPDATE meta SET value = 'v2' WHERE key = 'data_version'");
+  assert.equal(await rankingsReady(b), true);
+});
+
+test("revalidateRankings does not resurrect an unpublished cache", { skip }, async () => {
+  const sqlite = seed(true);
+  const db = makeDb(sqlite);
+  await rebuildRankings(db, [2000]); // rows, but never published
+  await revalidateRankings(db, "v2");
+  sqlite.exec("UPDATE meta SET value = 'v2' WHERE key = 'data_version'");
+  assert.equal(await rankingsReady(db), false);
 });
