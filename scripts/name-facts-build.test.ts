@@ -38,9 +38,14 @@ function build(): NameFacts[] {
     analysisYear: 2026,
     sourceDataVersion: "test",
     catalysts: new Map([["marvel|F", { year: 1931, title: "Marvel Comics debut", type: "media" }]]),
+    // State data begins in 1910, and the per-state totals below roughly account
+    // for the national births in that era — which is what the share divides by.
+    stateEraFirstYear: 1910,
     stateTotals: new Map([
-      ["Marvel|F", new Map([["WV", 900], ["OH", 400], ["PA", 300]])],
-      ["Elzada|F", new Map([["VT", 340], ["NH", 10]])],
+      // Marvel: 13,180 nationally, concentrated but nowhere near exclusive.
+      ["Marvel|F", new Map([["WV", 7_000], ["OH", 4_000], ["PA", 2_000]])],
+      // Elzada: 288 births from 1910 on, almost all of them in Vermont.
+      ["Elzada|F", new Map([["VT", 270], ["NH", 10]])],
     ]),
   });
 }
@@ -108,10 +113,12 @@ test("state totals become concentration facts", () => {
   const marvel = rows.find((r) => r.name === "Marvel")!;
   assert.equal(marvel.top_state, "WV");
   assert.equal(marvel.states_seen, 3);
-  assert.equal(marvel.exclusive_state, null, "56% is not exclusivity");
+  assert.equal(marvel.exclusive_state, null, "a 53% share is not exclusivity");
+  assert.ok((marvel.top_state_share ?? 0) > 0.5 && (marvel.top_state_share ?? 0) < 0.6);
 
   const elzada = rows.find((r) => r.name === "Elzada")!;
   assert.equal(elzada.exclusive_state, "VT");
+  assert.ok((elzada.top_state_share ?? 0) >= 0.9);
 
   // A name with no state data at all must not invent geography.
   const michael = rows.find((r) => r.name === "Michael")!;
@@ -161,7 +168,7 @@ test("a member never appears twice in the same collection", () => {
 
 test("emitted SQL is one balanced, idempotent transaction", () => {
   const rows = build();
-  const sql = emitSql(rows, assembleCollections(rows, { minYear: 1880, maxYear: YM }));
+  const sql = emitSql(rows, assembleCollections(rows, { minYear: 1880, maxYear: YM }), "corpus-a");
 
   assert.equal((sql.match(/^BEGIN TRANSACTION;$/gm) ?? []).length, 1);
   assert.equal((sql.match(/^COMMIT;$/gm) ?? []).length, 1);
@@ -169,7 +176,14 @@ test("emitted SQL is one balanced, idempotent transaction", () => {
   // Re-runnable: the deletes must precede the inserts.
   assert.ok(sql.indexOf("DELETE FROM name_facts;") < sql.indexOf("INSERT INTO name_facts"));
   assert.ok(sql.indexOf("DELETE FROM name_collections;") < sql.indexOf("INSERT INTO name_collections"));
-  assert.match(sql, /INSERT INTO meta \(key, value\) SELECT 'facts_version'/);
+  // facts_version must be the version this build READ, not a SELECT of whatever
+  // is live at seed time — otherwise applying a stale file after a newer ingest
+  // relabels the old rows as current and verify-name-facts passes wrongly.
+  assert.match(sql, /INSERT INTO meta \(key, value\) VALUES \('facts_version', 'corpus-a'\)/);
+  assert.ok(
+    !/SELECT 'facts_version', value FROM meta/.test(sql),
+    "facts_version must not be copied from the live data_version at seed time",
+  );
 });
 
 test("string literals are escaped, not concatenated raw", () => {
@@ -178,7 +192,7 @@ test("string literals are escaped, not concatenated raw", () => {
     sourceDataVersion: null,
     catalysts: new Map([["o'neal|M", { year: 1992, title: "Shaq's rookie year", type: "sport" }]]),
   });
-  const sql = emitSql(rows, assembleCollections(rows, { minYear: 1880, maxYear: YM }));
+  const sql = emitSql(rows, assembleCollections(rows, { minYear: 1880, maxYear: YM }), "corpus-a");
   assert.match(sql, /'o''neal'/);
   assert.match(sql, /'Shaq''s rookie year'/);
   // Every quote in the file must be part of a balanced pair once doubles are
@@ -188,7 +202,7 @@ test("string literals are escaped, not concatenated raw", () => {
 });
 
 test("an empty corpus emits a valid no-op transaction rather than broken SQL", () => {
-  const sql = emitSql([], []);
+  const sql = emitSql([], [], "corpus-a");
   assert.match(sql, /BEGIN TRANSACTION;/);
   assert.match(sql, /COMMIT;/);
   assert.ok(!sql.includes("VALUES\n;"), "emitted an INSERT with no rows");

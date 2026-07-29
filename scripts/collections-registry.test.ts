@@ -155,7 +155,7 @@ test("state collections only take names whose exclusivity cleared the floor", ()
     facts({ name: "Vermonter", exclusive_state: "VT", top_state_share: 0.97 }),
   ]);
   assert.deepEqual(picked.map((p) => p.row.name), ["Tejano"]);
-  assert.equal(picked[0]!.metricLabel, "94% of all births");
+  assert.equal(picked[0]!.metricLabel, "94% of births since 1910");
 });
 
 test("lost-names is scoped to its own decade and to names actually gone", () => {

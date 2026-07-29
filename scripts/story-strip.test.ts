@@ -123,7 +123,7 @@ test("the strip surfaces the facts that make the page distinctive", () => {
   }
   assert.match(s, /Rarer than 95\.5% of girls' names/);
   assert.match(s, /West Virginia/);
-  assert.match(s, /34% of recorded births/);
+  assert.match(s, /34% of births since state records began/);
 });
 
 test("the strip is omitted entirely when facts are unavailable", () => {
@@ -199,7 +199,7 @@ test("the story sentence reads as one sentence, not a chain of conjunctions", ()
   const line = /<p class="story-line">(.*?)<\/p>/.exec(strip(render()))?.[1] ?? "";
   assert.ok(line, "no story line rendered");
   assert.equal((line.match(/\band\b/g) ?? []).length, 1, `too many conjunctions: ${line}`);
-  assert.match(line, /1974, and 34% of those births were in West Virginia\.$/);
+  assert.match(line, /1974, and 34% of its births since state records began were in West Virginia\.$/);
 
   // Two clauses keep the plain "A, and B" form.
   const twoClause =

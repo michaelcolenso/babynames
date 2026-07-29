@@ -945,7 +945,7 @@ function storyCells(
     cells.push({
       label: "Strongest state",
       value: stateName(facts.top_state),
-      detail: `${Math.round(facts.top_state_share * 100)}% of recorded births`,
+      detail: `${Math.round(facts.top_state_share * 100)}% of births since state records began`,
     });
   }
 
@@ -1017,7 +1017,7 @@ export function storySentence(record: NameRecord, a: ClassifyResult, facts: Name
 
   if (facts.top_state && (facts.top_state_share ?? 0) >= 0.2) {
     parts.push(
-      `${Math.round((facts.top_state_share ?? 0) * 100)}% of those births were in ${stateName(facts.top_state)}`,
+      `${Math.round((facts.top_state_share ?? 0) * 100)}% of its births since state records began were in ${stateName(facts.top_state)}`,
     );
   }
 
@@ -1352,7 +1352,7 @@ function augmentNarrativeWithFacts(
   if (facts.top_state && facts.top_state_share) {
     const share = Math.round(facts.top_state_share * 100);
     answers.whereFrom =
-      `${stateName(facts.top_state)} accounts for ${share}% of every recorded ${record.name} birth` +
+      `${stateName(facts.top_state)} accounts for ${share}% of every ${record.name} birth recorded since state-level records began in 1910` +
       (facts.exclusive_state
         ? `, effectively the only state where the name is used.`
         : `, more than any other state.`);

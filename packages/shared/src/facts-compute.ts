@@ -42,7 +42,14 @@ export const VERGE_MAX_RATIO = 0.25;
 export const VERGE_WINDOW = 5;
 
 /** State exclusivity. Below MIN_BIRTHS, SSA's per-state suppression makes a
- *  100%-one-state reading an artifact of the floor rather than a fact. */
+ *  100%-one-state reading an artifact of the floor rather than a fact.
+ *
+ *  The share is taken against NATIONAL births in the state-data era, never
+ *  against the sum of visible state rows. SSA suppresses any state-year under
+ *  five births, so a name with 20 visible Texas births and two thousand more
+ *  scattered below the floor nationwide would otherwise read as 100% Texas.
+ *  Using the national denominator also makes coverage implicit: clearing a 90%
+ *  share is only possible when the state file accounts for ~90% of the name. */
 export const EXCLUSIVE_MIN_SHARE = 0.9;
 export const EXCLUSIVE_MIN_BIRTHS = 20;
 
@@ -66,9 +73,13 @@ export interface ComebackResult {
 
 export interface StateConcentration {
   top: string | null;
+  /** Top state's births as a fraction of NATIONAL births in the state-data era. */
   share: number;
   exclusive: string | null;
   statesSeen: number;
+  /** Fraction of national births the state file actually accounts for. Below
+   *  1.0 the remainder sits under the per-state reporting floor. */
+  coverage: number;
 }
 
 export interface SeriesFacts {
@@ -155,23 +166,42 @@ export function computeSpike(series: Record<number, number>): SpikeResult | null
   return best;
 }
 
+/** Every run of zero years strictly inside the recorded span, longest first. */
+export function listGaps(series: Record<number, number>): GapResult[] {
+  const ys = years(series);
+  const out: GapResult[] = [];
+  for (let i = 1; i < ys.length; i++) {
+    const prev = ys[i - 1] as number;
+    const curr = ys[i] as number;
+    const length = curr - prev - 1;
+    if (length > 0) out.push({ length, start: prev + 1, end: curr - 1 });
+  }
+  return out.sort((a, b) => b.length - a.length || a.start - b.start);
+}
+
 /**
  * A revival after a long dormancy. Requires both a gap of COMEBACK_MIN_GAP and
  * real post-gap usage — otherwise a single stray birth 60 years later reads as
  * a comeback.
+ *
+ * Every qualifying gap is tested, not just the longest. A name can have a
+ * 60-year gap that ends in one stray birth and a later 50-year gap followed by
+ * sustained use; only checking the longest would reject the genuine comeback.
  */
 export function computeComeback(series: Record<number, number>): ComebackResult | null {
-  const gap = computeLongestGap(series);
-  if (!gap || gap.length < COMEBACK_MIN_GAP) return null;
-  const revivalYear = gap.end + 1;
-  const postMean = meanOver(series, revivalYear, revivalYear + COMEBACK_WINDOW - 1);
-  if (postMean < COMEBACK_MIN_REVIVAL_MEAN) return null;
-  const preMean = meanOver(series, gap.start - COMEBACK_WINDOW, gap.start - 1);
-  return {
-    gap: gap.length,
-    year: revivalYear,
-    strength: Number((postMean / Math.max(preMean, 1)).toFixed(2)),
-  };
+  for (const gap of listGaps(series)) {
+    if (gap.length < COMEBACK_MIN_GAP) continue;
+    const revivalYear = gap.end + 1;
+    const postMean = meanOver(series, revivalYear, revivalYear + COMEBACK_WINDOW - 1);
+    if (postMean < COMEBACK_MIN_REVIVAL_MEAN) continue;
+    const preMean = meanOver(series, gap.start - COMEBACK_WINDOW, gap.start - 1);
+    return {
+      gap: gap.length,
+      year: revivalYear,
+      strength: Number((postMean / Math.max(preMean, 1)).toFixed(2)),
+    };
+  }
+  return null;
 }
 
 /**
@@ -206,25 +236,44 @@ export function rarityBand(pct: number, totalCount: number): RarityBand {
 /**
  * Where a name actually lives, from the per-state SSA corpus. `byState` maps a
  * two-letter abbreviation to lifetime births in that state.
+ *
+ * `nationalInStateEra` is the name's national births over the years the state
+ * file covers, and is the denominator for `share`. Passing the visible state
+ * sum instead would turn the reporting floor into fake exclusivity — see
+ * EXCLUSIVE_MIN_SHARE.
  */
-export function computeStateConcentration(byState: Record<string, number>): StateConcentration {
+export function computeStateConcentration(
+  byState: Record<string, number>,
+  nationalInStateEra: number,
+): StateConcentration {
   let top: string | null = null;
   let topCount = 0;
-  let total = 0;
+  let visible = 0;
   let statesSeen = 0;
   for (const [state, count] of Object.entries(byState)) {
     if (count <= 0) continue;
     statesSeen++;
-    total += count;
+    visible += count;
     if (count > topCount) {
       topCount = count;
       top = state;
     }
   }
-  if (!top || total <= 0) return { top: null, share: 0, exclusive: null, statesSeen: 0 };
-  const share = topCount / total;
+  if (!top || visible <= 0) {
+    return { top: null, share: 0, exclusive: null, statesSeen: 0, coverage: 0 };
+  }
+  // The state file can never exceed the national count; if the two disagree
+  // (mismatched vintages), fall back to the visible sum so share stays <= 1.
+  const denominator = Math.max(nationalInStateEra, visible);
+  const share = topCount / denominator;
   const exclusive = share >= EXCLUSIVE_MIN_SHARE && topCount >= EXCLUSIVE_MIN_BIRTHS ? top : null;
-  return { top, share: Number(share.toFixed(4)), exclusive, statesSeen };
+  return {
+    top,
+    share: Number(share.toFixed(4)),
+    exclusive,
+    statesSeen,
+    coverage: Number((visible / denominator).toFixed(4)),
+  };
 }
 
 /**

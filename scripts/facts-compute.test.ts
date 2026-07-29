@@ -73,6 +73,17 @@ test("comeback rejects a stray birth after a long silence", () => {
   assert.equal(computeComeback(s), null);
 });
 
+test("a later qualifying gap is found even when the longest one fails", () => {
+  // 1880 and 1941 are isolated years; the 60-year gap ends in a stray birth,
+  // but the 50-year gap after it is followed by sustained use. Testing only the
+  // longest gap would reject this name outright.
+  const s = series([[1880, 20], [1941, 6], ...flat(1992, 1996, 5)]);
+  const comeback = computeComeback(s);
+  assert.ok(comeback, "the valid 50-year revival was missed");
+  assert.equal(comeback.year, 1992);
+  assert.equal(comeback.gap, 50);
+});
+
 test("comeback rejects a short dormancy", () => {
   const s = series([...flat(1960, 1980, 60), ...flat(1995, 2005, 60)]);
   assert.equal(computeComeback(s), null);
@@ -123,21 +134,51 @@ test("rarity bands respect both percentile and absolute scale", () => {
 });
 
 test("state concentration finds the stronghold and gates exclusivity", () => {
-  const spread = computeStateConcentration({ WV: 120, OH: 60, PA: 20 });
+  const spread = computeStateConcentration({ WV: 120, OH: 60, PA: 20 }, 200);
   assert.equal(spread.top, "WV");
   assert.equal(spread.statesSeen, 3);
   assert.equal(spread.exclusive, null);
 
-  const exclusive = computeStateConcentration({ TX: 200, NM: 5 });
+  const exclusive = computeStateConcentration({ TX: 200, NM: 5 }, 205);
   assert.equal(exclusive.exclusive, "TX");
   assert.ok(exclusive.share >= 0.9);
 
   // 100% of one state, but below the suppression-artifact floor.
-  const artifact = computeStateConcentration({ VT: EXCLUSIVE_MIN_BIRTHS - 1 });
+  const artifact = computeStateConcentration({ VT: EXCLUSIVE_MIN_BIRTHS - 1 }, EXCLUSIVE_MIN_BIRTHS - 1);
   assert.equal(artifact.top, "VT");
   assert.equal(artifact.exclusive, null);
 
-  assert.deepEqual(computeStateConcentration({}), { top: null, share: 0, exclusive: null, statesSeen: 0 });
+  assert.deepEqual(computeStateConcentration({}, 0), {
+    top: null,
+    share: 0,
+    exclusive: null,
+    statesSeen: 0,
+    coverage: 0,
+  });
+});
+
+test("the state share is a fraction of national births, not of visible state rows", () => {
+  // The bug this guards: SSA suppresses any state-year under five births, so a
+  // name spread thinly nationwide surfaces in only one state. Dividing by the
+  // visible rows would call that 100% Texas and file it under only-in-texas.
+  const thin = computeStateConcentration({ TX: 20 }, 2_000);
+  assert.equal(thin.top, "TX");
+  assert.equal(thin.exclusive, null, "a thinly-spread name must not read as exclusive");
+  assert.ok(thin.share <= 0.02, `share was ${thin.share}`);
+  assert.ok(thin.coverage <= 0.02, "coverage should expose how little the state file explains");
+
+  // Genuinely concentrated: the state file accounts for nearly the whole name.
+  const real = computeStateConcentration({ VT: 340, NH: 10 }, 355);
+  assert.equal(real.exclusive, "VT");
+  assert.ok(real.share >= 0.9);
+  assert.ok(real.coverage >= 0.9);
+});
+
+test("state share never exceeds 1 when the corpora disagree", () => {
+  // A stale national vintage could report fewer births than the state file.
+  const skewed = computeStateConcentration({ TX: 500 }, 100);
+  assert.ok(skewed.share <= 1, `share was ${skewed.share}`);
+  assert.ok(skewed.coverage <= 1);
 });
 
 test("empty series yields no facts", () => {
