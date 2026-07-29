@@ -9,7 +9,7 @@
 // The staging-swap pattern means reads against /api/* keep seeing
 // consistent old data until the swap completes inside one transaction.
 
-import { META_KEYS, getMeta, setMeta, enrichName, sweepRateLimits, sweepStalePending } from "@nv/shared";
+import { META_KEYS, getMeta, setMeta, enrichName, revalidateRankings, sweepRateLimits, sweepStalePending } from "@nv/shared";
 import type {
   ExecutionContext,
   MessageBatch,
@@ -115,7 +115,11 @@ export default {
         cursor = r.nextCursor;
       } while (cursor);
       await swapDiasporaStaging(env.DB);
-      await setMeta(env.DB, META_KEYS.dataVersion, crypto.randomUUID());
+      // Diaspora does not touch name_years, so the rankings cache survives this
+      // cache-busting bump — carry its marker onto the new version.
+      const diasporaVersion = crypto.randomUUID();
+      await revalidateRankings(env.DB, diasporaVersion);
+      await setMeta(env.DB, META_KEYS.dataVersion, diasporaVersion);
       return Response.json({ ok: true, namesComputed: names });
     }
     if (url.pathname === "/health") {
@@ -315,7 +319,9 @@ async function handleMessage(env: Env, msg: IngestMessage): Promise<void> {
         await env.INGEST_QUEUE.send({ type: "diaspora-finalize", runId: msg.runId, cursor: nextCursor });
       } else {
         await swapDiasporaStaging(env.DB);
-        await setMeta(env.DB, META_KEYS.dataVersion, crypto.randomUUID());
+        const diasporaVersion = crypto.randomUUID();
+        await revalidateRankings(env.DB, diasporaVersion);
+        await setMeta(env.DB, META_KEYS.dataVersion, diasporaVersion);
         console.log(JSON.stringify({ message: "diaspora compute complete", runId: msg.runId }));
       }
       return;
@@ -323,10 +329,14 @@ async function handleMessage(env: Env, msg: IngestMessage): Promise<void> {
 
     case "finalize": {
       try {
+        // Minted before finalize so the rankings cache can be published under
+        // the same version written to meta below.
+        const dataVersion = crypto.randomUUID();
         const result = await finalize(env.DB, {
           runId: msg.runId,
           ym: msg.ym,
           yM: msg.yM,
+          dataVersion,
         });
         // NOTE: bumping max_year below immediately makes every /name/:name/
         // page's "Meet your shadow" link point at msg.yM, but
@@ -336,7 +346,6 @@ async function handleMessage(env: Env, msg: IngestMessage): Promise<void> {
         // (same manual-rerun requirement as build-enrichment/seed-enrichment).
         // Until that runs, shadow links for the new year 404 gracefully —
         // they don't error — but do rerun it after every SSA refresh.
-        const dataVersion = crypto.randomUUID();
         await Promise.all([
           setMeta(env.DB, META_KEYS.minYear, String(msg.ym)),
           setMeta(env.DB, META_KEYS.maxYear, String(msg.yM)),
