@@ -6,13 +6,17 @@
 
 import type { D1Database, PagesFunction } from "@cloudflare/workers-types";
 
-// meta.facts_version changes only when name_facts is reseeded, so one lookup
-// per isolate per TTL is ample. Kept deliberately short: the window between a
-// seed and the caches following it should be seconds, not minutes.
+// meta.facts_build changes on every facts build. facts_version deliberately
+// does NOT — it is the SSA data version, so a rebuild from the same corpus
+// (a corrected threshold, a new variant algorithm, added catalyst rows) leaves
+// it untouched and would reproduce the previous cache key exactly.
+//
+// One lookup per isolate per TTL is ample. The TTL is deliberately short: the
+// window between a seed and the caches following it should be seconds.
 const FACTS_VERSION_TTL_MS = 30_000;
 let factsVersionCache: { value: string | null; at: number } | null = null;
 
-async function factsVersionFor(db: D1Database | undefined): Promise<string | null> {
+async function factsBuildFor(db: D1Database | undefined): Promise<string | null> {
   if (!db) return null;
   const now = Date.now();
   if (factsVersionCache && now - factsVersionCache.at < FACTS_VERSION_TTL_MS) {
@@ -20,7 +24,7 @@ async function factsVersionFor(db: D1Database | undefined): Promise<string | nul
   }
   try {
     const row = await db
-      .prepare("SELECT value FROM meta WHERE key = 'facts_version'")
+      .prepare("SELECT value FROM meta WHERE key = 'facts_build'")
       .first<{ value: string }>();
     factsVersionCache = { value: row?.value ?? null, at: now };
   } catch {
@@ -138,16 +142,16 @@ async function handleRequest(ctx: Parameters<PagesFunction<Env>>[0], url: URL): 
 
   // Name pages render name_facts and name_collections, so a page cached before
   // a facts seed keeps its missing story strip for the full TTL. An ETag cannot
-  // fix that — cache.match never reads one — so the facts version goes into the
-  // key itself and a rebuild simply lands on a different key.
+  // fix that — cache.match never reads one — so the facts build id goes into
+  // the key itself and any rebuild lands on a different key.
   //
   // Bypassing instead, as the collection routes do, would drop the Cache API
   // for the busiest route on the site to fix a once-a-year transition. The
-  // version lookup is memoized per isolate (see factsVersionFor) so the common
-  // path adds no D1 read.
+  // build id is memoized per isolate (see factsBuildFor) so the common path
+  // adds no D1 read.
   if (url.pathname.startsWith("/name/")) {
-    const version = await factsVersionFor(ctx.env.DB);
-    if (version) keyUrl.searchParams.set("__nv_facts", version);
+    const build = await factsBuildFor(ctx.env.DB);
+    if (build) keyUrl.searchParams.set("__nv_facts", build);
   }
   const cacheKey = new Request(keyUrl.toString(), { method: "GET" });
 

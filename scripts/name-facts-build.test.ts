@@ -10,6 +10,7 @@ import {
   markCanonicalSex,
   corpusFingerprint,
 } from "./build-name-facts";
+import { MIN_PUBLISHABLE_MEMBERS } from "../packages/shared/src/collections";
 import type { NameFacts } from "../packages/shared/src/schema";
 
 const YM = 2025;
@@ -32,6 +33,11 @@ function corpus(): Map<string, Map<number, number>> {
   put("Kaitlyn|F", flat(1988, YM, 120));
   put("Bethzy|F", [[1998, 7]]);
   put("Elzada|F", flat(1900, 1945, 8));
+  // Enough one-year wonders to clear MIN_PUBLISHABLE_MEMBERS, so the fixture
+  // exercises a collection that actually materializes. Below the threshold the
+  // builder now emits nothing at all, which is the point of the guard below.
+  // All larger than Bethzy, so it stays the rarest name in the fixture.
+  for (let i = 0; i < 10; i++) put(`Once${i}|F`, [[1990 + i, 8 + i]]);
   return m;
 }
 
@@ -54,8 +60,8 @@ function build(): NameFacts[] {
 
 test("every pair in the corpus produces exactly one facts row", () => {
   const rows = build();
-  assert.equal(rows.length, 7);
-  assert.equal(new Set(rows.map((r) => `${r.name_lower}|${r.sex}`)).size, 7);
+  assert.equal(rows.length, 17);
+  assert.equal(new Set(rows.map((r) => `${r.name_lower}|${r.sex}`)).size, 17);
 });
 
 test("rarity rank is a global sort, and the percentile inverts it", () => {
@@ -75,7 +81,7 @@ test("rarity rank is a global sort, and the percentile inverts it", () => {
   // The percentile is the share of names strictly MORE common, so the rarest
   // name reads 5-of-6 rather than a synthetic 100. With real ties that matters:
   // the bottom 14% of male names share one total and must all read the same.
-  assert.equal(bethzy.rarity_pct_sex, 83.33);
+  assert.equal(bethzy.rarity_pct_sex, 93.75);
   assert.equal(bethzy.rarity_total_sex, females.length);
   assert.ok(bethzy.rarity_band === "ultra-rare");
 
@@ -159,10 +165,21 @@ test("collection membership is ranked densely from 1 within each slug", () => {
       `${slug} has non-dense ranks`,
     );
   }
-  // The corpus was constructed to land in these.
+  // The corpus was built to clear the publish threshold here; the other
+  // clusters are deliberately too thin and must materialize nothing.
   assert.ok(bySlug.has("one-year-wonders"));
-  assert.ok(bySlug.has("only-in-vermont"));
-  assert.ok(bySlug.has("famous-name-effects"));
+});
+
+test("collections below the publish threshold are materialized as nothing", () => {
+  // Otherwise every consumer has to remember to filter: the hub and sitemap
+  // did, the related nav did not, and name-page memberships did not. Dropping
+  // the rows makes the invariant hold everywhere at once.
+  const members = assembleCollections(build(), { minYear: 1880, maxYear: YM });
+  const counts = new Map<string, number>();
+  for (const m of members) counts.set(m.slug, (counts.get(m.slug) ?? 0) + 1);
+  for (const [slug, n] of counts) {
+    assert.ok(n >= MIN_PUBLISHABLE_MEMBERS, `${slug} materialized ${n} rows, below the threshold`);
+  }
 });
 
 test("a member never appears twice in the same collection", () => {
@@ -227,8 +244,21 @@ test("the corpus fingerprint is recomputable from the names table", () => {
 test("the emitted SQL stamps the corpus fingerprint alongside the version", () => {
   const rows = build();
   const stats = { maxYear: 2025, totalBirths: 900 };
-  const sql = emitSql(rows, assembleCollections(rows, { minYear: 1880, maxYear: YM }), "corpus-a", stats);
+  const members = assembleCollections(rows, { minYear: 1880, maxYear: YM });
+  const sql = emitSql(rows, members, "corpus-a", stats, "build-1");
   assert.ok(sql.includes(`VALUES ('facts_corpus', '${corpusFingerprint(rows, stats)}')`));
+
+  // facts_build must differ between two builds of the SAME corpus. Rebuilds
+  // happen for reasons unrelated to new SSA data — a corrected threshold, a
+  // changed variant algorithm — and the edge cache keys on this, so an
+  // unchanged value would serve the previous facts for another full TTL.
+  assert.ok(sql.includes(`VALUES ('facts_build', 'build-1')`));
+  const rebuilt = emitSql(rows, members, "corpus-a", stats, "build-2");
+  assert.ok(rebuilt.includes(`VALUES ('facts_build', 'build-2')`));
+  assert.notEqual(
+    /facts_build', '([^']*)'/.exec(sql)?.[1],
+    /facts_build', '([^']*)'/.exec(rebuilt)?.[1],
+  );
 });
 
 test("string literals are escaped, not concatenated raw", () => {
