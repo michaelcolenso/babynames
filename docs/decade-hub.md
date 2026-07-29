@@ -78,12 +78,31 @@ stored value. `scripts/seed-decade-hub.ts` binds the payload as a query
 parameter instead, which stores identical bytes. The `.sql` artifact is kept
 for inspection and diffing.
 
-Until the row exists, the hub route feature-detects the missing row and falls
-back to the legacy decade page, so deploy order is safe in that direction. The
-reverse is not: the scorecard is payload-driven while the thesis prose is
-compiled into the Pages bundle, so seeding a new vintage *before* deploying the
-matching copy leaves the live page quoting two different sets of numbers. Ship
-the code first, or accept a window of mismatch.
+### Vintage bumps have no safe deploy order
+
+The first seed is safe: until the row exists at all, the hub route
+feature-detects the missing row and falls back to the legacy decade page.
+
+**Re-seeding on a new vintage is different, and neither order avoids a
+mismatch.** The scorecard and rankings come from the payload, while the thesis
+copy in `packages/shared/src/content/decade-theses.ts` is compiled into the
+Pages bundle. The two carry the same figures and must move together:
+
+- Seed first → new scorecard above old copy.
+- Deploy first → new copy below old scorecard.
+
+So do not think of it as picking the safe order. Run the two steps back to back
+and keep the window to minutes, and remember the hub route sets
+`s-maxage=604800`, so an edge-cached copy of the mismatched page can outlive
+the window by a long way — purge the cache for `/names/<decade>/` afterwards
+rather than assuming it drains.
+
+The durable fix, if this becomes a recurring chore, is to make the mismatch
+detectable instead of merely brief: record in `decade-theses.ts` which
+`sourceVersion` each thesis was written against, and have the hub route treat a
+payload whose `sourceVersion` differs as a miss, falling back to the legacy
+page exactly as it does for a missing row. That trades a mixed-vintage page for
+a plain one during the window. It is not implemented today.
 
 ## Run the tests
 
