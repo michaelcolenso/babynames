@@ -14,6 +14,7 @@ export * from "./render-year";
 export * from "./render-blog";
 export * from "./render-landing";
 export * from "./render-collection";
+export * from "./sitemap-util";
 export * from "./render-shell";
 export * from "./render-shadow";
 export * from "./cf-access";
