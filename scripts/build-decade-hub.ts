@@ -239,11 +239,34 @@ export class D1IntegrityError extends Error {
   override readonly name = "D1IntegrityError";
 }
 
-/** meta.data_version — a UUID the ingest rewrites on every staging->live swap. */
-export async function readDataVersion(): Promise<string> {
-  const [row] = await d1Query<{ value: string }>("SELECT value FROM meta WHERE key = 'data_version'");
-  if (!row?.value) throw new D1IntegrityError("D1 meta.data_version is missing; refusing to read a database of unknown vintage");
-  return row.value;
+/**
+ * A marker for "the live tables have not changed under us".
+ *
+ * `meta.data_version` alone is not sufficient. The ingest worker's `finalize()`
+ * commits the staging->live rename and only afterwards writes the meta keys in
+ * a separate statement (apps/ingest-worker/src/index.ts), so there is a window
+ * where the tables are new but `data_version` is still the old UUID — a scan
+ * straddling that window would read both UUIDs as equal.
+ *
+ * The rest of the fingerprint is a single query against whatever `names` is
+ * live at that instant, so it flips with the rename itself rather than with the
+ * follow-up write:
+ *   - `n` / `total` catch any change in the name set or the counts;
+ *   - `id_weighted` catches a rebuild that reassigns ids while leaving the data
+ *     identical, which is the case that would otherwise slip through — paging
+ *     is by `names.id`, so reshuffled ids tear the scan even when nothing else
+ *     moves.
+ */
+export async function readLiveFingerprint(): Promise<string> {
+  const [version] = await d1Query<{ value: string }>("SELECT value FROM meta WHERE key = 'data_version'");
+  if (!version?.value) {
+    throw new D1IntegrityError("D1 meta.data_version is missing; refusing to read a database of unknown vintage");
+  }
+  const [shape] = await d1Query<{ n: number; total: number; id_weighted: number }>(
+    "SELECT COUNT(*) AS n, COALESCE(SUM(total_count), 0) AS total, COALESCE(SUM(id * total_count), 0) AS id_weighted FROM names",
+  );
+  if (!shape) throw new D1IntegrityError("could not fingerprint the live `names` table");
+  return `${version.value}|${shape.n}|${shape.total}|${shape.id_weighted}`;
 }
 
 /**
@@ -258,9 +281,9 @@ export async function loadD1Source(): Promise<LoadedSource> {
   // finalizes by renaming names_staging -> names in one transaction, which
   // regenerates ids. A swap mid-scan would silently tear the read: early id
   // ranges from the old table, later ones from the new, dropping or
-  // duplicating names in a way the year_totals check cannot catch. meta's
-  // data_version UUID changes on every finalize, so bracket the scan with it.
-  const dataVersionBefore = await readDataVersion();
+  // duplicating names in a way the year_totals check cannot catch. Bracket the
+  // scan with a fingerprint that flips with the rename itself.
+  const fingerprintBefore = await readLiveFingerprint();
 
   const [bounds] = await d1Query<{ min_id: number; max_id: number; min_year: number; max_year: number }>(
     "SELECT MIN(id) AS min_id, MAX(id) AS max_id, (SELECT MIN(year) FROM name_years) AS min_year, (SELECT MAX(year) FROM name_years) AS max_year FROM names",
@@ -293,10 +316,22 @@ export async function loadD1Source(): Promise<LoadedSource> {
   }
   if (!records.length) throw new D1IntegrityError("no (name, sex) records loaded from D1");
 
-  const dataVersionAfter = await readDataVersion();
-  if (dataVersionAfter !== dataVersionBefore) {
+  // Direct check on the tear's symptom, independent of any marker: paging by
+  // id can only produce a duplicate (name, sex) if the id space shifted under
+  // the scan.
+  const seen = new Set<string>();
+  for (const rec of records) {
+    const key = `${rec.name}|${rec.sex}`;
+    if (seen.has(key)) {
+      throw new D1IntegrityError(`duplicate (name, sex) in the D1 scan: ${key}. The id space shifted mid-scan; re-run the build.`);
+    }
+    seen.add(key);
+  }
+
+  const fingerprintAfter = await readLiveFingerprint();
+  if (fingerprintAfter !== fingerprintBefore) {
     throw new D1IntegrityError(
-      `D1 data_version changed mid-scan (${dataVersionBefore} -> ${dataVersionAfter}): an ingest finalized while paging, ` +
+      `D1 changed mid-scan (${fingerprintBefore} -> ${fingerprintAfter}): an ingest finalized while paging, ` +
         "so this read may be torn across two vintages. Re-run the build.",
     );
   }
