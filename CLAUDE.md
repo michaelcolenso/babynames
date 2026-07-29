@@ -26,6 +26,8 @@ npm run migrations:apply         # Apply migrations to remote D1
 # Scripts
 npm run seed                                    # One-time D1 population from legacy shards (run once pre-deploy)
 npm run verify-parity -- --base=<preview-url>  # Validate API parity before DNS cutover
+npm run backfill-rankings                       # Populate name_rankings_by_year on remote D1 (idempotent)
+npm run backfill-rankings:local                 # Same against local D1
 
 # Test cron trigger
 npm run -w @nv/ingest-worker test:scheduled    # Test scheduled handler locally
@@ -58,6 +60,7 @@ Shared by both apps (same `database_id` in both `wrangler.toml` files). Key tabl
 - **`names`** — ~100k rows, one per (name, sex). Holds all pre-classified metrics + `spark_blob`.
 - **`name_years`** — ~1.9M rows of (name_id, year, count). Sparse — only years with count > 0.
 - **`year_totals`** — Annual total births per sex (~290 rows).
+- **`name_rankings_by_year`** — Pre-computed top-200-per-(year, sex) ranks, PK `(year, sex, rank)`. Backs `/api/meta`, `/api/year/:year` and the river viz so those reads no longer rank ~137k rows per year at request time. Rebuilt by ingest finalize; backfill an existing DB with `npm run backfill-rankings`.
 - **`meta`** — Singleton key/value store (min/max year, schema version, `data_version` UUID for cache busting, last SSA ETag).
 
 ### Ingest Pipeline

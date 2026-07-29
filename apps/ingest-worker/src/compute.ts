@@ -11,6 +11,7 @@ import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types"
 import {
   classify,
   encodeSpark,
+  rebuildRankings,
   type ClassifyResult,
   type Sex,
 } from "@nv/shared";
@@ -52,6 +53,11 @@ export async function finalize(
 
   await swapStagingIntoLive(db);
   await rebuildIndexesIfNeeded(db);
+  // Rankings are derived from the freshly swapped tables, so they are rebuilt
+  // after the swap rather than staged alongside it. Readers fall back to the
+  // live ranking query for any year missing from the table, so the brief window
+  // where the table lags the swap degrades in cost, not correctness.
+  await rebuildRankings(db, yearRange(ym, yM));
   // Query actual count after swap so meta reflects reality, not the in-memory tally.
   const countRow = await db.prepare("SELECT COUNT(*) as n FROM names").first<{ n: number }>();
   return { namesInserted: countRow?.n ?? namesInserted, rowsInserted };
@@ -195,6 +201,14 @@ function buildPageStatements(
     yearStmts,
     last: last ? { name: last.name, sex: last.sex } : null,
   };
+}
+
+// Every year the dataset covers. The swap replaces all of name_years, so all
+// years need their rankings recomputed, not just the newly published one.
+function yearRange(ym: number, yM: number): number[] {
+  const out: number[] = [];
+  for (let y = ym; y <= yM; y++) out.push(y);
+  return out;
 }
 
 function minYear(series: Record<number, number>): number {

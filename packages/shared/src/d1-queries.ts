@@ -3,6 +3,7 @@
 // any further shaping (cache wrapping, JSON serialization).
 
 import type { D1Database } from "@cloudflare/workers-types";
+import { RANKINGS_PER_SEX_LIMIT } from "./rankings";
 import type {
   BlogPost,
   BlogPostSummary,
@@ -510,6 +511,43 @@ async function listDataYears(db: D1Database): Promise<number[]> {
 // How many per-year ranking statements to pipeline in a single db.batch().
 const YEAR_BATCH = 24;
 
+// Reads of `name_rankings_by_year` (migration 0022). The table is a cache of
+// the window-function queries below, so every reader degrades to the live query
+// when it cannot be served: the table may be absent (migration not applied),
+// empty (backfill not run yet) or too shallow (caller wants a deeper rank than
+// RANKINGS_PER_SEX_LIMIT). Returning null means "fall back".
+async function rankingsUsable(db: D1Database, perBucket: number): Promise<boolean> {
+  if (perBucket > RANKINGS_PER_SEX_LIMIT) return false;
+  try {
+    const row = await db
+      .prepare("SELECT 1 AS ok FROM name_rankings_by_year LIMIT 1")
+      .first<{ ok: number }>();
+    return !!row;
+  } catch {
+    // Table does not exist on this database yet.
+    return false;
+  }
+}
+
+async function topByYearPrecomputed(db: D1Database, perBucket: number): Promise<TopByYear[] | null> {
+  if (!(await rankingsUsable(db, perBucket))) return null;
+  const r = await db
+    .prepare(
+      // ORDER BY rank first matches the name_rankings_rank covering index, so
+      // this is a range scan with no sort. Callers bucket by year and only care
+      // that each year's rows arrive in rank order, which this preserves.
+      `SELECT year, sex, name, count
+         FROM name_rankings_by_year
+        WHERE rank <= ?1
+        ORDER BY rank, year, sex`,
+    )
+    .bind(perBucket)
+    .all<{ year: number; sex: Sex; name: string; count: number }>();
+  const rows = r.results ?? [];
+  if (!rows.length) return null;
+  return rows.map((row) => ({ year: row.year, sex: row.sex, name: row.name, count: row.count }));
+}
+
 // Returns the top-N per (year, sex). Used by /api/meta to populate the
 // "popular right now" grid on the home page.
 //
@@ -522,6 +560,9 @@ const YEAR_BATCH = 24;
 // ever holds one year's rows in memory — so peak memory stays bounded no matter
 // how large the table grows.
 export async function topByYear(db: D1Database, perBucket = 10): Promise<TopByYear[]> {
+  const precomputed = await topByYearPrecomputed(db, perBucket);
+  if (precomputed) return precomputed;
+
   const years = await listDataYears(db);
   if (!years.length) return [];
 
@@ -567,6 +608,19 @@ export interface YearTopRow {
 // Uses a CTE so the per-sex rank filter happens before truncation — a plain
 // ORDER BY sex + LIMIT would return only the first-sorted sex bucket.
 export async function topBySpecificYear(db: D1Database, year: number, perSex = 25): Promise<YearTopRow[]> {
+  if (await rankingsUsable(db, perSex)) {
+    const pre = await db
+      .prepare(
+        `SELECT name, sex, count, rank
+           FROM name_rankings_by_year
+          WHERE year = ?1 AND rank <= ?2
+          ORDER BY sex, rank`,
+      )
+      .bind(year, perSex)
+      .all<YearTopRow>();
+    if (pre.results?.length) return pre.results;
+  }
+
   const r = await db
     .prepare(
       `WITH ranked AS (
@@ -721,11 +775,27 @@ export interface RiverNameRow {
 // exceeds the Worker memory budget D1 runs under (Cloudflare Error 1101). Each
 // per-year statement filters on `WHERE ny.year = ?` (name_years(year, count
 // DESC) index), keeping peak memory bounded, and is pipelined via db.batch().
+// When name_rankings_by_year is available the whole first phase collapses to a
+// single indexed read; the per-year window functions below are the fallback.
 export async function riverNames(db: D1Database, perBucket = 30): Promise<RiverNameRow[]> {
-  const years = await listDataYears(db);
-  if (!years.length) return [];
-
   const ids = new Set<number>();
+
+  if (await rankingsUsable(db, perBucket)) {
+    const pre = await db
+      .prepare(
+        `SELECT DISTINCT n.id AS id
+           FROM name_rankings_by_year r
+           JOIN names n ON n.name = r.name AND n.sex = r.sex
+          WHERE r.rank <= ?1`,
+      )
+      .bind(perBucket)
+      .all<{ id: number }>();
+    for (const row of pre.results ?? []) ids.add(row.id);
+  }
+
+  const years = ids.size ? [] : await listDataYears(db);
+  if (!ids.size && !years.length) return [];
+
   for (let i = 0; i < years.length; i += YEAR_BATCH) {
     const slice = years.slice(i, i + YEAR_BATCH);
     const batch = slice.map((year) =>
