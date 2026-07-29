@@ -42,7 +42,10 @@ export const COMEBACK_WINDOW = 5;
 /** "On the verge": still recorded, but barely, and falling fast. Deliberately a
  *  smaller-name cohort than landingFlags().isEndangered (which needs peak >= 500)
  *  so the collection does not duplicate /endangered. */
-export const VERGE_MAX_LATEST = 10;
+// 9, not 10: the check is `latest > VERGE_MAX_LATEST`, and the collection's
+// lede, body, and meta description all promise "single digits" / "fewer than
+// ten births a year". A member showing 10 would contradict its own page.
+export const VERGE_MAX_LATEST = 9;
 export const VERGE_MIN_PEAK = 100;
 export const VERGE_MAX_RATIO = 0.25;
 export const VERGE_WINDOW = 5;

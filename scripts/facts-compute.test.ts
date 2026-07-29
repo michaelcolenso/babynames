@@ -7,6 +7,7 @@ import {
   SPIKE_DRAMATIC_RATIO,
   SPIKE_FELL_BACK_RATIO,
   SUB_TEN_MAX_ANNUAL,
+  VERGE_MAX_LATEST,
   computeComeback,
   computeLongestGap,
   computeSeriesFacts,
@@ -156,6 +157,14 @@ test("a spike too recent to judge reports an unknown post-ratio", () => {
 test("verge: single digits now, after a real peak, falling fast", () => {
   const s = series([...flat(1950, 1990, 800), ...flat(2016, 2020, 60), ...flat(2021, YM, 6)]);
   assert.equal(isOnTheVerge(s, YM, 800), true);
+});
+
+test("the verge cutoff matches the collection's single-digit claim", () => {
+  const big = (latest: number) =>
+    series([...flat(1950, 1990, 800), ...flat(2016, 2020, 60), ...flat(2021, YM, latest)]);
+  assert.equal(isOnTheVerge(big(9), YM, 800), true, "9 births is single digits");
+  assert.equal(isOnTheVerge(big(10), YM, 800), false, "10 births is not single digits");
+  assert.ok(VERGE_MAX_LATEST <= 9, "the threshold must not readmit double digits");
 });
 
 test("verge excludes names that were never popular and names already gone", () => {
