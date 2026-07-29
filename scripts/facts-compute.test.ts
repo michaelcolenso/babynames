@@ -151,14 +151,24 @@ test("verge excludes names that were never popular and names already gone", () =
   assert.equal(isOnTheVerge(series(flat(1950, YM, 900)), YM, 900), false);
 });
 
-test("rarity bands respect both percentile and absolute scale", () => {
-  assert.equal(rarityBand(99.8, 400), "ultra-rare");
-  assert.equal(rarityBand(98.5, 900), "very-rare");
-  assert.equal(rarityBand(92, 5_000), "rare");
-  assert.equal(rarityBand(70, 20_000), "uncommon");
-  // A huge name can never be labelled rare just because the tail is long.
-  assert.equal(rarityBand(99.9, 2_000_000), "ubiquitous");
-  assert.equal(rarityBand(99.9, 250_000), "common");
+test("rarity bands key on lifetime births, not on the percentile", () => {
+  // A percentile cannot carry this: 14% of male names share total_count = 5, so
+  // a tie-aware percentile tops out near 86 and no name would ever clear a
+  // 99.5-style cutoff. Volume is also stable as the tail grows each release.
+  assert.equal(rarityBand(40), "ultra-rare");
+  assert.equal(rarityBand(400), "very-rare");
+  assert.equal(rarityBand(5_000), "rare");
+  assert.equal(rarityBand(20_000), "uncommon");
+  assert.equal(rarityBand(250_000), "common");
+  assert.equal(rarityBand(2_000_000), "ubiquitous");
+  // Monotonic: more births can never mean a rarer band.
+  const order = ["ultra-rare", "very-rare", "rare", "uncommon", "common", "ubiquitous"];
+  let prev = -1;
+  for (const total of [1, 99, 100, 999, 1_000, 9_999, 10_000, 99_999, 100_000, 999_999, 1_000_000]) {
+    const idx = order.indexOf(rarityBand(total));
+    assert.ok(idx >= prev, `band went backwards at ${total}`);
+    prev = idx;
+  }
 });
 
 test("state concentration finds the stronghold and gates exclusivity", () => {

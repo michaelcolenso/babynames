@@ -47,6 +47,7 @@ function facts(overrides: Partial<NameFacts> = {}): NameFacts {
     top_state_share: 0.34,
     exclusive_state: null,
     states_seen: 12,
+    is_canonical_sex: 1,
     variant_key: "mrvl",
     variant_count: 1,
     variant_is_primary: 1,
@@ -174,10 +175,13 @@ test("one-hit-spikes requires the spike to have fallen back", () => {
 test("lost-names is scoped to its own decade and to names actually gone", () => {
   const def = getCollection("lost-names-of-the-1920s")!;
   const picked = def.select([
-    facts({ name: "Gone", peak_year: 1924, latest_count: 0, peak_count: 300, last_year: 1961 }),
-    facts({ name: "Alive", peak_year: 1924, latest_count: 40, peak_count: 300 }),
-    facts({ name: "Later", peak_year: 1955, latest_count: 0, peak_count: 300 }),
-    facts({ name: "Tiny", peak_year: 1924, latest_count: 0, peak_count: 6 }),
+    facts({ name: "Gone", peak_year: 1924, status: "extinct", latest_count: 0, peak_count: 300, last_year: 1961 }),
+    facts({ name: "Alive", peak_year: 1924, status: "declining", latest_count: 40, peak_count: 300 }),
+    facts({ name: "Later", peak_year: 1955, status: "extinct", latest_count: 0, peak_count: 300 }),
+    facts({ name: "Tiny", peak_year: 1924, status: "extinct", latest_count: 0, peak_count: 6 }),
+    // Below the reporting floor in the latest year, but recorded last year —
+    // classify() calls this declining, not extinct, and so must the collection.
+    facts({ name: "Vicki", peak_year: 1924, status: "declining", latest_count: 0, peak_count: 300, last_year: 2024 }),
   ]);
   assert.deepEqual(picked.map((p) => p.row.name), ["Gone"]);
   assert.equal(picked[0]!.metricLabel, "Last seen 1961");
@@ -210,6 +214,15 @@ test("unusual-spellings excludes the dominant spelling of its own family", () =>
   ]);
   assert.deepEqual(picked.map((p) => p.row.name), ["Katelyn"]);
   assert.equal(picked[0]!.metricLabel, "1 of 5 spellings");
+});
+
+test("a minority-sex row never carries a claim about the page it links to", () => {
+  const def = getCollection("one-year-wonders")!;
+  const picked = def.select([
+    facts({ name: "Ailany", sex: "M", is_one_and_done: 1, is_canonical_sex: 0, max_annual: 18 }),
+    facts({ name: "Bethzy", sex: "F", is_one_and_done: 1, is_canonical_sex: 1, max_annual: 7 }),
+  ]);
+  assert.deepEqual(picked.map((p) => p.row.name), ["Bethzy"]);
 });
 
 test("selection respects each collection's member cap", () => {

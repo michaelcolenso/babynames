@@ -7,6 +7,7 @@ import {
   emitSql,
   groupVariants,
   rankRarity,
+  markCanonicalSex,
 } from "./build-name-facts";
 import type { NameFacts } from "../packages/shared/src/schema";
 
@@ -70,15 +71,17 @@ test("rarity rank is a global sort, and the percentile inverts it", () => {
   // Rarest within F is the single-year name.
   const females = rows.filter((r) => r.sex === "F").sort((a, b) => a.rarity_rank_sex - b.rarity_rank_sex);
   assert.equal(females.at(-1)!.name, "Bethzy");
-  assert.equal(bethzy.rarity_pct_sex, 100);
+  // The percentile is the share of names strictly MORE common, so the rarest
+  // name reads 5-of-6 rather than a synthetic 100. With real ties that matters:
+  // the bottom 14% of male names share one total and must all read the same.
+  assert.equal(bethzy.rarity_pct_sex, 83.33);
   assert.equal(bethzy.rarity_total_sex, females.length);
   assert.ok(bethzy.rarity_band === "ultra-rare");
 
-  // Ranks within a sex are dense and 1-based.
-  assert.deepEqual(
-    females.map((r) => r.rarity_rank_sex),
-    females.map((_, i) => i + 1),
-  );
+  // Ranks are 1-based and never decrease down the list.
+  const ranks = females.map((r) => r.rarity_rank_sex);
+  assert.equal(ranks[0], 1);
+  for (let i = 1; i < ranks.length; i++) assert.ok(ranks[i]! >= ranks[i - 1]!);
 });
 
 test("spelling families are grouped and the dominant spelling is marked primary", () => {
@@ -208,13 +211,39 @@ test("an empty corpus emits a valid no-op transaction rather than broken SQL", (
   assert.ok(!sql.includes("VALUES\n;"), "emitted an INSERT with no rows");
 });
 
-test("rankRarity is stable for names with identical totals", () => {
+test("names with identical totals get identical rarity facts", () => {
+  // The alphabetical tie-break decides sort order, but it must not leak into
+  // the rarity claim: two names with the same lifetime total are equally rare
+  // and their pages must say the same thing.
   const base = build()[0]!;
   const rows: NameFacts[] = [
-    { ...base, name: "Zeta", name_lower: "zeta", sex: "F", total_count: 100 },
-    { ...base, name: "Alpha", name_lower: "alpha", sex: "F", total_count: 100 },
+    { ...base, name: "Big", name_lower: "big", sex: "F", total_count: 900 },
+    { ...base, name: "Zeta", name_lower: "zeta", sex: "F", total_count: 5 },
+    { ...base, name: "Alpha", name_lower: "alpha", sex: "F", total_count: 5 },
+    { ...base, name: "Mid", name_lower: "mid", sex: "F", total_count: 5 },
   ];
   rankRarity(rows);
-  assert.equal(rows.find((r) => r.name === "Alpha")!.rarity_rank_sex, 1);
-  assert.equal(rows.find((r) => r.name === "Zeta")!.rarity_rank_sex, 2);
+  const tied = rows.filter((r) => r.total_count === 5);
+  assert.equal(new Set(tied.map((r) => r.rarity_rank_sex)).size, 1, "tied names got different ranks");
+  assert.equal(new Set(tied.map((r) => r.rarity_pct_sex)).size, 1, "tied names got different percentiles");
+  assert.equal(new Set(tied.map((r) => r.rarity_band)).size, 1, "tied names got different bands");
+  // The percentile is the share strictly MORE common — one name of four here.
+  assert.equal(tied[0]!.rarity_pct_sex, 25);
+  assert.equal(rows.find((r) => r.name === "Big")!.rarity_pct_sex, 0);
+});
+
+test("the canonical sex is the one /name/:name/ resolves to", () => {
+  const base = build()[0]!;
+  const rows: NameFacts[] = [
+    { ...base, name: "Ailany", name_lower: "ailany", sex: "M", total_count: 18, is_one_and_done: 1 },
+    { ...base, name: "Ailany", name_lower: "ailany", sex: "F", total_count: 11_160, is_one_and_done: 0 },
+  ];
+  markCanonicalSex(rows);
+  assert.equal(rows.find((r) => r.sex === "F")!.is_canonical_sex, 1);
+  assert.equal(rows.find((r) => r.sex === "M")!.is_canonical_sex, 0);
+
+  // …and the minority-sex row must not carry a collection claim, since the
+  // link would open a page about a name with 11,160 births.
+  const picked = assembleCollections(rows, { minYear: 1880, maxYear: YM });
+  assert.ok(!picked.some((p) => p.slug === "one-year-wonders"));
 });

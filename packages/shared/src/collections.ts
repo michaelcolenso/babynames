@@ -55,6 +55,11 @@ export interface CollectionDef {
 
 const fmt = (n: number): string => n.toLocaleString("en-US");
 
+/**
+ * Selection helper. Membership is restricted to the canonical sex for every
+ * collection: a card's claim has to be true of the page its link opens, and
+ * /name/<Name>/ always resolves to the higher-total sex.
+ */
 function take(
   facts: readonly NameFacts[],
   where: (f: NameFacts) => boolean,
@@ -64,7 +69,7 @@ function take(
   limit: number,
 ): CollectionPick[] {
   return facts
-    .filter(where)
+    .filter((f) => f.is_canonical_sex === 1 && where(f))
     .sort(order)
     .slice(0, limit)
     .map((row) => ({ row, metricLabel: label(row), metricValue: value(row) }));
@@ -289,10 +294,14 @@ function decadeCollection(decade: number): CollectionDef {
     select: (facts) =>
       take(
         facts,
+        // status === "extinct" is classify()'s own definition (nothing in the
+        // latest year AND nothing for a decade). latest_count === 0 alone only
+        // means the name fell under the reporting floor once, so a name last
+        // recorded in the previous release would be called lost.
         (f) =>
           f.peak_year >= decade &&
           f.peak_year < decade + 10 &&
-          f.latest_count === 0 &&
+          f.status === "extinct" &&
           f.peak_count >= 25,
         (a, b) => b.peak_count - a.peak_count || a.name.localeCompare(b.name),
         (f) => `Last seen ${f.last_year}`,

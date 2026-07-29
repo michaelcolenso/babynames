@@ -67,6 +67,11 @@ CREATE TABLE IF NOT EXISTS name_facts (
   states_seen         INTEGER,
 
   -- Spelling family (packages/shared/src/variant-key.ts).
+  -- 1 when this sex is the one /name/<Name>/ resolves to (the higher lifetime
+  -- total). Collections filter on it so a claim never describes a minority-sex
+  -- row while linking to a page about the dominant one.
+  is_canonical_sex    INTEGER NOT NULL DEFAULT 1,
+
   variant_key         TEXT    NOT NULL,
   variant_count       INTEGER NOT NULL DEFAULT 1,
   variant_is_primary  INTEGER NOT NULL DEFAULT 0,

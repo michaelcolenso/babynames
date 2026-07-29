@@ -64,6 +64,7 @@ function facts(overrides: Partial<NameFacts> = {}): NameFacts {
     top_state_share: 0.34,
     exclusive_state: null,
     states_seen: 12,
+    is_canonical_sex: 1,
     variant_key: "mrvl",
     variant_count: 3,
     variant_is_primary: 1,

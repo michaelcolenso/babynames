@@ -146,6 +146,9 @@ export function buildFactsRows(
       exclusive_state: geo.exclusive,
       states_seen: geo.top ? geo.statesSeen : null,
 
+      // Filled by markCanonicalSex().
+      is_canonical_sex: 1,
+
       // Filled by groupVariants().
       variant_key: variantKey(name),
       variant_count: 1,
@@ -162,6 +165,7 @@ export function buildFactsRows(
 
   rankRarity(rows);
   groupVariants(rows);
+  markCanonicalSex(rows);
   return rows;
 }
 
@@ -174,21 +178,63 @@ export function rankRarity(rows: NameFacts[]): void {
   for (const sex of ["M", "F"] as const) {
     const inSex = rows.filter((r) => r.sex === sex).sort(byRarity);
     const total = inSex.length;
-    inSex.forEach((row, i) => {
-      row.rarity_rank_sex = i + 1;
-      row.rarity_total_sex = total;
-      // A rank of 1 out of 1 must not read as "rarer than 100%".
-      row.rarity_pct_sex = total > 1 ? Number((((i) / (total - 1)) * 100).toFixed(2)) : 0;
-      row.rarity_band = rarityBand(row.rarity_pct_sex, row.total_count);
-    });
+
+    // Competition ranking: identical lifetime totals must produce identical
+    // rank, percentile, and band. 14% of male names share total_count = 5, and
+    // ranking them by the alphabetical tie-break alone would spread otherwise
+    // indistinguishable names across a wide range of rarity claims.
+    let i = 0;
+    while (i < inSex.length) {
+      let j = i;
+      while (j + 1 < inSex.length && inSex[j + 1]!.total_count === inSex[i]!.total_count) j++;
+      // The share of names strictly MORE common than this group — the only
+      // honest reading of "rarer than X% of names" when there are ties.
+      const pct = total > 0 ? Number(((i / total) * 100).toFixed(2)) : 0;
+      for (let k = i; k <= j; k++) {
+        const row = inSex[k]!;
+        row.rarity_rank_sex = i + 1;
+        row.rarity_total_sex = total;
+        row.rarity_pct_sex = pct;
+        row.rarity_band = rarityBand(row.total_count);
+      }
+      i = j + 1;
+    }
   }
-  [...rows].sort(byRarity).forEach((row, i) => {
-    row.rarity_rank_all = i + 1;
-  });
+
+  const all = [...rows].sort(byRarity);
+  let i = 0;
+  while (i < all.length) {
+    let j = i;
+    while (j + 1 < all.length && all[j + 1]!.total_count === all[i]!.total_count) j++;
+    for (let k = i; k <= j; k++) all[k]!.rarity_rank_all = i + 1;
+    i = j + 1;
+  }
 }
 
 const byRarity = (a: NameFacts, b: NameFacts): number =>
   b.total_count - a.total_count || a.name.localeCompare(b.name);
+
+/**
+ * Marks the sex that /name/<Name>/ actually resolves to — the higher lifetime
+ * total, matching the dominant-sex pick in apps/web/functions/name/[name]/index.ts.
+ *
+ * Without this a minority-sex row can carry a claim that contradicts its own
+ * link: a spelling recorded once for one sex but with a long history for the
+ * other would be filed as a one-year wonder pointing at a popular name's page.
+ */
+export function markCanonicalSex(rows: NameFacts[]): void {
+  const byName = new Map<string, NameFacts[]>();
+  for (const row of rows) {
+    const list = byName.get(row.name_lower);
+    if (list) list.push(row);
+    else byName.set(row.name_lower, [row]);
+  }
+  for (const list of byName.values()) {
+    let best = list[0]!;
+    for (const row of list) if (row.total_count > best.total_count) best = row;
+    for (const row of list) row.is_canonical_sex = row === best ? 1 : 0;
+  }
+}
 
 /**
  * Spelling families. `variant_is_primary` marks the highest-volume spelling in
@@ -265,7 +311,7 @@ const FACTS_COLUMNS = [
   "spike_year", "spike_ratio", "spike_baseline", "spike_post_ratio",
   "comeback_gap", "comeback_year", "comeback_strength",
   "top_state", "top_state_share", "exclusive_state", "states_seen",
-  "variant_key", "variant_count", "variant_is_primary",
+  "is_canonical_sex", "variant_key", "variant_count", "variant_is_primary",
   "catalyst_year", "catalyst_title", "catalyst_type",
   "source_data_version", "analysis_year",
 ] as const;
@@ -281,7 +327,7 @@ function factsTuple(r: NameFacts): string {
     nOrNull(r.spike_year), nOrNull(r.spike_ratio), nOrNull(r.spike_baseline), nOrNull(r.spike_post_ratio),
     nOrNull(r.comeback_gap), nOrNull(r.comeback_year), nOrNull(r.comeback_strength),
     sOrNull(r.top_state), nOrNull(r.top_state_share), sOrNull(r.exclusive_state), nOrNull(r.states_seen),
-    q(r.variant_key), r.variant_count, r.variant_is_primary,
+    r.is_canonical_sex, q(r.variant_key), r.variant_count, r.variant_is_primary,
     nOrNull(r.catalyst_year), sOrNull(r.catalyst_title), sOrNull(r.catalyst_type),
     sOrNull(r.source_data_version), r.analysis_year,
   ].join(",")})`;

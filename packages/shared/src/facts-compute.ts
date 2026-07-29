@@ -235,18 +235,29 @@ export function isOnTheVerge(series: Record<number, number>, yM: number, peakCou
 }
 
 /**
- * Rarity band from the within-sex percentile (100 = rarest). `totalCount` acts
- * as a backstop: a name can sit high in the percentile purely because the tail
- * is enormous, so genuinely large names are never labelled rare.
+ * Rarity band, keyed on lifetime births rather than on the percentile.
+ *
+ * The percentile cannot carry this: 14% of male names share total_count = 5, so
+ * a tie-aware percentile tops out around 86 and no name would ever reach a
+ * 99.5-style "ultra-rare" cutoff. Absolute volume is also stable across
+ * releases, where a percentile shifts every time the tail grows.
+ *
+ * Cutoffs are calibrated against the live corpus (117,826 names): roughly 55%
+ * of names fall under 100 lifetime births, 83% under 500, and 96% under 5,000.
  */
-export function rarityBand(pct: number, totalCount: number): RarityBand {
-  if (totalCount >= 1_000_000) return "ubiquitous";
-  if (totalCount >= 100_000) return "common";
-  if (pct >= 99.5) return "ultra-rare";
-  if (pct >= 98) return "very-rare";
-  if (pct >= 90) return "rare";
-  if (pct >= 60) return "uncommon";
-  return "common";
+export const RARITY_BAND_CUTOFFS: readonly [number, RarityBand][] = [
+  [100, "ultra-rare"],
+  [1_000, "very-rare"],
+  [10_000, "rare"],
+  [100_000, "uncommon"],
+  [1_000_000, "common"],
+];
+
+export function rarityBand(totalCount: number): RarityBand {
+  for (const [ceiling, band] of RARITY_BAND_CUTOFFS) {
+    if (totalCount < ceiling) return band;
+  }
+  return "ubiquitous";
 }
 
 /**

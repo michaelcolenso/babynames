@@ -289,6 +289,9 @@ export interface NameFacts {
   exclusive_state: string | null;
   states_seen: number | null;
 
+  /** 1 when this sex is the one /name/<Name>/ resolves to. */
+  is_canonical_sex: 0 | 1;
+
   // Spelling family (see variant-key.ts).
   variant_key: string;
   variant_count: number;
