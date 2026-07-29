@@ -84,7 +84,7 @@ export function DecadeHero(profile: DecadeProfile, thesis: { heading: string; pa
   return `<header class="dh-hero">
   <p class="eyebrow">Decade hub</p>
   <h1>1980s baby names</h1>
-  <p class="lede">A name can be popular in the 1980s without truly belonging to the 1980s. This hub separates the two: the biggest names of the decade, and the names whose recorded history is concentrated inside it.</p>
+  <p class="lede">A name can be popular in the 1980s without belonging to the 1980s. This hub separates the two: the biggest names of the decade, and the names whose recorded history is concentrated inside it.</p>
   ${thesisHtml}
   ${DecadeScorecard(profile)}
   <nav class="decade-nav" aria-label="Adjacent decades">
