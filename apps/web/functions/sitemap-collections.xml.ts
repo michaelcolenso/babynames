@@ -8,6 +8,7 @@
 import {
   absoluteUrl,
   getCollection,
+  getContentVersion,
   getMeta,
   listCollectionSummaries,
   META_KEYS,
@@ -21,10 +22,9 @@ import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
-  const [summaries, factsVersion, dataVersion, yMStr] = await Promise.all([
+  const [summaries, contentVersion, yMStr] = await Promise.all([
     listCollectionSummaries(ctx.env.DB).catch(() => []),
-    getMeta(ctx.env.DB, META_KEYS.factsVersion).catch(() => null),
-    getMeta(ctx.env.DB, META_KEYS.dataVersion),
+    getContentVersion(ctx.env.DB).catch(() => null),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
   ]);
 
@@ -40,7 +40,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
 
   return xmlResponse(
     renderUrlset(urls),
-    factsVersion || dataVersion ? `sitemap-collections-${factsVersion ?? dataVersion}` : null,
+    contentVersion ? `sitemap-collections-${contentVersion}` : null,
   );
 };
 

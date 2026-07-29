@@ -38,6 +38,30 @@ export async function getMeta(db: D1Database, key: string): Promise<string | nul
   return r?.value ?? null;
 }
 
+/**
+ * The validator for any page assembled from `name_facts` / `name_collections`.
+ *
+ * Two independent things change such a page's body, so both belong in it:
+ * `data_version` (a new SSA ingest — which also refreshes the `names.spark_blob`
+ * values the collection tables draw their sparklines from) and `facts_build`
+ * (a facts rebuild). `facts_version` is deliberately not used: it records the
+ * SSA corpus the facts were built from, so a rebuild from that same corpus —
+ * a corrected threshold, a new variant algorithm, added catalyst rows — changes
+ * the body while leaving the validator identical.
+ *
+ * The same pair keys the middleware's cache entries, so the ETag a client
+ * revalidates against and the edge entry it revalidates through move together.
+ */
+export async function getContentVersion(db: D1Database): Promise<string | null> {
+  const rows = await db
+    .prepare("SELECT key, value FROM meta WHERE key IN ('data_version', 'facts_build')")
+    .all<{ key: string; value: string }>();
+  const map = new Map((rows.results ?? []).map((r) => [r.key, r.value]));
+  const data = map.get("data_version") ?? "";
+  const facts = map.get("facts_build") ?? "";
+  return data || facts ? `${data}:${facts}` : null;
+}
+
 export async function setMeta(db: D1Database, key: string, value: string): Promise<void> {
   await db
     .prepare("INSERT INTO meta(key, value) VALUES(?1, ?2) " + "ON CONFLICT(key) DO UPDATE SET value=excluded.value")

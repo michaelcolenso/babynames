@@ -7,6 +7,7 @@
 import {
   countCollectionMembers,
   getCollection,
+  getContentVersion,
   getMeta,
   listCollectionMembers,
   listCollectionSummaries,
@@ -28,14 +29,13 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   const page = clampPage(url.searchParams.get("page"));
   const offset = (page - 1) * COLLECTION_PAGE_SIZE;
 
-  const [rows, total, summaries, ymStr, yMStr, factsVersion, dataVersion] = await Promise.all([
+  const [rows, total, summaries, ymStr, yMStr, contentVersion] = await Promise.all([
     listCollectionMembers(ctx.env.DB, slug, COLLECTION_PAGE_SIZE, offset),
     countCollectionMembers(ctx.env.DB, slug),
     listCollectionSummaries(ctx.env.DB).catch(() => []),
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
-    getMeta(ctx.env.DB, META_KEYS.factsVersion).catch(() => null),
-    getMeta(ctx.env.DB, META_KEYS.dataVersion).catch(() => null),
+    getContentVersion(ctx.env.DB).catch(() => null),
   ]);
 
   // A page past the end is a dead end, not an empty table.
@@ -67,10 +67,12 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
-      // Keyed on facts_version, not data_version: collection content only
-      // changes when name_facts is rebuilt, so an annual national ingest should
-      // not invalidate caches whose contents are identical.
-      ETag: `"coll-${slug}-${page}-${factsVersion ?? dataVersion ?? "0"}"`,
+      // Keyed on the same data_version:facts_build pair the middleware puts in
+      // its cache key, so the validator a client revalidates against and the
+      // edge entry it revalidates through always move together. facts_version
+      // is not enough: it names the source corpus, so a rebuild from that same
+      // corpus changes the body and leaves the validator untouched.
+      ETag: `"coll-${slug}-${page}-${contentVersion ?? "0"}"`,
       Link: `<${canonical}>; rel="canonical"`,
     },
   });

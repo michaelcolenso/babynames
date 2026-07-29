@@ -5,6 +5,7 @@
 
 import {
   allCollections,
+  getContentVersion,
   getMeta,
   listCollectionSummaries,
   META_KEYS,
@@ -15,12 +16,11 @@ import {
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
-  const [summaries, ymStr, yMStr, factsVersion, dataVersion] = await Promise.all([
+  const [summaries, ymStr, yMStr, contentVersion] = await Promise.all([
     listCollectionSummaries(ctx.env.DB).catch(() => []),
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
-    getMeta(ctx.env.DB, META_KEYS.factsVersion).catch(() => null),
-    getMeta(ctx.env.DB, META_KEYS.dataVersion).catch(() => null),
+    getContentVersion(ctx.env.DB).catch(() => null),
   ]);
 
   const bySlug = new Map(summaries.map((s) => [s.slug, s]));
@@ -52,7 +52,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
-      ETag: `"collections-hub-${factsVersion ?? dataVersion ?? "0"}"`,
+      ETag: `"collections-hub-${contentVersion ?? "0"}"`,
       Link: `<${canonical}>; rel="canonical"`,
     },
   });

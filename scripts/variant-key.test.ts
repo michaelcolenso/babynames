@@ -57,12 +57,54 @@ const MUST_NOT_MERGE: [string, string][] = [
   ["Rachel", "Rakel"],
   ["Michelle", "Mikelle"],
   ["Chaya", "Kaya"],
+  // The terminal h in "-iah" is pronounced. Maria and Mariah between them have
+  // over 680,000 lifetime female births, so this was the loudest wrong relative
+  // the key could possibly produce.
+  ["Maria", "Mariah"],
+  ["Aria", "Ariah"],
+  ["Amia", "Amiah"],
+  ["Nya", "Nyah"],
 ];
 
 test("distinct names keep distinct keys", () => {
   for (const [a, b] of MUST_NOT_MERGE) {
     assert.notEqual(variantKey(a), variantKey(b), `${a} and ${b} both keyed ${variantKey(a)}`);
   }
+});
+
+// The "-iah" exclusion is narrow on purpose: every other silent terminal h
+// still goes. If this ever regresses to dropping h unconditionally, the
+// must-not-merge list above catches it; if it over-corrects into keeping every
+// terminal h, this catches that instead.
+test("silent terminal h still collapses everywhere it is silent", () => {
+  const SILENT: [string, string][] = [
+    ["Sarah", "Sara"],
+    ["Hannah", "Hanna"],
+    ["Leah", "Lea"],
+    ["Norah", "Nora"],
+    ["Micah", "Mica"],
+    ["Noah", "Noa"],
+    ["Selah", "Sela"],
+    ["Dinah", "Dina"],
+  ];
+  for (const [a, b] of SILENT) {
+    assert.equal(variantKey(a), variantKey(b), `${a} and ${b} should still group`);
+  }
+});
+
+// The stated cost of the rule, pinned so it is a decision on the record rather
+// than a surprise: -iah respellings no longer reach their -ia forms.
+test("the -iah exclusion costs the -ia links it is documented to cost", () => {
+  for (const [a, b] of [
+    ["Aaliyah", "Aaliya"],
+    ["Josiah", "Josia"],
+  ] as [string, string][]) {
+    assert.notEqual(variantKey(a), variantKey(b));
+  }
+  // Within the -iah cluster, respellings of each other still group: the rule
+  // separates the two endings, it does not shatter either one.
+  assert.equal(variantKey("Mariah"), variantKey("Maryah"));
+  assert.equal(variantKey("Aaliyah"), variantKey("Aliyah"));
 });
 
 test("keys are stable across casing, spacing and punctuation", () => {

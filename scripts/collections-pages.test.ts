@@ -37,6 +37,7 @@ interface DbOptions {
   total?: number;
   failMembers?: boolean;
   summaries?: { slug: string; member_count: number; sample: string | null }[];
+  meta?: Record<string, string>;
 }
 
 const POPULATED = getCollection(SLUG)!.related.map((slug) => ({
@@ -45,7 +46,7 @@ const POPULATED = getCollection(SLUG)!.related.map((slug) => ({
   sample: null as string | null,
 }));
 
-function fakeDb({ members = MEMBERS, total = members.length, failMembers = false, summaries = POPULATED }: DbOptions = {}) {
+function fakeDb({ members = MEMBERS, total = members.length, failMembers = false, summaries = POPULATED, meta = {} }: DbOptions = {}) {
   return {
     prepare(sql: string) {
       const stmt = {
@@ -66,6 +67,9 @@ function fakeDb({ members = MEMBERS, total = members.length, failMembers = false
           }
           if (sql.includes("GROUP BY slug")) {
             return { results: summaries as unknown as T[] };
+          }
+          if (sql.includes("FROM meta")) {
+            return { results: Object.entries(meta).map(([key, value]) => ({ key, value })) as unknown as T[] };
           }
           return { results: [] };
         },
@@ -164,6 +168,24 @@ test("cache headers are keyed so an ingest does not needlessly bust collections"
   const res = await get(`https://nobodynamed.com/collections/${SLUG}/`);
   assert.match(res.headers.get("Cache-Control") ?? "", /s-maxage=86400/);
   assert.match(res.headers.get("ETag") ?? "", new RegExp(`coll-${SLUG}-1-`));
+});
+
+// The ETag has to move whenever the body does, and the body is rebuilt by both
+// a facts rebuild and an ingest — the latter because the member sparklines come
+// from names.spark_blob. facts_version would miss the first case entirely: it
+// names the source corpus, so a rebuild from that same corpus (a changed
+// threshold, a new variant algorithm) leaves it identical.
+test("the ETag tracks both a facts rebuild and an ingest", async () => {
+  const etag = async (meta: Record<string, string>) =>
+    (await get(`https://nobodynamed.com/collections/${SLUG}/`, fakeDb({ meta }))).headers.get("ETag");
+
+  const base = await etag({ data_version: "dv1", facts_build: "fb1" });
+  assert.notEqual(base, await etag({ data_version: "dv1", facts_build: "fb2" }), "facts rebuild");
+  assert.notEqual(base, await etag({ data_version: "dv2", facts_build: "fb1" }), "new ingest");
+  assert.equal(base, await etag({ data_version: "dv1", facts_build: "fb1" }), "unchanged data");
+  // It must also match the version the middleware puts in its cache key, so the
+  // validator and the edge entry it revalidates through never disagree.
+  assert.ok(base?.includes("dv1:fb1"), base ?? "");
 });
 
 test("related collections are rendered as links and all resolve", async () => {

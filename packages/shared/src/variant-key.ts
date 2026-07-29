@@ -14,7 +14,7 @@
 // Bump `VARIANT_KEY_VERSION` whenever the pipeline changes — it is written to
 // `meta.variant_key_version` and a mismatch means name_facts must be rebuilt.
 
-export const VARIANT_KEY_VERSION = 3;
+export const VARIANT_KEY_VERSION = 4;
 
 /** Minimum length before a trailing "e" is treated as silent. */
 export const TRAILING_E_MIN_LENGTH = 4;
@@ -57,8 +57,23 @@ function yToI(s: string): string {
 
 // Silent terminal h, but only after a vowel: Sarah -> sara, Leah -> lea.
 // "Josh" and "Deborah"'s internal h are untouched.
+//
+// The "-iah" ending is excluded. It is the one shape where the terminal h
+// reliably carries a pronunciation: Mariah is not Maria, and merging them told
+// 566k Marias that the 115k Mariahs spell their name differently — the most
+// visible possible instance of a wrong relative. No orthographic rule separates
+// Maria/Mariah from Amia/Amiah, which genuinely are respellings, so the ending
+// as a whole has to go. This runs after y-to-i, so Aaliyah and Nyah are covered
+// by the same rule.
+//
+// The cost, stated plainly: Aaliyah no longer groups with Aaliya, nor Josiah
+// with Josia, nor the long tail of -iah respellings with their -ia forms. That
+// is recall, and this file has consistently spent recall to buy precision — a
+// missing relative is an absent link, a wrong one is a claim the page makes and
+// gets wrong.
 function dropTrailingH(s: string): string {
   if (s.length < 3 || !s.endsWith("h")) return s;
+  if (s.endsWith("iah")) return s;
   return VOWELS.includes(s[s.length - 2] ?? "") ? s.slice(0, -1) : s;
 }
 
