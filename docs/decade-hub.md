@@ -64,12 +64,26 @@ contributors. `apps/web/wrangler.toml` must exist locally with the real
 
 ```bash
 wrangler d1 migrations apply name-vitals --remote --config apps/web/wrangler.toml
-wrangler d1 execute name-vitals --remote --config apps/web/wrangler.toml --file=data/dist/decade-hub-1980.sql
+npx tsx scripts/seed-decade-hub.ts           # dry run: prints current vs artifact
+npx tsx scripts/seed-decade-hub.ts --apply   # writes and verifies the row
 ```
 
 The first command applies `0021_decade_hub.sql`; the second seeds the `1980s`
-row. Until the row exists, the hub route feature-detects the missing row and
-falls back to the legacy decade page, so deploy order is safe.
+row from `data/dist/decade-hub-1980.json`.
+
+**Do not seed with `wrangler d1 execute --file=data/dist/decade-hub-1980.sql`.**
+That file inlines the ~840 KB payload as one SQL string literal and D1 rejects
+the statement with `SQLITE_TOOBIG` — the limit is on the SQL text, not on the
+stored value. `scripts/seed-decade-hub.ts` binds the payload as a query
+parameter instead, which stores identical bytes. The `.sql` artifact is kept
+for inspection and diffing.
+
+Until the row exists, the hub route feature-detects the missing row and falls
+back to the legacy decade page, so deploy order is safe in that direction. The
+reverse is not: the scorecard is payload-driven while the thesis prose is
+compiled into the Pages bundle, so seeding a new vintage *before* deploying the
+matching copy leaves the live page quoting two different sets of numbers. Ship
+the code first, or accept a window of mismatch.
 
 ## Run the tests
 

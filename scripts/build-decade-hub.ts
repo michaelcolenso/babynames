@@ -203,7 +203,7 @@ interface D1QueryResponse<Row> {
   result?: { results: Row[] }[];
 }
 
-async function d1Query<Row>(sql: string, params: string[] = []): Promise<Row[]> {
+export async function d1Query<Row>(sql: string, params: string[] = []): Promise<Row[]> {
   // trim: these are commonly injected with stray surrounding whitespace, which
   // silently turns into a bad URL path / bad bearer header.
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
