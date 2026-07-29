@@ -14,7 +14,7 @@
 // Bump `VARIANT_KEY_VERSION` whenever the pipeline changes — it is written to
 // `meta.variant_key_version` and a mismatch means name_facts must be rebuilt.
 
-export const VARIANT_KEY_VERSION = 2;
+export const VARIANT_KEY_VERSION = 3;
 
 /** Minimum length before a trailing "e" is treated as silent. */
 export const TRAILING_E_MIN_LENGTH = 4;
@@ -27,10 +27,16 @@ function stripNonLetters(s: string): string {
 
 // Digraphs first, in an order where each rule's input cannot be produced by a
 // later rule. `ck` must run before the general `c` rule, `ch` before both.
+//
+// `ch` becomes hard `k` only before `r` or `l` — Chris, Christina, Chloe. In
+// English given names `ch` before a vowel is usually soft, and treating it as
+// hard merged Cheri with Keri, Charlotte with Karlotte, Rachel with Rakel and
+// Michelle with Mikelle. Measured against a curated set, the unrestricted rule
+// bought one extra true merge (Nicholas/Nikolas) at the cost of six false ones.
 function normalizeDigraphs(s: string): string {
   return s
     .replace(/ph/g, "f")
-    .replace(/ch/g, "k")
+    .replace(/ch(?=[rl])/g, "k")
     .replace(/gh$/, "")
     .replace(/ck/g, "k")
     .replace(/qu/g, "kw")

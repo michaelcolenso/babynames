@@ -13,8 +13,8 @@ const FAMILIES: Record<string, string[]> = {
   jaxon: ["Jaxon", "Jackson", "Jaxson"],
   sophia: ["Sophia", "Sofia"],
   hannah: ["Hannah", "Hanna", "Hana"],
-  nicholas: ["Nicholas", "Nikolas"],
   chris: ["Chris", "Kris"],
+  christina: ["Christina", "Kristina"],
   aiden: ["Aiden", "Ayden"],
   addilyn: ["Addilyn", "Adilyn", "Addilynn"],
   caitlin: ["Caitlin", "Kaitlyn", "Caitlyn"],
@@ -49,6 +49,14 @@ const MUST_NOT_MERGE: [string, string][] = [
   ["Barney", "Berania"],
   ["Caelan", "Colleen"],
   ["Kailani", "Colleen"],
+  // `ch` is soft before a vowel far more often than hard in English given
+  // names. Treating it as hard merged every one of these; both members of the
+  // first pair have well over thirty thousand lifetime births.
+  ["Cheri", "Keri"],
+  ["Charlotte", "Karlotte"],
+  ["Rachel", "Rakel"],
+  ["Michelle", "Mikelle"],
+  ["Chaya", "Kaya"],
 ];
 
 test("distinct names keep distinct keys", () => {

@@ -579,6 +579,45 @@ async function main(): Promise<void> {
   );
   console.error(`Catalysts: ${catalysts.size} (name,sex) pairs`);
 
+  // A catalyst is a hand-written claim about a specific name, denormalized onto
+  // the name's own page. A key that matches nothing is a typo that silently
+  // drops the claim; a key that matches a rare spelling of a much commoner name
+  // is a typo that puts the claim on the wrong page — which is how "spelled
+  // backwards" ended up on Neveah (5,449 births) instead of Nevaeh (98,497).
+  const corpusTotals = new Map<string, number>();
+  for (const [key, ymap] of series) {
+    const sep = key.lastIndexOf("|");
+    let total = 0;
+    for (const c of ymap.values()) total += c;
+    corpusTotals.set(`${key.slice(0, sep).toLowerCase()}|${key.slice(sep + 1)}`, total);
+  }
+  for (const key of catalysts.keys()) {
+    const total = corpusTotals.get(key);
+    if (total === undefined) {
+      console.error(`WARNING: catalyst key ${key} matches no name in the corpus — the claim is dropped.`);
+      continue;
+    }
+    const [nameLower, sex] = key.split("|");
+    // Matched on letters-sorted as well as spelling family. Nevaeh and Neveah
+    // are a transposition, not a spelling variant, so they land on different
+    // variant keys — the family check alone would have missed exactly the case
+    // that prompted this guard.
+    const famKey = variantKey(nameLower ?? "");
+    const letters = [...(nameLower ?? "")].sort().join("");
+    for (const [other, otherTotal] of corpusTotals) {
+      const [otherName, otherSex] = other.split("|");
+      if (other === key || otherSex !== sex) continue;
+      const sameFamily = variantKey(otherName ?? "") === famKey;
+      const sameLetters = [...(otherName ?? "")].sort().join("") === letters;
+      if (!sameFamily && !sameLetters) continue;
+      if (otherTotal > total * 10) {
+        console.error(
+          `WARNING: catalyst is on ${key} (${total} births) but ${other} has ${otherTotal}. Wrong spelling?`,
+        );
+      }
+    }
+  }
+
   // --no-state is a local convenience. Combined with a real data version it
   // would emit a full production seed with the geography silently stripped, so
   // the two are mutually exclusive; the fingerprint records the choice as well.
