@@ -1021,7 +1021,11 @@ export function storySentence(record: NameRecord, a: ClassifyResult, facts: Name
     );
   }
 
-  return parts.join(", and ") + ".";
+  // "A, B, and C" — joining every clause with ", and " produces a sentence
+  // with two "and"s in it, which reads as a mistake.
+  if (parts.length <= 1) return (parts[0] ?? "") + ".";
+  if (parts.length === 2) return `${parts[0]}, and ${parts[1]}.`;
+  return `${parts.slice(0, -1).join(", ")}, and ${parts.at(-1)}.`;
 }
 
 /** Collection chips. `limit` caps the strip copy; the explore rail shows all. */
