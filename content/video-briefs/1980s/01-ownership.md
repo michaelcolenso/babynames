@@ -6,7 +6,7 @@
 
 ## Script (15–30 seconds, ~65 words)
 
-"The most popular girl's name of the 1980s was Jessica — 469,472 babies. But the
+"The most popular girl's name of the 1980s was Jessica — 469,510 babies. But the
 name that most *belongs* to the decade? Krystle. It ranks just 242nd in
 popularity, yet its recorded history is packed inside these ten years. For boys,
 it's Dustin — 44th most popular, number one in ownership. We scored every name
@@ -18,7 +18,7 @@ NobodyNamed."
 1. **0–3s** — Screen recording: ownership table on `/names/1980s/`, Girls tab,
    Krystle row highlighted at rank 1. Quick zoom on the gap between ownership
    rank 1 and popularity rank 242.
-2. **3–8s** — Cut to the Most Popular tab: Jessica at the top with 469,472
+2. **3–8s** — Cut to the Most Popular tab: Jessica at the top with 469,510
    births. On-screen counter animates the number.
 3. **8–15s** — Side-by-side card: Krystle (ownership #1 / popularity #242) vs
    Jessica (popularity #1). Then flip to Boys: Dustin (#1 / #44).
@@ -28,7 +28,7 @@ NobodyNamed."
 
 ## On-screen text
 
-- "Most popular girl's name of the 80s: Jessica — 469,472 births"
+- "Most popular girl's name of the 80s: Jessica — 469,510 births"
 - "Most 1980s girl's name: Krystle — popularity rank #242"
 - "Most 1980s boy's name: Dustin — popularity rank #44"
 - "Ownership score = share of a name's recorded lifetime inside 1980–89"
@@ -46,7 +46,7 @@ between popular and *owned*, measured on 35.6 million birth records."
 
 ## Factual source line
 
-SSA national names data (1980–1989; lifetime through 2017), nobodynamed.com
+SSA national names data (1980–1989; lifetime through 2025), nobodynamed.com
 methodology decade-hub/v1.0.0.
 
 ## Destination URL

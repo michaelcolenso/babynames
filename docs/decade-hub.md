@@ -20,11 +20,18 @@ This runs `tsx scripts/build-decade-hub.ts`, which:
 
 1. Resolves the source data (`--source` flag; the parser only accepts the
    equals form, e.g. `--source=shards`):
-   - `--source=auto` (default) — prefers the SSA zip: a local zip in
-     `data/raw/ssa-national/` if one is present, otherwise the ssa.gov
-     download; falls back to the tracked shards in `viz/name-vitals/data/`
-     when ssa.gov is unreachable.
-   - `--source=shards` — force the tracked shards.
+   - `--source=auto` (default) — prefers the live `name-vitals` D1 database,
+     then an SSA zip (a local zip in `data/raw/ssa-national/` if one is
+     present, otherwise the ssa.gov download), then the tracked shards in
+     `viz/name-vitals/data/`.
+   - `--source=d1` — force the live D1 database. Reads `CLOUDFLARE_ACCOUNT_ID`
+     and `CLOUDFLARE_API_TOKEN` and queries the D1 HTTP API (read-only). This
+     is the newest vintage available to the project, since the ingest worker
+     refreshes D1 from SSA every year.
+   - `--source=shards` — force the tracked shards. These are frozen at the
+     2017 vintage; use them only offline, and never for a shipped payload —
+     lifetime-based measures such as the ownership score are wrong when a
+     name's recorded history is truncated eight years early.
    - `--source=zip` — force download of `https://www.ssa.gov/oact/babynames/names.zip`
      (same mechanism as `scripts/ingest-ssa.ts`).
    - `--zip=./names.zip` — use a local SSA zip file instead of downloading.
@@ -38,9 +45,16 @@ This runs `tsx scripts/build-decade-hub.ts`, which:
      decade_hub` statement.
 4. Prints a stdout summary (top-10 ownership per sex, alpha, counts).
 
-The current payload was built from `ssa-national-2017` (records through 2017);
-`sourceVersion` and `generatedAt` are recorded inside the payload and rendered
-on the methodology page.
+The current payload was built from `ssa-national-2025` (records through 2025)
+via `--source=d1`; `sourceVersion` and `generatedAt` are recorded inside the
+payload and rendered on the methodology page.
+
+Rebuilding on a newer vintage changes every figure on the hub, including the
+hand-written thesis copy in `packages/shared/src/content/decade-theses.ts`.
+Re-check that copy against the new `data/dist/decade-hub-1980.json` before
+seeding, and re-trim `scripts/fixtures/decade-hub-1980.real.fixture.json` (top
+100 ownership rows per sex, everything else intact) so the payload contract
+test runs against the shipped artifact.
 
 ## Apply the migration and seed D1 (repo owner only)
 

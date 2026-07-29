@@ -2,21 +2,26 @@
 // Builds the 1980s decade hub payload (SPEC §1).
 //
 // SOURCE DATA DECISION (documented per SPEC §1):
-// - The shipped artifact uses the tracked shards in viz/name-vitals/data/
-//   (genuine SSA national data, >= 5 occurrences per name/sex/year, 1880–2017
-//   vintage; verified: John/James/Mary lifetime totals and Michael 1984 match
-//   official SSA figures; 1984 counts include names down to exactly 5; 1984
-//   shard totals cross-checked against an independent 2024-vintage mirror:
-//   3,488,755 vs 3,487,820 published-count births — 0.03% vintage drift).
+// - The shipped artifact is built from the live `name-vitals` D1 database,
+//   which the ingest worker populates from the official SSA national zip. It
+//   is the newest vintage available to this project (records through 2025).
+// - The tracked shards in viz/name-vitals/data/ are a frozen 2017-vintage
+//   snapshot and remain available as an offline fallback, but they must not be
+//   the shipped source while D1 is reachable: lifetime-based measures (the
+//   ownership score above all) are wrong when a name's recorded history is
+//   truncated eight years early.
 // - ssa.gov is unreachable from the authoring sandbox (Akamai "Access Denied"),
-//   so `auto` resolves to shards here. The owner can regenerate against the
-//   newest SSA vintage from any environment that can reach ssa.gov.
+//   so `auto` prefers D1 and falls back to a local zip, then the shards.
 //
 // Usage (the parser only accepts the equals form):
 //   npx tsx scripts/build-decade-hub.ts                      # --source=auto
+//   npx tsx scripts/build-decade-hub.ts --source=d1          # live D1 (remote)
 //   npx tsx scripts/build-decade-hub.ts --source=shards      # tracked shards
 //   npx tsx scripts/build-decade-hub.ts --source=zip         # fetch SSA zip
 //   npx tsx scripts/build-decade-hub.ts --zip=./names.zip    # local SSA zip
+//
+// --source=d1 reads CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN from the
+// environment and queries the D1 HTTP API directly (read-only SELECTs).
 //
 // Output:
 //   data/dist/decade-hub-1980.sql  (INSERT OR REPLACE into decade_hub)
@@ -185,6 +190,119 @@ export async function loadZipSource(zipPath?: string): Promise<LoadedSource> {
   };
 }
 
+// ---------------------------------------------------------------------------
+// live D1 (`name-vitals`) — the shipped source
+// ---------------------------------------------------------------------------
+
+const D1_DATABASE_ID = "fc4741db-1f6d-457c-b4e4-675a4ea3ebc2"; // name-vitals (apps/web/wrangler.toml)
+const D1_ID_CHUNK = 2000; // names per request; keeps each response well under the API's response cap
+
+interface D1QueryResponse<Row> {
+  success: boolean;
+  errors?: { code: number; message: string }[];
+  result?: { results: Row[] }[];
+}
+
+async function d1Query<Row>(sql: string, params: string[] = []): Promise<Row[]> {
+  // trim: these are commonly injected with stray surrounding whitespace, which
+  // silently turns into a bad URL path / bad bearer header.
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  const token = process.env.CLOUDFLARE_API_TOKEN?.trim();
+  if (!accountId || !token) {
+    throw new Error("--source=d1 requires CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in the environment");
+  }
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${D1_DATABASE_ID}/query`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ sql, params }),
+  });
+  const body = (await res.json()) as D1QueryResponse<Row>;
+  if (!res.ok || !body.success) {
+    const detail = body.errors?.map((e) => `${e.code} ${e.message}`).join("; ") ?? `${res.status} ${res.statusText}`;
+    throw new Error(`D1 query failed: ${detail}`);
+  }
+  return body.result?.[0]?.results ?? [];
+}
+
+/**
+ * Loads every (name, sex) series from the live D1 database.
+ *
+ * The yearly series is fetched as one `year:count` group_concat per name so the
+ * ~2.2M `name_years` rows arrive as ~118k rows instead. Paging is by `names.id`
+ * range rather than LIMIT/OFFSET so each request reads only its own slice.
+ */
+export async function loadD1Source(): Promise<LoadedSource> {
+  const [bounds] = await d1Query<{ min_id: number; max_id: number; min_year: number; max_year: number }>(
+    "SELECT MIN(id) AS min_id, MAX(id) AS max_id, (SELECT MIN(year) FROM name_years) AS min_year, (SELECT MAX(year) FROM name_years) AS max_year FROM names",
+  );
+  if (!bounds || bounds.max_id == null) throw new Error("D1 `names` table is empty");
+
+  const records: SourceNameRecord[] = [];
+  for (let lo = bounds.min_id; lo <= bounds.max_id; lo += D1_ID_CHUNK) {
+    const hi = lo + D1_ID_CHUNK - 1;
+    const rows = await d1Query<{ name: string; sex: string; series: string | null }>(
+      "SELECT n.name AS name, n.sex AS sex, group_concat(y.year || ':' || y.count) AS series " +
+        "FROM names n JOIN name_years y ON y.name_id = n.id " +
+        "WHERE n.id >= ?1 AND n.id <= ?2 GROUP BY n.id",
+      [String(lo), String(hi)],
+    );
+    for (const row of rows) {
+      if (row.sex !== "M" && row.sex !== "F") continue;
+      const series: Record<number, number> = {};
+      for (const pair of (row.series ?? "").split(",")) {
+        if (!pair) continue;
+        const colon = pair.indexOf(":");
+        const year = Number(pair.slice(0, colon));
+        const count = Number(pair.slice(colon + 1));
+        if (!Number.isFinite(year) || !Number.isFinite(count) || count <= 0) continue;
+        series[year] = count;
+      }
+      if (Object.keys(series).length) records.push({ name: row.name, sex: row.sex, series });
+    }
+    console.error(`  d1: ids ${lo}–${hi} → ${records.length} records so far`);
+  }
+  if (!records.length) throw new Error("no (name, sex) records loaded from D1");
+
+  // internal consistency: per-year series sums must match the year_totals table
+  const totals = await d1Query<{ year: number; sex: string; total: number }>("SELECT year, sex, total FROM year_totals");
+  const sums = new Map<string, number>();
+  for (const rec of records) {
+    for (const [yearStr, count] of Object.entries(rec.series)) {
+      const k = `${yearStr}:${rec.sex}`;
+      sums.set(k, (sums.get(k) ?? 0) + count);
+    }
+  }
+  // `year_totals` is a denormalized rollup maintained by the ingest worker and
+  // can lag `name_years` by a few suppressed-threshold names (observed drift:
+  // 281 births across 38 of 292 year/sex pairs, max 25). `name_years` is the
+  // granular truth and is what the payload sums, so treat a small drift as
+  // informational and fail only on a real divergence.
+  let driftPairs = 0;
+  let driftBirths = 0;
+  for (const t of totals) {
+    const got = sums.get(`${t.year}:${t.sex}`) ?? 0;
+    const diff = Math.abs(got - t.total);
+    if (diff === 0) continue;
+    const tolerance = Math.max(50, t.total * 1e-4);
+    if (diff > tolerance) {
+      throw new Error(`d1/year_totals mismatch ${t.year} ${t.sex}: series sum ${got} vs year_totals ${t.total} (diff ${diff} > tolerance ${Math.round(tolerance)})`);
+    }
+    driftPairs += 1;
+    driftBirths += diff;
+  }
+  if (driftPairs) {
+    console.error(`  d1: year_totals rollup drift on ${driftPairs} year/sex pairs, ${driftBirths} births total (within tolerance; name_years used)`);
+  }
+
+  sortRecords(records);
+  return {
+    source: { minYear: bounds.min_year, maxYear: bounds.max_year, records },
+    sourceVersion: `ssa-national-${bounds.max_year}`,
+    sourceLabel: `live D1 name-vitals (ssa-national-${bounds.max_year})`,
+  };
+}
+
 function sortRecords(records: SourceNameRecord[]): void {
   records.sort((a, b) =>
     a.name.toLowerCase() < b.name.toLowerCase() ? -1 : a.name.toLowerCase() > b.name.toLowerCase() ? 1 : a.sex < b.sex ? -1 : 1,
@@ -199,10 +317,17 @@ export async function resolveSource(): Promise<LoadedSource> {
   const sourceArg = process.argv.find((a) => a.startsWith("--source="))?.slice("--source=".length) ?? "auto";
   const zipArg = process.argv.find((a) => a.startsWith("--zip="))?.slice("--zip=".length);
   if (zipArg) return loadZipSource(zipArg);
+  if (sourceArg === "d1") return loadD1Source();
   if (sourceArg === "shards") return loadShardSource();
   if (sourceArg === "zip") return loadZipSource(await findLocalZip());
-  if (sourceArg !== "auto") throw new Error(`unknown --source=${sourceArg} (expected shards|zip|auto)`);
-  // auto: prefer a present local zip, then a reachable ssa.gov, else shards.
+  if (sourceArg !== "auto") throw new Error(`unknown --source=${sourceArg} (expected d1|shards|zip|auto)`);
+  // auto: prefer live D1 (newest vintage), then a local zip, then ssa.gov, else
+  // the frozen 2017 shards.
+  try {
+    return await loadD1Source();
+  } catch (err) {
+    console.error(`D1 unavailable (${(err as Error).message}); trying zip sources`);
+  }
   const localZip = await findLocalZip();
   if (localZip) return loadZipSource(localZip);
   try {

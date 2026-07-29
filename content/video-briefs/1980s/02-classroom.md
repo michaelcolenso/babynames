@@ -11,7 +11,7 @@ duplicate."
 "We rebuilt an average 30-kid classroom from the actual 1984 birth records —
 14 girls, 16 boys, seats dealt by the real national distribution. The twist:
 no name repeats. Not Jennifer. Not Michael. Michael was the decade's biggest
-name — 663,690 boys — and his expected share of a class was just 0.60 seats.
+name — 663,807 boys — and his expected share of a class was just 0.60 seats.
 The blockbuster-name era was already more varied than memory says. Full roster
 on NobodyNamed."
 
@@ -46,12 +46,12 @@ on NobodyNamed."
 ## Caption
 
 "We dealt 30 classroom seats from the real 1984 birth records. Nobody sat
-twice. The 1980s recorded 38,588 distinct names — this average class drew 30
+twice. The 1980s recorded 38,615 distinct names — this average class drew 30
 of them without a repeat."
 
 ## Factual source line
 
-SSA national names data (1980–1989; lifetime through 2017), nobodynamed.com
+SSA national names data (1980–1989; lifetime through 2025), nobodynamed.com
 methodology decade-hub/v1.0.0.
 
 ## Destination URL
