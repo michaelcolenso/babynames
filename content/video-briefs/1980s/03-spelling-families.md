@@ -10,26 +10,26 @@
 rankings count every spelling separately: Ashley, Ashlee, Ashleigh, Ashlie,
 Ashly, Ashli. Add the reviewed variants together and the Ashley family reaches
 387,668 babies — enough to rank third, ahead of every spelling counted alone.
-Megan's family jumps to 215,480 and a combined rank of 8. Six hand-reviewed
+Megan's family jumps to 215,475 and a combined rank of 8. Six hand-reviewed
 families, charted year by year, on NobodyNamed."
 
 ## Shot list
 
 1. **0–3s** — Screen recording: `/names/1980s/spelling-families/`, Ashley
    family card front and center.
-2. **3–9s** — Animated stack: six variant bars (Ashley 352,171; Ashlee 15,849;
+2. **3–9s** — Animated stack: six variant bars (Ashley 352,185; Ashlee 15,850;
    Ashleigh 9,884; Ashlie 4,108; Ashly 3,450; Ashli 2,191) merging into one
    387,668 bar.
 3. **9–14s** — Rank flip graphic: "#4 alone → #3 combined".
 4. **14–20s** — Ashley family multi-series chart (1980–1989), hover the 1987
-   peak; then quick cut to the Megan card (215,480, combined rank 8) and the
+   peak; then quick cut to the Megan card (215,475, combined rank 8) and the
    Brittany family peaking in 1989.
 5. **20–end** — Copy-rule card (verbatim, see below) + URL.
 
 ## On-screen text
 
 - "Ashley alone: #4 · Ashley family: 387,668 — would rank #3"
-- "Megan family: 215,480 — combined rank #8"
+- "Megan family: 215,475 — combined rank #8"
 - "Brittany family: peak year 1989"
 - "Conventional rankings separate spelling variants. This view groups manually
   reviewed variants to show their combined demographic footprint."

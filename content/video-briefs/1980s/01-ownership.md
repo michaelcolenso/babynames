@@ -22,8 +22,8 @@ NobodyNamed."
    births. On-screen counter animates the number.
 3. **8–15s** — Side-by-side card: Krystle (ownership #1 / popularity #242) vs
    Jessica (popularity #1). Then flip to Boys: Dustin (#1 / #44).
-4. **15–22s** — Scroll the Most Owned pooled view: Dustin 91.51, Justin 81.66,
-   Krystle 80.79, Sheena 78.16, Adam 76.84.
+4. **15–22s** — Scroll the Most Owned pooled view: Dustin 91.51, Justin 81.51,
+   Krystle 80.80, Sheena 77.87, Latoya 75.98.
 5. **22–end** — End card: page URL + "data, not nostalgia".
 
 ## On-screen text

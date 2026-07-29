@@ -6,8 +6,8 @@
 
 ## Script (15–30 seconds, ~70 words)
 
-"Thirty-five million, six hundred twenty-seven thousand babies. Thirty-eight
-thousand, five hundred eighty-eight different names. And yet half of everyone
+"Thirty-five million, six hundred thirty-four thousand babies. Thirty-eight
+thousand, six hundred fifteen different names. And yet half of everyone
 born in the 1980s got one of just a hundred names. Michael alone: 663,807
 boys. The decade's roll call runs Michael, Christopher, Jessica, Matthew,
 Jennifer — but underneath the blockbusters, the effective roster was already
