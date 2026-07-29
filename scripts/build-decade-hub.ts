@@ -225,10 +225,24 @@ export async function d1Query<Row>(sql: string, params: string[] = []): Promise<
   return body.result?.[0]?.results ?? [];
 }
 
+/**
+ * A D1 read that reached the database but came back untrustworthy — a torn
+ * scan, or sums that disagree with `year_totals` beyond tolerance.
+ *
+ * This is deliberately distinct from an availability or credential failure.
+ * `--source=auto` may fall back to another source when D1 is simply out of
+ * reach, but an integrity failure means the data we did read is wrong, and
+ * silently substituting the frozen 2017 shards would turn "re-run the build"
+ * into a stale artifact that looks fresh.
+ */
+export class D1IntegrityError extends Error {
+  override readonly name = "D1IntegrityError";
+}
+
 /** meta.data_version — a UUID the ingest rewrites on every staging->live swap. */
 export async function readDataVersion(): Promise<string> {
   const [row] = await d1Query<{ value: string }>("SELECT value FROM meta WHERE key = 'data_version'");
-  if (!row?.value) throw new Error("D1 meta.data_version is missing; refusing to read a database of unknown vintage");
+  if (!row?.value) throw new D1IntegrityError("D1 meta.data_version is missing; refusing to read a database of unknown vintage");
   return row.value;
 }
 
@@ -251,7 +265,7 @@ export async function loadD1Source(): Promise<LoadedSource> {
   const [bounds] = await d1Query<{ min_id: number; max_id: number; min_year: number; max_year: number }>(
     "SELECT MIN(id) AS min_id, MAX(id) AS max_id, (SELECT MIN(year) FROM name_years) AS min_year, (SELECT MAX(year) FROM name_years) AS max_year FROM names",
   );
-  if (!bounds || bounds.max_id == null) throw new Error("D1 `names` table is empty");
+  if (!bounds || bounds.max_id == null) throw new D1IntegrityError("D1 `names` table is empty");
 
   const records: SourceNameRecord[] = [];
   for (let lo = bounds.min_id; lo <= bounds.max_id; lo += D1_ID_CHUNK) {
@@ -277,11 +291,11 @@ export async function loadD1Source(): Promise<LoadedSource> {
     }
     console.error(`  d1: ids ${lo}–${hi} → ${records.length} records so far`);
   }
-  if (!records.length) throw new Error("no (name, sex) records loaded from D1");
+  if (!records.length) throw new D1IntegrityError("no (name, sex) records loaded from D1");
 
   const dataVersionAfter = await readDataVersion();
   if (dataVersionAfter !== dataVersionBefore) {
-    throw new Error(
+    throw new D1IntegrityError(
       `D1 data_version changed mid-scan (${dataVersionBefore} -> ${dataVersionAfter}): an ingest finalized while paging, ` +
         "so this read may be torn across two vintages. Re-run the build.",
     );
@@ -309,7 +323,7 @@ export async function loadD1Source(): Promise<LoadedSource> {
     if (diff === 0) continue;
     const tolerance = Math.max(50, t.total * 1e-4);
     if (diff > tolerance) {
-      throw new Error(`d1/year_totals mismatch ${t.year} ${t.sex}: series sum ${got} vs year_totals ${t.total} (diff ${diff} > tolerance ${Math.round(tolerance)})`);
+      throw new D1IntegrityError(`d1/year_totals mismatch ${t.year} ${t.sex}: series sum ${got} vs year_totals ${t.total} (diff ${diff} > tolerance ${Math.round(tolerance)})`);
     }
     driftPairs += 1;
     driftBirths += diff;
@@ -349,6 +363,9 @@ export async function resolveSource(): Promise<LoadedSource> {
   try {
     return await loadD1Source();
   } catch (err) {
+    // Only availability/credential failures may fall through. A read that
+    // reached D1 and came back inconsistent must stop the build.
+    if (err instanceof D1IntegrityError) throw err;
     console.error(`D1 unavailable (${(err as Error).message}); trying zip sources`);
   }
   const localZip = await findLocalZip();

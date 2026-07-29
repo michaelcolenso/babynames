@@ -54,6 +54,24 @@ async function main() {
     `artifact:    ${decade} ${profile.sourceVersion} generated ${profile.generatedAt} (${payload.length} bytes)`,
   );
 
+  // Absolute check, independent of whatever row happens to be live: the
+  // artifact must be at least as new as the database it is about to be written
+  // into. This is what catches a shard-derived (2017) artifact on a *first*
+  // seed — a fresh deployment or a recreated database, where there is no
+  // previous row to compare against and the downgrade check below never runs.
+  const [dbVintage] = await d1Query<{ max_year: string }>("SELECT value AS max_year FROM meta WHERE key = 'max_year'");
+  const dbYear = Number(dbVintage?.max_year);
+  const artifactYear = Number(/(\d{4})$/.exec(profile.sourceVersion)?.[1] ?? NaN);
+  if (!Number.isFinite(artifactYear)) {
+    throw new Error(`cannot read a vintage year from sourceVersion ${profile.sourceVersion}`);
+  }
+  if (Number.isFinite(dbYear) && artifactYear < dbYear) {
+    throw new Error(
+      `refusing to seed a stale artifact: it is ${profile.sourceVersion} but name_vitals holds data through ${dbYear}. ` +
+        "An offline build falls back to the frozen 2017 shards — rebuild with `--source=d1`.",
+    );
+  }
+
   // Refuse to downgrade. `resolveSource()` deliberately falls back to the
   // frozen 2017 shards when D1 credentials and both zip sources are all
   // unavailable, so an offline build leaves a stale artifact on disk that looks
@@ -61,10 +79,8 @@ async function main() {
   // replace a newer production row with a shard payload the guide says must
   // never ship.
   if (before) {
-    const vintage = (v: string) => Number(/(\d{4})$/.exec(v)?.[1] ?? NaN);
-    const artifactYear = vintage(profile.sourceVersion);
-    const liveYear = vintage(before.source_version);
-    if (!Number.isFinite(artifactYear) || !Number.isFinite(liveYear)) {
+    const liveYear = Number(/(\d{4})$/.exec(before.source_version)?.[1] ?? NaN);
+    if (!Number.isFinite(liveYear)) {
       throw new Error(
         `cannot compare vintages (artifact ${profile.sourceVersion}, live ${before.source_version}); rebuild or seed by hand`,
       );
