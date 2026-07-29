@@ -232,11 +232,24 @@ export function listGaps(series: Record<number, number>): GapResult[] {
  * Every qualifying gap is tested, not just the longest. A name can have a
  * 60-year gap that ends in one stray birth and a later 50-year gap followed by
  * sustained use; only checking the longest would reject the genuine comeback.
+ *
+ * `yM` is the last year the corpus covers. A revival is only reported once its
+ * full observation window has actually happened: meanOver divides by the whole
+ * window, so unobserved future years count as zeros, and a revival beginning in
+ * the final years would be judged on a partly-imaginary average. The collection
+ * says the revival is measured over the five following years, so until those
+ * five years exist there is nothing to measure — the same treatment computeSpike
+ * gives a spike too recent to judge.
  */
-export function computeComeback(series: Record<number, number>): ComebackResult | null {
+export function computeComeback(
+  series: Record<number, number>,
+  yM?: number,
+): ComebackResult | null {
+  const lastYear = yM ?? Math.max(...years(series), 0);
   for (const gap of listGaps(series)) {
     if (gap.length < COMEBACK_MIN_GAP) continue;
     const revivalYear = gap.end + 1;
+    if (revivalYear + COMEBACK_WINDOW - 1 > lastYear) continue;
     const postMean = meanOver(series, revivalYear, revivalYear + COMEBACK_WINDOW - 1);
     if (postMean < COMEBACK_MIN_REVIVAL_MEAN) continue;
     const preMean = meanOver(series, gap.start - COMEBACK_WINDOW, gap.start - 1);
@@ -352,7 +365,7 @@ export function computeSeriesFacts(series: Record<number, number>, yM: number): 
     maxAnnual,
     gap: computeLongestGap(series),
     spike: computeSpike(series, yM),
-    comeback: computeComeback(series),
+    comeback: computeComeback(series, yM),
     isOneAndDone: ys.length === 1,
     isSubTen: maxAnnual < SUB_TEN_MAX_ANNUAL,
     isVerge: isOnTheVerge(series, yM, maxAnnual),

@@ -107,7 +107,7 @@ function main(): void {
 
   // Staleness.
   const meta = query<{ key: string; value: string }>(
-    "SELECT key, value FROM meta WHERE key IN ('data_version','facts_version','variant_key_version')",
+    "SELECT key, value FROM meta WHERE key IN ('data_version','facts_version','variant_key_version','facts_corpus')",
   );
   const get = (k: string) => meta.find((m) => m.key === k)?.value ?? null;
   const dataVersion = get("data_version");
@@ -123,9 +123,24 @@ function main(): void {
     `db=${get("variant_key_version") ?? "unset"} code=${VARIANT_KEY_VERSION}`,
   );
 
+  // The version the build stamped is only a claim; this checks it. Both
+  // quantities come from the same SSA corpus, so a build made from a different
+  // vintage than the database holds cannot match, whatever --data-version said.
+  const live = one<{ max_year: number; total_births: number }>(
+    "SELECT MAX(last_year) AS max_year, SUM(total_count) AS total_births FROM names",
+  );
+  const liveFingerprint = live ? `ssa:${live.max_year}:${live.total_births}` : null;
+  const storedFingerprint = get("facts_corpus");
+  check(
+    "facts were built from the corpus the database holds",
+    Boolean(storedFingerprint) && storedFingerprint === liveFingerprint,
+    `facts=${storedFingerprint ?? "unset"} live=${liveFingerprint ?? "unknown"}`,
+  );
+
   if (failures) {
     console.log(`\n${failures} check(s) failed.`);
     console.log("If the staleness check failed, re-run: npm run build-name-facts && npm run seed-name-facts");
+    console.log("If the corpus check failed, the SSA zip the build read is not the one this database was ingested from.");
   } else {
     console.log("\nAll checks passed.");
   }

@@ -349,6 +349,27 @@ function memberTuple(m: CollectionMemberInsert): string {
  * The whole seed file, as one transaction. Exported for the build test, which
  * asserts the transaction is balanced and every literal is escaped.
  */
+/**
+ * A fingerprint of the corpus the build actually read: last year covered and
+ * total births across every (name, sex) pair.
+ *
+ * --data-version is a caller-supplied string, and the input zip is fetched or
+ * passed separately, so nothing otherwise connects the two. During the annual
+ * release window it is entirely possible to pair the live database UUID with a
+ * newer SSA download, or a stale local zip with the current UUID, and stamp the
+ * result as fresh. Both quantities below are recomputable from the live `names`
+ * table, so verify-name-facts can check the claim rather than trust it.
+ */
+export function corpusFingerprint(rows: readonly NameFacts[]): string {
+  let maxYear = 0;
+  let totalBirths = 0;
+  for (const r of rows) {
+    if (r.last_year > maxYear) maxYear = r.last_year;
+    totalBirths += r.total_count;
+  }
+  return `ssa:${maxYear}:${totalBirths}`;
+}
+
 export function emitSql(
   rows: readonly NameFacts[],
   members: readonly CollectionMemberInsert[],
@@ -389,6 +410,10 @@ export function emitSql(
   );
   out.push(
     `INSERT INTO meta (key, value) VALUES ('variant_key_version', '${VARIANT_KEY_VERSION}')` +
+      " ON CONFLICT(key) DO UPDATE SET value = excluded.value;",
+  );
+  out.push(
+    `INSERT INTO meta (key, value) VALUES ('facts_corpus', ${q(corpusFingerprint(rows))})` +
       " ON CONFLICT(key) DO UPDATE SET value = excluded.value;",
   );
   out.push("COMMIT;");

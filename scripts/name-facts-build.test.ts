@@ -8,6 +8,7 @@ import {
   groupVariants,
   rankRarity,
   markCanonicalSex,
+  corpusFingerprint,
 } from "./build-name-facts";
 import type { NameFacts } from "../packages/shared/src/schema";
 
@@ -187,6 +188,30 @@ test("emitted SQL is one balanced, idempotent transaction", () => {
     !/SELECT 'facts_version', value FROM meta/.test(sql),
     "facts_version must not be copied from the live data_version at seed time",
   );
+});
+
+test("the corpus fingerprint is recomputable from the names table", () => {
+  const rows = build();
+  const fp = corpusFingerprint(rows);
+  // Exactly what verify-name-facts derives from SELECT MAX(last_year),
+  // SUM(total_count) FROM names — so a build made from a different SSA vintage
+  // than the database holds cannot match, whatever --data-version claimed.
+  const maxYear = Math.max(...rows.map((r) => r.last_year));
+  const totalBirths = rows.reduce((n, r) => n + r.total_count, 0);
+  assert.equal(fp, `ssa:${maxYear}:${totalBirths}`);
+
+  // A different corpus produces a different fingerprint.
+  const other = buildFactsRows(new Map([["Solo|F", new Map([[2000, 40]])]]), YM, {
+    analysisYear: 2026,
+    sourceDataVersion: "test",
+  });
+  assert.notEqual(corpusFingerprint(other), fp);
+});
+
+test("the emitted SQL stamps the corpus fingerprint alongside the version", () => {
+  const rows = build();
+  const sql = emitSql(rows, assembleCollections(rows, { minYear: 1880, maxYear: YM }), "corpus-a");
+  assert.ok(sql.includes(`VALUES ('facts_corpus', '${corpusFingerprint(rows)}')`));
 });
 
 test("string literals are escaped, not concatenated raw", () => {

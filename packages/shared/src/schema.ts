@@ -232,6 +232,8 @@ export const META_KEYS = {
   schemaVersion: "schema_version",
   dataVersion: "data_version",
   factsVersion: "facts_version",
+  /** Fingerprint of the SSA corpus the facts were built from. */
+  factsCorpus: "facts_corpus",
   variantKeyVersion: "variant_key_version",
 } as const;
 

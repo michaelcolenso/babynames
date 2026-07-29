@@ -86,6 +86,19 @@ test("a later qualifying gap is found even when the longest one fails", () => {
   assert.equal(comeback.gap, 50);
 });
 
+test("a revival too recent to observe is not yet a comeback", () => {
+  // 15 births in yM-1 and 10 in yM after a long gap averages to exactly 5 over
+  // a five-year window — but three of those years have not happened. The
+  // collection claims the revival was measured over five following years, so
+  // there is nothing to claim yet.
+  const tooRecent = series([[1880, 20], ...flat(YM - 1, YM, 15)]);
+  assert.equal(computeComeback(tooRecent, YM), null);
+
+  // The same shape, with the window fully in the past, does qualify.
+  const observed = series([[1880, 20], ...flat(YM - 10, YM - 6, 15)]);
+  assert.ok(computeComeback(observed, YM));
+});
+
 test("comeback rejects a short dormancy", () => {
   const s = series([...flat(1960, 1980, 60), ...flat(1995, 2005, 60)]);
   assert.equal(computeComeback(s), null);
