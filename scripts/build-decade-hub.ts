@@ -2,21 +2,26 @@
 // Builds the 1980s decade hub payload (SPEC §1).
 //
 // SOURCE DATA DECISION (documented per SPEC §1):
-// - The shipped artifact uses the tracked shards in viz/name-vitals/data/
-//   (genuine SSA national data, >= 5 occurrences per name/sex/year, 1880–2017
-//   vintage; verified: John/James/Mary lifetime totals and Michael 1984 match
-//   official SSA figures; 1984 counts include names down to exactly 5; 1984
-//   shard totals cross-checked against an independent 2024-vintage mirror:
-//   3,488,755 vs 3,487,820 published-count births — 0.03% vintage drift).
+// - The shipped artifact is built from the live `name-vitals` D1 database,
+//   which the ingest worker populates from the official SSA national zip. It
+//   is the newest vintage available to this project (records through 2025).
+// - The tracked shards in viz/name-vitals/data/ are a frozen 2017-vintage
+//   snapshot and remain available as an offline fallback, but they must not be
+//   the shipped source while D1 is reachable: lifetime-based measures (the
+//   ownership score above all) are wrong when a name's recorded history is
+//   truncated eight years early.
 // - ssa.gov is unreachable from the authoring sandbox (Akamai "Access Denied"),
-//   so `auto` resolves to shards here. The owner can regenerate against the
-//   newest SSA vintage from any environment that can reach ssa.gov.
+//   so `auto` prefers D1 and falls back to a local zip, then the shards.
 //
 // Usage (the parser only accepts the equals form):
 //   npx tsx scripts/build-decade-hub.ts                      # --source=auto
+//   npx tsx scripts/build-decade-hub.ts --source=d1          # live D1 (remote)
 //   npx tsx scripts/build-decade-hub.ts --source=shards      # tracked shards
 //   npx tsx scripts/build-decade-hub.ts --source=zip         # fetch SSA zip
 //   npx tsx scripts/build-decade-hub.ts --zip=./names.zip    # local SSA zip
+//
+// --source=d1 reads CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN from the
+// environment and queries the D1 HTTP API directly (read-only SELECTs).
 //
 // Output:
 //   data/dist/decade-hub-1980.sql  (INSERT OR REPLACE into decade_hub)
@@ -185,6 +190,191 @@ export async function loadZipSource(zipPath?: string): Promise<LoadedSource> {
   };
 }
 
+// ---------------------------------------------------------------------------
+// live D1 (`name-vitals`) — the shipped source
+// ---------------------------------------------------------------------------
+
+const D1_DATABASE_ID = "fc4741db-1f6d-457c-b4e4-675a4ea3ebc2"; // name-vitals (apps/web/wrangler.toml)
+const D1_ID_CHUNK = 2000; // names per request; keeps each response well under the API's response cap
+
+interface D1QueryResponse<Row> {
+  success: boolean;
+  errors?: { code: number; message: string }[];
+  result?: { results: Row[] }[];
+}
+
+export async function d1Query<Row>(sql: string, params: string[] = []): Promise<Row[]> {
+  // trim: these are commonly injected with stray surrounding whitespace, which
+  // silently turns into a bad URL path / bad bearer header.
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  const token = process.env.CLOUDFLARE_API_TOKEN?.trim();
+  if (!accountId || !token) {
+    throw new Error("--source=d1 requires CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN in the environment");
+  }
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${D1_DATABASE_ID}/query`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ sql, params }),
+  });
+  const body = (await res.json()) as D1QueryResponse<Row>;
+  if (!res.ok || !body.success) {
+    const detail = body.errors?.map((e) => `${e.code} ${e.message}`).join("; ") ?? `${res.status} ${res.statusText}`;
+    throw new Error(`D1 query failed: ${detail}`);
+  }
+  return body.result?.[0]?.results ?? [];
+}
+
+/**
+ * A D1 read that reached the database but came back untrustworthy — a torn
+ * scan, or sums that disagree with `year_totals` beyond tolerance.
+ *
+ * This is deliberately distinct from an availability or credential failure.
+ * `--source=auto` may fall back to another source when D1 is simply out of
+ * reach, but an integrity failure means the data we did read is wrong, and
+ * silently substituting the frozen 2017 shards would turn "re-run the build"
+ * into a stale artifact that looks fresh.
+ */
+export class D1IntegrityError extends Error {
+  override readonly name = "D1IntegrityError";
+}
+
+/**
+ * A marker for "the live tables have not changed under us".
+ *
+ * `meta.data_version` alone is not sufficient. The ingest worker's `finalize()`
+ * commits the staging->live rename and only afterwards writes the meta keys in
+ * a separate statement (apps/ingest-worker/src/index.ts), so there is a window
+ * where the tables are new but `data_version` is still the old UUID — a scan
+ * straddling that window would read both UUIDs as equal.
+ *
+ * The rest of the fingerprint is a single query against whatever `names` is
+ * live at that instant, so it flips with the rename itself rather than with the
+ * follow-up write:
+ *   - `n` / `total` catch any change in the name set or the counts;
+ *   - `id_weighted` catches a rebuild that reassigns ids while leaving the data
+ *     identical, which is the case that would otherwise slip through — paging
+ *     is by `names.id`, so reshuffled ids tear the scan even when nothing else
+ *     moves.
+ */
+export async function readLiveFingerprint(): Promise<string> {
+  const [version] = await d1Query<{ value: string }>("SELECT value FROM meta WHERE key = 'data_version'");
+  if (!version?.value) {
+    throw new D1IntegrityError("D1 meta.data_version is missing; refusing to read a database of unknown vintage");
+  }
+  const [shape] = await d1Query<{ n: number; total: number; id_weighted: number }>(
+    "SELECT COUNT(*) AS n, COALESCE(SUM(total_count), 0) AS total, COALESCE(SUM(id * total_count), 0) AS id_weighted FROM names",
+  );
+  if (!shape) throw new D1IntegrityError("could not fingerprint the live `names` table");
+  return `${version.value}|${shape.n}|${shape.total}|${shape.id_weighted}`;
+}
+
+/**
+ * Loads every (name, sex) series from the live D1 database.
+ *
+ * The yearly series is fetched as one `year:count` group_concat per name so the
+ * ~2.2M `name_years` rows arrive as ~118k rows instead. Paging is by `names.id`
+ * range rather than LIMIT/OFFSET so each request reads only its own slice.
+ */
+export async function loadD1Source(): Promise<LoadedSource> {
+  // The scan spans many requests over several minutes, and the annual ingest
+  // finalizes by renaming names_staging -> names in one transaction, which
+  // regenerates ids. A swap mid-scan would silently tear the read: early id
+  // ranges from the old table, later ones from the new, dropping or
+  // duplicating names in a way the year_totals check cannot catch. Bracket the
+  // scan with a fingerprint that flips with the rename itself.
+  const fingerprintBefore = await readLiveFingerprint();
+
+  const [bounds] = await d1Query<{ min_id: number; max_id: number; min_year: number; max_year: number }>(
+    "SELECT MIN(id) AS min_id, MAX(id) AS max_id, (SELECT MIN(year) FROM name_years) AS min_year, (SELECT MAX(year) FROM name_years) AS max_year FROM names",
+  );
+  if (!bounds || bounds.max_id == null) throw new D1IntegrityError("D1 `names` table is empty");
+
+  const records: SourceNameRecord[] = [];
+  for (let lo = bounds.min_id; lo <= bounds.max_id; lo += D1_ID_CHUNK) {
+    const hi = lo + D1_ID_CHUNK - 1;
+    const rows = await d1Query<{ name: string; sex: string; series: string | null }>(
+      "SELECT n.name AS name, n.sex AS sex, group_concat(y.year || ':' || y.count) AS series " +
+        "FROM names n JOIN name_years y ON y.name_id = n.id " +
+        "WHERE n.id >= ?1 AND n.id <= ?2 GROUP BY n.id",
+      [String(lo), String(hi)],
+    );
+    for (const row of rows) {
+      if (row.sex !== "M" && row.sex !== "F") continue;
+      const series: Record<number, number> = {};
+      for (const pair of (row.series ?? "").split(",")) {
+        if (!pair) continue;
+        const colon = pair.indexOf(":");
+        const year = Number(pair.slice(0, colon));
+        const count = Number(pair.slice(colon + 1));
+        if (!Number.isFinite(year) || !Number.isFinite(count) || count <= 0) continue;
+        series[year] = count;
+      }
+      if (Object.keys(series).length) records.push({ name: row.name, sex: row.sex, series });
+    }
+    console.error(`  d1: ids ${lo}–${hi} → ${records.length} records so far`);
+  }
+  if (!records.length) throw new D1IntegrityError("no (name, sex) records loaded from D1");
+
+  // Direct check on the tear's symptom, independent of any marker: paging by
+  // id can only produce a duplicate (name, sex) if the id space shifted under
+  // the scan.
+  const seen = new Set<string>();
+  for (const rec of records) {
+    const key = `${rec.name}|${rec.sex}`;
+    if (seen.has(key)) {
+      throw new D1IntegrityError(`duplicate (name, sex) in the D1 scan: ${key}. The id space shifted mid-scan; re-run the build.`);
+    }
+    seen.add(key);
+  }
+
+  const fingerprintAfter = await readLiveFingerprint();
+  if (fingerprintAfter !== fingerprintBefore) {
+    throw new D1IntegrityError(
+      `D1 changed mid-scan (${fingerprintBefore} -> ${fingerprintAfter}): an ingest finalized while paging, ` +
+        "so this read may be torn across two vintages. Re-run the build.",
+    );
+  }
+
+  // internal consistency: per-year series sums must match the year_totals table
+  const totals = await d1Query<{ year: number; sex: string; total: number }>("SELECT year, sex, total FROM year_totals");
+  const sums = new Map<string, number>();
+  for (const rec of records) {
+    for (const [yearStr, count] of Object.entries(rec.series)) {
+      const k = `${yearStr}:${rec.sex}`;
+      sums.set(k, (sums.get(k) ?? 0) + count);
+    }
+  }
+  // `year_totals` is a denormalized rollup maintained by the ingest worker and
+  // can lag `name_years` by a few suppressed-threshold names (observed drift:
+  // 281 births across 38 of 292 year/sex pairs, max 25). `name_years` is the
+  // granular truth and is what the payload sums, so treat a small drift as
+  // informational and fail only on a real divergence.
+  let driftPairs = 0;
+  let driftBirths = 0;
+  for (const t of totals) {
+    const got = sums.get(`${t.year}:${t.sex}`) ?? 0;
+    const diff = Math.abs(got - t.total);
+    if (diff === 0) continue;
+    const tolerance = Math.max(50, t.total * 1e-4);
+    if (diff > tolerance) {
+      throw new D1IntegrityError(`d1/year_totals mismatch ${t.year} ${t.sex}: series sum ${got} vs year_totals ${t.total} (diff ${diff} > tolerance ${Math.round(tolerance)})`);
+    }
+    driftPairs += 1;
+    driftBirths += diff;
+  }
+  if (driftPairs) {
+    console.error(`  d1: year_totals rollup drift on ${driftPairs} year/sex pairs, ${driftBirths} births total (within tolerance; name_years used)`);
+  }
+
+  sortRecords(records);
+  return {
+    source: { minYear: bounds.min_year, maxYear: bounds.max_year, records },
+    sourceVersion: `ssa-national-${bounds.max_year}`,
+    sourceLabel: `live D1 name-vitals (ssa-national-${bounds.max_year})`,
+  };
+}
+
 function sortRecords(records: SourceNameRecord[]): void {
   records.sort((a, b) =>
     a.name.toLowerCase() < b.name.toLowerCase() ? -1 : a.name.toLowerCase() > b.name.toLowerCase() ? 1 : a.sex < b.sex ? -1 : 1,
@@ -199,10 +389,20 @@ export async function resolveSource(): Promise<LoadedSource> {
   const sourceArg = process.argv.find((a) => a.startsWith("--source="))?.slice("--source=".length) ?? "auto";
   const zipArg = process.argv.find((a) => a.startsWith("--zip="))?.slice("--zip=".length);
   if (zipArg) return loadZipSource(zipArg);
+  if (sourceArg === "d1") return loadD1Source();
   if (sourceArg === "shards") return loadShardSource();
   if (sourceArg === "zip") return loadZipSource(await findLocalZip());
-  if (sourceArg !== "auto") throw new Error(`unknown --source=${sourceArg} (expected shards|zip|auto)`);
-  // auto: prefer a present local zip, then a reachable ssa.gov, else shards.
+  if (sourceArg !== "auto") throw new Error(`unknown --source=${sourceArg} (expected d1|shards|zip|auto)`);
+  // auto: prefer live D1 (newest vintage), then a local zip, then ssa.gov, else
+  // the frozen 2017 shards.
+  try {
+    return await loadD1Source();
+  } catch (err) {
+    // Only availability/credential failures may fall through. A read that
+    // reached D1 and came back inconsistent must stop the build.
+    if (err instanceof D1IntegrityError) throw err;
+    console.error(`D1 unavailable (${(err as Error).message}); trying zip sources`);
+  }
   const localZip = await findLocalZip();
   if (localZip) return loadZipSource(localZip);
   try {
