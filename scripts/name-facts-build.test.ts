@@ -203,12 +203,18 @@ test("the corpus fingerprint is recomputable from the names table", () => {
   // than the database holds cannot match, whatever --data-version claimed.
   const maxYear = Math.max(...rows.map((r) => r.last_year));
   const totalBirths = rows.reduce((n, r) => n + r.total_count, 0);
-  assert.equal(fp, `ssa:${maxYear}:${totalBirths}:geo=yes`);
+  assert.equal(fp, `ssa:${maxYear}:${totalBirths}:geo=none`);
 
   // A build that skipped the state corpus must be distinguishable, or a
   // --no-state seed would look complete while every only-in-* page is empty.
-  const noGeo = build().map((r) => ({ ...r, top_state: null }));
-  assert.match(corpusFingerprint(noGeo), /:geo=no$/);
+  const withGeo = corpusFingerprint(rows, { maxYear: 2025, totalBirths: 900 });
+  assert.equal(withGeo, `ssa:${maxYear}:${totalBirths}:geo=2025:900`);
+  assert.notEqual(withGeo, fp);
+
+  // …and a build that read an OLDER state archive must differ too, which
+  // recording only presence would not have caught.
+  const olderGeo = corpusFingerprint(rows, { maxYear: 2024, totalBirths: 880 });
+  assert.notEqual(olderGeo, withGeo);
 
   // A different corpus produces a different fingerprint.
   const other = buildFactsRows(new Map([["Solo|F", new Map([[2000, 40]])]]), YM, {
@@ -220,8 +226,9 @@ test("the corpus fingerprint is recomputable from the names table", () => {
 
 test("the emitted SQL stamps the corpus fingerprint alongside the version", () => {
   const rows = build();
-  const sql = emitSql(rows, assembleCollections(rows, { minYear: 1880, maxYear: YM }), "corpus-a");
-  assert.ok(sql.includes(`VALUES ('facts_corpus', '${corpusFingerprint(rows)}')`));
+  const stats = { maxYear: 2025, totalBirths: 900 };
+  const sql = emitSql(rows, assembleCollections(rows, { minYear: 1880, maxYear: YM }), "corpus-a", stats);
+  assert.ok(sql.includes(`VALUES ('facts_corpus', '${corpusFingerprint(rows, stats)}')`));
 });
 
 test("string literals are escaped, not concatenated raw", () => {

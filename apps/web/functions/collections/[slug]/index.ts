@@ -9,7 +9,9 @@ import {
   getCollection,
   getMeta,
   listCollectionMembers,
+  listCollectionSummaries,
   META_KEYS,
+  MIN_PUBLISHABLE_MEMBERS,
   pageShell,
   renderCollectionPage,
   COLLECTION_PAGE_SIZE,
@@ -26,9 +28,10 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   const page = clampPage(url.searchParams.get("page"));
   const offset = (page - 1) * COLLECTION_PAGE_SIZE;
 
-  const [rows, total, ymStr, yMStr, factsVersion, dataVersion] = await Promise.all([
+  const [rows, total, summaries, ymStr, yMStr, factsVersion, dataVersion] = await Promise.all([
     listCollectionMembers(ctx.env.DB, slug, COLLECTION_PAGE_SIZE, offset),
     countCollectionMembers(ctx.env.DB, slug),
+    listCollectionSummaries(ctx.env.DB).catch(() => []),
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
     getMeta(ctx.env.DB, META_KEYS.factsVersion).catch(() => null),
@@ -40,9 +43,15 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
 
   const origin = url.origin;
   const canonical = `${origin}/collections/${slug}/${page > 1 ? `?page=${page}` : ""}`;
+  // Related links are filtered by what is actually populated, not by the
+  // registry alone. The hub and the sitemap already hide collections below the
+  // publish threshold, and a cross-link to one of those is an internal link to
+  // a page we are deliberately not indexing.
+  const populated = new Map(summaries.map((s) => [s.slug, s.member_count]));
   const related = def.related
     .map((s) => getCollection(s))
-    .filter((d): d is CollectionDef => Boolean(d));
+    .filter((d): d is CollectionDef => Boolean(d))
+    .filter((d) => (populated.get(d.slug) ?? 0) >= MIN_PUBLISHABLE_MEMBERS);
 
   const html = renderCollectionPage(def, rows, {
     canonical,

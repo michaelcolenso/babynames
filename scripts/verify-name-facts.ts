@@ -129,13 +129,14 @@ function main(): void {
   const live = one<{ max_year: number; total_births: number }>(
     "SELECT MAX(last_year) AS max_year, SUM(total_count) AS total_births FROM names",
   );
-  // The database knows whether state data exists, so it also knows whether the
-  // facts should carry geography. A --no-state build against a database that
-  // has name_states rows has silently dropped the only-in-* collections.
-  const hasStates = (one<{ n: number }>("SELECT COUNT(*) AS n FROM name_states")?.n ?? 0) > 0;
-  const liveFingerprint = live
-    ? `ssa:${live.max_year}:${live.total_births}:geo=${hasStates ? "yes" : "no"}`
-    : null;
+  // The state half identifies the per-state corpus, so a build that read an
+  // older namesbystate archive is caught as well as one that read none.
+  const liveState = one<{ n: number; max_year: number | null; total_births: number | null }>(
+    "SELECT COUNT(*) AS n, MAX(year) AS max_year, SUM(count) AS total_births FROM name_states",
+  );
+  const geo =
+    liveState && liveState.n > 0 ? `${liveState.max_year}:${liveState.total_births}` : "none";
+  const liveFingerprint = live ? `ssa:${live.max_year}:${live.total_births}:geo=${geo}` : null;
   const storedFingerprint = get("facts_corpus");
   check(
     "facts were built from the corpus the database holds",

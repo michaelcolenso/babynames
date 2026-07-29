@@ -39,7 +39,13 @@ interface DbOptions {
   summaries?: { slug: string; member_count: number; sample: string | null }[];
 }
 
-function fakeDb({ members = MEMBERS, total = members.length, failMembers = false, summaries }: DbOptions = {}) {
+const POPULATED = getCollection(SLUG)!.related.map((slug) => ({
+  slug,
+  member_count: 50,
+  sample: null as string | null,
+}));
+
+function fakeDb({ members = MEMBERS, total = members.length, failMembers = false, summaries = POPULATED }: DbOptions = {}) {
   return {
     prepare(sql: string) {
       const stmt = {
@@ -59,7 +65,7 @@ function fakeDb({ members = MEMBERS, total = members.length, failMembers = false
             return { results: members as unknown as T[] };
           }
           if (sql.includes("GROUP BY slug")) {
-            return { results: (summaries ?? []) as unknown as T[] };
+            return { results: summaries as unknown as T[] };
           }
           return { results: [] };
         },
@@ -165,6 +171,26 @@ test("related collections are rendered as links and all resolve", async () => {
   for (const slug of getCollection(SLUG)!.related) {
     assert.ok(html.includes(`href="/collections/${slug}/"`), `missing related link to ${slug}`);
   }
+});
+
+test("related links point only at collections that are actually populated", async () => {
+  // The hub and the sitemap both hide collections below the publish threshold.
+  // A cross-link to one of those is an internal link to a page we deliberately
+  // do not index — the case that had /rising linking famous-name-effects, which
+  // the catalyst data can never fill.
+  const [thin, ...healthy] = getCollection(SLUG)!.related;
+  const db = fakeDb({
+    summaries: [
+      { slug: thin!, member_count: MIN_PUBLISHABLE_MEMBERS - 1, sample: null },
+      ...healthy.map((slug) => ({ slug, member_count: 40, sample: null })),
+    ],
+  });
+  const html = await (await get(`https://nobodynamed.com/collections/${SLUG}/`, db)).text();
+  assert.ok(
+    !html.includes(`href="/collections/${thin}/"`),
+    `linked ${thin}, which the hub and sitemap both hide`,
+  );
+  for (const slug of healthy) assert.ok(html.includes(`href="/collections/${slug}/"`));
 });
 
 test("a D1 failure surfaces rather than rendering a silently empty page", async () => {

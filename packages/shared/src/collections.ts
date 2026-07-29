@@ -143,7 +143,7 @@ const BASE: readonly CollectionDef[] = [
     lede:
       "Alternate spellings of names that already had a dominant form — the variant that never became the default.",
     body:
-      "<p>Each name here shares a spelling family with a much more common sibling. Grouping is done on a normalized consonant skeleton, so Kaitlyn, Katelyn, and Caitlin land together regardless of which one a given family chose.</p><p>The variants that persist are the ones worth looking at: a spelling used steadily for decades is a genuine parallel tradition, not a misfiling.</p>",
+      "<p>Each name here shares a spelling family with a much more common sibling. Grouping normalizes the letters that vary without changing the sound — ph and f, ck and k, a trailing h — while keeping the vowels, so Sophia and Sofia land together, as do Jaxon, Jackson and Jaxson.</p><p>Keeping the vowels is a deliberate limit. Dropping them would also group Colleen with Kaylin, so families that differ by an inserted vowel rather than a substituted one, such as Caitlin and Katelyn, are listed separately. A wrong relative is worse than a missing one.</p><p>The variants that persist are the ones worth looking at: a spelling used steadily for decades is a genuine parallel tradition, not a misfiling.</p>",
     group: "spelling",
     columns: ["metric", "peak", "total", "spark"],
     metricHeading: "Spelling family",

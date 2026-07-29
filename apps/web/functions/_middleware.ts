@@ -4,7 +4,32 @@
 // hooking caches.default here means every endpoint gets edge-caching for
 // free (with the `data_version` cache-bust trick built into each handler).
 
-import type { PagesFunction } from "@cloudflare/workers-types";
+import type { D1Database, PagesFunction } from "@cloudflare/workers-types";
+
+// meta.facts_version changes only when name_facts is reseeded, so one lookup
+// per isolate per TTL is ample. Kept deliberately short: the window between a
+// seed and the caches following it should be seconds, not minutes.
+const FACTS_VERSION_TTL_MS = 30_000;
+let factsVersionCache: { value: string | null; at: number } | null = null;
+
+async function factsVersionFor(db: D1Database | undefined): Promise<string | null> {
+  if (!db) return null;
+  const now = Date.now();
+  if (factsVersionCache && now - factsVersionCache.at < FACTS_VERSION_TTL_MS) {
+    return factsVersionCache.value;
+  }
+  try {
+    const row = await db
+      .prepare("SELECT value FROM meta WHERE key = 'facts_version'")
+      .first<{ value: string }>();
+    factsVersionCache = { value: row?.value ?? null, at: now };
+  } catch {
+    // A meta lookup failure must never take the page down; fall back to an
+    // unversioned key, which is exactly today's behaviour.
+    factsVersionCache = { value: null, at: now };
+  }
+  return factsVersionCache.value;
+}
 
 const CANONICAL_PAGES = new Set([
   "/about",
@@ -23,7 +48,7 @@ const CANONICAL_PAGES = new Set([
   "/year",
 ]);
 
-export const onRequest: PagesFunction = async (ctx) => {
+export const onRequest: PagesFunction<Env> = async (ctx) => {
   const startedAt = Date.now();
   const requestId = crypto.randomUUID();
   const url = new URL(ctx.request.url);
@@ -56,7 +81,7 @@ export const onRequest: PagesFunction = async (ctx) => {
   }
 };
 
-async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promise<Response> {
+async function handleRequest(ctx: Parameters<PagesFunction<Env>>[0], url: URL): Promise<Response> {
   const legacyName = url.pathname === "/" ? url.searchParams.get("name")?.trim() : "";
   if (legacyName) {
     const target = new URL(`/name/${encodeURIComponent(legacyName)}/`, url.origin);
@@ -110,6 +135,20 @@ async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promi
   const wantsMarkdown = (ctx.request.headers.get("Accept") ?? "").includes("text/markdown");
   const keyUrl = new URL(ctx.request.url);
   keyUrl.searchParams.set("__nv_variant", wantsMarkdown ? "md" : "html");
+
+  // Name pages render name_facts and name_collections, so a page cached before
+  // a facts seed keeps its missing story strip for the full TTL. An ETag cannot
+  // fix that — cache.match never reads one — so the facts version goes into the
+  // key itself and a rebuild simply lands on a different key.
+  //
+  // Bypassing instead, as the collection routes do, would drop the Cache API
+  // for the busiest route on the site to fix a once-a-year transition. The
+  // version lookup is memoized per isolate (see factsVersionFor) so the common
+  // path adds no D1 read.
+  if (url.pathname.startsWith("/name/")) {
+    const version = await factsVersionFor(ctx.env.DB);
+    if (version) keyUrl.searchParams.set("__nv_facts", version);
+  }
   const cacheKey = new Request(keyUrl.toString(), { method: "GET" });
 
   const cached = await cache.match(cacheKey);
