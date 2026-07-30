@@ -38,30 +38,13 @@
     overflow-x: hidden;
   }
 
-  /* ── Nav ── */
-  nav {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 1rem 2rem;
-    border-bottom: 1px solid var(--rule);
-    font-size: 0.85rem;
-    position: sticky;
-    top: 0;
-    background: rgba(10,10,15,0.92);
-    backdrop-filter: blur(8px);
-    z-index: 50;
-  }
-  nav a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
-  nav a:hover { color: var(--text); }
-  nav .brand {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--amber);
-    letter-spacing: 0.1em;
-    margin-right: auto;
-    text-decoration: none;
-  }
+  /* Nav: intentionally no rules here. A prior draft of this page (and
+     suffix-waves.html) had an unscoped `nav{}` block that gave the header's
+     <nav> a near-black sticky background — which then made style.css's
+     `header.site nav a[aria-current="page"] { color: var(--ink) }` (also
+     near-black, designed for a light header) illegible. style.css's own
+     `header.site nav` rules already style the real header nav correctly;
+     nothing here needs to touch it. */
 
   /* ── Hero ── */
   .hero {
@@ -265,10 +248,13 @@
     position: absolute;
     inset: 0;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
-    background: rgba(244,240,231,0.72);
-    backdrop-filter: blur(3px);
+    padding-bottom: 28px;
+    /* Deliberately light: the whole point of the piano-roll is that it's
+       readable before you press play. Just enough scrim to anchor the
+       button, not enough to hide the chart underneath. */
+    background: linear-gradient(rgba(244,240,231,0), rgba(244,240,231,0.55) 70%);
     z-index: 20;
     border-radius: 6px;
     cursor: pointer;
@@ -479,6 +465,13 @@ function noteMidi(sex, rankIdx) {
 
 /* ── Data loading ─────────────────────────────────────────────────────── */
 
+// Synthetic data is only ever substituted on an unstyled local dev server
+// (no deployed API to hit). On every real deployment — production or a
+// Pages preview build — a fetch failure surfaces the real #error-msg state
+// instead of silently playing fabricated history back to a visitor as if it
+// were SSA data.
+const IS_LOCAL_DEV = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
 async function loadData() {
   try {
     const [meta, conc] = await Promise.all([
@@ -487,7 +480,8 @@ async function loadData() {
     ]);
     return normalize(meta, conc);
   } catch (err) {
-    console.warn('perfect-pitch APIs unavailable, using mock data:', err.message);
+    if (!IS_LOCAL_DEV) throw err;
+    console.warn('perfect-pitch APIs unavailable, using mock data (local dev only):', err.message);
     return makeMockData();
   }
 }
@@ -585,6 +579,7 @@ const Audio_ = {
   nextYearIdx: 0,
   playStartAudioTime: 0,
   playStartYearIdx: 0,
+  pending: [], // one-shot {osc, env} nodes already .start()-ed but not yet finished
 
   ensure() {
     if (this.ctx) return;
@@ -632,6 +627,17 @@ const Audio_ = {
     this.master.gain.setTargetAtTime(muted ? 0 : 0.85, this.ctx.currentTime, 0.05);
   },
 
+  // Tracks a one-shot oscillator so panic() can silence it if a seek or speed
+  // change abandons it mid-flight. Self-removes once the node actually ends.
+  track(osc, env) {
+    const rec = { osc, env };
+    this.pending.push(rec);
+    osc.onended = () => {
+      const i = this.pending.indexOf(rec);
+      if (i >= 0) this.pending.splice(i, 1);
+    };
+  },
+
   pluck(freq, gainVal, pan, sex, when, dur) {
     const ctx = this.ctx;
     const osc = ctx.createOscillator();
@@ -647,6 +653,7 @@ const Audio_ = {
     (panner ? env.connect(panner).connect(this.voiceGain[sex]) : env.connect(this.voiceGain[sex]));
     osc.start(when);
     osc.stop(when + dur + 0.05);
+    this.track(osc, env);
   },
 
   chime(when) {
@@ -661,6 +668,7 @@ const Audio_ = {
     osc.connect(env).connect(this.master);
     osc.start(when);
     osc.stop(when + 1);
+    this.track(osc, env);
   },
 
   ding(when) {
@@ -675,6 +683,27 @@ const Audio_ = {
     osc.connect(env).connect(this.master);
     osc.start(when);
     osc.stop(when + 0.4);
+    this.track(osc, env);
+  },
+
+  // Immediately silences every scheduled-but-not-yet-finished one-shot note.
+  // Needed because clearInterval() only stops *future* scheduling — oscillators
+  // already created and .start()-ed during the look-ahead window keep playing
+  // on their own regardless, so a seek or speed change would otherwise leave
+  // up to ~0.5s of stale notes (worth ~10 years at 8x) ringing over the new
+  // position. Does not touch the drone, which is meant to run continuously.
+  panic() {
+    if (!this.ctx) { this.pending = []; return; }
+    const now = this.ctx.currentTime;
+    this.pending.forEach(({ osc, env }) => {
+      try {
+        env.gain.cancelScheduledValues(now);
+        env.gain.setValueAtTime(env.gain.value, now);
+        env.gain.linearRampToValueAtTime(0.0001, now + 0.03);
+        osc.stop(now + 0.04);
+      } catch (e) { /* already stopped */ }
+    });
+    this.pending = [];
   },
 
   yearDuration() { return (YEAR_MS_AT_1X / 1000) / speed; },
@@ -723,6 +752,9 @@ const Audio_ = {
   start(fromYearFloat) {
     this.ensure();
     if (this.ctx.state === 'suspended') this.ctx.resume();
+    // Silence anything still ringing from a previous scheduling pass — a
+    // no-op on first play, since `pending` is empty until notes are scheduled.
+    this.panic();
     this.playStartYearIdx = fromYearFloat;
     this.playStartAudioTime = this.ctx.currentTime + 0.06;
     this.nextYearIdx = Math.floor(fromYearFloat);
@@ -799,9 +831,15 @@ function buildChart() {
     .attr('class', `note-dot dot-${sex}`)
     .attr('cx', (d) => xScale(DATA.perYear[d.yi].year))
     .attr('cy', (d) => yScaleNote(noteMidi(sex, d.ri)))
-    .attr('r', (d) => 0.9 + d.note.share * 5.2)
+    // A power curve rather than linear: at typical shares (0.03-0.15 for ranks
+    // 2-10), linear scaling produced sub-2px dots that vanished against 146
+    // years of width — a flat haze, not the "shape of a century" the page
+    // promises you can read before pressing play. sqrt keeps the low end
+    // visible as a real texture while still letting a dominant rank-1 note
+    // (Mary at 0.31 in 1880) visibly dwarf everything around it.
+    .attr('r', (d) => 1.3 + Math.sqrt(d.note.share) * 6.5)
     .attr('fill', color)
-    .attr('fill-opacity', (d) => 0.25 + d.note.share * 0.6)
+    .attr('fill-opacity', (d) => 0.4 + Math.sqrt(d.note.share) * 0.55)
     .attr('data-yi', (d) => d.yi)
     .attr('data-sex', sex);
 
@@ -920,9 +958,13 @@ function startPlayback() {
 }
 
 function stopPlayback(reachedEnd) {
+  // Capture the float position *before* flipping `playing` — currentYearFloat()
+  // falls back to the stale pausedAtYearFloat once playing is false, which
+  // would make every pause jump back to wherever playback last started.
+  const floatYear = reachedEnd ? 0 : Audio_.currentYearFloat();
   playing = false;
   Audio_.stop();
-  pausedAtYearFloat = reachedEnd ? 0 : Audio_.currentYearFloat();
+  pausedAtYearFloat = floatYear;
   document.getElementById('play-icon').innerHTML = '&#9658;';
   document.getElementById('play-label').textContent = reachedEnd ? 'Replay' : 'Play';
   setPlayheadX(pausedAtYearFloat);
@@ -958,8 +1000,13 @@ function wireControls() {
     btn.addEventListener('click', () => {
       document.querySelectorAll('#speed-group .pill-btn').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
+      // currentYearFloat() divides elapsed audio time by yearDuration(), which
+      // reads `speed` live — so it must be evaluated at the OLD speed before
+      // `speed` changes, or the resume point jumps (2x speed would double the
+      // apparent elapsed years; a slower speed would jump backward).
+      const resumeAt = playing ? Audio_.currentYearFloat() : null;
       speed = parseFloat(btn.dataset.speed);
-      if (playing) Audio_.start(Audio_.currentYearFloat());
+      if (playing) Audio_.start(resumeAt);
     });
   });
 
