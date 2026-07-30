@@ -472,6 +472,16 @@ const YEAR_MS_AT_1X = 420; // one "measure" at 1x speed
 const ROLL_SPAN = 0.55; // fraction of a year's duration the 10-note roll spans
 const SCHEDULE_AHEAD = 0.5; // seconds
 const TIMER_MS = 25;
+const NOTE_PLUCK_DUR_FRAC = 0.7; // dur*0.7, matches the pluck() call in scheduleYear()
+
+// The last (rank-10) note in a year's roll starts at ROLL_SPAN * 9/10 into
+// the year and its pluck envelope lasts another NOTE_PLUCK_DUR_FRAC of a year
+// -- for the constants above that's 0.495 + 0.7 = 1.195, i.e. the true audio
+// tail rings 0.195 year-durations *past* the year's nominal end. Used to hold
+// off stopPlayback(true) at the end of the piece until the final chord has
+// actually finished sounding, not just visually crossed the last-year
+// boundary (which used to hard-cut it via panic()).
+const YEAR_TAIL_FRAC = Math.max(0, (ROLL_SPAN * (NOTES_PER_YEAR - 1)) / NOTES_PER_YEAR + NOTE_PLUCK_DUR_FRAC - 1);
 
 function midiToFreq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
 function noteMidi(sex, rankIdx) {
@@ -762,7 +772,7 @@ const Audio_ = {
         // explainer's claim that volume *is* the share, not a softened version.
         const gainVal = Math.min(0.5, note.share * 1.1);
         const pan = sex === 'F' ? 0.35 : -0.35;
-        this.pluck(freq, gainVal, pan, sex, t, dur * 0.7);
+        this.pluck(freq, gainVal, pan, sex, t, dur * NOTE_PLUCK_DUR_FRAC);
       });
     });
 
@@ -1005,10 +1015,16 @@ function setPlayheadX(yearFloat) {
   // Keep the keyboard-operable seek control in sync with wherever the
   // playhead actually is, whether that's a click-seek, a keyboard seek, or
   // rAF-driven playback — this is the one place all three paths converge.
+  // Only suppress this while an actual drag/debounce is in flight
+  // (draggingSeek) — merely having focus on the control (e.g. a keyboard
+  // user tabbed to it and is just watching playback) must not freeze its
+  // value, or the next arrow-key press would fire from a stale value and
+  // seek from the wrong position; aria-valuetext would also disagree with
+  // the frozen thumb.
   const seekRange = document.getElementById('seek-range');
   const yi = Math.round(yearFloat);
   const yr = DATA.years[Math.max(0, Math.min(DATA.years.length - 1, yi))];
-  if (document.activeElement !== seekRange) seekRange.value = String(yi);
+  if (!draggingSeek) seekRange.value = String(yi);
   seekRange.setAttribute('aria-valuetext', String(yr));
 }
 
@@ -1108,15 +1124,24 @@ let draggingSeek = false;
 function tick() {
   if (!playing) return;
   const yf = Audio_.currentYearFloat();
-  if (yf >= DATA.years.length) { stopPlayback(true); return; }
+  // Don't cut the scheduler off the instant the playhead visually crosses the
+  // last year — the final chord's rank-10 note doesn't finish ringing until
+  // YEAR_TAIL_FRAC years later, and stopPlayback(true) calls panic(), which
+  // would hard-silence it mid-decay. Keep ticking (silently, audio-only)
+  // until the tail has genuinely finished.
+  if (yf >= DATA.years.length + YEAR_TAIL_FRAC) { stopPlayback(true); return; }
   if (!draggingSeek) {
-    setPlayheadX(yf);
-    const yi = Math.floor(yf);
+    // Clamp what's actually rendered to the last real year once yf runs past
+    // it, so the playhead/panel/dots freeze there instead of trying to index
+    // past the end of the data while the tail rings out.
+    const displayYf = Math.min(yf, DATA.years.length - 0.001);
+    setPlayheadX(displayYf);
+    const yi = Math.floor(displayYf);
     if (yi !== lastTickYear) {
       renderNowPanel(yi);
       lastTickYear = yi;
     }
-    pulseYear(yi, yf - yi);
+    pulseYear(yi, displayYf - yi);
   }
   requestAnimationFrame(tick);
 }
