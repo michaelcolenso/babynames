@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perfect Pitch — NobodyNamed</title>
+<meta name="description" content="145 years of America's favorite baby names, turned into music. One dominant note in 1880. A shimmering chord of hundreds today. Press play and listen to a monoculture become a chorus.">
+<link rel="canonical" href="https://nobodynamed.com/viz/perfect-pitch">
+<meta property="og:title" content="Perfect Pitch — NobodyNamed">
+<meta property="og:description" content="America's naming history, sonified. Mary's solo note in 1880 dissolves into a chorus of hundreds by 2025 — hear it happen.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://nobodynamed.com/api/og/default">
+<meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#f7f5f2">
+    <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/viz-theme.css">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="https://d3js.org/d3.v7.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f0e7;
+    --bg2: #fbf8f1;
+    --text: #171511;
+    --muted: #787064;
+    --rule: rgba(23,21,17,0.09);
+    --amber: #c9922a;
+    --rose: #c4786e;
+    --blue: #6a8aaa;
+  }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Avenir Next', system-ui, sans-serif;
+    background: var(--paper);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Nav ── */
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.85rem;
+    position: sticky;
+    top: 0;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(8px);
+    z-index: 50;
+  }
+  nav a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
+  nav a:hover { color: var(--text); }
+  nav .brand {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+    margin-right: auto;
+    text-decoration: none;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 3rem 2rem 1.5rem;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  .kicker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 0.75rem;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+  .lede {
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 680px;
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+  }
+  .lede strong { color: var(--text); font-weight: 600; }
+
+  /* ── Transport ── */
+  .transport {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    align-items: center;
+    padding: 1.25rem 2rem;
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+  .play-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 1.3rem;
+    border: 1px solid var(--amber);
+    border-radius: 24px;
+    background: var(--amber);
+    color: #14120e;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .play-btn:hover { filter: brightness(1.08); }
+  .play-btn .icon { font-size: 0.9em; line-height: 1; }
+
+  .controls-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    margin-right: -0.35rem;
+  }
+  .pill-group {
+    display: flex;
+    border: 1px solid var(--rule);
+    border-radius: 20px;
+    overflow: hidden;
+  }
+  .pill-btn {
+    padding: 0.32rem 0.85rem;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .pill-btn:not(:last-child) { border-right: 1px solid var(--rule); }
+  .pill-btn:hover { color: var(--text); background: rgba(23,21,17,0.06); }
+  .pill-btn.active { background: var(--amber); color: #000; font-weight: 700; }
+
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .icon-btn:hover { color: var(--text); border-color: rgba(23,21,17,0.24); }
+  .icon-btn.muted { color: var(--rose); border-color: var(--rose); }
+
+  /* ── Now-playing readout ── */
+  #now-panel {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 2rem 0.5rem;
+    min-height: 92px;
+  }
+  .now-year {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 2.1rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .now-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem 1.5rem;
+    margin-top: 0.5rem;
+  }
+  .now-row {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.5;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .now-row .sw {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.4rem;
+    vertical-align: middle;
+  }
+  .now-row b { color: var(--text); }
+  .now-stat {
+    grid-column: 1 / -1;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 0.15rem;
+  }
+  .now-stat b { color: var(--amber); font-style: normal; font-family: 'IBM Plex Mono', monospace; }
+
+  /* ── Chart ── */
+  #chart-wrap {
+    padding: 0 2rem;
+    max-width: 1120px;
+    margin: 0 auto;
+    position: relative;
+  }
+  #chart-wrap svg { display: block; width: 100%; overflow: visible; }
+  .note-dot { transition: r 0.06s, opacity 0.06s; }
+  .note-dot.fired { filter: brightness(1.6) saturate(1.3); }
+  .voice-dim { opacity: 0.12 !important; }
+  .playhead {
+    stroke: var(--text);
+    stroke-width: 1.5;
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .playhead-glow {
+    stroke: var(--amber);
+    stroke-width: 6;
+    opacity: 0.18;
+    pointer-events: none;
+    filter: blur(2px);
+  }
+  .hhi-area { pointer-events: none; }
+  .turnover-tick { cursor: default; }
+  .axis-year text {
+    fill: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+  }
+  .axis-year line { stroke: rgba(23,21,17,0.1); }
+  .axis-year .domain { display: none; }
+  .strip-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    fill: var(--muted);
+    text-transform: uppercase;
+  }
+  #chart-wrap svg { cursor: pointer; }
+
+  /* ── Press-play overlay ── */
+  .gate-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(244,240,231,0.72);
+    backdrop-filter: blur(3px);
+    z-index: 20;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .gate-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 1.1rem 1.8rem;
+    border: 1.5px solid var(--text);
+    border-radius: 12px;
+    background: var(--bg2);
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text);
+    transition: all 0.15s;
+  }
+  .gate-overlay:hover .gate-btn { background: var(--amber); border-color: var(--amber); }
+  .gate-btn .big { font-size: 1.5rem; }
+  .gate-btn .small { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  .gate-overlay:hover .gate-btn .small { color: #14120e; }
+
+  /* ── Legend / footnote ── */
+  .legend-section {
+    padding: 1rem 2rem 0.5rem;
+    max-width: 1120px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .legend-section .sw { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 0.35rem; vertical-align: middle; }
+
+  .explainer {
+    max-width: 1120px;
+    margin: 1.5rem auto 0;
+    padding: 0 2rem;
+    font-size: 0.86rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .explainer h2 {
+    font-size: 0.95rem;
+    color: var(--text);
+    font-weight: 700;
+    margin: 1.4rem 0 0.4rem;
+  }
+  .explainer p { margin-bottom: 0.6rem; max-width: 680px; }
+
+  /* ── Loading / Error ── */
+  #loading {
+    text-align: center;
+    padding: 8rem 2rem;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+  }
+  #loading::after {
+    content: '';
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%,100%{content:''} 25%{content:'.'} 50%{content:'..'} 75%{content:'...'}
+  }
+  #error-msg {
+    display: none;
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--rose);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.8;
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 2.5rem 2rem 2rem;
+    max-width: 1120px;
+    margin: 2rem auto 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    border-top: 1px solid var(--rule);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .hero, .transport, #now-panel, #chart-wrap, .legend-section, .explainer, footer {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    h1 { font-size: 1.8rem; }
+    .now-grid { grid-template-columns: 1fr; }
+    .pill-btn { padding: 0.3rem 0.65rem; font-size: 0.62rem; }
+  }
+</style>
+<script src="/assets/analytics.js" defer></script>
+</head>
+<body class="viz-page" data-content-id="visualization:perfect-pitch" data-content-type="visualization" data-content-slug="perfect-pitch">
+
+<a href="#viz-content" class="skip-link">Skip to content</a>
+<header class="site">
+  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="" loading="lazy"></a>
+  <nav aria-label="Main navigation"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a></nav>
+  <details class="mobile-nav">
+  <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
+  <nav aria-label="Mobile navigation"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a></nav>
+</details>
+</header>
+
+<div id="viz-content" class="hero">
+  <div class="kicker">34 / THE CHORUS</div>
+  <h1>Perfect Pitch</h1>
+  <p class="lede">Every year of American birth records, played as ten-note chords. In 1880, one name — <strong>Mary</strong> — rings out over everything else, a single dominant voice. By 2025 that voice has dissolved into a wide, quiet shimmer of hundreds of names, no one of them loud enough to hear alone. <strong>Press play and listen to a monoculture become a chorus.</strong></p>
+</div>
+
+<div class="transport">
+  <button class="play-btn" id="play-btn" aria-label="Play"><span class="icon" id="play-icon">&#9658;</span><span id="play-label">Play</span></button>
+  <button class="icon-btn" id="mute-btn" aria-label="Mute" title="Mute">&#128266;</button>
+  <span class="controls-label">SPEED:</span>
+  <div class="pill-group" id="speed-group">
+    <button class="pill-btn" data-speed="0.25">0.25&times;</button>
+    <button class="pill-btn active" data-speed="1">1&times;</button>
+    <button class="pill-btn" data-speed="2">2&times;</button>
+    <button class="pill-btn" data-speed="4">4&times;</button>
+    <button class="pill-btn" data-speed="8">8&times;</button>
+  </div>
+  <span class="controls-label">VOICES:</span>
+  <div class="pill-group" id="voice-group">
+    <button class="pill-btn active" data-voice="both">Both</button>
+    <button class="pill-btn" data-voice="F">Girls</button>
+    <button class="pill-btn" data-voice="M">Boys</button>
+  </div>
+</div>
+
+<div id="now-panel" aria-live="polite">
+  <div class="now-year" id="now-year">1880</div>
+  <div class="now-grid">
+    <div class="now-row" id="now-f">&nbsp;</div>
+    <div class="now-row" id="now-m">&nbsp;</div>
+    <div class="now-stat" id="now-stat">&nbsp;</div>
+  </div>
+</div>
+
+<div id="chart-wrap">
+  <div id="loading">TUNING 146 YEARS OF DATA</div>
+  <div id="error-msg">Failed to load data.<br>Try refreshing the page.</div>
+</div>
+
+<div class="legend-section" id="legend-section" style="display:none">
+  <span><span class="sw" style="background:#c4786e"></span>Girls — higher octave, panned right</span>
+  <span><span class="sw" style="background:#6a8aaa"></span>Boys — lower octave, panned left</span>
+  <span><span class="sw" style="background:rgba(201,146,42,0.55)"></span>Concentration (HHI) — the drone's brightness</span>
+  <span>&#9650; rank-1 name changed hands</span>
+</div>
+
+<div class="explainer">
+  <h2>How to listen</h2>
+  <p>Each year plays as a quick rolled chord: the #1 girl and #1 boy name sound first, low and loud, followed by ranks 2 through 10 rippling upward into a higher, quieter shimmer. A note's volume is exactly its share of that year's top-10 births — the same math behind <a href="/viz/concentration">the Concentration Index</a>. A low drone hums underneath the whole piece; its filter opens up (brighter, more resonant) in years when one name dominated, and closes down (darker, more muffled) as the naming pool fragmented. A small chime marks every decade, and a brighter ding — with a triangle on the timeline — marks the moment the #1 name changes hands.</p>
+  <p>Scrub anywhere on the timeline to jump straight to a decade. Isolate just the girls' or boys' line with the Voices control. The whole run is about a minute at 1&times; speed, or under 15 seconds at 8&times; if you just want the shape of the century.</p>
+</div>
+
+<p class="data-note">Built on public-domain SSA data. Note gains, HHI drone modulation and rank-1 turnover are all computed from the same precomputed <code>/api/meta</code> and <code>/api/concentration</code> payloads that back the rest of the site.</p>
+
+<script>
+'use strict';
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Perfect Pitch — sonifies 146 years of SSA top-10 name data.
+ *
+ * Design: rank 1..10 within each sex maps to a major-pentatonic run (always
+ * consonant, regardless of what the data says). Girls occupy the octave
+ * above boys, purely so two simultaneous 10-note streams stay distinguishable
+ * — not a claim about anything, just voicing. A note's gain is its share of
+ * that year's top-10 births *within its own sex*, renormalized to sum to 1,
+ * so every year produces a full-volume chord whose *shape* — one loud voice
+ * vs. ten quiet ones — is what actually encodes concentration.
+ *
+ * Playback uses the standard Web Audio look-ahead scheduler (schedule ~0.5s
+ * ahead of audioCtx.currentTime on a 25ms timer) rather than setTimeout per
+ * note, so timing stays sample-accurate even under main-thread jank. Visual
+ * sync reads audioCtx.currentTime every animation frame rather than tracking
+ * its own clock, so the playhead and the audio can never drift apart.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+const ROSE = '#c4786e';
+const BLUE = '#6a8aaa';
+const AMBER = '#c9922a';
+const PENTATONIC = [0, 2, 4, 7, 9]; // major pentatonic, semitones from root
+const ROOT_MIDI = { F: 72, M: 60 }; // C5 / C4 — girls an octave above boys
+const NOTES_PER_YEAR = 10;
+const YEAR_MS_AT_1X = 420; // one "measure" at 1x speed
+const ROLL_SPAN = 0.55; // fraction of a year's duration the 10-note roll spans
+const SCHEDULE_AHEAD = 0.5; // seconds
+const TIMER_MS = 25;
+
+function midiToFreq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
+function noteMidi(sex, rankIdx) {
+  // rankIdx: 0 (rank 1, loudest) .. 9 (rank 10, quietest)
+  const deg = PENTATONIC[rankIdx % 5] + 12 * Math.floor(rankIdx / 5);
+  return ROOT_MIDI[sex] + deg;
+}
+
+/* ── Data loading ─────────────────────────────────────────────────────── */
+
+async function loadData() {
+  try {
+    const [meta, conc] = await Promise.all([
+      fetch('/api/meta').then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }),
+      fetch('/api/concentration').then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }),
+    ]);
+    return normalize(meta, conc);
+  } catch (err) {
+    console.warn('perfect-pitch APIs unavailable, using mock data:', err.message);
+    return makeMockData();
+  }
+}
+
+function normalize(meta, conc) {
+  const ym = meta.ym || 1880;
+  const yM = meta.yM || 2025;
+  const years = d3.range(ym, yM + 1);
+
+  const hhiBy = { F: new Map(), M: new Map() };
+  const top1By = { F: new Map(), M: new Map() };
+  (conc.data || []).forEach((r) => {
+    hhiBy[r.sex]?.set(r.year, r.hhi);
+    top1By[r.sex]?.set(r.year, r.top1Share);
+  });
+
+  const perYear = years.map((year) => {
+    const entries = meta.top10PerYear?.[String(year)] || [];
+    const F = entries.filter((e) => e[1] === 'F').sort((a, b) => b[2] - a[2]).slice(0, NOTES_PER_YEAR);
+    const M = entries.filter((e) => e[1] === 'M').sort((a, b) => b[2] - a[2]).slice(0, NOTES_PER_YEAR);
+    const sumF = F.reduce((s, e) => s + e[2], 0) || 1;
+    const sumM = M.reduce((s, e) => s + e[2], 0) || 1;
+    return {
+      year,
+      F: F.map((e) => ({ name: e[0], count: e[2], share: e[2] / sumF })),
+      M: M.map((e) => ({ name: e[0], count: e[2], share: e[2] / sumM })),
+      hhi: { F: hhiBy.F.get(year) ?? 0, M: hhiBy.M.get(year) ?? 0 },
+      top1Share: { F: top1By.F.get(year) ?? 0, M: top1By.M.get(year) ?? 0 },
+    };
+  });
+
+  // Rank-1 turnover: does the #1 name (by sex) differ from the prior year?
+  perYear.forEach((row, i) => {
+    const prev = perYear[i - 1];
+    row.turnover = { F: false, M: false };
+    if (prev) {
+      const prevF = prev.F[0]?.name, prevM = prev.M[0]?.name;
+      row.turnover.F = !!(row.F[0] && prevF && row.F[0].name !== prevF);
+      row.turnover.M = !!(row.M[0] && prevM && row.M[0].name !== prevM);
+    }
+  });
+
+  return { years, perYear };
+}
+
+// Deterministic offline/dev fallback: synthetic pentatonic-friendly data that
+// still tells the concentration-collapse story (wide chord early, narrow late).
+function makeMockData() {
+  const years = d3.range(1880, 2025);
+  const poolF = ['Mary','Anna','Emma','Elizabeth','Margaret','Helen','Dorothy','Betty','Susan','Linda','Karen','Lisa','Jennifer','Jessica','Ashley','Emily','Sophia','Olivia','Ava','Isabella'];
+  const poolM = ['John','William','James','Robert','Charles','George','Richard','David','Michael','Christopher','Matthew','Joshua','Daniel','Ethan','Noah','Liam','Mason','Jacob','Logan','Lucas'];
+  const perYear = years.map((year, i) => {
+    const t = i / (years.length - 1); // 0..1 across the whole span
+    const concentration = 1 - t * 0.85; // starts concentrated, fragments over time
+    const mk = (pool) => {
+      const shares = d3.range(10).map((r) => Math.pow(0.62, r) * concentration + (1 - concentration) * 0.1);
+      const sum = shares.reduce((a, b) => a + b, 0);
+      return pool.slice(0, 10).map((name, r) => ({ name, count: Math.round(shares[r] * 100000), share: shares[r] / sum }));
+    };
+    const F = mk(poolF.slice(i % 5, i % 5 + 10).length === 10 ? poolF.slice(i % 5, i % 5 + 10) : poolF);
+    const M = mk(poolM.slice(i % 5, i % 5 + 10).length === 10 ? poolM.slice(i % 5, i % 5 + 10) : poolM);
+    const hhiVal = Math.pow(concentration, 2) * 0.08;
+    return {
+      year, F, M,
+      hhi: { F: hhiVal, M: hhiVal * 0.9 },
+      top1Share: { F: F[0].share * concentration * 0.5, M: M[0].share * concentration * 0.5 },
+      turnover: { F: i % 7 === 0, M: i % 9 === 0 },
+    };
+  });
+  return { years, perYear };
+}
+
+/* ── Application state ───────────────────────────────────────────────── */
+
+let DATA = null;
+let speed = 1;
+let voiceMode = 'both'; // 'both' | 'F' | 'M'
+let muted = false;
+let playing = false;
+let pausedAtYearFloat = 0; // where playback resumes from
+
+// Layout (set in buildChart)
+let xScale, yScaleNote, W, H_NOTES, H_HHI, GAP;
+let dotsF = [], dotsM = []; // flat arrays of {yearIdx, rankIdx, sel} for pulse lookups
+
+/* ── Audio engine ────────────────────────────────────────────────────── */
+
+const Audio_ = {
+  ctx: null,
+  master: null,
+  droneFilter: null,
+  droneGain: null,
+  voiceGain: { F: null, M: null },
+  timer: null,
+  nextYearIdx: 0,
+  playStartAudioTime: 0,
+  playStartYearIdx: 0,
+
+  ensure() {
+    if (this.ctx) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    this.ctx = new Ctx();
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.85;
+    this.master.connect(this.ctx.destination);
+
+    // Drone: two detuned saw oscillators through a lowpass filter whose
+    // cutoff is driven by HHI at schedule time.
+    this.droneFilter = this.ctx.createBiquadFilter();
+    this.droneFilter.type = 'lowpass';
+    this.droneFilter.Q.value = 0.7;
+    this.droneGain = this.ctx.createGain();
+    this.droneGain.gain.value = 0.06;
+    this.droneFilter.connect(this.droneGain).connect(this.master);
+    [0, -6].forEach((detune) => {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.value = midiToFreq(ROOT_MIDI.M - 12);
+      osc.detune.value = detune;
+      osc.connect(this.droneFilter);
+      osc.start();
+    });
+
+    this.voiceGain.F = this.ctx.createGain();
+    this.voiceGain.M = this.ctx.createGain();
+    this.voiceGain.F.connect(this.master);
+    this.voiceGain.M.connect(this.master);
+    this.applyVoiceMode();
+  },
+
+  applyVoiceMode() {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    const gF = voiceMode === 'M' ? 0 : 1;
+    const gM = voiceMode === 'F' ? 0 : 1;
+    this.voiceGain.F.gain.setTargetAtTime(gF, t, 0.05);
+    this.voiceGain.M.gain.setTargetAtTime(gM, t, 0.05);
+  },
+
+  applyMute() {
+    if (!this.ctx) return;
+    this.master.gain.setTargetAtTime(muted ? 0 : 0.85, this.ctx.currentTime, 0.05);
+  },
+
+  pluck(freq, gainVal, pan, sex, when, dur) {
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    osc.type = sex === 'F' ? 'triangle' : 'sine';
+    osc.frequency.value = freq;
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(gainVal, when + 0.008);
+    env.gain.exponentialRampToValueAtTime(Math.max(gainVal * 0.001, 0.0001), when + dur);
+    const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+    if (panner) panner.pan.value = pan;
+    osc.connect(env);
+    (panner ? env.connect(panner).connect(this.voiceGain[sex]) : env.connect(this.voiceGain[sex]));
+    osc.start(when);
+    osc.stop(when + dur + 0.05);
+  },
+
+  chime(when) {
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = midiToFreq(ROOT_MIDI.F + 24);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(0.05, when + 0.01);
+    env.gain.exponentialRampToValueAtTime(0.0001, when + 0.9);
+    osc.connect(env).connect(this.master);
+    osc.start(when);
+    osc.stop(when + 1);
+  },
+
+  ding(when) {
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = midiToFreq(ROOT_MIDI.F + 28);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, when);
+    env.gain.linearRampToValueAtTime(0.09, when + 0.005);
+    env.gain.exponentialRampToValueAtTime(0.0001, when + 0.35);
+    osc.connect(env).connect(this.master);
+    osc.start(when);
+    osc.stop(when + 0.4);
+  },
+
+  yearDuration() { return (YEAR_MS_AT_1X / 1000) / speed; },
+
+  scheduleYear(yearIdx, when) {
+    const row = DATA.perYear[yearIdx];
+    if (!row) return;
+    const dur = this.yearDuration();
+    const rollDur = dur * ROLL_SPAN;
+
+    if (row.year % 10 === 0) this.chime(when);
+    if (row.turnover.F || row.turnover.M) this.ding(when - 0.02 > 0 ? when - 0.02 : when);
+
+    ['F', 'M'].forEach((sex) => {
+      const list = row[sex];
+      list.forEach((note, rankIdx) => {
+        const t = when + (rollDur * rankIdx) / NOTES_PER_YEAR;
+        const freq = midiToFreq(noteMidi(sex, rankIdx));
+        const gainVal = Math.min(0.5, 0.09 + note.share * 0.85);
+        const pan = sex === 'F' ? 0.35 : -0.35;
+        this.pluck(freq, gainVal, pan, sex, t, dur * 0.7);
+      });
+    });
+
+    // Drone follows the average HHI of the two sexes for this year.
+    const hhiAvg = (row.hhi.F + row.hhi.M) / 2;
+    const cutoff = 220 + Math.min(1, hhiAvg / 0.05) * 2400; // brighter = more concentrated
+    this.droneFilter.frequency.setTargetAtTime(cutoff, when, dur * 0.4);
+    this.droneGain.gain.setTargetAtTime(0.04 + Math.min(1, hhiAvg / 0.05) * 0.05, when, dur * 0.4);
+  },
+
+  schedulerTick() {
+    const ctx = this.ctx;
+    while (this.nextYearIdx < DATA.years.length) {
+      const when = this.playStartAudioTime + (this.nextYearIdx - this.playStartYearIdx) * this.yearDuration();
+      if (when > ctx.currentTime + SCHEDULE_AHEAD) break;
+      this.scheduleYear(this.nextYearIdx, when);
+      this.nextYearIdx++;
+    }
+    if (this.nextYearIdx >= DATA.years.length) {
+      const endTime = this.playStartAudioTime + (DATA.years.length - this.playStartYearIdx) * this.yearDuration();
+      if (ctx.currentTime > endTime + 0.5) stopPlayback(true);
+    }
+  },
+
+  start(fromYearFloat) {
+    this.ensure();
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    this.playStartYearIdx = fromYearFloat;
+    this.playStartAudioTime = this.ctx.currentTime + 0.06;
+    this.nextYearIdx = Math.floor(fromYearFloat);
+    this.applyVoiceMode();
+    this.applyMute();
+    clearInterval(this.timer);
+    this.schedulerTick();
+    this.timer = setInterval(() => this.schedulerTick(), TIMER_MS);
+  },
+
+  stop() {
+    clearInterval(this.timer);
+    this.timer = null;
+  },
+
+  currentYearFloat() {
+    if (!this.ctx || !playing) return pausedAtYearFloat;
+    const elapsed = this.ctx.currentTime - this.playStartAudioTime;
+    return this.playStartYearIdx + Math.max(0, elapsed) / this.yearDuration();
+  },
+};
+
+/* ── Chart ────────────────────────────────────────────────────────────── */
+
+function buildChart() {
+  const wrap = document.getElementById('chart-wrap');
+  wrap.innerHTML = '';
+
+  W = (wrap.clientWidth || 1080);
+  H_NOTES = 300;
+  H_HHI = 90;
+  GAP = 18;
+  const totalH = H_NOTES + GAP + H_HHI + 26;
+
+  xScale = d3.scaleLinear().domain([DATA.years[0], DATA.years[DATA.years.length - 1]]).range([0, W]);
+
+  const allMidi = DATA.years.flatMap(() => [ROOT_MIDI.M, ROOT_MIDI.F + 21]);
+  yScaleNote = d3.scaleLinear().domain([ROOT_MIDI.M - 2, ROOT_MIDI.F + 23]).range([H_NOTES, 0]);
+
+  const svg = d3.select('#chart-wrap').append('svg')
+    .attr('width', W).attr('height', totalH)
+    .attr('viewBox', `0 0 ${W} ${totalH}`)
+    .attr('role', 'img')
+    .attr('aria-label', 'Piano-roll of top-10 name chords by year, with a concentration strip below');
+
+  const defs = svg.append('defs');
+  const glow = defs.append('filter').attr('id', 'glow').attr('x', '-100%').attr('y', '-100%').attr('width', '300%').attr('height', '300%');
+  glow.append('feGaussianBlur').attr('stdDeviation', 2.2).attr('result', 'blur');
+  const merge = glow.append('feMerge');
+  merge.append('feMergeNode').attr('in', 'blur');
+  merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  const notesG = svg.append('g').attr('class', 'notes-group');
+  const hhiG = svg.append('g').attr('class', 'hhi-group').attr('transform', `translate(0,${H_NOTES + GAP})`);
+
+  // Faint year gridlines shared by both strips
+  const xTickYears = d3.range(1880, DATA.years[DATA.years.length - 1] + 1, 20);
+  [notesG, hhiG].forEach((g, gi) => {
+    g.selectAll('.ygrid').data(xTickYears).join('line')
+      .attr('x1', (d) => xScale(d)).attr('x2', (d) => xScale(d))
+      .attr('y1', 0).attr('y2', gi === 0 ? H_NOTES : H_HHI)
+      .attr('stroke', 'rgba(23,21,17,0.06)').attr('stroke-dasharray', '2,5');
+  });
+
+  // ── Note dots ──
+  dotsF = []; dotsM = [];
+  DATA.perYear.forEach((row, yi) => {
+    row.F.forEach((note, ri) => dotsF.push({ yi, ri, note }));
+    row.M.forEach((note, ri) => dotsM.push({ yi, ri, note }));
+  });
+
+  const dotSel = (arr, sex, color) => notesG.selectAll(`.dot-${sex}`)
+    .data(arr).join('circle')
+    .attr('class', `note-dot dot-${sex}`)
+    .attr('cx', (d) => xScale(DATA.perYear[d.yi].year))
+    .attr('cy', (d) => yScaleNote(noteMidi(sex, d.ri)))
+    .attr('r', (d) => 0.9 + d.note.share * 5.2)
+    .attr('fill', color)
+    .attr('fill-opacity', (d) => 0.25 + d.note.share * 0.6)
+    .attr('data-yi', (d) => d.yi)
+    .attr('data-sex', sex);
+
+  const selF = dotSel(dotsF, 'F', ROSE);
+  const selM = dotSel(dotsM, 'M', BLUE);
+  dotsF.forEach((d, i) => (d.el = selF.nodes()[i]));
+  dotsM.forEach((d, i) => (d.el = selM.nodes()[i]));
+
+  notesG.append('g').attr('class', 'axis-year').attr('transform', `translate(0,${H_NOTES})`)
+    .call(d3.axisBottom(xScale).tickValues(xTickYears).tickFormat(d3.format('d')).tickSize(4));
+
+  // ── HHI strip ──
+  const hhiMax = d3.max(DATA.perYear, (r) => Math.max(r.hhi.F, r.hhi.M)) || 0.01;
+  const yHhi = d3.scaleLinear().domain([0, hhiMax]).range([H_HHI, 0]);
+  const areaF = d3.area().x((r) => xScale(r.year)).y0(H_HHI).y1((r) => yHhi(r.hhi.F)).curve(d3.curveMonotoneX);
+  const areaM = d3.area().x((r) => xScale(r.year)).y0(H_HHI).y1((r) => yHhi(r.hhi.M)).curve(d3.curveMonotoneX);
+  hhiG.append('path').datum(DATA.perYear).attr('class', 'hhi-area').attr('d', areaF).attr('fill', ROSE).attr('fill-opacity', 0.28);
+  hhiG.append('path').datum(DATA.perYear).attr('class', 'hhi-area').attr('d', areaM).attr('fill', BLUE).attr('fill-opacity', 0.28);
+  hhiG.append('text').attr('class', 'strip-label').attr('x', 2).attr('y', 12).text('CONCENTRATION (HHI)');
+
+  // Turnover ticks
+  const ticks = DATA.perYear.filter((r) => r.turnover.F || r.turnover.M);
+  hhiG.selectAll('.turnover-tick').data(ticks).join('path')
+    .attr('class', 'turnover-tick')
+    .attr('transform', (r) => `translate(${xScale(r.year)},${H_HHI - 3})`)
+    .attr('d', 'M0,0 L3,6 L-3,6 Z')
+    .attr('fill', (r) => (r.turnover.F && r.turnover.M ? AMBER : r.turnover.F ? ROSE : BLUE))
+    .attr('opacity', 0.65);
+
+  // ── Playhead (spans both strips) ──
+  const playheadG = svg.append('g').attr('class', 'playhead-g');
+  playheadG.append('line').attr('class', 'playhead-glow').attr('y1', 0).attr('y2', H_NOTES + GAP + H_HHI);
+  playheadG.append('line').attr('class', 'playhead').attr('y1', 0).attr('y2', H_NOTES + GAP + H_HHI);
+  playheadG.attr('transform', `translate(${xScale(DATA.years[0])},0)`);
+
+  // ── Scrub / seek ──
+  function seekFromEvent(event) {
+    const [mx] = d3.pointer(event, svg.node());
+    const yr = xScale.invert(mx);
+    const yearFloat = Math.max(0, Math.min(DATA.years.length - 1, yr - DATA.years[0]));
+    seekTo(yearFloat);
+  }
+  svg.on('click', seekFromEvent);
+
+  document.getElementById('legend-section').style.display = 'flex';
+  setPlayheadX(pausedAtYearFloat);
+  renderNowPanel(Math.floor(pausedAtYearFloat));
+}
+
+function setPlayheadX(yearFloat) {
+  if (!xScale) return;
+  const x = xScale(DATA.years[0] + yearFloat);
+  d3.select('.playhead-g').attr('transform', `translate(${x},0)`);
+}
+
+function clearFiredDots() {
+  dotsF.forEach((d) => d.el && d.el.classList.remove('fired'));
+  dotsM.forEach((d) => d.el && d.el.classList.remove('fired'));
+}
+
+let firedForYear = -1;
+function pulseYear(yearIdx, withinYearFrac) {
+  if (yearIdx !== firedForYear) { clearFiredDots(); firedForYear = yearIdx; }
+  const threshold = withinYearFrac / ROLL_SPAN;
+  dotsF.forEach((d) => {
+    if (d.yi === yearIdx && d.ri / NOTES_PER_YEAR <= threshold) d.el?.classList.add('fired');
+  });
+  dotsM.forEach((d) => {
+    if (d.yi === yearIdx && d.ri / NOTES_PER_YEAR <= threshold) d.el?.classList.add('fired');
+  });
+}
+
+function applyVoiceDim() {
+  d3.selectAll('.dot-F').classed('voice-dim', voiceMode === 'M');
+  d3.selectAll('.dot-M').classed('voice-dim', voiceMode === 'F');
+}
+
+/* ── Now-playing panel ──────────────────────────────────────────────── */
+
+function fmtPct(x) { return (x * 100).toFixed(1) + '%'; }
+function oneIn(share) { return share > 0 ? Math.round(1 / share).toLocaleString() : '—'; }
+
+function renderNowPanel(yearIdx) {
+  const row = DATA.perYear[Math.max(0, Math.min(DATA.perYear.length - 1, yearIdx))];
+  if (!row) return;
+  document.getElementById('now-year').textContent = row.year;
+  const topF = row.F.slice(0, 5).map((n) => n.name).join(', ') || '—';
+  const topM = row.M.slice(0, 5).map((n) => n.name).join(', ') || '—';
+  document.getElementById('now-f').innerHTML = `<span class="sw" style="background:${ROSE}"></span>Girls: <b>${row.F[0]?.name || '—'}</b> leads (${row.F[0] ? fmtPct(row.F[0].share) : '0%'} of this chord) — ${topF}`;
+  document.getElementById('now-m').innerHTML = `<span class="sw" style="background:${BLUE}"></span>Boys: <b>${row.M[0]?.name || '—'}</b> leads (${row.M[0] ? fmtPct(row.M[0].share) : '0%'} of this chord) — ${topM}`;
+  const f1 = row.top1Share.F, m1 = row.top1Share.M;
+  document.getElementById('now-stat').innerHTML =
+    `That year, <b>${row.F[0]?.name || 'the #1 girl name'}</b> was heard by roughly 1 in ${oneIn(f1)} baby girls; ` +
+    `<b>${row.M[0]?.name || 'the #1 boy name'}</b> by 1 in ${oneIn(m1)} baby boys — of every birth, not just the top 10.`;
+}
+
+/* ── Transport control ──────────────────────────────────────────────── */
+
+function seekTo(yearFloat) {
+  pausedAtYearFloat = yearFloat;
+  if (playing) {
+    Audio_.start(yearFloat);
+  } else {
+    setPlayheadX(yearFloat);
+    renderNowPanel(Math.floor(yearFloat));
+  }
+}
+
+function startPlayback() {
+  playing = true;
+  document.getElementById('play-icon').innerHTML = '&#10074;&#10074;';
+  document.getElementById('play-label').textContent = 'Pause';
+  document.querySelector('.gate-overlay')?.remove();
+  Audio_.start(pausedAtYearFloat >= DATA.years.length - 0.01 ? 0 : pausedAtYearFloat);
+  requestAnimationFrame(tick);
+}
+
+function stopPlayback(reachedEnd) {
+  playing = false;
+  Audio_.stop();
+  pausedAtYearFloat = reachedEnd ? 0 : Audio_.currentYearFloat();
+  document.getElementById('play-icon').innerHTML = '&#9658;';
+  document.getElementById('play-label').textContent = reachedEnd ? 'Replay' : 'Play';
+  setPlayheadX(pausedAtYearFloat);
+  clearFiredDots();
+}
+
+function tick() {
+  if (!playing) return;
+  const yf = Audio_.currentYearFloat();
+  if (yf >= DATA.years.length) { stopPlayback(true); return; }
+  setPlayheadX(yf);
+  const yi = Math.floor(yf);
+  renderNowPanel(yi);
+  pulseYear(yi, yf - yi);
+  requestAnimationFrame(tick);
+}
+
+/* ── UI wiring ───────────────────────────────────────────────────────── */
+
+function wireControls() {
+  document.getElementById('play-btn').addEventListener('click', () => {
+    if (playing) stopPlayback(false); else startPlayback();
+  });
+
+  document.getElementById('mute-btn').addEventListener('click', (e) => {
+    muted = !muted;
+    e.currentTarget.classList.toggle('muted', muted);
+    e.currentTarget.innerHTML = muted ? '&#128263;' : '&#128266;';
+    Audio_.applyMute();
+  });
+
+  document.querySelectorAll('#speed-group .pill-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#speed-group .pill-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      speed = parseFloat(btn.dataset.speed);
+      if (playing) Audio_.start(Audio_.currentYearFloat());
+    });
+  });
+
+  document.querySelectorAll('#voice-group .pill-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#voice-group .pill-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      voiceMode = btn.dataset.voice;
+      Audio_.applyVoiceMode();
+      applyVoiceDim();
+    });
+  });
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(buildChart, 180);
+  });
+}
+
+function addGateOverlay() {
+  const wrap = document.getElementById('chart-wrap');
+  const gate = document.createElement('div');
+  gate.className = 'gate-overlay';
+  gate.innerHTML = `<div class="gate-btn"><span class="big">&#9658;</span><span class="small">Press play — audio required</span></div>`;
+  gate.addEventListener('click', () => startPlayback());
+  wrap.style.position = 'relative';
+  wrap.appendChild(gate);
+}
+
+/* ── Bootstrap ───────────────────────────────────────────────────────── */
+
+loadData().then((data) => {
+  DATA = data;
+  document.getElementById('loading').style.display = 'none';
+  buildChart();
+  addGateOverlay();
+  wireControls();
+}).catch((err) => {
+  console.error(err);
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error-msg').style.display = 'block';
+});
+</script>
+
+<nav class="viz-related" aria-label="More visualizations">More views: <a href="/viz/concentration">Mary's Empire, Measured</a> &middot; <a href="/viz/terminal-letters">How Names End</a> &middot; <a href="/viz/">All thirty &rarr;</a></nav>
+<footer class="site">
+  <p>NobodyNamed is a small data project about American first names. Data sourced from Social Security Administration birth records (1880–present).</p>
+  <p><a href="/about">About</a> · <a href="/press">Press</a> · <a href="https://www.ssa.gov/oact/babynames/" target="_blank" rel="noopener">SSA source</a></p>
+</footer>
+</body>
+</html>
