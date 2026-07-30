@@ -9,7 +9,16 @@
 // The staging-swap pattern means reads against /api/* keep seeing
 // consistent old data until the swap completes inside one transaction.
 
-import { META_KEYS, getMeta, setMeta, enrichName, revalidateRankings, sweepRateLimits, sweepStalePending } from "@nv/shared";
+import {
+  META_KEYS,
+  getMeta,
+  setMeta,
+  enrichName,
+  revalidateRankings,
+  revalidateVizPayloads,
+  sweepRateLimits,
+  sweepStalePending,
+} from "@nv/shared";
 import type {
   ExecutionContext,
   MessageBatch,
@@ -118,7 +127,9 @@ export default {
       // Diaspora does not touch name_years, so the rankings cache survives this
       // cache-busting bump — carry its marker onto the new version.
       const diasporaVersion = crypto.randomUUID();
+      const priorVersion = (await getMeta(env.DB, META_KEYS.dataVersion)) ?? "";
       await revalidateRankings(env.DB, diasporaVersion);
+      await revalidateVizPayloads(env.DB, priorVersion, diasporaVersion);
       await setMeta(env.DB, META_KEYS.dataVersion, diasporaVersion);
       return Response.json({ ok: true, namesComputed: names });
     }
@@ -320,7 +331,9 @@ async function handleMessage(env: Env, msg: IngestMessage): Promise<void> {
       } else {
         await swapDiasporaStaging(env.DB);
         const diasporaVersion = crypto.randomUUID();
+        const priorVersion = (await getMeta(env.DB, META_KEYS.dataVersion)) ?? "";
         await revalidateRankings(env.DB, diasporaVersion);
+        await revalidateVizPayloads(env.DB, priorVersion, diasporaVersion);
         await setMeta(env.DB, META_KEYS.dataVersion, diasporaVersion);
         console.log(JSON.stringify({ message: "diaspora compute complete", runId: msg.runId }));
       }

@@ -12,6 +12,7 @@ import {
   classify,
   encodeSpark,
   publishRankings,
+  publishVizPayloads,
   type ClassifyResult,
   type Sex,
 } from "@nv/shared";
@@ -65,6 +66,24 @@ export async function finalize(
   // new. The marker is restored at the end, and only takes effect once the
   // caller writes the matching data_version.
   await publishRankings(db, yearRange(ym, yM), dataVersion);
+  // Same contract for the whole-dataset viz aggregates: each payload is stamped
+  // with this run's data_version and only served once meta.data_version matches,
+  // so nothing half-built becomes visible.
+  //
+  // Best-effort on purpose. This runs after the swap and takes a couple of
+  // minutes; letting it fail the message would retry the entire aggregation for
+  // a derived cache whose absence is harmless — the endpoints just compute live
+  // until `npm run backfill-viz-payloads` is run.
+  try {
+    await publishVizPayloads(db, ym, yM, dataVersion);
+  } catch (err) {
+    console.error(
+      JSON.stringify({
+        message: "viz payload publish failed; endpoints will compute live until backfilled",
+        error: err instanceof Error ? err.message : String(err),
+      }),
+    );
+  }
   // Query actual count after swap so meta reflects reality, not the in-memory tally.
   const countRow = await db.prepare("SELECT COUNT(*) as n FROM names").first<{ n: number }>();
   return { namesInserted: countRow?.n ?? namesInserted, rowsInserted };
