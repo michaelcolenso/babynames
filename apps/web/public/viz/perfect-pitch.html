@@ -759,6 +759,22 @@ const Audio_ = {
     // Silence anything still ringing from a previous scheduling pass — a
     // no-op on first play, since `pending` is empty until notes are scheduled.
     this.panic();
+    // panic() only clears one-shot notes. scheduleYear() also leaves
+    // setTargetAtTime() automation scheduled on the drone's filter and gain for
+    // every year it queued — on a seek or speed change those events belong to
+    // the abandoned position and would keep sliding the drone toward the OLD
+    // year's HHI for up to the 0.5s look-ahead window, misrepresenting the new
+    // position. Cancel them and hold at the current value; the schedulerTick()
+    // call below immediately schedules correct automation for the new spot.
+    // (stop()/pause schedules its own deliberate silencing ramp instead, so
+    // this only runs here, not from stop().)
+    {
+      const now = this.ctx.currentTime;
+      [this.droneFilter.frequency, this.droneGain.gain].forEach((param) => {
+        param.cancelScheduledValues(now);
+        param.setValueAtTime(param.value, now);
+      });
+    }
     this.playStartYearIdx = fromYearFloat;
     this.playStartAudioTime = this.ctx.currentTime + 0.06;
     this.nextYearIdx = Math.floor(fromYearFloat);
@@ -1012,8 +1028,15 @@ function wireControls() {
 
   document.getElementById('mute-btn').addEventListener('click', (e) => {
     muted = !muted;
-    e.currentTarget.classList.toggle('muted', muted);
-    e.currentTarget.innerHTML = muted ? '&#128263;' : '&#128266;';
+    const btn = e.currentTarget;
+    btn.classList.toggle('muted', muted);
+    btn.innerHTML = muted ? '&#128263;' : '&#128266;';
+    // Label/title describe what the button currently *is* (its state), not
+    // what clicking it does — matches the icon, and avoids telling a screen
+    // reader user "Mute" right after they've just muted it.
+    const label = muted ? 'Muted' : 'Mute';
+    btn.setAttribute('aria-label', label);
+    btn.setAttribute('title', label);
     Audio_.applyMute();
   });
 
