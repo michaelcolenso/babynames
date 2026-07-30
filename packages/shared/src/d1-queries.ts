@@ -648,6 +648,66 @@ export async function getTopNamesForYear(db: D1Database, year: number, perSex = 
   return topBySpecificYear(db, year, perSex);
 }
 
+export interface RankedYearRow {
+  name: string;
+  sex: Sex;
+  year: number;
+}
+
+// Every (name, sex, year) that held a top-`perSex` position, ordered so the
+// caller can group by (sex, name) and read each name's years ascending. Used by
+// /api/top100-history to build contiguous year spans.
+//
+// The fallback deliberately does NOT reproduce the single global window
+// function this used to run (`PARTITION BY ny.year, n.sex` over the whole of
+// name_years): that materializes ~1.9M rows and is the Error 1101 shape
+// documented above. It batches per year like the other rank readers.
+export async function rankedNameYears(db: D1Database, perSex = 100): Promise<RankedYearRow[]> {
+  if (await rankingsUsable(db, perSex)) {
+    const pre = await db
+      .prepare(
+        `SELECT name, sex, year
+           FROM name_rankings_by_year
+          WHERE rank <= ?1
+          ORDER BY sex, name, year`,
+      )
+      .bind(perSex)
+      .all<RankedYearRow>();
+    if (pre.results?.length) return pre.results;
+  }
+
+  const years = await listDataYears(db);
+  if (!years.length) return [];
+
+  const out: RankedYearRow[] = [];
+  for (let i = 0; i < years.length; i += YEAR_BATCH) {
+    const slice = years.slice(i, i + YEAR_BATCH);
+    const batch = slice.map((year) =>
+      db
+        .prepare(
+          `WITH ranked AS (
+             SELECT n.name, n.sex,
+                    ROW_NUMBER() OVER (PARTITION BY n.sex ORDER BY ny.count DESC, n.name ASC) AS rn
+               FROM name_years ny
+               JOIN names n ON n.id = ny.name_id
+              WHERE ny.year = ?1
+           )
+           SELECT name, sex FROM ranked WHERE rn <= ?2`,
+        )
+        .bind(year, perSex),
+    );
+    const results = await db.batch<{ name: string; sex: Sex }>(batch);
+    results.forEach((res, idx) => {
+      const year = slice[idx]!;
+      for (const row of res.results ?? []) out.push({ name: row.name, sex: row.sex, year });
+    });
+  }
+
+  // The per-year path collects year-major; the caller needs (sex, name, year).
+  out.sort((a, b) => a.sex.localeCompare(b.sex) || a.name.localeCompare(b.name) || a.year - b.year);
+  return out;
+}
+
 export async function getYearTotalsForYears(db: D1Database, sex: Sex, years: number[]): Promise<YearTotal[]> {
   const uniqueYears = [...new Set(years.map((year) => Math.floor(year)).filter(Number.isFinite))];
   if (!uniqueYears.length) return [];

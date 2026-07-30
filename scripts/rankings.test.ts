@@ -17,7 +17,12 @@ import {
   revalidateRankings,
   RANKINGS_PER_SEX_LIMIT,
 } from "../packages/shared/src/rankings";
-import { topByYear, topBySpecificYear, riverNames } from "../packages/shared/src/d1-queries";
+import {
+  topByYear,
+  topBySpecificYear,
+  riverNames,
+  rankedNameYears,
+} from "../packages/shared/src/d1-queries";
 
 // node:sqlite ships in Node 22+. The repo still targets Node 20 (see
 // .github/workflows/deploy-cloudflare.yml), where importing it throws
@@ -60,6 +65,10 @@ function makeDb(sqlite: SqliteDb): D1Database {
   };
   return db as unknown as D1Database;
 }
+
+// node:sqlite returns null-prototype row objects while the fallback paths build
+// plain ones, so compare rows by value rather than by deepEqual on the objects.
+const key = (r: { sex: string; name: string; year: number }) => `${r.sex}:${r.name}:${r.year}`;
 
 // Deterministic fixture: 3 years, 4 names, counts chosen so ranks differ per
 // year and per sex.
@@ -161,6 +170,10 @@ test("readers agree whether or not the rankings table is published", { skip }, a
     await topBySpecificYear(withoutTable, 2001, 2),
   );
   assert.deepEqual(await riverNames(withTable, 1), await riverNames(withoutTable, 1));
+  assert.deepEqual(
+    (await rankedNameYears(withTable, 1)).map(key),
+    (await rankedNameYears(withoutTable, 1)).map(key),
+  );
 
   // Sanity-check the shared answer rather than only that the two paths match.
   const top = await topByYear(withTable, 1);
@@ -250,4 +263,23 @@ test("revalidateRankings does not resurrect an unpublished cache", { skip }, asy
   await revalidateRankings(db, "v2");
   sqlite.exec("UPDATE meta SET value = 'v2' WHERE key = 'data_version'");
   assert.equal(await rankingsReady(db), false);
+});
+
+test("rankedNameYears groups by (sex, name) with years ascending", { skip }, async () => {
+  const sqlite = seed(true);
+  const db = makeDb(sqlite);
+  await publishRankings(db, [2000, 2001, 2002], "v1");
+
+  // rank 1 only: Mia leads F in 2000, Ava in 2001-2002; Max leads M in 2000,
+  // Leo in 2001-2002. /api/top100-history relies on this exact ordering to
+  // build contiguous spans without re-sorting.
+  const rows = await rankedNameYears(db, 1);
+  assert.deepEqual(
+    rows.map(key),
+    ["F:Ava:2001", "F:Ava:2002", "F:Mia:2000", "M:Leo:2001", "M:Leo:2002", "M:Max:2000"],
+  );
+
+  // The fallback path must produce the same ordering, not year-major order.
+  const fallback = makeDb(seed(false));
+  assert.deepEqual((await rankedNameYears(fallback, 1)).map(key), rows.map(key));
 });
