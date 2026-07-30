@@ -618,6 +618,8 @@ const Audio_ = {
   nextYearIdx: 0,
   playStartAudioTime: 0,
   playStartYearIdx: 0,
+  firstScheduledYearIdx: -1, // -1 matches no real yearIdx, so it's a safe "unset" sentinel
+  firstYearElapsedFrac: 0,
   pending: [], // one-shot {osc, env} nodes already .start()-ed but not yet finished
 
   ensure() {
@@ -753,6 +755,13 @@ const Audio_ = {
     const dur = this.yearDuration();
     const rollDur = dur * ROLL_SPAN;
 
+    // Only the very first year scheduled after a (re)start can be a partial
+    // seek into its roll — every year after it always starts fresh at its own
+    // boundary. skipBefore is that elapsed fraction (of one year's duration),
+    // 0 otherwise.
+    const skipBefore = yearIdx === this.firstScheduledYearIdx ? this.firstYearElapsedFrac : 0;
+    if (yearIdx === this.firstScheduledYearIdx) this.firstScheduledYearIdx = -1; // one-shot
+
     if (row.year % 10 === 0) this.chime(when);
     // Gate by the selected voice: ding() bypasses voiceGain and goes straight
     // to master, so an ungated condition would let a boys-only #1 change
@@ -764,6 +773,8 @@ const Audio_ = {
     ['F', 'M'].forEach((sex) => {
       const list = row[sex];
       list.forEach((note, rankIdx) => {
+        const noteOffsetFrac = (ROLL_SPAN * rankIdx) / NOTES_PER_YEAR;
+        if (noteOffsetFrac < skipBefore) return; // this note's roll position already elapsed before we arrived here
         const t = when + (rollDur * rankIdx) / NOTES_PER_YEAR;
         const freq = midiToFreq(noteMidi(sex, rankIdx));
         // Directly proportional to share (capped only so an extreme monopoly
@@ -842,6 +853,16 @@ const Audio_ = {
     this.playStartYearIdx = fromYearFloat;
     this.playStartAudioTime = this.ctx.currentTime + 0.06;
     this.nextYearIdx = Math.floor(fromYearFloat);
+    // Seeking to a fractional year (e.g. n+0.9) means we're landing most of
+    // the way through year n's roll. Scheduling all 10 of its notes from
+    // scratch would replay ranks that conceptually already happened, and the
+    // late ones (rank 10 doesn't start until ROLL_SPAN into the roll) would
+    // still be sounding well after the playhead has already moved into year
+    // n+1, audibly overlapping its chord. scheduleYear() uses these two
+    // fields, for this one year only, to skip notes whose roll position has
+    // already elapsed.
+    this.firstScheduledYearIdx = this.nextYearIdx;
+    this.firstYearElapsedFrac = fromYearFloat - this.nextYearIdx;
     this.applyVoiceMode();
     this.applyMute();
     clearInterval(this.timer);
@@ -1006,6 +1027,10 @@ function buildChart() {
 
   setPlayheadX(pausedAtYearFloat);
   renderNowPanel(Math.floor(pausedAtYearFloat));
+  // A resize tears down and rebuilds the whole SVG (fresh .dot-F/.dot-M
+  // elements), so any active voice-isolation dimming must be reapplied here
+  // or hidden-sex dots snap back to full opacity after the viewport changes.
+  applyVoiceDim();
 }
 
 function setPlayheadX(yearFloat) {
