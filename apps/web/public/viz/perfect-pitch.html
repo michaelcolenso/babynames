@@ -722,7 +722,11 @@ const Audio_ = {
       list.forEach((note, rankIdx) => {
         const t = when + (rollDur * rankIdx) / NOTES_PER_YEAR;
         const freq = midiToFreq(noteMidi(sex, rankIdx));
-        const gainVal = Math.min(0.5, 0.09 + note.share * 0.85);
+        // Directly proportional to share (capped only so an extreme monopoly
+        // year can't clip) — a fixed +0.09 floor here previously compressed a
+        // true 10:1 share ratio down to about 3:1, contradicting the
+        // explainer's claim that volume *is* the share, not a softened version.
+        const gainVal = Math.min(0.5, note.share * 1.1);
         const pan = sex === 'F' ? 0.35 : -0.35;
         this.pluck(freq, gainVal, pan, sex, t, dur * 0.7);
       });
@@ -768,6 +772,21 @@ const Audio_ = {
   stop() {
     clearInterval(this.timer);
     this.timer = null;
+    // clearInterval only stops *future* scheduling. The drone runs
+    // continuously by design (it never gets its own stop() call) and one-shot
+    // notes already scheduled inside the look-ahead window keep sounding on
+    // their own — at 8x that's up to ~10 years of chords still audible after
+    // the UI shows "paused". panic() kills the pending one-shots; the drone
+    // is a continuous node so it's silenced by ramping its gain down instead
+    // of stopping it outright. Resuming schedules a new year immediately,
+    // whose scheduleYear() call ramps droneGain back up on its own.
+    if (this.ctx) {
+      const now = this.ctx.currentTime;
+      this.droneGain.gain.cancelScheduledValues(now);
+      this.droneGain.gain.setValueAtTime(this.droneGain.gain.value, now);
+      this.droneGain.gain.linearRampToValueAtTime(0.0001, now + 0.08);
+    }
+    this.panic();
   },
 
   currentYearFloat() {
@@ -952,6 +971,7 @@ function startPlayback() {
   playing = true;
   document.getElementById('play-icon').innerHTML = '&#10074;&#10074;';
   document.getElementById('play-label').textContent = 'Pause';
+  document.getElementById('play-btn').setAttribute('aria-label', 'Pause');
   document.querySelector('.gate-overlay')?.remove();
   Audio_.start(pausedAtYearFloat >= DATA.years.length - 0.01 ? 0 : pausedAtYearFloat);
   requestAnimationFrame(tick);
@@ -967,6 +987,7 @@ function stopPlayback(reachedEnd) {
   pausedAtYearFloat = floatYear;
   document.getElementById('play-icon').innerHTML = '&#9658;';
   document.getElementById('play-label').textContent = reachedEnd ? 'Replay' : 'Play';
+  document.getElementById('play-btn').setAttribute('aria-label', reachedEnd ? 'Replay' : 'Play');
   setPlayheadX(pausedAtYearFloat);
   clearFiredDots();
 }
