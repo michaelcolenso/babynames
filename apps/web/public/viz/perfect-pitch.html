@@ -1064,17 +1064,25 @@ function stopPlayback(reachedEnd) {
 // year index, so the first tick after any (re)start or seek always renders.
 let lastTickYear = -1;
 
+// True while the seek range is mid-drag (or a rapid key-repeat) and the
+// actual audio restart is being debounced — see wireControls(). tick() skips
+// its own playhead/panel writes during that window so it doesn't fight the
+// position the user is actively previewing.
+let draggingSeek = false;
+
 function tick() {
   if (!playing) return;
   const yf = Audio_.currentYearFloat();
   if (yf >= DATA.years.length) { stopPlayback(true); return; }
-  setPlayheadX(yf);
-  const yi = Math.floor(yf);
-  if (yi !== lastTickYear) {
-    renderNowPanel(yi);
-    lastTickYear = yi;
+  if (!draggingSeek) {
+    setPlayheadX(yf);
+    const yi = Math.floor(yf);
+    if (yi !== lastTickYear) {
+      renderNowPanel(yi);
+      lastTickYear = yi;
+    }
+    pulseYear(yi, yf - yi);
   }
-  pulseYear(yi, yf - yi);
   requestAnimationFrame(tick);
 }
 
@@ -1088,8 +1096,24 @@ function wireControls() {
   // Native range: arrow keys, Home/End, Page Up/Down and click-drag all work
   // for free. This is the only keyboard-operable way to seek — the SVG's
   // click handler has no keyboard equivalent.
+  // A mouse drag fires 'input' many times per second; calling seekTo() (which
+  // restarts the Web Audio scheduler) on every one of those events would
+  // create/cancel hundreds of oscillators per second during a drag. Update the
+  // visible playhead + now-panel immediately on every event (cheap, no audio
+  // touched) but debounce the actual audio restart to once the value has
+  // settled for 60ms — long enough to coalesce a drag or a fast key-repeat,
+  // short enough that a single arrow-key press still feels instant.
+  let seekDebounceTimer = null;
   document.getElementById('seek-range').addEventListener('input', (e) => {
-    seekTo(parseFloat(e.target.value));
+    const yf = parseFloat(e.target.value);
+    draggingSeek = true;
+    setPlayheadX(yf);
+    renderNowPanel(Math.floor(yf));
+    clearTimeout(seekDebounceTimer);
+    seekDebounceTimer = setTimeout(() => {
+      draggingSeek = false;
+      seekTo(yf);
+    }, 60);
   });
 
   document.getElementById('mute-btn').addEventListener('click', (e) => {
@@ -1127,8 +1151,17 @@ function wireControls() {
       btn.classList.add('active');
       btn.setAttribute('aria-pressed', 'true');
       voiceMode = btn.dataset.voice;
+      // applyVoiceMode() only retunes the note gains — it doesn't touch
+      // ding(), which bypasses voiceGain and goes straight to master. A
+      // turnover ding for the now-hidden sex, already queued in the ~0.5s
+      // look-ahead, would otherwise keep sounding after the switch. Rescheduling
+      // from the current position runs it through panic() (clears the stale
+      // ding) and re-schedules ahead with the new voiceMode's gating applied —
+      // same pattern as a seek or speed change.
+      const resumeAt = playing ? Audio_.currentYearFloat() : null;
       Audio_.applyVoiceMode();
       applyVoiceDim();
+      if (playing) Audio_.start(resumeAt);
     });
   });
 
