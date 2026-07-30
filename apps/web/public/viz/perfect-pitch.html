@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Perfect Pitch — NobodyNamed</title>
-<meta name="description" content="146 years of America's favorite baby names, turned into music. One dominant note in 1880. A shimmering chord of hundreds today. Press play and listen to a monoculture become a chorus.">
+<meta name="description" content="America's favorite baby names, from 1880 to today, turned into music. One dominant note in 1880. A shimmering chord of hundreds now. Press play and listen to a monoculture become a chorus.">
 <link rel="canonical" href="https://nobodynamed.com/viz/perfect-pitch">
 <meta property="og:title" content="Perfect Pitch — NobodyNamed">
-<meta property="og:description" content="America's naming history, sonified. Mary's solo note in 1880 dissolves into a chorus of hundreds by 2025 — hear it happen.">
+<meta property="og:description" content="America's naming history, sonified. Mary's solo note in 1880 dissolves into a chorus of hundreds today — hear it happen.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://nobodynamed.com/api/og/default">
 <meta name="twitter:card" content="summary_large_image">
@@ -382,9 +382,9 @@
 </header>
 
 <div id="viz-content" class="hero">
-  <div class="kicker">34 / THE CHORUS</div>
+  <div class="kicker">35 / THE CHORUS</div>
   <h1>Perfect Pitch</h1>
-  <p class="lede">Every year of American birth records, played as ten-note chords. In 1880, one name — <strong>Mary</strong> — rings out over everything else, a single dominant voice. By 2025 that voice has dissolved into a wide, quiet shimmer of hundreds of names, no one of them loud enough to hear alone. <strong>Press play and listen to a monoculture become a chorus.</strong></p>
+  <p class="lede" id="lede-text">Every year of American birth records, played as ten-note chords. In 1880, one name — <strong>Mary</strong> — rings out over everything else, a single dominant voice. By today that voice has dissolved into a wide, quiet shimmer of hundreds of names, no one of them loud enough to hear alone. <strong>Press play and listen to a monoculture become a chorus.</strong></p>
 </div>
 
 <div class="transport">
@@ -732,7 +732,12 @@ const Audio_ = {
     const rollDur = dur * ROLL_SPAN;
 
     if (row.year % 10 === 0) this.chime(when);
-    if (row.turnover.F || row.turnover.M) this.ding(when - 0.02 > 0 ? when - 0.02 : when);
+    // Gate by the selected voice: ding() bypasses voiceGain and goes straight
+    // to master, so an ungated condition would let a boys-only #1 change
+    // sound even in Girls-only mode, breaking the isolation the control
+    // promises.
+    const turnoverAudible = (voiceMode !== 'M' && row.turnover.F) || (voiceMode !== 'F' && row.turnover.M);
+    if (turnoverAudible) this.ding(when - 0.02 > 0 ? when - 0.02 : when);
 
     ['F', 'M'].forEach((sex) => {
       const list = row[sex];
@@ -939,6 +944,21 @@ function buildChart() {
   document.getElementById('legend-section').style.display = 'flex';
   const seekRange = document.getElementById('seek-range');
   seekRange.max = String(DATA.years.length - 1);
+
+  // The static markup says "today" rather than a fixed year specifically so
+  // it can't silently go stale after the next SSA ingest (data updates
+  // automatically; this hardcoded HTML would not). Once real data loads, fill
+  // in the actual end year here rather than leaving "today" ambiguous.
+  const ledeEl = document.getElementById('lede-text');
+  if (ledeEl) {
+    const firstYear = DATA.years[0];
+    const lastYear = DATA.years[DATA.years.length - 1];
+    ledeEl.innerHTML =
+      `Every year of American birth records, played as ten-note chords. In ${firstYear}, one name — <strong>Mary</strong> — ` +
+      `rings out over everything else, a single dominant voice. By ${lastYear} that voice has dissolved into a wide, quiet ` +
+      `shimmer of hundreds of names, no one of them loud enough to hear alone. <strong>Press play and listen to a monoculture become a chorus.</strong>`;
+  }
+
   setPlayheadX(pausedAtYearFloat);
   renderNowPanel(Math.floor(pausedAtYearFloat));
 }
