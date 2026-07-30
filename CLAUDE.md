@@ -28,6 +28,7 @@ npm run seed                                    # One-time D1 population from le
 npm run verify-parity -- --base=<preview-url>  # Validate API parity before DNS cutover
 npm run backfill-rankings                       # Populate name_rankings_by_year on remote D1 (idempotent)
 npm run backfill-rankings:local                 # Same against local D1
+npm run backfill-viz-payloads                   # Rebuild viz_payloads on remote D1 (idempotent)
 
 # Test cron trigger
 npm run -w @nv/ingest-worker test:scheduled    # Test scheduled handler locally
@@ -61,6 +62,7 @@ Shared by both apps (same `database_id` in both `wrangler.toml` files). Key tabl
 - **`name_years`** — ~1.9M rows of (name_id, year, count). Sparse — only years with count > 0.
 - **`year_totals`** — Annual total births per sex (~290 rows).
 - **`name_rankings_by_year`** — Pre-computed top-200-per-(year, sex) ranks, PK `(year, sex, rank)`. Backs `/api/meta`, `/api/year/:year` and the river viz so those reads no longer rank ~137k rows per year at request time. Rebuilt by ingest finalize; backfill an existing DB with `npm run backfill-rankings`. Readers only trust it while `meta.rankings_version` matches `meta.data_version`, so an in-flight or partial rebuild is never served — they fall back to the live window-function query instead.
+- **`viz_payloads`** — One row per whole-dataset viz endpoint (`concentration`, `terminal-letters`, `suffix-waves`, `name-survival`), holding the finished JSON response. Those aggregates read 4.4M–15.3M rows apiece when computed live; the payload turns each into a single PK read. Built by ingest finalize and by `npm run backfill-viz-payloads`. Each row carries the `source_version` it was built from — readers require it to match `meta.data_version`, so a stale or half-written payload falls back to the live query instead of being served.
 - **`meta`** — Singleton key/value store (min/max year, schema version, `data_version` UUID for cache busting, `rankings_version` readiness marker, last SSA ETag).
 
 ### Ingest Pipeline
