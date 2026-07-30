@@ -754,11 +754,15 @@ const Audio_ = {
       });
     });
 
-    // Drone follows the average HHI of the two sexes for this year.
-    const hhiAvg = (row.hhi.F + row.hhi.M) / 2;
-    const cutoff = 220 + Math.min(1, hhiAvg / 0.05) * 2400; // brighter = more concentrated
+    // Drone follows HHI for whichever sex is actually audible — averaging
+    // both regardless of voiceMode would let changes in a "hidden" sex keep
+    // coloring the one audible signal the Voices control is supposed to
+    // isolate to, exactly the leak the notes and turnover ding were already
+    // gated against.
+    const hhiDrive = voiceMode === 'F' ? row.hhi.F : voiceMode === 'M' ? row.hhi.M : (row.hhi.F + row.hhi.M) / 2;
+    const cutoff = 220 + Math.min(1, hhiDrive / 0.05) * 2400; // brighter = more concentrated
     this.droneFilter.frequency.setTargetAtTime(cutoff, when, dur * 0.4);
-    this.droneGain.gain.setTargetAtTime(0.04 + Math.min(1, hhiAvg / 0.05) * 0.05, when, dur * 0.4);
+    this.droneGain.gain.setTargetAtTime(0.04 + Math.min(1, hhiDrive / 0.05) * 0.05, when, dur * 0.4);
   },
 
   schedulerTick() {
