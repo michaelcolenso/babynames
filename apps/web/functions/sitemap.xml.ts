@@ -37,6 +37,7 @@ const STATIC_PATHS: { path: string; priority: number }[] = [
   { path: "/viz/living-treemap", priority: 0.5 },
   { path: "/viz/naming-diversity-index", priority: 0.5 },
   { path: "/viz/peak-speed", priority: 0.5 },
+  { path: "/viz/perfect-pitch", priority: 0.5 },
   { path: "/viz/suffix-waves", priority: 0.5 },
   { path: "/viz/surge", priority: 0.5 },
   { path: "/viz/survival", priority: 0.5 },

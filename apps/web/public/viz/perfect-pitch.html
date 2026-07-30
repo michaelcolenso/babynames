@@ -775,7 +775,12 @@ const Audio_ = {
       list.forEach((note, rankIdx) => {
         const noteOffsetFrac = (ROLL_SPAN * rankIdx) / NOTES_PER_YEAR;
         if (noteOffsetFrac < skipBefore) return; // this note's roll position already elapsed before we arrived here
-        const t = when + (rollDur * rankIdx) / NOTES_PER_YEAR;
+        // When arrives mid-roll (skipBefore > 0), `when` is the clamped "now",
+        // not the year's true boundary — subtract the already-elapsed fraction
+        // so a surviving note lands at its actual remaining delay instead of
+        // its full from-boundary offset, which would otherwise lag it behind
+        // the playhead and into the next year's chord.
+        const t = when + dur * (noteOffsetFrac - skipBefore);
         const freq = midiToFreq(noteMidi(sex, rankIdx));
         // Directly proportional to share (capped only so an extreme monopoly
         // year can't clip) — a fixed +0.09 floor here previously compressed a
