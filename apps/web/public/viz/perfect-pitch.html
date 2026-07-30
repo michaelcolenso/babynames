@@ -525,8 +525,20 @@ function normalize(meta, conc) {
       year,
       F: F.map((e) => ({ name: e[0], count: e[2], share: e[2] / sumF })),
       M: M.map((e) => ({ name: e[0], count: e[2], share: e[2] / sumM })),
-      hhi: { F: hhiBy.F.get(year) ?? 0, M: hhiBy.M.get(year) ?? 0 },
-      top1Share: { F: top1By.F.get(year) ?? 0, M: top1By.M.get(year) ?? 0 },
+      // null (not 0) when a year is genuinely missing from /api/concentration
+      // — e.g. during the annual SSA refresh window, /api/meta and
+      // /api/concentration are cached independently (7-day edge cache, per
+      // apps/web/functions/_middleware.ts) and can briefly disagree on which
+      // years exist. Defaulting to 0 would misrepresent that year as
+      // maximally diverse; null lets every consumer render "unknown" instead.
+      hhi: {
+        F: hhiBy.F.has(year) ? hhiBy.F.get(year) : null,
+        M: hhiBy.M.has(year) ? hhiBy.M.get(year) : null,
+      },
+      top1Share: {
+        F: top1By.F.has(year) ? top1By.F.get(year) : null,
+        M: top1By.M.has(year) ? top1By.M.get(year) : null,
+      },
     };
   });
 
@@ -759,17 +771,33 @@ const Audio_ = {
     // coloring the one audible signal the Voices control is supposed to
     // isolate to, exactly the leak the notes and turnover ding were already
     // gated against.
-    const hhiDrive = voiceMode === 'F' ? row.hhi.F : voiceMode === 'M' ? row.hhi.M : (row.hhi.F + row.hhi.M) / 2;
-    const cutoff = 220 + Math.min(1, hhiDrive / 0.05) * 2400; // brighter = more concentrated
-    this.droneFilter.frequency.setTargetAtTime(cutoff, when, dur * 0.4);
-    this.droneGain.gain.setTargetAtTime(0.04 + Math.min(1, hhiDrive / 0.05) * 0.05, when, dur * 0.4);
+    const hF = row.hhi.F, hM = row.hhi.M;
+    const hhiDrive =
+      voiceMode === 'F' ? hF : voiceMode === 'M' ? hM : (hF != null && hM != null ? (hF + hM) / 2 : hF ?? hM);
+    // hF/hM can be null for a year missing from /api/concentration (see
+    // normalize()). Rather than driving toward a fabricated value for a year
+    // we have no real reading for, leave the drone at whatever it last held.
+    if (hhiDrive != null) {
+      const cutoff = 220 + Math.min(1, hhiDrive / 0.05) * 2400; // brighter = more concentrated
+      this.droneFilter.frequency.setTargetAtTime(cutoff, when, dur * 0.4);
+      this.droneGain.gain.setTargetAtTime(0.04 + Math.min(1, hhiDrive / 0.05) * 0.05, when, dur * 0.4);
+    }
   },
 
   schedulerTick() {
     const ctx = this.ctx;
     while (this.nextYearIdx < DATA.years.length) {
-      const when = this.playStartAudioTime + (this.nextYearIdx - this.playStartYearIdx) * this.yearDuration();
-      if (when > ctx.currentTime + SCHEDULE_AHEAD) break;
+      const rawWhen = this.playStartAudioTime + (this.nextYearIdx - this.playStartYearIdx) * this.yearDuration();
+      if (rawWhen > ctx.currentTime + SCHEDULE_AHEAD) break;
+      // playStartYearIdx can carry a fraction (any seek lands mid-year) while
+      // nextYearIdx is floored, so this subtracts more than playStartAudioTime's
+      // +0.06s lead — shortly after first pressing Play, ctx.currentTime is
+      // still near 0, so rawWhen can go genuinely negative. osc.start()/AudioParam
+      // scheduling methods throw a RangeError for a truly negative time (unlike
+      // a merely-past-but-nonnegative time, which the spec just clamps), which
+      // would abort mid-tick and silently kill the scheduler. Floor at
+      // ctx.currentTime so it's always schedulable.
+      const when = Math.max(rawWhen, ctx.currentTime);
       this.scheduleYear(this.nextYearIdx, when);
       this.nextYearIdx++;
     }
@@ -913,10 +941,13 @@ function buildChart() {
     .call(d3.axisBottom(xScale).tickValues(xTickYears).tickFormat(d3.format('d')).tickSize(4));
 
   // ── HHI strip ──
-  const hhiMax = d3.max(DATA.perYear, (r) => Math.max(r.hhi.F, r.hhi.M)) || 0.01;
+  const hhiMax = d3.max(DATA.perYear, (r) => Math.max(r.hhi.F ?? 0, r.hhi.M ?? 0)) || 0.01;
   const yHhi = d3.scaleLinear().domain([0, hhiMax]).range([H_HHI, 0]);
-  const areaF = d3.area().x((r) => xScale(r.year)).y0(H_HHI).y1((r) => yHhi(r.hhi.F)).curve(d3.curveMonotoneX);
-  const areaM = d3.area().x((r) => xScale(r.year)).y0(H_HHI).y1((r) => yHhi(r.hhi.M)).curve(d3.curveMonotoneX);
+  // .defined() skips null years entirely (a gap in the ribbon) instead of
+  // drawing them at y=0, which would misrepresent "we don't have this year's
+  // reading yet" as "this year was maximally diverse."
+  const areaF = d3.area().defined((r) => r.hhi.F != null).x((r) => xScale(r.year)).y0(H_HHI).y1((r) => yHhi(r.hhi.F)).curve(d3.curveMonotoneX);
+  const areaM = d3.area().defined((r) => r.hhi.M != null).x((r) => xScale(r.year)).y0(H_HHI).y1((r) => yHhi(r.hhi.M)).curve(d3.curveMonotoneX);
   hhiG.append('path').datum(DATA.perYear).attr('class', 'hhi-area').attr('d', areaF).attr('fill', ROSE).attr('fill-opacity', 0.28);
   hhiG.append('path').datum(DATA.perYear).attr('class', 'hhi-area').attr('d', areaM).attr('fill', BLUE).attr('fill-opacity', 0.28);
   hhiG.append('text').attr('class', 'strip-label').attr('x', 2).attr('y', 12).text('CONCENTRATION (HHI)');
