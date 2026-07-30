@@ -154,6 +154,17 @@
   .icon-btn:hover { color: var(--text); border-color: rgba(23,21,17,0.24); }
   .icon-btn.muted { color: var(--rose); border-color: var(--rose); }
 
+  /* ── Seek row: a real <input type="range"> so keyboard/screen-reader users
+     can jump anywhere on the timeline, not just by clicking the SVG. ── */
+  #seek-row { padding-top: 0; padding-bottom: 0.5rem; }
+  .seek-range {
+    flex: 1;
+    min-width: 160px;
+    max-width: 100%;
+    accent-color: var(--amber);
+    cursor: pointer;
+  }
+
   /* ── Now-playing readout ── */
   #now-panel {
     max-width: 1120px;
@@ -393,6 +404,12 @@
     <button class="pill-btn" data-voice="F" aria-pressed="false">Girls</button>
     <button class="pill-btn" data-voice="M" aria-pressed="false">Boys</button>
   </div>
+</div>
+
+<div class="transport" id="seek-row">
+  <span class="controls-label">SEEK:</span>
+  <input type="range" id="seek-range" class="seek-range" min="0" max="1" step="1" value="0"
+         aria-label="Seek to year" title="Seek to year">
 </div>
 
 <div id="now-panel" aria-live="polite">
@@ -920,6 +937,8 @@ function buildChart() {
   svg.on('click', seekFromEvent);
 
   document.getElementById('legend-section').style.display = 'flex';
+  const seekRange = document.getElementById('seek-range');
+  seekRange.max = String(DATA.years.length - 1);
   setPlayheadX(pausedAtYearFloat);
   renderNowPanel(Math.floor(pausedAtYearFloat));
 }
@@ -928,6 +947,14 @@ function setPlayheadX(yearFloat) {
   if (!xScale) return;
   const x = xScale(DATA.years[0] + yearFloat);
   d3.select('.playhead-g').attr('transform', `translate(${x},0)`);
+  // Keep the keyboard-operable seek control in sync with wherever the
+  // playhead actually is, whether that's a click-seek, a keyboard seek, or
+  // rAF-driven playback — this is the one place all three paths converge.
+  const seekRange = document.getElementById('seek-range');
+  const yi = Math.round(yearFloat);
+  const yr = DATA.years[Math.max(0, Math.min(DATA.years.length - 1, yi))];
+  if (document.activeElement !== seekRange) seekRange.value = String(yi);
+  seekRange.setAttribute('aria-valuetext', String(yr));
 }
 
 function clearFiredDots() {
@@ -1036,6 +1063,13 @@ function tick() {
 function wireControls() {
   document.getElementById('play-btn').addEventListener('click', () => {
     if (playing) stopPlayback(false); else startPlayback();
+  });
+
+  // Native range: arrow keys, Home/End, Page Up/Down and click-drag all work
+  // for free. This is the only keyboard-operable way to seek — the SVG's
+  // click handler has no keyboard equivalent.
+  document.getElementById('seek-range').addEventListener('input', (e) => {
+    seekTo(parseFloat(e.target.value));
   });
 
   document.getElementById('mute-btn').addEventListener('click', (e) => {
