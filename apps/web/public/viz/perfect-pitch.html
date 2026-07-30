@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Perfect Pitch — NobodyNamed</title>
-<meta name="description" content="145 years of America's favorite baby names, turned into music. One dominant note in 1880. A shimmering chord of hundreds today. Press play and listen to a monoculture become a chorus.">
+<meta name="description" content="146 years of America's favorite baby names, turned into music. One dominant note in 1880. A shimmering chord of hundreds today. Press play and listen to a monoculture become a chorus.">
 <link rel="canonical" href="https://nobodynamed.com/viz/perfect-pitch">
 <meta property="og:title" content="Perfect Pitch — NobodyNamed">
 <meta property="og:description" content="America's naming history, sonified. Mary's solo note in 1880 dissolves into a chorus of hundreds by 2025 — hear it happen.">
@@ -381,17 +381,17 @@
   <button class="icon-btn" id="mute-btn" aria-label="Mute" title="Mute">&#128266;</button>
   <span class="controls-label">SPEED:</span>
   <div class="pill-group" id="speed-group">
-    <button class="pill-btn" data-speed="0.25">0.25&times;</button>
-    <button class="pill-btn active" data-speed="1">1&times;</button>
-    <button class="pill-btn" data-speed="2">2&times;</button>
-    <button class="pill-btn" data-speed="4">4&times;</button>
-    <button class="pill-btn" data-speed="8">8&times;</button>
+    <button class="pill-btn" data-speed="0.25" aria-pressed="false">0.25&times;</button>
+    <button class="pill-btn active" data-speed="1" aria-pressed="true">1&times;</button>
+    <button class="pill-btn" data-speed="2" aria-pressed="false">2&times;</button>
+    <button class="pill-btn" data-speed="4" aria-pressed="false">4&times;</button>
+    <button class="pill-btn" data-speed="8" aria-pressed="false">8&times;</button>
   </div>
   <span class="controls-label">VOICES:</span>
   <div class="pill-group" id="voice-group">
-    <button class="pill-btn active" data-voice="both">Both</button>
-    <button class="pill-btn" data-voice="F">Girls</button>
-    <button class="pill-btn" data-voice="M">Boys</button>
+    <button class="pill-btn active" data-voice="both" aria-pressed="true">Both</button>
+    <button class="pill-btn" data-voice="F" aria-pressed="false">Girls</button>
+    <button class="pill-btn" data-voice="M" aria-pressed="false">Boys</button>
   </div>
 </div>
 
@@ -976,6 +976,7 @@ function renderNowPanel(yearIdx) {
 function seekTo(yearFloat) {
   pausedAtYearFloat = yearFloat;
   if (playing) {
+    lastTickYear = -1; // force the next tick() to re-render even if it lands on the same integer year
     Audio_.start(yearFloat);
   } else {
     setPlayheadX(yearFloat);
@@ -985,6 +986,7 @@ function seekTo(yearFloat) {
 
 function startPlayback() {
   playing = true;
+  lastTickYear = -1; // force the first tick() to render, even resuming on the same year
   document.getElementById('play-icon').innerHTML = '&#10074;&#10074;';
   document.getElementById('play-label').textContent = 'Pause';
   document.getElementById('play-btn').setAttribute('aria-label', 'Pause');
@@ -1008,13 +1010,23 @@ function stopPlayback(reachedEnd) {
   clearFiredDots();
 }
 
+// Tracks the last year rendered into the aria-live now-panel during
+// playback. tick() runs every animation frame (~60/s); rewriting the panel
+// that often — even when the integer year hasn't moved — fires dozens of
+// redundant screen-reader announcements per second. -1 never matches a real
+// year index, so the first tick after any (re)start or seek always renders.
+let lastTickYear = -1;
+
 function tick() {
   if (!playing) return;
   const yf = Audio_.currentYearFloat();
   if (yf >= DATA.years.length) { stopPlayback(true); return; }
   setPlayheadX(yf);
   const yi = Math.floor(yf);
-  renderNowPanel(yi);
+  if (yi !== lastTickYear) {
+    renderNowPanel(yi);
+    lastTickYear = yi;
+  }
   pulseYear(yi, yf - yi);
   requestAnimationFrame(tick);
 }
@@ -1042,8 +1054,9 @@ function wireControls() {
 
   document.querySelectorAll('#speed-group .pill-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('#speed-group .pill-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('#speed-group .pill-btn').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
       btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
       // currentYearFloat() divides elapsed audio time by yearDuration(), which
       // reads `speed` live — so it must be evaluated at the OLD speed before
       // `speed` changes, or the resume point jumps (2x speed would double the
@@ -1056,8 +1069,9 @@ function wireControls() {
 
   document.querySelectorAll('#voice-group .pill-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('#voice-group .pill-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('#voice-group .pill-btn').forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
       btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
       voiceMode = btn.dataset.voice;
       Audio_.applyVoiceMode();
       applyVoiceDim();
