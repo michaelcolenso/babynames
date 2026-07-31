@@ -30,3 +30,10 @@ export * from "./newsletter";
 export * from "./newsletter-tokens";
 export * from "./newsletter-email";
 export * from "./newsletter-ratelimit";
+export {
+  fetchDecadeHubProfile1920,
+  renderDecadeHub1920,
+  renderDecadeClassroom1920,
+  renderDecadeSpellingFamilies1920,
+  renderDecadeMethodology1920,
+} from "./render-decade-hub-1920";

@@ -32,7 +32,7 @@
     "build-shadow-matches": "tsx scripts/build-shadow-matches.ts",
     "build-decade-hub": "tsx scripts/build-decade-hub.ts",
     "sensitivity:decade-hub": "tsx scripts/decade-hub-sensitivity.ts",
-    "test:decade-hub": "tsx --test scripts/decade-hub.test.ts scripts/decade-hub-classroom.test.ts scripts/decade-hub-families.test.ts scripts/decade-hub-routes.test.ts scripts/decade-hub-payload.test.ts",
+    "test:decade-hub": "tsx --test scripts/decade-hub.test.ts scripts/decade-hub-classroom.test.ts scripts/decade-hub-families.test.ts scripts/decade-hub-routes.test.ts scripts/decade-hub-payload.test.ts scripts/decade-hub-1920.test.ts",
     "seed-shadow-matches": "tsx scripts/seed-shadow-matches.ts",
     "seed-shadow-matches:local": "tsx scripts/seed-shadow-matches.ts --local",
     "test": "tsc -b apps/ingest-worker packages/shared && npm run test:mini-sparkline && npm run test:rankings && npm run test:viz-payloads && npm run test:dominant-name-sparks && npm run test:editorial && npm run test:editorial-growth && npm run test:decade-hub && npm run verify-diaspora && npm run verify-strongholds",
@@ -49,12 +49,14 @@
     "blog:test": "tsx --test scripts/blog-publish.test.ts scripts/render-blog.test.ts",
     "test:narrative": "tsx scripts/test-narrative.ts",
     "validate:pages": "tsx scripts/validate-name-pages.ts",
-    "test:editorial-growth": "tsx --test scripts/editorial-growth.test.ts"
+    "test:editorial-growth": "tsx --test scripts/editorial-growth.test.ts",
+    "build-decade-hub:1920s": "tsx scripts/build-decade-hub-1920.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260621.1",
     "tsx": "^4.19.0",
     "typescript": "^5.5.4",
+    "undici": "^7.29.0",
     "wrangler": "^4.85.0"
   },
   "license": "MIT",

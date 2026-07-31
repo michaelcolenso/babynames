@@ -70,10 +70,10 @@ function decadeUrls(origin: string, ym: number, yM: number): SitemapUrl[] {
   return out;
 }
 
-// 1980s decade-hub child routes (flagship). Same data vintage as the decade
+// Decade-hub child routes. Same data vintage as the decade
 // pages, so lastmod follows the dataset's max year.
 function decadeHubUrls(origin: string, yM: number): SitemapUrl[] {
-  return ["/names/1980s/methodology/", "/names/1980s/classroom/", "/names/1980s/spelling-families/"].map(
+  return ["1920s", "1980s"].flatMap((decade) => [`/names/${decade}/methodology/`, `/names/${decade}/classroom/`, `/names/${decade}/spelling-families/`]).map(
     (path) => ({ loc: absoluteUrl(origin, path), lastmod: `${yM}-05-15`, priority: 0.5 }),
   );
 }
