@@ -13,6 +13,17 @@ export interface DecadeThesis {
 }
 
 export const DECADE_THESES: Record<string, DecadeThesis> = {
+  "1920s": {
+    heading: "A concentrated decade, and a wider story",
+    paragraphs: [
+      "The 1920s include 22,972,053 births recorded in the Social Security data: 11,952,683 girls and 11,019,370 boys across 18,108 name-and-sex records. Mary led girls with 701,755 births, while Robert led boys with 576,374. The ten largest name-and-sex combinations accounted for 19.03% of all recorded births, and the top hundred accounted for 54.58%.",
+      "Those shares describe popularity, but they do not show which names belong most distinctly to the era. A long-running classic can be enormous in one decade while spreading most of its history across many others. Ownership asks a narrower question: how concentrated was a name's recorded lifetime inside these ten years, after smoothing rare names and accounting for prominence?",
+      "By that measure, Dorothy leads the girls' ownership ranking. It was also the decade's second-most-popular girls' name, but its 368,875 births cluster more tightly around this era than Mary's much longer history. Seymour leads the boys' ownership ranking despite ranking 211th by 1920s births. The result is a reminder that identity and size are related, but not interchangeable.",
+      "The representative classroom turns the national distribution into a fixed roster. Thirty seats apportioned from 1924 records produce sixteen girls and fourteen boys. In this deterministic reconstruction all thirty seats carry different names: even a concentrated naming pool does not make a duplicate inevitable at this classroom size.",
+      "Spelling also changes the view. Conventional tables rank Katherine and Catherine separately. The manually reviewed family combines 121,626 recorded girls' births in the decade, a footprint large enough to sit near the top of the decade even though neither spelling tells the whole story alone.",
+      "These figures describe the SSA's national files, not every birth or every person's identity. The files omit name-and-sex counts below five, record sex rather than gender, and do not explain why parents chose a name. Ownership is a versioned descriptive score—not a claim of cultural truth—and the methodology page publishes every formula and threshold behind it.",
+    ],
+  },
   "1980s": {
     heading: "A hundred names for half the decade",
     paragraphs: [

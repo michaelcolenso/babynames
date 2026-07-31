@@ -40,7 +40,7 @@ export interface ClassroomStudent {
 }
 
 export interface ClassroomResult {
-  year: 1984;
+  year: number;
   size: 30;
   femaleSeats: number;
   maleSeats: number; // from actual 1984 national distribution
@@ -78,9 +78,9 @@ export interface SpellingFamilyResult {
 }
 
 export interface DecadeProfile {
-  decade: 1980;
-  startYear: 1980;
-  endYear: 1989;
+  decade: number;
+  startYear: number;
+  endYear: number;
   dataThroughYear: number;
   isComplete: true;
   totalBirths: number;

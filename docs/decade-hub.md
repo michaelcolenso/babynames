@@ -242,3 +242,19 @@ no schema change.
    feature-detects the missing row and falls back to the legacy decade page
    unchanged; child routes 404 as before. Seeding the row (or removing it)
    flips the hub on (or off) with no deploy.
+
+## 1920s flagship
+
+The 1920s hub reuses the established precomputed D1 profile, renderer, analytics,
+and accessible chart architecture. Regenerate its deterministic artifact with:
+
+```bash
+npm run build-decade-hub:1920s -- --source=d1
+npm run build-decade-hub:1920s -- --source=shards # offline validation only
+```
+
+Its manually reviewed families live in `data/manual/spelling-families-1920.csv`.
+The classroom reference year is 1924. Formula changes still require incrementing
+`DECADE_HUB_METHODOLOGY_VERSION`; alpha remains 2,500 and should be reassessed
+with the sensitivity procedure described above. The four repository-controlled
+video briefs live under `content/video-briefs/1920s/`.

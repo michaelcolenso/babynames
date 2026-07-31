@@ -9,8 +9,8 @@
 // parameter keeps the statement short and stores the identical bytes.
 //
 // Usage:
-//   npx tsx scripts/seed-decade-hub.ts            # print what would change
-//   npx tsx scripts/seed-decade-hub.ts --apply    # write it
+//   npx tsx scripts/seed-decade-hub.ts                         # 1980s dry run
+//   npx tsx scripts/seed-decade-hub.ts --decade=1920 --apply   # seed 1920s
 //
 // Reads CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN, same as --source=d1.
 
@@ -23,7 +23,9 @@ import type { DecadeProfile } from "../packages/shared/src/decade-hub-types";
 import { d1Query } from "./build-decade-hub";
 
 const REPO = path.resolve(import.meta.dirname ?? path.dirname(fileURLToPath(import.meta.url)), "..");
-const ARTIFACT = path.join(REPO, "data/dist/decade-hub-1980.json");
+const decadeArg = process.argv.find((arg) => arg.startsWith("--decade="))?.slice("--decade=".length) ?? "1980";
+if (!/^\d{4}$/.test(decadeArg)) throw new Error(`--decade must be a four-digit start year, got ${decadeArg}`);
+const ARTIFACT = path.join(REPO, `data/dist/decade-hub-${decadeArg}.json`);
 
 interface ExistingRow {
   decade: string;
