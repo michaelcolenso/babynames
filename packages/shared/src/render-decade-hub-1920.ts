@@ -527,7 +527,7 @@ export function MethodologyCallout(profile: DecadeProfile): string {
   return `<section class="dh-methodology-callout">
   <h2>How these numbers are made</h2>
   <p>Every figure on this page is computed offline from SSA birth records with methodology <code>${escapeHtml(profile.methodologyVersion)}</code>, then served as a precomputed profile. Nothing is recalculated in your browser.</p>
-  <p>For the generation-scale view, see <a href="/millennial-names" data-dh-target-id="editorial:millennial-names" data-dh-target-type="editorial">Millennial names</a> — the classroom names of the 1920s and 1990s.</p>
+  <p>For the generation-scale view, see <a href="/millennial-names" data-dh-target-id="editorial:millennial-names" data-dh-target-type="editorial">Millennial names</a> — the classroom names of the 1980s and 1990s.</p>
   <p><a href="${METHODOLOGY_PATH}" data-dh-target-id="${HUB_CONTENT_ID}/methodology" data-dh-target-type="${CONTENT_TYPE}">Read the methodology</a></p>
 </section>`;
 }
