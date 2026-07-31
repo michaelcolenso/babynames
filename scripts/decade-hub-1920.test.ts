@@ -39,3 +39,16 @@ test("all four 1920s routes have indexable HTML, metadata, and formulas", () => 
   assert.match(pages[2]!, /adjusted_concentration/);
   assert.match(pages[3]!, /Katherine family/);
 });
+
+test("1920s hub puts the scorecard before the introductory editorial copy", () => {
+  const html = renderDecadeHub1920(profile, { origin: "https://nobodynamed.com" });
+  const scorecard = html.indexOf('<dl class="dh-scorecard">');
+  const lede = html.indexOf('<p class="lede">');
+  const thesis = html.indexOf('<div class="dh-thesis">');
+
+  assert.ok(scorecard >= 0, "scorecard is rendered");
+  assert.ok(lede >= 0, "introductory lede is rendered");
+  assert.ok(thesis >= 0, "editorial thesis is rendered");
+  assert.ok(scorecard < lede, "scorecard appears before the lede");
+  assert.ok(scorecard < thesis, "scorecard appears before the thesis");
+});

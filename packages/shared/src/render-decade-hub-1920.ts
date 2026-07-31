@@ -84,9 +84,9 @@ export function DecadeHero(profile: DecadeProfile, thesis: { heading: string; pa
   return `<header class="dh-hero">
   <p class="eyebrow">Decade hub</p>
   <h1>1920s baby names</h1>
+  ${DecadeScorecard(profile)}
   <p class="lede">A name can be popular in the 1920s without belonging to the 1920s. This hub separates the two: the biggest names of the decade, and the names whose recorded history is concentrated inside it.</p>
   ${thesisHtml}
-  ${DecadeScorecard(profile)}
   <nav class="decade-nav" aria-label="Adjacent decades">
     <a href="/names/1910s/" data-dh-target-id="decade:1910s" data-dh-target-type="decade">← 1910s</a>
     <a href="/names/1930s/" data-dh-target-id="decade:1930s" data-dh-target-type="decade">1930s →</a>
