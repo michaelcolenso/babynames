@@ -1,0 +1,38 @@
+name: Fix PR 116 review copy
+
+on:
+  push:
+    branches:
+      - codex/implement-1920s-decade-hub
+
+permissions:
+  contents: write
+
+jobs:
+  fix-copy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/implement-1920s-decade-hub
+      - name: Correct millennial cross-link copy
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('packages/shared/src/render-decade-hub-1920.ts')
+          text = path.read_text()
+          old = 'the classroom names of the 1920s and 1990s.'
+          new = 'the classroom names of the 1980s and 1990s.'
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected exactly one target string, found {text.count(old)}')
+          path.write_text(text.replace(old, new))
+          PY
+          rm .github/workflows/fix-pr-116-copy.yml
+      - name: Commit fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/shared/src/render-decade-hub-1920.ts .github/workflows/fix-pr-116-copy.yml
+          git commit -m "Fix millennial decade cross-link copy"
+          git push origin HEAD:codex/implement-1920s-decade-hub
