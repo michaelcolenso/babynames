@@ -1,10 +1,8 @@
 name: Validate
 
 on:
-  push:
-    branches:
-      - agent/site-audit-alt-link-architecture
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
