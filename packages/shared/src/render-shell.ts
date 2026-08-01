@@ -72,7 +72,7 @@ export function siteHeader(currentPath?: string, opts: SiteHeaderOpts = {}): str
   const items = opts.navItems ?? DEFAULT_NAV;
   const mobileNav = opts.mobileNav !== false ? renderMobileNav(items, currentPath) : "";
   return `<header class="site">
-  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt=""></a>
+  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="NobodyNamed"></a>
   ${renderNav(items, currentPath)}
   ${mobileNav}
 </header>`;
