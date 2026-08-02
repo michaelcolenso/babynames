@@ -22,6 +22,7 @@ export * from "./enrich";
 export * from "./enrichment-compute";
 export * from "./content-identity";
 export * from "./analytics";
+export * from "./indexable-routes";
 export * from "./decade-hub-types";
 export * from "./render-decade-hub";
 export * from "./content/decade-theses";
