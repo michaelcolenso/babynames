@@ -50,6 +50,9 @@
     "blog:test": "tsx --test scripts/blog-publish.test.ts scripts/render-blog.test.ts",
     "test:narrative": "tsx scripts/test-narrative.ts",
     "validate:pages": "tsx scripts/validate-name-pages.ts",
+    "audit:links": "tsx scripts/validate-internal-links.ts",
+    "audit:site": "npm run audit:links && npm run validate:pages",
+    "test:indexable-routes": "tsx --test scripts/indexable-routes.test.ts",
     "test:editorial-growth": "tsx --test scripts/editorial-growth.test.ts",
     "build-decade-hub:1920s": "tsx scripts/build-decade-hub-1920.ts"
   },
