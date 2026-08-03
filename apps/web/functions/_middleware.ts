@@ -167,7 +167,13 @@ async function handleRequest(ctx: Parameters<PagesFunction<Env>>[0], url: URL): 
   const scope = versionScopeFor(url.pathname);
   if (scope) {
     const version = await contentVersionFor(ctx.env.DB, scope);
-    if (version) keyUrl.searchParams.set("__nv_ver", version);
+    // No version means the lookup failed. Caching anyway would write an entry
+    // under an unversioned key that no ingest or facts rebuild can invalidate,
+    // and a later failure would serve it back — the cache-busting scheme
+    // silently switched off for a full TTL. Skip the Cache API entirely and
+    // serve from the handler: slower, but never stale in a way nothing clears.
+    if (!version) return ctx.next();
+    keyUrl.searchParams.set("__nv_ver", version);
   }
   const cacheKey = new Request(keyUrl.toString(), { method: "GET" });
 

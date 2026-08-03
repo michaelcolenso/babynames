@@ -198,7 +198,11 @@ test("routes with no facts dependency carry no version in their key", async () =
   assert.ok(!cache.puts[0]!.includes("__nv_ver"), cache.puts[0]);
 });
 
-test("a meta lookup failure degrades to an unversioned key, never an error", async () => {
+// A version lookup failure must not take the page down — but it must not be
+// cached either. An entry written under an unversioned key is one no ingest or
+// facts rebuild can ever invalidate, and the next failed lookup would serve it
+// back: the cache-busting scheme silently off for a full TTL.
+test("a version lookup failure serves the page but caches nothing", async () => {
   reset();
   const ctx = {
     request: new Request("https://x.test/collections/one-year-wonders/"),
@@ -215,9 +219,32 @@ test("a meta lookup failure degrades to an unversioned key, never an error", asy
       new Response("ok", { headers: { "Cache-Control": "public, s-maxage=86400" } }),
   };
   const res = await (onRequest as (c: unknown) => Promise<Response>)(ctx);
-  assert.equal(res.status, 200);
-  assert.equal(cache.puts.length, 1);
-  assert.ok(!cache.puts[0]!.includes("__nv_ver"));
+  assert.equal(res.status, 200, "availability must not depend on the version lookup");
+  assert.equal(cache.puts.length, 0, "wrote an entry no rebuild could invalidate");
+});
+
+test("a versionless request cannot be served a poisoned entry either", async () => {
+  reset();
+  // Prime the cache normally, then strip the version and confirm the failed
+  // request does not read through to some unversioned neighbour.
+  const hits = { n: 0 };
+  await run("https://x.test/name/Marvel/", { meta: { data_version: "dv1", facts_build: "fb1" }, hits });
+  __resetContentVersionCache();
+
+  const ctx = {
+    request: new Request("https://x.test/name/Marvel/"),
+    env: { DB: { prepare() { throw new Error("D1 unavailable"); } } },
+    params: {},
+    waitUntil: (p: Promise<unknown>) => void p,
+    next: async () => {
+      hits.n += 1;
+      return new Response("fresh", { headers: { "Cache-Control": "public, s-maxage=86400" } });
+    },
+  };
+  const res = await (onRequest as (c: unknown) => Promise<Response>)(ctx);
+  assert.equal(await res.text(), "fresh");
+  assert.equal(hits.n, 2, "the versionless request should reach the handler");
+  assert.equal(cache.puts.length, 1, "and should add nothing to the cache");
 });
 
 // The sitemap index is three static child URLs and has never been cached here.

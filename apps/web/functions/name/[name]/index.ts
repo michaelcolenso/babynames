@@ -100,6 +100,10 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   };
   const cls = classify({ series: record.series, yM: record.yM })!;
   const primaryRow = rows.find((r) => r.row.sex === primary.sex) ?? rows[0]!;
+  // Set when a facts query fails and its fallback silently strips the story
+  // strip, the collection backlinks, or the spelling relatives. The page still
+  // renders; the response just must not be cached in that state.
+  let factsDegraded = false;
   const [
     relatedNames,
     discovery,
@@ -126,8 +130,14 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     getNameEnrichmentBundle(ctx.env.DB, lower, primaryRow.row.sex).catch(() => null),
     getNameDiaspora(ctx.env.DB, lower, primaryRow.row.sex).catch(() => null),
     getNameStrongholds(ctx.env.DB, lower, primaryRow.row.sex).catch(() => []),
-    getNameFacts(ctx.env.DB, lower, primaryRow.row.sex).catch(() => null),
-    listNameCollections(ctx.env.DB, lower, primaryRow.row.sex, 8).catch(() => []),
+    getNameFacts(ctx.env.DB, lower, primaryRow.row.sex).catch(() => {
+      factsDegraded = true;
+      return null;
+    }),
+    listNameCollections(ctx.env.DB, lower, primaryRow.row.sex, 8).catch(() => {
+      factsDegraded = true;
+      return [];
+    }),
   ]);
 
   // Spelling relatives depend on facts.variant_key, so this is a second hop
@@ -136,7 +146,10 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   const variants =
     facts && facts.variant_count > 1
       ? await listSpellingVariants(ctx.env.DB, facts.variant_key, lower, primaryRow.row.sex, 6).catch(
-          () => [],
+          () => {
+            factsDegraded = true;
+            return [];
+          },
         )
       : [];
   const url = new URL(ctx.request.url);
@@ -160,7 +173,14 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
+      // A page that lost its story strip to a transient D1 failure is degraded,
+      // not wrong — serving it beats a 503 for the busiest route on the site.
+      // Caching it is the part that does damage: the content version does not
+      // move during an outage, so the stripped page would be served from the
+      // versioned key for a full day after D1 recovered.
+      "Cache-Control": factsDegraded
+        ? "no-store, max-age=0"
+        : "public, s-maxage=86400, stale-while-revalidate=604800",
       Link: `<${canonical}>; rel="canonical"`,
     },
   });

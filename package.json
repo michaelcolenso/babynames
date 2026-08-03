@@ -35,7 +35,7 @@
     "test:decade-hub": "tsx --test scripts/decade-hub.test.ts scripts/decade-hub-classroom.test.ts scripts/decade-hub-families.test.ts scripts/decade-hub-routes.test.ts scripts/decade-hub-payload.test.ts scripts/decade-hub-1920.test.ts",
     "seed-shadow-matches": "tsx scripts/seed-shadow-matches.ts",
     "seed-shadow-matches:local": "tsx scripts/seed-shadow-matches.ts --local",
-    "test": "tsc -b apps/ingest-worker packages/shared && npm run test:shell && npm run test:mini-sparkline && npm run test:rankings && npm run test:viz-payloads && npm run test:dominant-name-sparks && npm run test:editorial && npm run test:variant-key && npm run test:facts-compute && npm run test:collections && npm run test:name-facts-build && npm run test:collections-pages && npm run test:story-strip && npm run test:sitemap && npm run test:middleware-cache && npm run test:editorial-growth && npm run test:decade-hub && npm run verify-diaspora && npm run verify-strongholds",
+    "test": "tsc -b apps/ingest-worker packages/shared && npm run test:shell && npm run test:mini-sparkline && npm run test:rankings && npm run test:viz-payloads && npm run test:dominant-name-sparks && npm run test:editorial && npm run test:variant-key && npm run test:facts-compute && npm run test:collections && npm run test:name-facts-build && npm run test:collections-pages && npm run test:story-strip && npm run test:sitemap && npm run test:middleware-cache && npm run test:name-route-cache && npm run test:editorial-growth && npm run test:decade-hub && npm run verify-diaspora && npm run verify-strongholds",
     "test:shell": "tsx --test scripts/render-shell.test.ts",
     "test:mini-sparkline": "tsx --test scripts/mini-sparkline.test.ts",
     "test:rankings": "tsx --test scripts/rankings.test.ts",
@@ -66,7 +66,8 @@
     "test:collections-pages": "tsx --test scripts/collections-pages.test.ts",
     "test:story-strip": "tsx --test scripts/story-strip.test.ts",
     "test:sitemap": "tsx --test scripts/sitemap.test.ts",
-    "test:middleware-cache": "tsx --test scripts/middleware-cache.test.ts"
+    "test:middleware-cache": "tsx --test scripts/middleware-cache.test.ts",
+    "test:name-route-cache": "tsx --test scripts/name-route-cache.test.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260621.1",
