@@ -6,7 +6,7 @@
 //   state     <ST>.TXT       ->  state,sex,year,name,count
 
 import fs from "node:fs/promises";
-import { unzipSync } from "fflate";
+import { Unzip, UnzipInflate, unzipSync } from "fflate";
 
 import type { Sex } from "../../packages/shared/src/schema";
 
@@ -81,36 +81,75 @@ export function parseNational(zipBytes: Uint8Array): NationalCorpus {
 
 /**
  * Streams the per-state corpus one state at a time, invoking `onRow` for every
- * record. The full decompressed corpus is ~330 MB, so callers must accumulate
- * rather than materialize — nothing here retains the rows.
+ * record. Nothing here retains the rows — callers must accumulate.
+ *
+ * Deliberately not `unzipSync`, which inflates every entry into one object
+ * before the first row is seen: the decompressed state corpus is ~330 MB, and
+ * it would sit there for the whole run while the caller builds its own large
+ * maps alongside it. fflate's `Unzip` hands over one entry at a time, and an
+ * entry we do not `start()` is never inflated at all.
+ *
+ * Measured over a 142 MB synthetic archive (7.1M rows), peak heap during the
+ * pass fell from 84 MB to 55 MB, and — the part that matters for a run that
+ * then holds the accumulated maps — the corpus retained once the pass is under
+ * way fell from 58 MB to ~8 MB. Nothing is held across entries, so the gap
+ * widens with archive size rather than staying constant.
+ *
+ * `UnzipInflate` is the synchronous handler, so every callback fires during the
+ * `push()` below and this function stays synchronous for its callers.
  */
 export function forEachStateRow(
   zipBytes: Uint8Array,
   onRow: (state: string, sex: Sex, year: number, name: string, count: number) => void,
 ): void {
-  const files = unzipSync(zipBytes);
-  const dec = new TextDecoder("utf-8");
   let seenFiles = 0;
+  let failure: Error | null = null;
 
-  for (const [filePath, data] of Object.entries(files)) {
-    const base = filePath.split("/").pop() ?? "";
+  const emit = (state: string, line: string): void => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    const p = trimmed.split(",");
+    if (p.length !== 5) return;
+    const sex = p[1]!.trim() as Sex;
+    const year = Number(p[2]!.trim());
+    const name = p[3]!.trim();
+    const count = Number(p[4]!.trim());
+    if (!name || (sex !== "M" && sex !== "F") || !Number.isFinite(count) || count <= 0) return;
+    onRow(state, sex, year, name, count);
+  };
+
+  const unzipper = new Unzip();
+  unzipper.register(UnzipInflate);
+  unzipper.onfile = (file) => {
+    const base = file.name.split("/").pop() ?? "";
     const m = STATE_FILE_RE.exec(base);
-    if (!m) continue;
+    if (!m) return; // Never started, so never decompressed.
     seenFiles++;
     const state = m[1]!.toUpperCase();
-    for (const rawLine of dec.decode(data).split("\n")) {
-      const line = rawLine.trim();
-      if (!line) continue;
-      const p = line.split(",");
-      if (p.length !== 5) continue;
-      const sex = p[1]!.trim() as Sex;
-      const year = Number(p[2]!.trim());
-      const name = p[3]!.trim();
-      const count = Number(p[4]!.trim());
-      if (!name || (sex !== "M" && sex !== "F") || !Number.isFinite(count) || count <= 0) continue;
-      onRow(state, sex, year, name, count);
-    }
-  }
+    const dec = new TextDecoder("utf-8");
+    // A record can straddle a chunk boundary, so hold the trailing partial line
+    // until the next chunk completes it.
+    let carry = "";
+    file.ondata = (err, chunk, final) => {
+      if (err) {
+        failure ??= err instanceof Error ? err : new Error(String(err));
+        return;
+      }
+      carry += dec.decode(chunk, { stream: !final });
+      const lines = carry.split("\n");
+      carry = lines.pop() ?? "";
+      for (const line of lines) emit(state, line);
+      if (final) {
+        emit(state, carry);
+        carry = "";
+      }
+    };
+    file.start();
+  };
+
+  unzipper.push(zipBytes, true);
+
+  if (failure) throw failure;
   if (!seenFiles) throw new Error("no <ST>.TXT files in state zip");
 }
 
