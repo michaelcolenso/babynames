@@ -55,6 +55,11 @@ function versionScopeFor(pathname: string): ContentScope | null {
   // ~50k rows to reproduce the same document is the most expensive needless
   // miss on the site.
   if (pathname === "/sitemap-names.xml") return "data";
+  // /name/:name/twin/ reads names and the data-versioned spark cache, never
+  // name_facts. It has to be matched before the /name/ prefix below, or a facts
+  // rebuild would drop every twin page and each cold URL would re-filter, score
+  // and sort the whole spark cohort to rebuild an identical page.
+  if (/^\/name\/[^/]+\/twin\/?$/.test(pathname)) return "data";
   if (
     /^\/sitemap-[a-z]+\.xml$/.test(pathname) ||
     pathname === "/collections" ||

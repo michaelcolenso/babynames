@@ -181,6 +181,37 @@ test("a facts rebuild does not evict the name sitemap", async () => {
   assert.equal(hits.n, 2, "a new ingest did not refresh the name sitemap");
 });
 
+// /name/:name/twin/ reads `names` and the data-versioned spark cache, never
+// name_facts. Under the blanket /name/ match a facts rebuild dropped every twin
+// page, and each cold URL then re-filtered, scored and sorted the whole spark
+// cohort to rebuild a byte-identical page.
+test("a facts rebuild does not evict twin pages", async () => {
+  reset();
+  const hits = { n: 0 };
+  const url = "https://x.test/name/Marvel/twin/";
+  await run(url, { meta: { data_version: "dv1", facts_build: "fb1" }, hits });
+  __resetContentVersionCache();
+  await run(url, { meta: { data_version: "dv1", facts_build: "fb2" }, hits });
+  assert.equal(hits.n, 1, "a facts-only rebuild re-ran the twin cohort scan");
+
+  // An ingest changes the spark cohort, so it must still land on a fresh key.
+  __resetContentVersionCache();
+  await run(url, { meta: { data_version: "dv2", facts_build: "fb2" }, hits });
+  assert.equal(hits.n, 2, "a new ingest did not refresh the twin page");
+});
+
+// The ordinary name page does read name_facts, so it must keep the wider scope
+// — the twin rule must not swallow it.
+test("the twin exemption does not widen to ordinary name pages", async () => {
+  reset();
+  const hits = { n: 0 };
+  const url = "https://x.test/name/Marvel/";
+  await run(url, { meta: { data_version: "dv1", facts_build: "fb1" }, hits });
+  __resetContentVersionCache();
+  await run(url, { meta: { data_version: "dv1", facts_build: "fb2" }, hits });
+  assert.equal(hits.n, 2, "the name page kept a pre-rebuild story strip");
+});
+
 test("the version is memoized, so the common path costs no extra D1 read", async () => {
   reset();
   let queries = 0;
