@@ -288,3 +288,34 @@ test("a collection page survives losing only its related links, uncached", async
   // The members themselves are unaffected, so the table still renders.
   assert.match(await res.text(), /Bethzy/);
 });
+
+// numberOfItems declares the whole collection, so an ItemList position has to
+// be the member's rank in that collection. Restarting at 1 on ?page=2 claimed
+// two different names both held position 1 and misdescribed the curated order.
+test("ItemList positions continue across pages instead of restarting", async () => {
+  const jsonLd = async (url: string, db: ReturnType<typeof fakeDb>) => {
+    const html = await (await get(url, db)).text();
+    const block = /<script type="application\/ld\+json">(.+?)<\/script>/s.exec(html)!;
+    const data = JSON.parse(block[1]!.replace(/\\u003c/g, "<"));
+    return data.find((d: { "@type": string }) => d["@type"] === "CollectionPage").mainEntity;
+  };
+
+  // rank_in is the stored curated rank; page two of a 250-member collection
+  // holds ranks 101 onward.
+  const pageTwo = Array.from({ length: 100 }, (_, i) => ({ ...member(`N${i}`, i), rank_in: 101 + i }));
+  const list = await jsonLd(
+    `https://nobodynamed.com/collections/${SLUG}/?page=2`,
+    fakeDb({ members: pageTwo, total: 250 }),
+  );
+
+  assert.equal(list.numberOfItems, 250, "numberOfItems stays the whole collection");
+  assert.equal(list.itemListElement[0].position, 101, "page two must not restart at 1");
+  assert.deepEqual(
+    list.itemListElement.map((it: { position: number }) => it.position),
+    Array.from({ length: list.itemListElement.length }, (_, i) => 101 + i),
+  );
+
+  // Page one is unchanged.
+  const first = await jsonLd(`https://nobodynamed.com/collections/${SLUG}/`, fakeDb());
+  assert.equal(first.itemListElement[0].position, 1);
+});

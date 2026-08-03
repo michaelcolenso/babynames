@@ -208,9 +208,13 @@ export function buildCollectionStructuredData(
   rows: readonly CollectionMemberRow[],
   opts: { canonical: string; origin: string; total: number },
 ): object[] {
+  // `position` is the member's rank in the whole collection, not its index on
+  // this page: numberOfItems already declares the full total, so restarting at
+  // 1 on ?page=2 would claim two different names both hold position 1. rank_in
+  // is the stored curated rank, so it stays correct however the page is sliced.
   const items = rows.slice(0, 25).map((row, i) => ({
     "@type": "ListItem",
-    position: i + 1,
+    position: row.rank_in ?? i + 1,
     name: row.name,
     url: `${opts.origin}/name/${encodeURIComponent(row.name)}/`,
   }));
