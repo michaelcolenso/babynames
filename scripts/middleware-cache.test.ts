@@ -87,7 +87,7 @@ function reset() {
 }
 
 const FACTS_ROUTES = [
-  "https://x.test/collections",
+  "https://x.test/collections/",
   "https://x.test/collections/one-year-wonders/",
   "https://x.test/sitemap-names.xml",
   "https://x.test/sitemap-collections.xml",
@@ -204,4 +204,29 @@ test("the sitemap index keeps its long-standing bypass", async () => {
   reset();
   await run("https://x.test/sitemap.xml", { meta: { data_version: "dv1" } });
   assert.equal(cache.puts.length, 0);
+});
+
+// _routes.json routes /collections and /collections/<slug> to the same handlers
+// as their trailing-slash forms, so without a canonical redirect each slashless
+// URL returned a cacheable 200 whose <link rel=canonical> pointed somewhere
+// else — a duplicate indexable URL and a second edge-cache entry per collection.
+test("slashless collection URLs redirect to their canonical form", async () => {
+  for (const [from, to] of [
+    ["https://x.test/collections", "https://x.test/collections/"],
+    ["https://x.test/collections/one-year-wonders", "https://x.test/collections/one-year-wonders/"],
+    ["https://x.test/collections/only-in-vermont", "https://x.test/collections/only-in-vermont/"],
+  ]) {
+    reset();
+    const res = await run(from);
+    assert.equal(res.status, 301, `${from} did not redirect`);
+    assert.equal(res.headers.get("Location"), to);
+    assert.equal(cache.puts.length, 0, "a redirect must not populate the cache");
+  }
+});
+
+test("already-canonical collection URLs are served, not redirected", async () => {
+  for (const url of ["https://x.test/collections/", "https://x.test/collections/one-year-wonders/"]) {
+    reset();
+    assert.equal((await run(url)).status, 200, url);
+  }
 });

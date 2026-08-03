@@ -296,6 +296,15 @@ function canonicalizePath(pathname: string): string | null {
     return pathname.slice(0, -1);
   }
 
+  // Collection URLs are canonical with a trailing slash — that is what the
+  // pages render as their <link rel=canonical>, what the hub links to, and what
+  // the sitemap advertises. _routes.json routes the slashless forms to the same
+  // handlers, so without this they returned a cacheable 200 whose canonical
+  // pointed elsewhere: a duplicate public URL and a second edge-cache entry for
+  // every collection.
+  if (pathname === "/collections") return "/collections/";
+  if (/^\/collections\/[^/]+$/.test(pathname)) return `${pathname}/`;
+
   if (pathname === "/blog") return "/blog/";
   if (/^\/blog\/[^/]+$/.test(pathname)) return `${pathname}/`;
 
