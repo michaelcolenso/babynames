@@ -27,7 +27,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
   const [blogPosts, contentVersion, ymStr, yMStr] = await Promise.all([
     listBlogPosts(ctx.env.DB, "published", 100, 0),
-    getContentVersion(ctx.env.DB).catch(() => null),
+    getContentVersion(ctx.env.DB, "core").catch(() => null),
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
   ]);

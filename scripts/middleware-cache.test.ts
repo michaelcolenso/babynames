@@ -29,6 +29,7 @@ let cache = new FakeCache();
 interface Meta {
   data_version?: string;
   facts_build?: string;
+  /** Stands in for both blog_posts subqueries: "<count>@<max updated_at>". */
   blog_version?: string;
 }
 
@@ -40,10 +41,12 @@ function fakeDb(meta: Meta, onQuery?: () => void) {
         async first() {
           if (sql.includes("AS dataVersion")) {
             onQuery?.();
+            const [count, updatedAt] = (meta.blog_version ?? "0@").split("@");
             return {
               dataVersion: meta.data_version ?? null,
               factsBuild: meta.facts_build ?? null,
-              blogVersion: meta.blog_version ?? null,
+              blogCount: Number(count),
+              blogUpdatedAt: updatedAt || null,
             };
           }
           return null;
@@ -141,6 +144,20 @@ test("a blog publish lands on a different cache key", async () => {
   __resetContentVersionCache();
   await run(url, { meta: { data_version: "dv1", facts_build: "fb1", blog_version: "13@2026-02-01" }, hits });
   assert.equal(hits.n, 2, "the core sitemap served a pre-publish response");
+});
+
+// The other half of that: a blog publish must NOT evict name and collection
+// pages. They never read blog_posts, so re-running their D1-heavy handlers —
+// tens of thousands of name pages — would buy a body that cannot have changed.
+test("a blog publish leaves facts-backed keys alone", async () => {
+  for (const url of ["https://x.test/name/Marvel/", "https://x.test/collections/one-year-wonders/", "https://x.test/sitemap-collections.xml"]) {
+    reset();
+    const hits = { n: 0 };
+    await run(url, { meta: { data_version: "dv1", facts_build: "fb1", blog_version: "12@2026-01-01" }, hits });
+    __resetContentVersionCache();
+    await run(url, { meta: { data_version: "dv1", facts_build: "fb1", blog_version: "13@2026-02-01" }, hits });
+    assert.equal(hits.n, 1, `${url} was evicted by an unrelated blog publish`);
+  }
 });
 
 test("the version is memoized, so the common path costs no extra D1 read", async () => {

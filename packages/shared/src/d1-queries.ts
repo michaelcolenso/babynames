@@ -40,37 +40,72 @@ export async function getMeta(db: D1Database, key: string): Promise<string | nul
 }
 
 /**
- * The validator for any page whose body is assembled from D1 rather than from
- * the request. Three independent things change such a body, so all three are
- * in it:
+ * What a D1-backed page's body depends on, read in one round trip.
  *
- *   `data_version` — a new SSA ingest. Also refreshes `names.spark_blob`, which
- *     is where the collection tables get their sparklines.
- *   `facts_build` — a `name_facts` / `name_collections` rebuild. `facts_version`
- *     is deliberately not used: it records the SSA corpus the facts were built
+ *   `data` — a new SSA ingest. Also refreshes `names.spark_blob`, which is
+ *     where the collection tables get their sparklines.
+ *   `facts` — a `name_facts` / `name_collections` rebuild. `facts_version` is
+ *     deliberately not used: it records the SSA corpus the facts were built
  *     from, so a rebuild from that same corpus (a corrected threshold, a new
  *     variant algorithm, added catalyst rows) changes the body and leaves the
  *     validator identical.
- *   Blog state — a publish or edit through scripts/blog-publish.ts touches only
- *     `blog_posts`, moving neither meta key, so /sitemap-core.xml could omit a
- *     new post for its full week-long TTL. Counted as well as maxed so that a
- *     deletion busts it too.
- *
- * One round trip: three scalar subqueries against a single row. The same string
- * keys the middleware's cache entries, so the ETag a client revalidates against
- * and the edge entry it revalidates through always move together.
+ *   `blog` — a publish or edit through scripts/blog-publish.ts touches only
+ *     `blog_posts`, moving neither meta key. Counted as well as maxed so a
+ *     deletion registers too.
  */
-export async function getContentVersion(db: D1Database): Promise<string | null> {
+export interface ContentVersions {
+  data: string;
+  facts: string;
+  blog: string;
+  /** The most recent blog `updated_at`, for sitemap-index lastmod. */
+  blogUpdatedAt: string | null;
+}
+
+/**
+ * Which inputs a given route actually reads. Scoping matters: only the core
+ * sitemap lists blog posts, so folding the blog component into every key would
+ * make one blog publish abandon the warm cache for tens of thousands of name
+ * pages and re-run their D1-heavy handlers for nothing.
+ */
+export type ContentScope = "facts" | "core";
+
+export async function getContentVersions(db: D1Database): Promise<ContentVersions | null> {
   const row = await db
     .prepare(
       `SELECT (SELECT value FROM meta WHERE key = 'data_version') AS dataVersion,
               (SELECT value FROM meta WHERE key = 'facts_build')  AS factsBuild,
-              (SELECT COUNT(*) || '@' || COALESCE(MAX(updated_at), '') FROM blog_posts) AS blogVersion`,
+              (SELECT COUNT(*) FROM blog_posts) AS blogCount,
+              (SELECT MAX(updated_at) FROM blog_posts) AS blogUpdatedAt`,
     )
-    .first<{ dataVersion: string | null; factsBuild: string | null; blogVersion: string | null }>();
+    .first<{
+      dataVersion: string | null;
+      factsBuild: string | null;
+      blogCount: number | null;
+      blogUpdatedAt: string | null;
+    }>();
   if (!row) return null;
-  const parts = [row.dataVersion ?? "", row.factsBuild ?? "", row.blogVersion ?? ""];
+  return {
+    data: row.dataVersion ?? "",
+    facts: row.factsBuild ?? "",
+    blog: `${row.blogCount ?? 0}@${row.blogUpdatedAt ?? ""}`,
+    blogUpdatedAt: row.blogUpdatedAt ?? null,
+  };
+}
+
+/**
+ * The cache key and ETag string for one scope. The middleware and the routes
+ * both build theirs from this, so the validator a client revalidates against
+ * and the edge entry it revalidates through always move together.
+ */
+export function contentVersionString(v: ContentVersions, scope: ContentScope): string | null {
+  const parts = scope === "core" ? [v.data, v.facts, v.blog] : [v.data, v.facts];
   return parts.some((p) => p) ? parts.join(":") : null;
+}
+
+/** Convenience for a route that needs one scope and nothing else. */
+export async function getContentVersion(db: D1Database, scope: ContentScope): Promise<string | null> {
+  const v = await getContentVersions(db);
+  return v ? contentVersionString(v, scope) : null;
 }
 
 export async function setMeta(db: D1Database, key: string, value: string): Promise<void> {

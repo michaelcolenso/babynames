@@ -23,7 +23,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     listCollectionSummaries(ctx.env.DB),
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
-    getContentVersion(ctx.env.DB).catch(() => null),
+    getContentVersion(ctx.env.DB, "facts").catch(() => null),
   ]);
 
   const bySlug = new Map(summaries.map((s) => [s.slug, s]));

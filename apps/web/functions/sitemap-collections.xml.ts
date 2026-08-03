@@ -31,7 +31,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     // An initialized but unseeded table returns [] without throwing, so the
     // not-yet-seeded case is unaffected.
     listCollectionSummaries(ctx.env.DB),
-    getContentVersion(ctx.env.DB).catch(() => null),
+    getContentVersion(ctx.env.DB, "facts").catch(() => null),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
   ]);
 

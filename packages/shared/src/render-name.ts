@@ -1366,10 +1366,21 @@ function augmentNarrativeWithFacts(
         : `, more than any other state.`);
   }
 
+  // Every fact on this page describes one sex, so a name-wide claim of absence
+  // is only safe when the other sex is absent too. Edris/F was last recorded in
+  // 1973 while Edris/M had 25 births in 2025; saying the name "has not appeared
+  // in the Social Security data since" was flatly false for 232 spellings, in
+  // the visible answer and in the FAQ JSON-LD alike.
+  const ourNoun = record.sex === "F" ? "girls" : "boys";
+  const otherNoun = record.sex === "F" ? "boys" : "girls";
+  const otherLatest = record.other?.series[record.yM] ?? 0;
+
   answers.whenLast =
     a.latestCount > 0
       ? `${record.name} was recorded most recently in ${record.yM}, with ${fmt(a.latestCount)} births.`
-      : `${record.name} was last recorded in ${facts.last_year}. It has not appeared in the Social Security data since — meaning fewer than five American babies a year have been given the name.`;
+      : otherLatest > 0
+        ? `${record.name} was last recorded for ${ourNoun} in ${facts.last_year}; fewer than five American ${ourNoun} a year have been given the name since. It remains in use for ${otherNoun}, with ${fmt(otherLatest)} recorded in ${record.yM}.`
+        : `${record.name} was last recorded in ${facts.last_year}. It has not appeared in the Social Security data since — meaning fewer than five American babies a year have been given the name.`;
 
   let metaDescription = narrative.metaDescription;
   if (facts.is_one_and_done) {

@@ -55,10 +55,12 @@ function fakeDb({ members = MEMBERS, total = members.length, failMembers = false
         async first<T>(): Promise<T | null> {
           if (sql.includes("COUNT(*) AS n FROM name_collections")) return { n: total } as T;
           if (sql.includes("AS dataVersion")) {
+            const [count, updatedAt] = (meta.blog_version ?? "0@").split("@");
             return {
               dataVersion: meta.data_version ?? null,
               factsBuild: meta.facts_build ?? null,
-              blogVersion: meta.blog_version ?? null,
+              blogCount: Number(count),
+              blogUpdatedAt: updatedAt || null,
             } as T;
           }
           if (sql.includes("FROM meta")) {

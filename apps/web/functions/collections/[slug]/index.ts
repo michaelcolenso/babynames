@@ -39,7 +39,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
     listCollectionSummaries(ctx.env.DB).catch(() => null),
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
-    getContentVersion(ctx.env.DB).catch(() => null),
+    getContentVersion(ctx.env.DB, "facts").catch(() => null),
   ]);
 
   // A page past the end is a dead end, not an empty table.

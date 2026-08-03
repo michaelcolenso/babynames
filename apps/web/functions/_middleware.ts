@@ -4,7 +4,7 @@
 // hooking caches.default here means every endpoint gets edge-caching for
 // free (with the `data_version` cache-bust trick built into each handler).
 
-import { getContentVersion } from "@nv/shared";
+import { contentVersionString, getContentVersions, type ContentScope, type ContentVersions } from "@nv/shared";
 import type { D1Database, PagesFunction } from "@cloudflare/workers-types";
 
 // The content version folded into cache keys for every route whose body is
@@ -16,27 +16,27 @@ import type { D1Database, PagesFunction } from "@cloudflare/workers-types";
 // One lookup per isolate per TTL is ample. The TTL is deliberately short: the
 // window between a seed and the caches following it should be seconds.
 const CONTENT_VERSION_TTL_MS = 30_000;
-let contentVersionCache: { value: string | null; at: number } | null = null;
+let contentVersionCache: { value: ContentVersions | null; at: number } | null = null;
 
 /** Exported for tests: clears the per-isolate memo. */
 export function __resetContentVersionCache(): void {
   contentVersionCache = null;
 }
 
-async function contentVersionFor(db: D1Database | undefined): Promise<string | null> {
+async function contentVersionFor(db: D1Database | undefined, scope: ContentScope): Promise<string | null> {
   if (!db) return null;
   const now = Date.now();
-  if (contentVersionCache && now - contentVersionCache.at < CONTENT_VERSION_TTL_MS) {
-    return contentVersionCache.value;
+  if (!contentVersionCache || now - contentVersionCache.at >= CONTENT_VERSION_TTL_MS) {
+    try {
+      contentVersionCache = { value: await getContentVersions(db), at: now };
+    } catch {
+      // A version lookup failure must never take the page down; fall back to an
+      // unversioned key, which is exactly the pre-versioning behaviour.
+      contentVersionCache = { value: null, at: now };
+    }
   }
-  try {
-    contentVersionCache = { value: await getContentVersion(db), at: now };
-  } catch {
-    // A version lookup failure must never take the page down; fall back to an
-    // unversioned key, which is exactly the pre-versioning behaviour.
-    contentVersionCache = { value: null, at: now };
-  }
-  return contentVersionCache.value;
+  const versions = contentVersionCache.value;
+  return versions ? contentVersionString(versions, scope) : null;
 }
 
 // Routes whose body is assembled from D1 rather than from the request.
@@ -45,13 +45,20 @@ async function contentVersionFor(db: D1Database | undefined): Promise<string | n
 // empty collections sitemap, an empty collection page, a hub advertising
 // nothing, a core sitemap missing a just-published post. The fix is to make the
 // version participate in the key.
-function isVersionedRoute(pathname: string): boolean {
-  return (
+function versionScopeFor(pathname: string): ContentScope | null {
+  // Only the core sitemap lists blog posts. Giving the others the blog-inclusive
+  // version would mean a single blog publish evicted every warm name-page entry
+  // and re-ran its handler for a body that could not have changed.
+  if (pathname === "/sitemap-core.xml") return "core";
+  if (
     /^\/sitemap-[a-z]+\.xml$/.test(pathname) ||
     pathname === "/collections" ||
     pathname.startsWith("/collections/") ||
     pathname.startsWith("/name/")
-  );
+  ) {
+    return "facts";
+  }
+  return null;
 }
 
 const CANONICAL_PAGES = new Set([
@@ -152,8 +159,9 @@ async function handleRequest(ctx: Parameters<PagesFunction<Env>>[0], url: URL): 
   // hit reruns the handler and its D1 queries, `listIndexableNames` over ~50k
   // rows included. The version is memoized per isolate (see contentVersionFor),
   // so the common path adds no D1 read, and a seed lands on a fresh key.
-  if (isVersionedRoute(url.pathname)) {
-    const version = await contentVersionFor(ctx.env.DB);
+  const scope = versionScopeFor(url.pathname);
+  if (scope) {
+    const version = await contentVersionFor(ctx.env.DB, scope);
     if (version) keyUrl.searchParams.set("__nv_ver", version);
   }
   const cacheKey = new Request(keyUrl.toString(), { method: "GET" });

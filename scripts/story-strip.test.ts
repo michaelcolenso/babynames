@@ -374,3 +374,30 @@ test("spelling relatives are restricted to the rows their links resolve to", asy
     "a minority-sex spelling must not be offered as a relative",
   );
 });
+
+// A name page is a page about one sex, so an unqualified "has not appeared in
+// the Social Security data since" is a claim the page has no basis for. In the
+// live corpus 232 spellings are dormant for one sex and active for the other —
+// Edris/F last recorded in 1973, Edris/M with 25 births in 2025 — and the false
+// sentence went out in the visible answer and the FAQ JSON-LD alike.
+test("a dormant sex does not claim the whole name has vanished", () => {
+  const dormant = series(Array.from({ length: 60 }, (_, i): [number, number] => [1913 + i, 40 - Math.floor(i / 2)]));
+  const html = render({
+    rec: record({
+      name: "Edris",
+      series: dormant,
+      other: { sex: "M", series: series([[2024, 22], [YM, 25]]) },
+    }),
+    facts: facts({ name: "Edris", name_lower: "edris", last_year: 1973, latest_count: 0 }),
+  });
+
+  assert.ok(
+    !/has not appeared in the Social Security data since/.test(html),
+    "the page claimed the name vanished while the other sex is still recorded",
+  );
+  assert.match(html, /last recorded for girls in 1973/);
+  assert.match(html, /remains in use for boys/);
+
+  // With no other-sex activity the original, stronger sentence is still right.
+  assert.match(render(), /has not appeared in the Social Security data since/);
+});

@@ -23,10 +23,12 @@ function fakeDb({ names = [], summaries = [], blog = [], version = {}, failSumma
         bind: () => stmt,
         async first<T>(): Promise<T | null> {
           if (sql.includes("AS dataVersion")) {
+            const [count, updatedAt] = (version.blogVersion ?? "0@").split("@");
             return {
               dataVersion: version.dataVersion ?? null,
               factsBuild: version.factsBuild ?? null,
-              blogVersion: version.blogVersion ?? null,
+              blogCount: Number(count),
+              blogUpdatedAt: updatedAt || null,
             } as T;
           }
           if (sql.includes("FROM meta")) return { value: "1880" } as T;
@@ -189,4 +191,34 @@ test("the collections sitemap errors rather than publishing an empty urlset", as
     () => collectionsGet(ctx(`${ORIGIN}/sitemap-collections.xml`, fakeDb({ failSummaries: true }))),
     /D1 unavailable/,
   );
+});
+
+// A crawler decides whether to refetch a child from the index's lastmod. When
+// all three carried the SSA release date, a facts rebuild or a blog publish was
+// invisible here and the crawler skipped the one child that had changed.
+test("each child sitemap is stamped with the date of what it is built from", async () => {
+  const lastmods = async (version: DbOptions["version"]) => {
+    const xml = await ((await indexGet(ctx(`${ORIGIN}/sitemap.xml`, fakeDb({ version })))) as Response).text();
+    const blocks = [...xml.matchAll(/<sitemap>([\s\S]*?)<\/sitemap>/g)].map((m) => m[1]!);
+    return Object.fromEntries(
+      blocks.map((b) => [
+        /<loc>(.*?)<\/loc>/.exec(b)![1]!.replace(`${ORIGIN}/`, ""),
+        /<lastmod>(.*?)<\/lastmod>/.exec(b)?.[1] ?? null,
+      ]),
+    );
+  };
+
+  const base = { dataVersion: "dv1", factsBuild: "2026-06-01T00:00:00Z", blogVersion: "12@2026-07-04T00:00:00Z" };
+  const stamps = await lastmods(base);
+  // maxYear is 1880 in the fake, so the SSA date is the oldest of the three and
+  // each child has to reach past it for its own signal.
+  assert.equal(stamps["sitemap-names.xml"], "1880-05-15", "the name cohort only moves on ingest");
+  assert.equal(stamps["sitemap-collections.xml"], "2026-06-01", "collections follow the facts build");
+  assert.equal(stamps["sitemap-core.xml"], "2026-07-04", "core follows the newest blog post");
+
+  // A facts rebuild moves the collections child and nothing else.
+  const after = await lastmods({ ...base, factsBuild: "2026-08-02T00:00:00Z" });
+  assert.equal(after["sitemap-collections.xml"], "2026-08-02");
+  assert.equal(after["sitemap-core.xml"], stamps["sitemap-core.xml"]);
+  assert.equal(after["sitemap-names.xml"], stamps["sitemap-names.xml"]);
 });
