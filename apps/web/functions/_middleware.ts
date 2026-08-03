@@ -50,6 +50,11 @@ function versionScopeFor(pathname: string): ContentScope | null {
   // version would mean a single blog publish evicted every warm name-page entry
   // and re-ran its handler for a body that could not have changed.
   if (pathname === "/sitemap-core.xml") return "core";
+  // The name sitemap is a list of /name/ URLs drawn from `names`; a facts
+  // rebuild cannot change a byte of it, and re-running listIndexableNames over
+  // ~50k rows to reproduce the same document is the most expensive needless
+  // miss on the site.
+  if (pathname === "/sitemap-names.xml") return "data";
   if (
     /^\/sitemap-[a-z]+\.xml$/.test(pathname) ||
     pathname === "/collections" ||

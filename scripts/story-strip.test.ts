@@ -401,3 +401,36 @@ test("a dormant sex does not claim the whole name has vanished", () => {
   // With no other-sex activity the original, stronger sentence is still right.
   assert.match(render(), /has not appeared in the Social Security data since/);
 });
+
+// The narrower version of the same error: both sexes are quiet today, but the
+// other sex was recorded more recently than this one. An "is it active now"
+// check passes both and the name-wide claim is still false — Loretto/F ended in
+// 1964, Loretto/M was recorded in 2021, and 893 spellings sit in that gap.
+test("a more recent opposite-sex record still blocks the name-wide claim", () => {
+  const html = render({
+    rec: record({
+      name: "Loretto",
+      series: series(Array.from({ length: 50 }, (_, i): [number, number] => [1915 + i, 30 - Math.floor(i / 3)])),
+      other: { sex: "M", series: series([[2019, 6], [2021, 5]]) },
+    }),
+    facts: facts({ name: "Loretto", name_lower: "loretto", last_year: 1964, latest_count: 0 }),
+  });
+
+  assert.ok(
+    !/has not appeared in the Social Security data since/.test(html),
+    "the page claimed the name vanished in 1964 though it was recorded for boys in 2021",
+  );
+  assert.match(html, /last recorded for girls in 1964/);
+  assert.match(html, /recorded for boys more recently, in 2021/);
+});
+
+test("an older opposite-sex record leaves the name-wide claim intact", () => {
+  const html = render({
+    rec: record({
+      name: "Marvel",
+      series: MARVEL_SERIES,
+      other: { sex: "M", series: series([[1930, 8]]) },
+    }),
+  });
+  assert.match(html, /has not appeared in the Social Security data since/);
+});

@@ -62,12 +62,18 @@ export interface ContentVersions {
 }
 
 /**
- * Which inputs a given route actually reads. Scoping matters: only the core
- * sitemap lists blog posts, so folding the blog component into every key would
- * make one blog publish abandon the warm cache for tens of thousands of name
- * pages and re-run their D1-heavy handlers for nothing.
+ * Which inputs a given route actually reads. Scoping matters in both
+ * directions: only the core sitemap lists blog posts, so a blog component in
+ * every key would make one publish abandon the warm cache for tens of thousands
+ * of name pages; and /sitemap-names.xml reads only the `names` table, so giving
+ * it the facts component would make every facts-only rebuild re-run
+ * listIndexableNames — a ~50k-row scan — to produce a byte-identical document.
+ *
+ *   "data"  — the `names` corpus alone.
+ *   "facts" — plus name_facts / name_collections.
+ *   "core"  — plus blog_posts.
  */
-export type ContentScope = "facts" | "core";
+export type ContentScope = "data" | "facts" | "core";
 
 export async function getContentVersions(db: D1Database): Promise<ContentVersions | null> {
   const row = await db
@@ -98,7 +104,8 @@ export async function getContentVersions(db: D1Database): Promise<ContentVersion
  * and the edge entry it revalidates through always move together.
  */
 export function contentVersionString(v: ContentVersions, scope: ContentScope): string | null {
-  const parts = scope === "core" ? [v.data, v.facts, v.blog] : [v.data, v.facts];
+  const parts =
+    scope === "core" ? [v.data, v.facts, v.blog] : scope === "facts" ? [v.data, v.facts] : [v.data];
   return parts.some((p) => p) ? parts.join(":") : null;
 }
 

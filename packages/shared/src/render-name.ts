@@ -1373,14 +1373,28 @@ function augmentNarrativeWithFacts(
   // the visible answer and in the FAQ JSON-LD alike.
   const ourNoun = record.sex === "F" ? "girls" : "boys";
   const otherNoun = record.sex === "F" ? "boys" : "girls";
-  const otherLatest = record.other?.series[record.yM] ?? 0;
+  const otherSeries = record.other?.series;
+  const otherLatest = otherSeries?.[record.yM] ?? 0;
+  // Not just "is the other sex active now" — "was it recorded after we stopped".
+  // Loretto/F ended in 1964 and Loretto/M was recorded in 2021: both are quiet
+  // today, so an activity check passes them both and the name-wide claim is
+  // still wrong. 893 spellings sit in that gap.
+  const otherLastYear = otherSeries
+    ? Object.keys(otherSeries).reduce((max, key) => {
+        const year = Number(key);
+        return (otherSeries[year] ?? 0) > 0 && year > max ? year : max;
+      }, 0)
+    : 0;
+  const ourLastYear = facts.last_year ?? 0;
 
   answers.whenLast =
     a.latestCount > 0
       ? `${record.name} was recorded most recently in ${record.yM}, with ${fmt(a.latestCount)} births.`
       : otherLatest > 0
         ? `${record.name} was last recorded for ${ourNoun} in ${facts.last_year}; fewer than five American ${ourNoun} a year have been given the name since. It remains in use for ${otherNoun}, with ${fmt(otherLatest)} recorded in ${record.yM}.`
-        : `${record.name} was last recorded in ${facts.last_year}. It has not appeared in the Social Security data since — meaning fewer than five American babies a year have been given the name.`;
+        : otherLastYear > ourLastYear
+          ? `${record.name} was last recorded for ${ourNoun} in ${facts.last_year}; fewer than five American ${ourNoun} a year have been given the name since. It was recorded for ${otherNoun} more recently, in ${otherLastYear}.`
+          : `${record.name} was last recorded in ${facts.last_year}. It has not appeared in the Social Security data since — meaning fewer than five American babies a year have been given the name.`;
 
   let metaDescription = narrative.metaDescription;
   if (facts.is_one_and_done) {

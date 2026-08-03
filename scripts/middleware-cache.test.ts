@@ -112,7 +112,9 @@ test("facts-backed routes populate the cache instead of bypassing it", async () 
 });
 
 test("a facts rebuild lands on a different cache key", async () => {
-  for (const url of FACTS_ROUTES) {
+  // The name sitemap is deliberately absent: it has a data-only scope, covered
+  // by its own test below.
+  for (const url of FACTS_ROUTES.filter((u) => !u.endsWith("/sitemap-names.xml"))) {
     reset();
     const hits = { n: 0 };
     await run(url, { meta: { data_version: "dv1", facts_build: "fb1" }, hits });
@@ -158,6 +160,25 @@ test("a blog publish leaves facts-backed keys alone", async () => {
     await run(url, { meta: { data_version: "dv1", facts_build: "fb1", blog_version: "13@2026-02-01" }, hits });
     assert.equal(hits.n, 1, `${url} was evicted by an unrelated blog publish`);
   }
+});
+
+// /sitemap-names.xml is a list of /name/ URLs drawn from `names`. A facts
+// rebuild cannot change a byte of it, so putting the facts component in its key
+// would re-run listIndexableNames — a ~50k-row scan — at every cold edge to
+// reproduce an identical document.
+test("a facts rebuild does not evict the name sitemap", async () => {
+  reset();
+  const hits = { n: 0 };
+  const url = "https://x.test/sitemap-names.xml";
+  await run(url, { meta: { data_version: "dv1", facts_build: "fb1" }, hits });
+  __resetContentVersionCache();
+  await run(url, { meta: { data_version: "dv1", facts_build: "fb2" }, hits });
+  assert.equal(hits.n, 1, "a facts-only rebuild re-ran the 50k-row names query");
+
+  // An ingest does change it, and must still land on a fresh key.
+  __resetContentVersionCache();
+  await run(url, { meta: { data_version: "dv2", facts_build: "fb2" }, hits });
+  assert.equal(hits.n, 2, "a new ingest did not refresh the name sitemap");
 });
 
 test("the version is memoized, so the common path costs no extra D1 read", async () => {
