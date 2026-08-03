@@ -29,6 +29,7 @@ let cache = new FakeCache();
 interface Meta {
   data_version?: string;
   facts_build?: string;
+  blog_version?: string;
 }
 
 function fakeDb(meta: Meta, onQuery?: () => void) {
@@ -37,15 +38,17 @@ function fakeDb(meta: Meta, onQuery?: () => void) {
       const stmt = {
         bind: () => stmt,
         async first() {
+          if (sql.includes("AS dataVersion")) {
+            onQuery?.();
+            return {
+              dataVersion: meta.data_version ?? null,
+              factsBuild: meta.facts_build ?? null,
+              blogVersion: meta.blog_version ?? null,
+            };
+          }
           return null;
         },
         async all() {
-          if (sql.includes("FROM meta")) {
-            onQuery?.();
-            return {
-              results: Object.entries(meta).map(([key, value]) => ({ key, value })),
-            };
-          }
           return { results: [] };
         },
       };
@@ -125,6 +128,19 @@ test("a new SSA ingest also lands on a different cache key", async () => {
   __resetContentVersionCache();
   await run(url, { meta: { data_version: "dv2", facts_build: "fb1" }, hits });
   assert.equal(hits.n, 2);
+});
+
+// A blog publish touches only blog_posts — neither meta key moves — so without
+// the blog half of the version /sitemap-core.xml would omit a new post for the
+// full week-long TTL it advertises.
+test("a blog publish lands on a different cache key", async () => {
+  reset();
+  const hits = { n: 0 };
+  const url = "https://x.test/sitemap-core.xml";
+  await run(url, { meta: { data_version: "dv1", facts_build: "fb1", blog_version: "12@2026-01-01" }, hits });
+  __resetContentVersionCache();
+  await run(url, { meta: { data_version: "dv1", facts_build: "fb1", blog_version: "13@2026-02-01" }, hits });
+  assert.equal(hits.n, 2, "the core sitemap served a pre-publish response");
 });
 
 test("the version is memoized, so the common path costs no extra D1 read", async () => {

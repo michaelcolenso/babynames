@@ -53,6 +53,13 @@ function fakeDb({ members = MEMBERS, total = members.length, failMembers = false
         bind: () => stmt,
         async first<T>(): Promise<T | null> {
           if (sql.includes("COUNT(*) AS n FROM name_collections")) return { n: total } as T;
+          if (sql.includes("AS dataVersion")) {
+            return {
+              dataVersion: meta.data_version ?? null,
+              factsBuild: meta.facts_build ?? null,
+              blogVersion: meta.blog_version ?? null,
+            } as T;
+          }
           if (sql.includes("FROM meta")) {
             const key = sql.includes("?1") ? "" : "";
             void key;
@@ -67,9 +74,6 @@ function fakeDb({ members = MEMBERS, total = members.length, failMembers = false
           }
           if (sql.includes("GROUP BY slug")) {
             return { results: summaries as unknown as T[] };
-          }
-          if (sql.includes("FROM meta")) {
-            return { results: Object.entries(meta).map(([key, value]) => ({ key, value })) as unknown as T[] };
           }
           return { results: [] };
         },

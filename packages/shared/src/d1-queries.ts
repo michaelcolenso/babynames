@@ -39,27 +39,37 @@ export async function getMeta(db: D1Database, key: string): Promise<string | nul
 }
 
 /**
- * The validator for any page assembled from `name_facts` / `name_collections`.
+ * The validator for any page whose body is assembled from D1 rather than from
+ * the request. Three independent things change such a body, so all three are
+ * in it:
  *
- * Two independent things change such a page's body, so both belong in it:
- * `data_version` (a new SSA ingest — which also refreshes the `names.spark_blob`
- * values the collection tables draw their sparklines from) and `facts_build`
- * (a facts rebuild). `facts_version` is deliberately not used: it records the
- * SSA corpus the facts were built from, so a rebuild from that same corpus —
- * a corrected threshold, a new variant algorithm, added catalyst rows — changes
- * the body while leaving the validator identical.
+ *   `data_version` — a new SSA ingest. Also refreshes `names.spark_blob`, which
+ *     is where the collection tables get their sparklines.
+ *   `facts_build` — a `name_facts` / `name_collections` rebuild. `facts_version`
+ *     is deliberately not used: it records the SSA corpus the facts were built
+ *     from, so a rebuild from that same corpus (a corrected threshold, a new
+ *     variant algorithm, added catalyst rows) changes the body and leaves the
+ *     validator identical.
+ *   Blog state — a publish or edit through scripts/blog-publish.ts touches only
+ *     `blog_posts`, moving neither meta key, so /sitemap-core.xml could omit a
+ *     new post for its full week-long TTL. Counted as well as maxed so that a
+ *     deletion busts it too.
  *
- * The same pair keys the middleware's cache entries, so the ETag a client
- * revalidates against and the edge entry it revalidates through move together.
+ * One round trip: three scalar subqueries against a single row. The same string
+ * keys the middleware's cache entries, so the ETag a client revalidates against
+ * and the edge entry it revalidates through always move together.
  */
 export async function getContentVersion(db: D1Database): Promise<string | null> {
-  const rows = await db
-    .prepare("SELECT key, value FROM meta WHERE key IN ('data_version', 'facts_build')")
-    .all<{ key: string; value: string }>();
-  const map = new Map((rows.results ?? []).map((r) => [r.key, r.value]));
-  const data = map.get("data_version") ?? "";
-  const facts = map.get("facts_build") ?? "";
-  return data || facts ? `${data}:${facts}` : null;
+  const row = await db
+    .prepare(
+      `SELECT (SELECT value FROM meta WHERE key = 'data_version') AS dataVersion,
+              (SELECT value FROM meta WHERE key = 'facts_build')  AS factsBuild,
+              (SELECT COUNT(*) || '@' || COALESCE(MAX(updated_at), '') FROM blog_posts) AS blogVersion`,
+    )
+    .first<{ dataVersion: string | null; factsBuild: string | null; blogVersion: string | null }>();
+  if (!row) return null;
+  const parts = [row.dataVersion ?? "", row.factsBuild ?? "", row.blogVersion ?? ""];
+  return parts.some((p) => p) ? parts.join(":") : null;
 }
 
 export async function setMeta(db: D1Database, key: string, value: string): Promise<void> {
@@ -1266,6 +1276,13 @@ export async function listNameCollections(
  * Other spellings in the same family. Equality on the indexed variant_key —
  * deliberately not a LIKE or an edit-distance scan, which would be a table walk
  * on every name page.
+ *
+ * Restricted to canonical-sex rows because the rail links to a bare
+ * `/name/<Name>/`, which resolves to whichever sex is dominant for that name.
+ * Without the filter, Daniel's male page listed Danielle from Danielle/M's
+ * 1,895-birth row while the link opened Danielle/F's 371,803-birth history —
+ * the row's numbers described a page the reader would never see. Same rule the
+ * collection tables apply, for the same reason.
  */
 export async function listSpellingVariants(
   db: D1Database,
@@ -1281,6 +1298,7 @@ export async function listSpellingVariants(
          FROM name_facts f
          JOIN names n ON n.name_lower = f.name_lower AND n.sex = f.sex
         WHERE f.variant_key = ?1 AND f.sex = ?2 AND f.name_lower <> ?3
+          AND f.is_canonical_sex = 1
         ORDER BY n.total_count DESC
         LIMIT ?4`,
     )

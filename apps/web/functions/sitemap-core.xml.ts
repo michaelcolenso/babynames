@@ -6,6 +6,7 @@
 
 import {
   absoluteUrl,
+  getContentVersion,
   getMeta,
   listBlogPosts,
   META_KEYS,
@@ -92,9 +93,9 @@ function letterUrls(origin: string, yM: number, prefix: string, priority: number
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
-  const [blogPosts, dataVersion, ymStr, yMStr] = await Promise.all([
+  const [blogPosts, contentVersion, ymStr, yMStr] = await Promise.all([
     listBlogPosts(ctx.env.DB, "published", 100, 0),
-    getMeta(ctx.env.DB, META_KEYS.dataVersion),
+    getContentVersion(ctx.env.DB).catch(() => null),
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
   ]);
@@ -117,7 +118,11 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     })),
   ];
 
-  return xmlResponse(renderUrlset(urls), dataVersion ? `sitemap-core-${dataVersion}` : null);
+  // The blog half of the content version is what makes this correct: a publish
+  // through scripts/blog-publish.ts touches only blog_posts, so keying on
+  // data_version alone left a new post out of this sitemap for the full
+  // week-long TTL.
+  return xmlResponse(renderUrlset(urls), contentVersion ? `sitemap-core-${contentVersion}` : null);
 };
 
 export const onRequestHead: PagesFunction<Env> = async (ctx) => withoutBody(await onRequestGet(ctx));

@@ -4,17 +4,14 @@
 // hooking caches.default here means every endpoint gets edge-caching for
 // free (with the `data_version` cache-bust trick built into each handler).
 
+import { getContentVersion } from "@nv/shared";
 import type { D1Database, PagesFunction } from "@cloudflare/workers-types";
 
 // The content version folded into cache keys for every route whose body is
-// derived from D1. Two independent things can change it:
-//
-//   meta.data_version — a new SSA ingest (names, name_years).
-//   meta.facts_build  — a name_facts / name_collections rebuild. facts_version
-//                       deliberately does NOT serve here: it is the SSA data
-//                       version, so a rebuild from the same corpus (a corrected
-//                       threshold, a new variant algorithm, added catalyst rows)
-//                       leaves it untouched and would reproduce the previous key.
+// derived from D1. getContentVersion is the single definition of what "the
+// content changed" means — the routes below build their ETags from the same
+// call, so a validator and the cache entry it revalidates through cannot drift
+// apart.
 //
 // One lookup per isolate per TTL is ample. The TTL is deliberately short: the
 // window between a seed and the caches following it should be seconds.
@@ -33,26 +30,21 @@ async function contentVersionFor(db: D1Database | undefined): Promise<string | n
     return contentVersionCache.value;
   }
   try {
-    const rows = await db
-      .prepare("SELECT key, value FROM meta WHERE key IN ('data_version', 'facts_build')")
-      .all<{ key: string; value: string }>();
-    const map = new Map((rows.results ?? []).map((r) => [r.key, r.value]));
-    const data = map.get("data_version") ?? "";
-    const facts = map.get("facts_build") ?? "";
-    contentVersionCache = { value: data || facts ? `${data}:${facts}` : null, at: now };
+    contentVersionCache = { value: await getContentVersion(db), at: now };
   } catch {
-    // A meta lookup failure must never take the page down; fall back to an
+    // A version lookup failure must never take the page down; fall back to an
     // unversioned key, which is exactly the pre-versioning behaviour.
     contentVersionCache = { value: null, at: now };
   }
   return contentVersionCache.value;
 }
 
-// Routes whose body is assembled from name_facts / name_collections. caches.default
-// keys on the request URL and cache.match never consults an ETag, so a response
-// cached before a facts seed survives the seed for its full TTL: an empty
-// collections sitemap, an empty collection page, a hub advertising nothing. The
-// fix is to make the version participate in the key.
+// Routes whose body is assembled from D1 rather than from the request.
+// caches.default keys on the request URL and cache.match never consults an
+// ETag, so a response cached before a seed survives it for the full TTL: an
+// empty collections sitemap, an empty collection page, a hub advertising
+// nothing, a core sitemap missing a just-published post. The fix is to make the
+// version participate in the key.
 function isVersionedRoute(pathname: string): boolean {
   return (
     /^\/sitemap-[a-z]+\.xml$/.test(pathname) ||

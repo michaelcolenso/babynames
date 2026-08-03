@@ -334,3 +334,43 @@ test("a still-active name reports current volume rather than a last-seen year", 
   assert.match(s, /Still recorded/);
   assert.match(s, /4,200 in 2025/);
 });
+
+// The spelling-relatives rail links to a bare /name/<Name>/, which resolves to
+// whichever sex is dominant for that name. A minority-sex row therefore
+// describes a page the reader will never see: Daniel/M listed Danielle from
+// Danielle/M's 1,895-birth row while the link opened Danielle/F's 371,803-birth
+// history. The query has to do the filtering — the renderer has no way to tell
+// which row it was handed.
+test("spelling relatives are restricted to the rows their links resolve to", async () => {
+  const { listSpellingVariants } = await import("../packages/shared/src/d1-queries");
+
+  const ROWS = [
+    { name: "Danielle", sex: "M", is_canonical_sex: 0, total_count: 1_895, status: "declining", peak_year: 1985 },
+    { name: "Danial", sex: "M", is_canonical_sex: 1, total_count: 9_100, status: "stable", peak_year: 2007 },
+  ];
+
+  let seenSql = "";
+  const db = {
+    prepare(sql: string) {
+      seenSql = sql;
+      const stmt = {
+        bind: () => stmt,
+        async all() {
+          // Stands in for D1 applying the WHERE clause: a row survives only if
+          // the query actually asked for canonical-sex rows.
+          const canonicalOnly = /is_canonical_sex\s*=\s*1/.test(sql);
+          return { results: canonicalOnly ? ROWS.filter((r) => r.is_canonical_sex === 1) : ROWS };
+        },
+      };
+      return stmt;
+    },
+  };
+
+  const rows = await listSpellingVariants(db as never, "danial", "daniel", "M", 6);
+  assert.ok(/is_canonical_sex\s*=\s*1/.test(seenSql), "query must filter to canonical-sex rows");
+  assert.deepEqual(
+    rows.map((r) => r.name),
+    ["Danial"],
+    "a minority-sex spelling must not be offered as a relative",
+  );
+});

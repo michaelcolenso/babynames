@@ -12,14 +12,22 @@ interface DbOptions {
   names?: { name: string }[];
   summaries?: { slug: string; member_count: number; sample: string | null }[];
   blog?: { slug: string; publishedAt: string | null }[];
+  version?: { dataVersion?: string; factsBuild?: string; blogVersion?: string };
 }
 
-function fakeDb({ names = [], summaries = [], blog = [] }: DbOptions = {}) {
+function fakeDb({ names = [], summaries = [], blog = [], version = {} }: DbOptions = {}) {
   return {
     prepare(sql: string) {
       const stmt = {
         bind: () => stmt,
         async first<T>(): Promise<T | null> {
+          if (sql.includes("AS dataVersion")) {
+            return {
+              dataVersion: version.dataVersion ?? null,
+              factsBuild: version.factsBuild ?? null,
+              blogVersion: version.blogVersion ?? null,
+            } as T;
+          }
           if (sql.includes("FROM meta")) return { value: "1880" } as T;
           return null;
         },
@@ -44,6 +52,29 @@ const ORIGIN = "https://nobodynamed.com";
 function locs(xml: string): string[] {
   return [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map((m) => m[1]!);
 }
+
+// A blog publish through scripts/blog-publish.ts writes only to blog_posts, so
+// an ETag built from data_version alone stayed byte-identical while this
+// sitemap's body gained a URL. With the week-long TTL these responses carry,
+// that hid a new post from crawlers for up to seven days.
+test("the core sitemap's ETag moves when a post is published", async () => {
+  const etag = async (v: DbOptions["version"], blog: DbOptions["blog"]) =>
+    ((await coreGet(ctx(`${ORIGIN}/sitemap-core.xml`, fakeDb({ version: v, blog })))) as Response).headers.get(
+      "ETag",
+    );
+
+  const base = { dataVersion: "dv1", factsBuild: "fb1", blogVersion: "12@2026-01-01" };
+  const before = await etag(base, [{ slug: "a-post", publishedAt: "2026-01-02T00:00:00Z" }]);
+  const after = await etag({ ...base, blogVersion: "13@2026-02-01" }, [
+    { slug: "a-post", publishedAt: "2026-01-02T00:00:00Z" },
+    { slug: "b-post", publishedAt: "2026-02-01T00:00:00Z" },
+  ]);
+  assert.ok(before, "the core sitemap should carry an ETag");
+  assert.notEqual(before, after, "publishing a post left the validator unchanged");
+  // An edit that changes no post count still moves it, and an unrelated request
+  // does not.
+  assert.equal(before, await etag(base, [{ slug: "a-post", publishedAt: "2026-01-02T00:00:00Z" }]));
+});
 
 test("/sitemap.xml is an index listing exactly the three children", async () => {
   const res = (await indexGet(ctx(`${ORIGIN}/sitemap.xml`, fakeDb()))) as Response;
