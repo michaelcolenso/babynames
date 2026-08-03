@@ -237,6 +237,10 @@ export const META_KEYS = {
   /** Changes on every facts build, including rebuilds from the same corpus. */
   factsBuild: "facts_build",
   variantKeyVersion: "variant_key_version",
+  // The data_version that name_rankings_by_year was last fully built for.
+  // Readers only trust the table when this matches data_version — see
+  // rankings.ts.
+  rankingsVersion: "rankings_version",
 } as const;
 
 // Rare-name story metrics — one row per (name, sex), mirroring `name_facts`.

@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-// Builds the 1980s decade hub payload (SPEC §1).
+// Builds the 1920s decade hub payload (SPEC §1).
 //
 // SOURCE DATA DECISION (documented per SPEC §1):
 // - The shipped artifact is built from the live `name-vitals` D1 database,
@@ -24,8 +24,8 @@
 // environment and queries the D1 HTTP API directly (read-only SELECTs).
 //
 // Output:
-//   data/dist/decade-hub-1980.sql  (INSERT OR REPLACE into decade_hub)
-//   data/dist/decade-hub-1980.json (same payload, pretty, for inspection/tests)
+//   data/dist/decade-hub-1920.sql  (INSERT OR REPLACE into decade_hub)
+//   data/dist/decade-hub-1920.json (same payload, pretty, for inspection/tests)
 //   stdout summary for the PR note
 
 import fs from "node:fs/promises";
@@ -35,19 +35,19 @@ import { fileURLToPath } from "node:url";
 import { unzipSync } from "fflate";
 import { ProxyAgent } from "undici";
 
-import type { DecadeHubSource, SourceNameRecord } from "../packages/shared/src/decade-hub-compute";
+import type { DecadeHubSource, SourceNameRecord } from "../packages/shared/src/decade-hub-compute-1920";
 import {
   DECADE_HUB_ALPHA,
   assertSanityAnchors,
   buildDecadeProfile,
   stableStringify,
-} from "../packages/shared/src/decade-hub-compute";
+} from "../packages/shared/src/decade-hub-compute-1920";
 import type { DecadeProfile } from "../packages/shared/src/decade-hub-types";
 
 const REPO = path.resolve(import.meta.dirname ?? path.dirname(fileURLToPath(import.meta.url)), "..");
 const SHARD_DIR = path.join(REPO, "viz/name-vitals/data");
 const RAW_ZIP_DIR = path.join(REPO, "data/raw/ssa-national");
-const FAMILIES_CSV = path.join(REPO, "data/manual/spelling-families.csv");
+const FAMILIES_CSV = path.join(REPO, "data/manual/spelling-families-1920.csv");
 const OUT_DIR = path.join(REPO, "data/dist");
 const SSA_URL = "https://www.ssa.gov/oact/babynames/names.zip";
 
@@ -449,9 +449,7 @@ async function main() {
 
   const anchors = assertSanityAnchors(source);
   console.error(
-    `sanity anchors ok: 1984 total ${anchors.totalBirths1984.toLocaleString("en-US")}, ` +
-      `Michael M 1984 ${anchors.michaelM1984.toLocaleString("en-US")}, ` +
-      `Jennifer F 1980s ${anchors.jenniferF1980s.toLocaleString("en-US")}`,
+    `sanity anchors ok: 1924 total ${anchors.totalBirths1924.toLocaleString("en-US")}`,
   );
 
   const familiesCsv = await fs.readFile(FAMILIES_CSV, "utf8");
@@ -461,8 +459,8 @@ async function main() {
   const profile = buildDecadeProfile({ source, alpha: DECADE_HUB_ALPHA, familiesCsv, generatedAt, sourceVersion });
 
   await fs.mkdir(OUT_DIR, { recursive: true });
-  const jsonPath = path.join(OUT_DIR, "decade-hub-1980.json");
-  const sqlPath = path.join(OUT_DIR, "decade-hub-1980.sql");
+  const jsonPath = path.join(OUT_DIR, "decade-hub-1920.json");
+  const sqlPath = path.join(OUT_DIR, "decade-hub-1920.sql");
   await fs.writeFile(jsonPath, stableStringify(profile, true) + "\n");
   await fs.writeFile(sqlPath, profileToSql(profile));
 
@@ -472,7 +470,7 @@ async function main() {
     `  ${String(r.ownershipRank).padStart(2)}. ${r.name.padEnd(14)} score ${r.ownershipScore.toFixed(2).padStart(6)}  ` +
     `births ${fmt(r.birthsInDecade).padStart(8)}  popularity rank ${r.popularityRank}`;
 
-  console.log(`# Decade hub build summary — 1980s`);
+  console.log(`# Decade hub build summary — 1920s`);
   console.log(`source: ${sourceLabel}`);
   console.log(`generatedAt: ${generatedAt}   alpha: ${profile.alpha}   methodology: ${profile.methodologyVersion}`);
   console.log(`priors: F ${profile.priorDecadeShareFemale}  M ${profile.priorDecadeShareMale}  pooled ${profile.priorDecadeShare}`);
@@ -491,7 +489,7 @@ async function main() {
   console.log(`Popular but Timeless (top 5): ${profile.ownershipRankings.popularButTimeless.slice(0, 5).map((r) => `${r.name} (${r.sex})`).join(", ")}`);
   console.log(`Unexpected (top 5): ${profile.ownershipRankings.unexpected.slice(0, 5).map((r) => `${r.name} (${r.sex}, Δ${r.popularityRank - r.ownershipRank})`).join(", ")}`);
   const cr = profile.classroomDefaults;
-  console.log(`\nClassroom 1984: ${cr.femaleSeats}F/${cr.maleSeats}M seats, ${cr.uniqueNames} unique names, ${cr.repeatedNames} repeats, most repeated ${cr.mostRepeated.name} ×${cr.mostRepeated.seats}`);
+  console.log(`\nClassroom 1924: ${cr.femaleSeats}F/${cr.maleSeats}M seats, ${cr.uniqueNames} unique names, ${cr.repeatedNames} repeats, most repeated ${cr.mostRepeated.name} ×${cr.mostRepeated.seats}`);
   console.log(`spelling families shipped: ${profile.spellingFamilies.map((f) => `${f.id} (${fmt(f.totalBirthsInDecade)}, combined rank ${f.combinedDecadeRank})`).join(", ")}`);
   console.log(`\nwrote ${path.relative(process.cwd(), jsonPath)} and ${path.relative(process.cwd(), sqlPath)}`);
 }

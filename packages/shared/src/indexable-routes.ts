@@ -1,0 +1,98 @@
+export type IndexableRouteFamily =
+  | "static"
+  | "name"
+  | "year"
+  | "decade"
+  | "decade-child"
+  | "initial"
+  | "ending"
+  | "status"
+  | "visualization"
+  | "blog";
+
+export interface IndexableRoute {
+  path: string;
+  family: IndexableRouteFamily;
+  lastmod?: string;
+  priority?: number;
+  /** Why this route is intentionally exempt from the three-inbound-link rule. */
+  linkGraphExemption?: string;
+}
+
+export interface IndexableNameInput { name: string }
+export interface IndexableBlogInput { slug: string; publishedAt?: string | null }
+
+export interface IndexableRouteOptions {
+  minYear: number;
+  maxYear: number;
+  names?: IndexableNameInput[];
+  blogPosts?: IndexableBlogInput[];
+  maxRoutes?: number;
+}
+
+const LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
+const DECADE_CHILDREN = ["methodology", "classroom", "spelling-families"];
+const FEATURED_DECADES = [1920, 1980];
+
+const STATIC_ROUTES: IndexableRoute[] = [
+  { path: "/", family: "static", priority: 1 },
+  ...["extinct", "endangered", "comeback", "rising"].map((slug): IndexableRoute => ({ path: `/${slug}`, family: "status", priority: 0.7 })),
+  { path: "/year", family: "static", priority: 0.7 },
+  { path: "/about", family: "static", priority: 0.6 },
+  { path: "/press", family: "static", priority: 0.6 },
+  { path: "/blog/", family: "blog", priority: 0.7 },
+  { path: "/viz/", family: "visualization", priority: 0.6 },
+  ...[
+    "explore", "nobody-named-2025", "debut-of-the-year", "concentration", "constellations", "crossings", "empire", "fossil",
+    "gallery", "graveyard", "heartbeats", "heatwave", "kehlani-effect", "living-treemap", "naming-diversity-index", "peak-speed",
+    "suffix-waves", "surge", "survival", "tenure", "terminal-letters", "velocity", "wavefront",
+  ].map((slug): IndexableRoute => ({ path: `/viz/${slug}`, family: "visualization", priority: 0.5 })),
+  ...["millennial-names", "gen-z-names", "classic-names", "future-grandparent-names"].map((slug): IndexableRoute => ({ path: `/${slug}`, family: "static", priority: 0.5 })),
+];
+
+/** Normalize a route path to the site's established canonical trailing-slash policy. */
+export function canonicalRoutePath(path: string): string {
+  const url = new URL(path, "https://nobodynamed.com");
+  let pathname = url.pathname.replace(/\/{2,}/g, "/");
+  if (pathname !== "/" && !pathname.endsWith("/") && !pathname.includes(".") && shouldHaveTrailingSlash(pathname)) pathname += "/";
+  return pathname;
+}
+
+function shouldHaveTrailingSlash(path: string): boolean {
+  return path.startsWith("/name/") || path.startsWith("/year/") || path.startsWith("/names/") || path.startsWith("/blog/") || path === "/blog" || path === "/viz";
+}
+
+/** The canonical URL universe consumed by sitemap, IndexNow, and link auditing. */
+export function buildIndexableRoutes(options: IndexableRouteOptions): IndexableRoute[] {
+  const { minYear, maxYear } = options;
+  const dataDate = `${maxYear}-05-15`;
+  const routes: IndexableRoute[] = [...STATIC_ROUTES];
+
+  for (let year = minYear; year <= maxYear; year++) routes.push({ path: `/year/${year}/`, family: "year", lastmod: `${year}-05-15`, priority: 0.6 });
+  for (let decade = Math.floor(minYear / 10) * 10; decade <= Math.floor(maxYear / 10) * 10; decade += 10) {
+    routes.push({ path: `/names/${decade}s/`, family: "decade", lastmod: `${Math.min(decade + 9, maxYear)}-05-15`, priority: 0.5 });
+  }
+  for (const decade of FEATURED_DECADES) for (const child of DECADE_CHILDREN) {
+    routes.push({ path: `/names/${decade}s/${child}/`, family: "decade-child", lastmod: dataDate, priority: 0.5 });
+  }
+  for (const letter of LETTERS) {
+    routes.push({ path: `/names/${letter}/`, family: "initial", lastmod: dataDate, priority: 0.4 });
+    routes.push({ path: `/names/ending/${letter}/`, family: "ending", lastmod: dataDate, priority: 0.4 });
+  }
+  for (const post of options.blogPosts ?? []) routes.push({ path: `/blog/${encodeURIComponent(post.slug)}/`, family: "blog", lastmod: post.publishedAt?.slice(0, 10), priority: 0.7 });
+
+  const maxRoutes = options.maxRoutes ?? 50_000;
+  const nameCapacity = Math.max(0, maxRoutes - routes.length);
+  for (const name of (options.names ?? []).slice(0, nameCapacity)) routes.push({ path: `/name/${encodeURIComponent(name.name)}/`, family: "name", lastmod: dataDate, priority: 0.8 });
+
+  const unique = new Map<string, IndexableRoute>();
+  for (const route of routes) unique.set(canonicalRoutePath(route.path), { ...route, path: canonicalRoutePath(route.path) });
+  return [...unique.values()].slice(0, maxRoutes);
+}
+
+export function absoluteIndexableUrl(origin: string, path: string): string {
+  const base = new URL(origin);
+  if (base.hostname !== "localhost" && base.hostname !== "127.0.0.1") base.protocol = "https:";
+  base.pathname = "/";
+  return new URL(canonicalRoutePath(path).replace(/^\//, ""), base).toString();
+}
