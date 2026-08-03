@@ -8,8 +8,11 @@
 import {
   absoluteUrl,
   getCollection,
-  getContentVersion,
+  getContentVersions,
+  contentVersionString,
   getMeta,
+  isoDate,
+  newestDate,
   listCollectionSummaries,
   META_KEYS,
   MIN_PUBLISHABLE_MEMBERS,
@@ -22,7 +25,7 @@ import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
-  const [summaries, contentVersion, yMStr] = await Promise.all([
+  const [summaries, versions, yMStr] = await Promise.all([
     // Deliberately not caught. This query IS the body of the sitemap, so
     // swallowing a D1 failure would publish an empty urlset — and the
     // middleware caches any successful s-maxage response, so that empty set
@@ -31,11 +34,16 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     // An initialized but unseeded table returns [] without throwing, so the
     // not-yet-seeded case is unaffected.
     listCollectionSummaries(ctx.env.DB),
-    getContentVersion(ctx.env.DB, "facts").catch(() => null),
+    getContentVersions(ctx.env.DB).catch(() => null),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
   ]);
 
-  const lastmod = `${Number(yMStr ?? 2024)}-05-15`;
+  // A facts-only rebuild changes membership, ordering and the metric copy on
+  // every collection page while the SSA release date stands still. The index
+  // signalling that this child moved is not enough — a crawler reading this
+  // file decides per URL, and every entry would look untouched.
+  const ssaDate = `${Number(yMStr ?? 2024)}-05-15`;
+  const lastmod = newestDate(ssaDate, isoDate(versions?.facts)) ?? ssaDate;
   const urls: SitemapUrl[] = summaries
     .filter((s) => s.member_count >= MIN_PUBLISHABLE_MEMBERS && getCollection(s.slug))
     .sort((a, b) => b.member_count - a.member_count)
@@ -47,7 +55,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
 
   return xmlResponse(
     renderUrlset(urls),
-    contentVersion ? `sitemap-collections-${contentVersion}` : null,
+    versions ? `sitemap-collections-${contentVersionString(versions, "facts")}` : null,
   );
 };
 

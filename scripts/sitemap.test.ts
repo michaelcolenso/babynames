@@ -222,3 +222,29 @@ test("each child sitemap is stamped with the date of what it is built from", asy
   assert.equal(after["sitemap-core.xml"], stamps["sitemap-core.xml"]);
   assert.equal(after["sitemap-names.xml"], stamps["sitemap-names.xml"]);
 });
+
+// The index telling a crawler that /sitemap-collections.xml moved is not
+// enough: the crawler then reads this file and decides per URL. With every
+// entry stamped at the SSA release date, a facts-only rebuild — which changes
+// membership, ordering and the metric copy on every collection page — left all
+// of them looking untouched.
+test("collection URLs carry the facts build date, not just the SSA date", async () => {
+  const stamps = async (version: DbOptions["version"]) => {
+    const xml = await ((await collectionsGet(
+      ctx(`${ORIGIN}/sitemap-collections.xml`, fakeDb({ summaries: [{ slug: "one-year-wonders", member_count: 40, sample: null }, { slug: "on-the-verge", member_count: 20, sample: null }], version })),
+    )) as Response).text();
+    return [...xml.matchAll(/<lastmod>(.*?)<\/lastmod>/g)].map((m) => m[1]!);
+  };
+
+  const before = await stamps({ dataVersion: "dv1", factsBuild: "2026-06-01T00:00:00Z" });
+  assert.ok(before.length > 0, "collection entries should carry a lastmod");
+  assert.deepEqual([...new Set(before)], ["2026-06-01"]);
+
+  const after = await stamps({ dataVersion: "dv1", factsBuild: "2026-08-02T00:00:00Z" });
+  assert.deepEqual([...new Set(after)], ["2026-08-02"], "a facts rebuild must move every entry");
+
+  // maxYear is 1880 in the fake, so this also proves the SSA date is a floor
+  // rather than the value: an unparseable facts build falls back to it.
+  const noFacts = await stamps({ dataVersion: "dv1" });
+  assert.deepEqual([...new Set(noFacts)], ["1880-05-15"]);
+});

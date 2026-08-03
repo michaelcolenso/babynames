@@ -10,6 +10,23 @@ export interface SitemapUrl {
 /** Per-file cap from the sitemaps.org spec. */
 export const MAX_SITEMAP_URLS = 50_000;
 
+/**
+ * A `lastmod` date from a timestamp, or null when the value is not parseable.
+ * `meta.facts_build` is an ISO timestamp; `data_version` is a UUID and yields
+ * null, which is the point — only real timestamps become dates.
+ */
+export function isoDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const t = Date.parse(value);
+  return Number.isNaN(t) ? null : new Date(t).toISOString().slice(0, 10);
+}
+
+/** The newest of several YYYY-MM-DD dates, ignoring nulls. */
+export function newestDate(...dates: (string | null | undefined)[]): string | undefined {
+  const known = dates.filter((d): d is string => Boolean(d));
+  return known.length ? known.reduce((a, b) => (a > b ? a : b)) : undefined;
+}
+
 export function absoluteUrl(origin: string, path: string): string {
   return new URL(path, origin).toString();
 }

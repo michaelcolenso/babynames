@@ -13,24 +13,14 @@ import {
   contentVersionString,
   getContentVersions,
   getMeta,
+  isoDate,
   META_KEYS,
+  newestDate,
   renderSitemapIndex,
   withoutBody,
   xmlResponse,
 } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
-
-/** YYYY-MM-DD, or null when the input is not a parseable timestamp. */
-function isoDate(value: string | null): string | null {
-  if (!value) return null;
-  const t = Date.parse(value);
-  return Number.isNaN(t) ? null : new Date(t).toISOString().slice(0, 10);
-}
-
-function newest(...dates: (string | null)[]): string | undefined {
-  const known = dates.filter((d): d is string => Boolean(d));
-  return known.length ? known.reduce((a, b) => (a > b ? a : b)) : undefined;
-}
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
@@ -51,12 +41,12 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const children: { path: string; lastmod?: string }[] = [
     // Static hubs and year/letter indexes move with the SSA release; blog posts
     // move whenever one is published or edited.
-    { path: "/sitemap-core.xml", lastmod: newest(ssaDate, blogDate) },
+    { path: "/sitemap-core.xml", lastmod: newestDate(ssaDate, blogDate) },
     // The name cohort changes only on ingest.
     { path: "/sitemap-names.xml", lastmod: ssaDate },
     // Membership is whatever the last facts build produced, which can be newer
     // than the corpus it was built from.
-    { path: "/sitemap-collections.xml", lastmod: newest(ssaDate, factsDate) },
+    { path: "/sitemap-collections.xml", lastmod: newestDate(ssaDate, factsDate) },
   ];
 
   const xml = renderSitemapIndex(
