@@ -23,7 +23,14 @@ import type { PagesFunction } from "@cloudflare/workers-types";
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
   const [summaries, contentVersion, yMStr] = await Promise.all([
-    listCollectionSummaries(ctx.env.DB).catch(() => []),
+    // Deliberately not caught. This query IS the body of the sitemap, so
+    // swallowing a D1 failure would publish an empty urlset — and the
+    // middleware caches any successful s-maxage response, so that empty set
+    // would then outlive the outage by up to a week under an unchanged content
+    // version. Letting it throw reaches the middleware's uncached 503 instead.
+    // An initialized but unseeded table returns [] without throwing, so the
+    // not-yet-seeded case is unaffected.
+    listCollectionSummaries(ctx.env.DB),
     getContentVersion(ctx.env.DB).catch(() => null),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
   ]);

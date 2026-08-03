@@ -32,7 +32,11 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   const [rows, total, summaries, ymStr, yMStr, contentVersion] = await Promise.all([
     listCollectionMembers(ctx.env.DB, slug, COLLECTION_PAGE_SIZE, offset),
     countCollectionMembers(ctx.env.DB, slug),
-    listCollectionSummaries(ctx.env.DB).catch(() => []),
+    // Caught, unlike the hub and the sitemap: here the summaries only decide
+    // which related links are shown, so failing the whole page over a
+    // secondary query would be the worse trade. The response is marked
+    // uncacheable below instead, so a degraded page never outlives the outage.
+    listCollectionSummaries(ctx.env.DB).catch(() => null),
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
     getContentVersion(ctx.env.DB).catch(() => null),
@@ -47,7 +51,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   // registry alone. The hub and the sitemap already hide collections below the
   // publish threshold, and a cross-link to one of those is an internal link to
   // a page we are deliberately not indexing.
-  const populated = new Map(summaries.map((s) => [s.slug, s.member_count]));
+  const populated = new Map((summaries ?? []).map((s) => [s.slug, s.member_count]));
   const related = def.related
     .map((s) => getCollection(s))
     .filter((d): d is CollectionDef => Boolean(d))
@@ -66,7 +70,12 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
+      // A page rendered without its related-links data is degraded, not wrong.
+      // Serving it beats a 503, but caching it would freeze the degradation in
+      // place for a day under a content version that never changed.
+      "Cache-Control": summaries
+        ? "public, s-maxage=86400, stale-while-revalidate=604800"
+        : "no-store, max-age=0",
       // Keyed on the same data_version:facts_build pair the middleware puts in
       // its cache key, so the validator a client revalidates against and the
       // edge entry it revalidates through always move together. facts_version

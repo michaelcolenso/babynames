@@ -17,7 +17,10 @@ import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const [summaries, ymStr, yMStr, contentVersion] = await Promise.all([
-    listCollectionSummaries(ctx.env.DB).catch(() => []),
+    // Not caught, for the same reason as the collections sitemap: these rows
+    // are the entire hub. A caught failure would render "nothing published
+    // yet" and the middleware would cache that for a day.
+    listCollectionSummaries(ctx.env.DB),
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
     getContentVersion(ctx.env.DB).catch(() => null),

@@ -38,6 +38,7 @@ interface DbOptions {
   failMembers?: boolean;
   summaries?: { slug: string; member_count: number; sample: string | null }[];
   meta?: Record<string, string>;
+  failSummaries?: boolean;
 }
 
 const POPULATED = getCollection(SLUG)!.related.map((slug) => ({
@@ -46,7 +47,7 @@ const POPULATED = getCollection(SLUG)!.related.map((slug) => ({
   sample: null as string | null,
 }));
 
-function fakeDb({ members = MEMBERS, total = members.length, failMembers = false, summaries = POPULATED, meta = {} }: DbOptions = {}) {
+function fakeDb({ members = MEMBERS, total = members.length, failMembers = false, summaries = POPULATED, meta = {}, failSummaries = false }: DbOptions = {}) {
   return {
     prepare(sql: string) {
       const stmt = {
@@ -73,6 +74,7 @@ function fakeDb({ members = MEMBERS, total = members.length, failMembers = false
             return { results: members as unknown as T[] };
           }
           if (sql.includes("GROUP BY slug")) {
+            if (failSummaries) throw new Error("D1 unavailable");
             return { results: summaries as unknown as T[] };
           }
           return { results: [] };
@@ -262,4 +264,25 @@ test("the hub degrades to an explanation when facts have not been seeded", async
   const res = (await hubGet(ctx("https://nobodynamed.com/collections/", fakeDb({ summaries: [] })))) as Response;
   assert.equal(res.status, 200);
   assert.match(await res.text(), /build-name-facts/);
+});
+
+// A caught D1 failure that still returns 200 with an s-maxage header is worse
+// than an error: the middleware caches any successful cacheable response, so
+// the degraded body outlives the outage under a content version that never
+// moved. These three routes make different trades, and each has to be right.
+
+test("the hub fails loudly rather than caching an empty index", async () => {
+  await assert.rejects(
+    () => hubGet(ctx("https://nobodynamed.com/collections/", fakeDb({ failSummaries: true }))),
+    /D1 unavailable/,
+    "the hub must not render 'nothing published yet' from a query failure",
+  );
+});
+
+test("a collection page survives losing only its related links, uncached", async () => {
+  const res = await get(`https://nobodynamed.com/collections/${SLUG}/`, fakeDb({ failSummaries: true }));
+  assert.equal(res.status, 200, "a secondary query must not take the page down");
+  assert.match(res.headers.get("Cache-Control") ?? "", /no-store/);
+  // The members themselves are unaffected, so the table still renders.
+  assert.match(await res.text(), /Bethzy/);
 });

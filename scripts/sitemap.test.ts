@@ -13,9 +13,10 @@ interface DbOptions {
   summaries?: { slug: string; member_count: number; sample: string | null }[];
   blog?: { slug: string; publishedAt: string | null }[];
   version?: { dataVersion?: string; factsBuild?: string; blogVersion?: string };
+  failSummaries?: boolean;
 }
 
-function fakeDb({ names = [], summaries = [], blog = [], version = {} }: DbOptions = {}) {
+function fakeDb({ names = [], summaries = [], blog = [], version = {}, failSummaries = false }: DbOptions = {}) {
   return {
     prepare(sql: string) {
       const stmt = {
@@ -32,7 +33,10 @@ function fakeDb({ names = [], summaries = [], blog = [], version = {} }: DbOptio
           return null;
         },
         async all<T>(): Promise<{ results: T[] }> {
-          if (sql.includes("GROUP BY slug")) return { results: summaries as unknown as T[] };
+          if (sql.includes("GROUP BY slug")) {
+            if (failSummaries) throw new Error("D1 unavailable");
+            return { results: summaries as unknown as T[] };
+          }
           if (sql.includes("blog_posts")) return { results: blog as unknown as T[] };
           if (sql.includes("quality_score")) return { results: names as unknown as T[] };
           return { results: [] };
@@ -173,4 +177,16 @@ test("every emitted XML document is well-formed enough to parse", async () => {
     const inner = xml.replace(/&(amp|lt|gt|quot|apos);/g, "");
     assert.ok(!inner.includes("&"), "unescaped ampersand in sitemap output");
   }
+});
+
+// An empty sitemap is a valid document, which is what makes this dangerous: a
+// caught D1 failure would publish "this site has no collection pages" with a
+// week-long TTL, and the middleware would keep serving it long after D1
+// recovered. An unseeded table returns [] without throwing, so the legitimate
+// empty case still works.
+test("the collections sitemap errors rather than publishing an empty urlset", async () => {
+  await assert.rejects(
+    () => collectionsGet(ctx(`${ORIGIN}/sitemap-collections.xml`, fakeDb({ failSummaries: true }))),
+    /D1 unavailable/,
+  );
 });
