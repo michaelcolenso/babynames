@@ -40,6 +40,7 @@ const STATIC_ROUTES: IndexableRoute[] = [
   { path: "/year", family: "static", priority: 0.7 },
   { path: "/about", family: "static", priority: 0.6 },
   { path: "/press", family: "static", priority: 0.6 },
+  { path: "/developers", family: "static", priority: 0.6 },
   { path: "/blog/", family: "blog", priority: 0.7 },
   { path: "/viz/", family: "visualization", priority: 0.6 },
   ...[

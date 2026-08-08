@@ -1,4 +1,4 @@
-import type { PagesFunction } from "@cloudflare/workers-types";
+import type { D1Database, PagesFunction } from "@cloudflare/workers-types";
 
 const PROTOCOL_VERSION = "2025-03-26";
 
@@ -226,6 +226,41 @@ type JsonRpcMessage = {
   params?: unknown;
 };
 
+// Best-effort usage logging — fired via ctx.waitUntil so a slow or failing
+// insert never delays or breaks the actual MCP response.
+function logMcpEvent(
+  db: D1Database,
+  waitUntil: (promise: Promise<unknown>) => void,
+  fields: {
+    eventType: "initialize" | "tools_call";
+    toolName?: string;
+    clientName?: string;
+    clientVersion?: string;
+    isError?: boolean;
+    sessionId?: string | null;
+    userAgent?: string | null;
+  },
+): void {
+  waitUntil(
+    db
+      .prepare(
+        `INSERT INTO mcp_events(event_type, tool_name, client_name, client_version, is_error, session_id, user_agent)
+         VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+      )
+      .bind(
+        fields.eventType,
+        fields.toolName ?? null,
+        fields.clientName ?? null,
+        fields.clientVersion ?? null,
+        fields.isError ? 1 : 0,
+        fields.sessionId ?? null,
+        fields.userAgent ? fields.userAgent.slice(0, 300) : null,
+      )
+      .run()
+      .catch(() => {}),
+  );
+}
+
 function ok(id: unknown, result: unknown) {
   return Response.json(
     { jsonrpc: "2.0", id, result },
@@ -254,12 +289,23 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   }
 
   const { id, method, params } = msg;
+  const sessionId = ctx.request.headers.get("Mcp-Session-Id");
+  const userAgent = ctx.request.headers.get("User-Agent");
 
   if (method === "notifications/initialized") {
     return new Response(null, { status: 202, headers: CORS_HEADERS });
   }
 
   if (method === "initialize") {
+    const clientInfo = (params as { clientInfo?: { name?: string; version?: string } } | undefined)
+      ?.clientInfo;
+    logMcpEvent(ctx.env.DB, ctx.waitUntil.bind(ctx), {
+      eventType: "initialize",
+      clientName: clientInfo?.name,
+      clientVersion: clientInfo?.version,
+      sessionId,
+      userAgent,
+    });
     return ok(id, {
       protocolVersion: PROTOCOL_VERSION,
       serverInfo: { name: "nobodynamed", version: "1.0.0" },
@@ -288,8 +334,21 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     };
     try {
       const data = await callTool(name, args, origin);
+      logMcpEvent(ctx.env.DB, ctx.waitUntil.bind(ctx), {
+        eventType: "tools_call",
+        toolName: name,
+        sessionId,
+        userAgent,
+      });
       return ok(id, { content: [{ type: "text", text: JSON.stringify(data) }] });
     } catch (e) {
+      logMcpEvent(ctx.env.DB, ctx.waitUntil.bind(ctx), {
+        eventType: "tools_call",
+        toolName: name,
+        isError: true,
+        sessionId,
+        userAgent,
+      });
       return ok(id, {
         content: [{ type: "text", text: `Error: ${e instanceof Error ? e.message : String(e)}` }],
         isError: true,
