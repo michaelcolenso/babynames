@@ -44,7 +44,7 @@
     {
       name: "get_name_data",
       description:
-        "Returns full yearly birth count timeseries (1880-present) for a given name for both sexes, including trend classification (rising/stable/declining/endangered/extinct), peak year, and peak count.",
+        "Returns full yearly birth count timeseries (1880-present) for a given name, for whichever sex has the most births plus the other sex's series if present.",
       inputSchema: {
         type: "object",
         properties: {
@@ -83,7 +83,7 @@
       inputSchema: {
         type: "object",
         properties: {
-          year: { type: "integer", minimum: 1880, maximum: 2025, description: "Birth year" },
+          year: { type: "integer", minimum: 1880, description: "Birth year" },
         },
         required: ["year"],
       },
@@ -110,16 +110,14 @@
         type: "object",
         properties: {
           name: { type: "string", description: "The baby name to open (case-insensitive)" },
-          sex: { type: "string", enum: ["M", "F"], description: "Optional sex filter" },
         },
         required: ["name"],
       },
       annotations: { readOnlyHint: false },
-      async execute({ name, sex }) {
+      async execute({ name }) {
         const target = String(name ?? "").trim();
         if (!target) throw new Error("name is required");
-        const tail = sex ? `?sex=${encodeURIComponent(sex)}` : "";
-        location.href = `/name/${encodeURIComponent(target)}/${tail}`;
+        location.href = `/name/${encodeURIComponent(target)}/`;
         return textResult({ navigated: true, name: target });
       },
     },
@@ -129,5 +127,10 @@
     navigator.modelContext.registerTool(tool, { signal });
   }
 
-  window.addEventListener("pagehide", () => controller.abort(), { once: true });
+  // Only tear down on a real unload — a bfcache-eligible pagehide (event.persisted)
+  // freezes this script in place rather than discarding it, so aborting there would
+  // leave the restored page with no tools registered and no code left to re-run.
+  window.addEventListener("pagehide", (event) => {
+    if (!event.persisted) controller.abort();
+  });
 })();
