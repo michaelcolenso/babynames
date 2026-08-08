@@ -78,6 +78,48 @@ Top names for a given birth year (1880–2025).
 
 Top names by decade. `decade` format: `1990s`, `2000s`, etc.
 
+---
+
+### Compare names
+`GET /api/compare?names=A,B,C`
+
+Side-by-side yearly series for 2-3 names.
+
+---
+
+### Trajectory twins
+`GET /api/twin/{name}?sex=M|F`
+
+Names whose popularity arc over time is most similar to `{name}` (cosine similarity on yearly counts). Returns top 5 matches.
+
+---
+
+### Year-over-year movers
+`GET /api/movers/{year}`
+
+Rank changes for the top 100 names of each sex vs. the prior year: gainers, losers, and new entrants.
+
+---
+
+### Name enrichment profile
+`GET /api/enrichment/{name}?sex=M|F`
+
+Precomputed demographic and cultural profile: estimated living population, median age, popularity wave shape, cultural catalysts (events/media tied to spikes), historical demographic profiles by era, and regional anomalies (states where the name over-indexes).
+
+---
+
+### Name diaspora
+`GET /api/diaspora/{name}?sex=M|F`
+
+Precomputed geographic spread: origin state, origin year, national peak year, state-by-state adoption spread, and states that never adopted the name.
+
+---
+
+### Debut names
+`GET /api/debuts/{year}`
+
+Every name appearing in SSA records for the first time in the given year.
+
 ## Name Classification
 
 Classifications are computed at ingest time from SSA data:

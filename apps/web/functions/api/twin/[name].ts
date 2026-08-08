@@ -5,7 +5,14 @@
 // Fetches all name sparks with peak_count >= 200 (~30-50k rows, ~2MB),
 // computes cosine similarity in-process, returns top 5 matches per sex.
 
-import { getNameSpark, getCachedNameSparks, decodeSpark, getMeta, META_KEYS } from "@nv/shared";
+import {
+  getNameSpark,
+  getNameSparkForSex,
+  getCachedNameSparks,
+  decodeSpark,
+  getMeta,
+  META_KEYS,
+} from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 import type { Sex } from "@nv/shared";
 
@@ -44,9 +51,21 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   }
 
   const targetSex = sexParam ?? targetRow.sex;
-  const targetSpark = targetRow.spark_blob
-    ? decodeSpark(targetRow.spark_blob)
-    : new Array(60).fill(0);
+  let targetBlob = targetRow.spark_blob;
+  if (sexParam && sexParam !== targetRow.sex) {
+    const exists = await ctx.env.DB
+      .prepare(`SELECT 1 FROM names WHERE name_lower = ?1 AND sex = ?2 LIMIT 1`)
+      .bind(nameLower, sexParam)
+      .first();
+    if (!exists) {
+      return new Response(
+        JSON.stringify({ error: `No ${sexParam} record found for "${targetRow.name}"` }),
+        { status: 404, headers: { "Content-Type": "application/json; charset=utf-8" } },
+      );
+    }
+    targetBlob = await getNameSparkForSex(ctx.env.DB, nameLower, sexParam);
+  }
+  const targetSpark = targetBlob ? decodeSpark(targetBlob) : new Array(60).fill(0);
 
   // Score all candidates (same sex, exclude the name itself)
   const scored = allSparks

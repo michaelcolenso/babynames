@@ -66,7 +66,115 @@ const TOOLS = [
       "Returns top-10 names per year, total birth counts per year, and the full year range covered by the dataset.",
     inputSchema: { type: "object", properties: {} },
   },
+  {
+    name: "compare_names",
+    description:
+      "Side-by-side comparison of 2-3 names: full yearly series for each so trends can be plotted or contrasted directly.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        names: {
+          type: "array",
+          items: { type: "string" },
+          minItems: 2,
+          maxItems: 3,
+          description: 'Names to compare, e.g. ["Michael", "James", "David"]',
+        },
+      },
+      required: ["names"],
+    },
+  },
+  {
+    name: "get_name_twin",
+    description:
+      "Finds the names whose popularity trajectory over time is most similar to the given name (cosine similarity on the yearly series), i.e. names that rose and fell together.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The baby name to find trajectory twins for" },
+        sex: { type: "string", enum: ["M", "F"], description: "Restrict to this sex (defaults to the name's most common sex)" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "get_decade_names",
+    description: "Returns the top baby names aggregated across an entire calendar decade.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        decade: { type: "string", description: 'Decade label, e.g. "1980s"' },
+      },
+      required: ["decade"],
+    },
+  },
+  {
+    name: "get_year_movers",
+    description:
+      "Year-over-year rank changes for the top 100 names of each sex vs. the prior year: biggest gainers, biggest losers, and new entrants.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        year: { type: "integer", minimum: 1881, description: "Birth year to compare against the prior year" },
+      },
+      required: ["year"],
+    },
+  },
+  {
+    name: "get_name_enrichment",
+    description:
+      "Returns a precomputed profile for a name: estimated living population and median age, its popularity wave shape, cultural catalysts (events/media tied to spikes), historical demographic profiles by era (top occupations, region, urban vs. rural), and regional anomalies (states where it over-indexes).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The baby name to look up" },
+        sex: { type: "string", enum: ["M", "F"], description: "Restrict to this sex (defaults to the name's most common sex)" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "get_name_diaspora",
+    description:
+      "Returns the geographic spread of a name over time: where it originated, when it peaked nationally, which states adopted it and when, and how many states never adopted it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The baby name to look up" },
+        sex: { type: "string", enum: ["M", "F"], description: "Restrict to this sex (defaults to the name's most common sex)" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "get_name_debuts",
+    description:
+      "Returns every name that appeared in SSA records for the first time in the given year — genuine linguistic novelties, celebrity imports, invented spellings, or names newly crossing the 5-birth reporting threshold.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        year: { type: "integer", minimum: 1880, description: "Birth year to find debut names for" },
+      },
+      required: ["year"],
+    },
+  },
 ];
+
+// Fetches a REST endpoint and throws when it responds with a non-2xx status,
+// so tools/call surfaces the failure via isError instead of returning a 404
+// error body as if it were a successful result.
+async function fetchJson(url: string): Promise<unknown> {
+  const res = await fetch(url);
+  const body = await res.json();
+  if (!res.ok) {
+    const message =
+      body && typeof body === "object" && "error" in body
+        ? String((body as { error: unknown }).error)
+        : `Request failed with status ${res.status}`;
+    throw new Error(message);
+  }
+  return body;
+}
 
 async function callTool(
   name: string,
@@ -74,26 +182,38 @@ async function callTool(
   origin: string,
 ): Promise<unknown> {
   switch (name) {
-    case "search_names": {
-      const res = await fetch(`${origin}/api/search?q=${encodeURIComponent(String(args.q ?? ""))}`);
-      return res.json();
+    case "search_names":
+      return fetchJson(`${origin}/api/search?q=${encodeURIComponent(String(args.q ?? ""))}`);
+    case "get_name_data":
+      return fetchJson(`${origin}/api/name/${encodeURIComponent(String(args.name ?? ""))}`);
+    case "get_names_by_status":
+      return fetchJson(`${origin}/api/landing/${encodeURIComponent(String(args.kind ?? ""))}`);
+    case "get_year_names":
+      return fetchJson(`${origin}/api/year/${Number(args.year)}`);
+    case "get_site_metadata":
+      return fetchJson(`${origin}/api/meta`);
+    case "compare_names": {
+      const names = Array.isArray(args.names) ? args.names.map(String) : [];
+      return fetchJson(`${origin}/api/compare?names=${encodeURIComponent(names.join(","))}`);
     }
-    case "get_name_data": {
-      const res = await fetch(`${origin}/api/name/${encodeURIComponent(String(args.name ?? ""))}`);
-      return res.json();
+    case "get_name_twin": {
+      const sex = args.sex ? `?sex=${encodeURIComponent(String(args.sex))}` : "";
+      return fetchJson(`${origin}/api/twin/${encodeURIComponent(String(args.name ?? ""))}${sex}`);
     }
-    case "get_names_by_status": {
-      const res = await fetch(`${origin}/api/landing/${encodeURIComponent(String(args.kind ?? ""))}`);
-      return res.json();
+    case "get_decade_names":
+      return fetchJson(`${origin}/api/decade/${encodeURIComponent(String(args.decade ?? ""))}`);
+    case "get_year_movers":
+      return fetchJson(`${origin}/api/movers/${Number(args.year)}`);
+    case "get_name_enrichment": {
+      const sex = args.sex ? `?sex=${encodeURIComponent(String(args.sex))}` : "";
+      return fetchJson(`${origin}/api/enrichment/${encodeURIComponent(String(args.name ?? ""))}${sex}`);
     }
-    case "get_year_names": {
-      const res = await fetch(`${origin}/api/year/${Number(args.year)}`);
-      return res.json();
+    case "get_name_diaspora": {
+      const sex = args.sex ? `?sex=${encodeURIComponent(String(args.sex))}` : "";
+      return fetchJson(`${origin}/api/diaspora/${encodeURIComponent(String(args.name ?? ""))}${sex}`);
     }
-    case "get_site_metadata": {
-      const res = await fetch(`${origin}/api/meta`);
-      return res.json();
-    }
+    case "get_name_debuts":
+      return fetchJson(`${origin}/api/debuts/${Number(args.year)}`);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -148,7 +268,12 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
         "Query US baby name popularity data from SSA records spanning 1880–2025. " +
         "Use search_names to autocomplete, get_name_data for full history and classification, " +
         "get_names_by_status for curated lists (extinct/endangered/rising/comeback), " +
-        "get_year_names for birth year rosters, and get_site_metadata for dataset overview.",
+        "get_year_names for birth year rosters, get_decade_names for decade rosters, " +
+        "get_year_movers for year-over-year gainers/losers/new entrants, " +
+        "compare_names for side-by-side trajectories, get_name_twin for names with a similar " +
+        "popularity arc, get_name_enrichment for demographic/cultural profile data, " +
+        "get_name_diaspora for geographic spread, get_name_debuts for first-appearance names " +
+        "in a given year, and get_site_metadata for dataset overview.",
     });
   }
 
