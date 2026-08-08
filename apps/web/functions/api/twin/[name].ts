@@ -5,7 +5,14 @@
 // Fetches all name sparks with peak_count >= 200 (~30-50k rows, ~2MB),
 // computes cosine similarity in-process, returns top 5 matches per sex.
 
-import { getNameSpark, getCachedNameSparks, decodeSpark, getMeta, META_KEYS } from "@nv/shared";
+import {
+  getNameSpark,
+  getNameSparkForSex,
+  getCachedNameSparks,
+  decodeSpark,
+  getMeta,
+  META_KEYS,
+} from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 import type { Sex } from "@nv/shared";
 
@@ -44,9 +51,11 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   }
 
   const targetSex = sexParam ?? targetRow.sex;
-  const targetSpark = targetRow.spark_blob
-    ? decodeSpark(targetRow.spark_blob)
-    : new Array(60).fill(0);
+  const targetBlob =
+    sexParam && sexParam !== targetRow.sex
+      ? await getNameSparkForSex(ctx.env.DB, nameLower, sexParam)
+      : targetRow.spark_blob;
+  const targetSpark = targetBlob ? decodeSpark(targetBlob) : new Array(60).fill(0);
 
   // Score all candidates (same sex, exclude the name itself)
   const scored = allSparks
