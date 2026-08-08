@@ -6,7 +6,7 @@
       "type": "skill-md",
       "description": "Query US baby name popularity data (1880–2025) — search names, retrieve full timeseries, get trend classifications, and browse curated collections by status.",
       "url": "https://nobodynamed.com/.well-known/agent-skills/name-data-api.md",
-      "digest": "sha256:92053113515b5c54c64edadd66ae5dc2e16e40eaee75ceb682488d96bb090062"
+      "digest": "sha256:4bf42bd2f8aca754389a62321c87cbba4640600d342968fa5568adf5e492d52d"
     }
   ]
 }
