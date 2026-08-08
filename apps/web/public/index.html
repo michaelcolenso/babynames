@@ -18,6 +18,7 @@
   <meta name="theme-color" content="#f7f5f2">
   <link rel="stylesheet" href="/assets/style.css">
   <script src="/assets/analytics.js" defer></script>
+  <script src="/assets/webmcp.js" defer></script>
   <noscript>
     <style>
       .search select { position: static; width: auto; height: auto; padding: 0.75rem; margin-top: 0.5rem; clip: auto; white-space: normal; border: 1px solid rgba(23,21,17,0.22); }
@@ -308,98 +309,5 @@
         }
       })();
     </script>
-    <script>
-      if ("modelContext" in navigator) {
-        const ac = new AbortController();
-        const opts = { signal: ac.signal, annotations: { readOnlyHint: true } };
 
-        navigator.modelContext.registerTool({
-          name: "search_names",
-          title: "Search baby names",
-          description: "Autocomplete search for US baby names. Returns up to 10 name suggestions matching the given prefix.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              q: { type: "string", description: "Name prefix to search for (e.g. \"Jen\", \"The\")" }
-            },
-            required: ["q"]
-          },
-          execute: async ({ q }) => {
-            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
-            return res.json();
-          },
-          annotations: { readOnlyHint: true }
-        }, { signal: ac.signal });
-
-        navigator.modelContext.registerTool({
-          name: "get_name_data",
-          title: "Get name history",
-          description: "Returns full yearly birth count timeseries (1880–2025) for a given name, for both male and female, including trend classification (rising/stable/declining/endangered/extinct), peak year, and peak count.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              name: { type: "string", description: "The baby name to look up (case-insensitive)" }
-            },
-            required: ["name"]
-          },
-          execute: async ({ name }) => {
-            const res = await fetch(`/api/name/${encodeURIComponent(name)}`);
-            return res.json();
-          },
-          annotations: { readOnlyHint: true }
-        }, { signal: ac.signal });
-
-        navigator.modelContext.registerTool({
-          name: "get_names_by_status",
-          title: "Browse names by status",
-          description: "Returns a curated list of names filtered by trend status.",
-          inputSchema: {
-            type: "object",
-            properties: {
-              kind: {
-                type: "string",
-                enum: ["extinct", "endangered", "rising", "comeback"],
-                description: "extinct = zero recent births; endangered = near-zero; rising = gaining share; comeback = previously dormant, now recovering"
-              }
-            },
-            required: ["kind"]
-          },
-          execute: async ({ kind }) => {
-            const res = await fetch(`/api/landing/${encodeURIComponent(kind)}`);
-            return res.json();
-          },
-          annotations: { readOnlyHint: true }
-        }, { signal: ac.signal });
-
-        navigator.modelContext.registerTool({
-          name: "get_year_names",
-          title: "Top names for a birth year",
-          description: "Returns the top baby names for a given birth year (1880–2025).",
-          inputSchema: {
-            type: "object",
-            properties: {
-              year: { type: "integer", minimum: 1880, maximum: 2025, description: "Birth year" }
-            },
-            required: ["year"]
-          },
-          execute: async ({ year }) => {
-            const res = await fetch(`/api/year/${year}`);
-            return res.json();
-          },
-          annotations: { readOnlyHint: true }
-        }, { signal: ac.signal });
-
-        navigator.modelContext.registerTool({
-          name: "get_site_metadata",
-          title: "Site metadata",
-          description: "Returns top-10 names per year, total birth counts per year, and the full year range covered by the dataset.",
-          inputSchema: { type: "object", properties: {} },
-          execute: async () => {
-            const res = await fetch("/api/meta");
-            return res.json();
-          },
-          annotations: { readOnlyHint: true }
-        }, { signal: ac.signal });
-      }
-    </script>
 </body></html>
