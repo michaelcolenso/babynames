@@ -51,10 +51,20 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   }
 
   const targetSex = sexParam ?? targetRow.sex;
-  const targetBlob =
-    sexParam && sexParam !== targetRow.sex
-      ? await getNameSparkForSex(ctx.env.DB, nameLower, sexParam)
-      : targetRow.spark_blob;
+  let targetBlob = targetRow.spark_blob;
+  if (sexParam && sexParam !== targetRow.sex) {
+    const exists = await ctx.env.DB
+      .prepare(`SELECT 1 FROM names WHERE name_lower = ?1 AND sex = ?2 LIMIT 1`)
+      .bind(nameLower, sexParam)
+      .first();
+    if (!exists) {
+      return new Response(
+        JSON.stringify({ error: `No ${sexParam} record found for "${targetRow.name}"` }),
+        { status: 404, headers: { "Content-Type": "application/json; charset=utf-8" } },
+      );
+    }
+    targetBlob = await getNameSparkForSex(ctx.env.DB, nameLower, sexParam);
+  }
   const targetSpark = targetBlob ? decodeSpark(targetBlob) : new Array(60).fill(0);
 
   // Score all candidates (same sex, exclude the name itself)
