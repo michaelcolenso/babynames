@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.michaelcolenso/nobodynamed",
+  "title": "NobodyNamed",
+  "description": "US baby name popularity data from SSA records (1880-2025): search, trends, geography, culture.",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/michaelcolenso/babynames",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://nobodynamed.com/mcp"
+    }
+  ]
+}
