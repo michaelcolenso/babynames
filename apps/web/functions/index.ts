@@ -72,8 +72,19 @@ Top names for a given birth year (1880–2025).
 
 ## Browser Tool Access (WebMCP)
 
-When visiting https://nobodynamed.com/ in a WebMCP-capable browser, five tools are exposed via \`navigator.modelContext\`:
-\`search_names\`, \`get_name_data\`, \`get_names_by_status\`, \`get_year_names\`, \`get_site_metadata\`.
+When visiting https://nobodynamed.com/ in a WebMCP-capable browser, six tools are exposed via \`navigator.modelContext\`:
+\`search_names\`, \`get_name_data\`, \`get_names_by_status\`, \`get_year_names\`, \`get_site_metadata\`, \`open_name_page\`.
+
+## Agent Payments (x402)
+
+\`\`\`
+GET /api/premium/report/{name}
+\`\`\`
+Bundles trend classification, peak stats, and trajectory-similar names for a name in one call — the
+free \`/api/name/{name}\` endpoint returns the raw timeseries only. Gated by the
+[x402 protocol](https://x402.org) (scheme \`exact\`, network \`base-sepolia\`, $0.01 USDC): request
+without an \`X-PAYMENT\` header to receive HTTP 402 with payment requirements, pay, and retry with the
+header set. Every other endpoint on this site remains free.
 `;
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {

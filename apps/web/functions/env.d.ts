@@ -35,4 +35,14 @@ interface Env extends Cloudflare.Env {
   // Verified sender, e.g. "NobodyNamed <hello@nobodynamed.com>".
   NEWSLETTER_FROM?: string;
   NEWSLETTER_REPLY_TO?: string;
+  // ── x402 payments ──────────────────────────────────────────────────────
+  //
+  // Wallet address that receives x402 payments on Base Sepolia (USDC).
+  // Set as a Pages environment variable/secret — never hardcoded. Until
+  // it's set, GET /api/premium/report/:name returns 501 instead of
+  // advertising a payment path with nowhere real to send funds.
+  X402_PAY_TO?: string;
+  // Facilitator base URL for /verify and /settle. Defaults to the free
+  // public testnet facilitator (https://x402.org/facilitator) when unset.
+  X402_FACILITATOR_URL?: string;
 }

@@ -24,6 +24,11 @@
     {
       "anchor": "https://nobodynamed.com/api/year/{year}",
       "service-doc": [{"href": "https://nobodynamed.com/about", "type": "text/html"}]
+    },
+    {
+      "anchor": "https://nobodynamed.com/api/premium/report/{name}",
+      "service-doc": [{"href": "https://nobodynamed.com/about", "type": "text/html"}],
+      "payment": [{"href": "https://x402.org", "type": "application/json"}]
     }
   ]
 }
