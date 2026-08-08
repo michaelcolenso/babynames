@@ -1,4 +1,4 @@
-import type { PagesFunction } from "@cloudflare/workers-types";
+import type { D1Database, PagesFunction } from "@cloudflare/workers-types";
 
 const PROTOCOL_VERSION = "2025-03-26";
 
@@ -226,6 +226,54 @@ type JsonRpcMessage = {
   params?: unknown;
 };
 
+// Coerces arbitrary JSON-RPC input to a short bindable string, or null.
+// Request bodies are untrusted — a field the schema calls a string can
+// arrive as a number, object, or array — and D1's .bind() throws
+// synchronously on anything it can't bind, so values must be sanitized
+// before they ever reach it.
+function asBindableString(v: unknown, maxLen = 300): string | null {
+  if (typeof v !== "string" || !v) return null;
+  return v.slice(0, maxLen);
+}
+
+// Best-effort usage logging — fired via ctx.waitUntil so a slow insert never
+// delays the actual MCP response, and wrapped in try/catch so a failure to
+// even construct the query (e.g. a bind error) can't break it either.
+function logMcpEvent(
+  db: D1Database,
+  waitUntil: (promise: Promise<unknown>) => void,
+  fields: {
+    eventType: "initialize" | "tools_call";
+    toolName?: unknown;
+    clientName?: unknown;
+    clientVersion?: unknown;
+    isError?: boolean;
+    sessionId?: unknown;
+    userAgent?: unknown;
+  },
+): void {
+  try {
+    const promise = db
+      .prepare(
+        `INSERT INTO mcp_events(event_type, tool_name, client_name, client_version, is_error, session_id, user_agent)
+         VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
+      )
+      .bind(
+        fields.eventType,
+        asBindableString(fields.toolName),
+        asBindableString(fields.clientName),
+        asBindableString(fields.clientVersion),
+        fields.isError ? 1 : 0,
+        asBindableString(fields.sessionId, 200),
+        asBindableString(fields.userAgent),
+      )
+      .run();
+    waitUntil(promise.catch(() => {}));
+  } catch {
+    // Logging must never break the actual MCP response.
+  }
+}
+
 function ok(id: unknown, result: unknown) {
   return Response.json(
     { jsonrpc: "2.0", id, result },
@@ -254,12 +302,23 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   }
 
   const { id, method, params } = msg;
+  const sessionId = ctx.request.headers.get("Mcp-Session-Id");
+  const userAgent = ctx.request.headers.get("User-Agent");
 
   if (method === "notifications/initialized") {
     return new Response(null, { status: 202, headers: CORS_HEADERS });
   }
 
   if (method === "initialize") {
+    const clientInfo = (params as { clientInfo?: { name?: string; version?: string } } | undefined)
+      ?.clientInfo;
+    logMcpEvent(ctx.env.DB, ctx.waitUntil.bind(ctx), {
+      eventType: "initialize",
+      clientName: clientInfo?.name,
+      clientVersion: clientInfo?.version,
+      sessionId,
+      userAgent,
+    });
     return ok(id, {
       protocolVersion: PROTOCOL_VERSION,
       serverInfo: { name: "nobodynamed", version: "1.0.0" },
@@ -288,8 +347,21 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     };
     try {
       const data = await callTool(name, args, origin);
+      logMcpEvent(ctx.env.DB, ctx.waitUntil.bind(ctx), {
+        eventType: "tools_call",
+        toolName: name,
+        sessionId,
+        userAgent,
+      });
       return ok(id, { content: [{ type: "text", text: JSON.stringify(data) }] });
     } catch (e) {
+      logMcpEvent(ctx.env.DB, ctx.waitUntil.bind(ctx), {
+        eventType: "tools_call",
+        toolName: name,
+        isError: true,
+        sessionId,
+        userAgent,
+      });
       return ok(id, {
         content: [{ type: "text", text: `Error: ${e instanceof Error ? e.message : String(e)}` }],
         isError: true,
