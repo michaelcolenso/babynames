@@ -93,10 +93,13 @@
       <h2>MCP server</h2>
       <p>NobodyNamed runs a remote <a target="_blank" rel="noopener" href="https://modelcontextprotocol.io/">MCP</a> server at <code>https://nobodynamed.com/mcp</code> — no API key, no auth, no signup. Point any MCP-capable agent at it and it can look up names, compare trajectories, and pull demographic and geographic profiles instead of scraping pages or guessing from training data.</p>
 
-      <p>To add it in Claude Code or Claude Desktop, add this to your MCP config:</p>
+      <p><strong>Claude Desktop / claude.ai:</strong> Settings &rarr; Connectors &rarr; Add custom connector, then paste in <code>https://nobodynamed.com/mcp</code>. No config file editing needed.</p>
+
+      <p><strong>Claude Code</strong> and other clients that read an MCP config file, add:</p>
       <div class="dev-config">{
   "mcpServers": {
     "nobodynamed": {
+      "type": "http",
       "url": "https://nobodynamed.com/mcp"
     }
   }
