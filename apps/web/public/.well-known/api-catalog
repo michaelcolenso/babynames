@@ -31,6 +31,34 @@
       "payment": [{"href": "https://x402.org", "type": "application/json"}]
     },
     {
+      "anchor": "https://nobodynamed.com/api/compare",
+      "service-doc": [{"href": "https://nobodynamed.com/developers", "type": "text/html"}]
+    },
+    {
+      "anchor": "https://nobodynamed.com/api/twin/{name}",
+      "service-doc": [{"href": "https://nobodynamed.com/developers", "type": "text/html"}]
+    },
+    {
+      "anchor": "https://nobodynamed.com/api/decade/{decade}",
+      "service-doc": [{"href": "https://nobodynamed.com/developers", "type": "text/html"}]
+    },
+    {
+      "anchor": "https://nobodynamed.com/api/movers/{year}",
+      "service-doc": [{"href": "https://nobodynamed.com/developers", "type": "text/html"}]
+    },
+    {
+      "anchor": "https://nobodynamed.com/api/enrichment/{name}",
+      "service-doc": [{"href": "https://nobodynamed.com/developers", "type": "text/html"}]
+    },
+    {
+      "anchor": "https://nobodynamed.com/api/diaspora/{name}",
+      "service-doc": [{"href": "https://nobodynamed.com/developers", "type": "text/html"}]
+    },
+    {
+      "anchor": "https://nobodynamed.com/api/debuts/{year}",
+      "service-doc": [{"href": "https://nobodynamed.com/developers", "type": "text/html"}]
+    },
+    {
       "anchor": "https://nobodynamed.com/mcp",
       "service-doc": [{"href": "https://nobodynamed.com/developers", "type": "text/html"}],
       "describedby": [{"href": "https://nobodynamed.com/.well-known/mcp/server-card.json", "type": "application/json"}]

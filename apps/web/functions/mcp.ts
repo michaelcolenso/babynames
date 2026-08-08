@@ -226,39 +226,52 @@ type JsonRpcMessage = {
   params?: unknown;
 };
 
-// Best-effort usage logging — fired via ctx.waitUntil so a slow or failing
-// insert never delays or breaks the actual MCP response.
+// Coerces arbitrary JSON-RPC input to a short bindable string, or null.
+// Request bodies are untrusted — a field the schema calls a string can
+// arrive as a number, object, or array — and D1's .bind() throws
+// synchronously on anything it can't bind, so values must be sanitized
+// before they ever reach it.
+function asBindableString(v: unknown, maxLen = 300): string | null {
+  if (typeof v !== "string" || !v) return null;
+  return v.slice(0, maxLen);
+}
+
+// Best-effort usage logging — fired via ctx.waitUntil so a slow insert never
+// delays the actual MCP response, and wrapped in try/catch so a failure to
+// even construct the query (e.g. a bind error) can't break it either.
 function logMcpEvent(
   db: D1Database,
   waitUntil: (promise: Promise<unknown>) => void,
   fields: {
     eventType: "initialize" | "tools_call";
-    toolName?: string;
-    clientName?: string;
-    clientVersion?: string;
+    toolName?: unknown;
+    clientName?: unknown;
+    clientVersion?: unknown;
     isError?: boolean;
-    sessionId?: string | null;
-    userAgent?: string | null;
+    sessionId?: unknown;
+    userAgent?: unknown;
   },
 ): void {
-  waitUntil(
-    db
+  try {
+    const promise = db
       .prepare(
         `INSERT INTO mcp_events(event_type, tool_name, client_name, client_version, is_error, session_id, user_agent)
          VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
       )
       .bind(
         fields.eventType,
-        fields.toolName ?? null,
-        fields.clientName ?? null,
-        fields.clientVersion ?? null,
+        asBindableString(fields.toolName),
+        asBindableString(fields.clientName),
+        asBindableString(fields.clientVersion),
         fields.isError ? 1 : 0,
-        fields.sessionId ?? null,
-        fields.userAgent ? fields.userAgent.slice(0, 300) : null,
+        asBindableString(fields.sessionId, 200),
+        asBindableString(fields.userAgent),
       )
-      .run()
-      .catch(() => {}),
-  );
+      .run();
+    waitUntil(promise.catch(() => {}));
+  } catch {
+    // Logging must never break the actual MCP response.
+  }
 }
 
 function ok(id: unknown, result: unknown) {
