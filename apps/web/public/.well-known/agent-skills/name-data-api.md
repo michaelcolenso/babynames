@@ -99,6 +99,27 @@ Names whose popularity arc over time is most similar to `{name}` (cosine similar
 
 Rank changes for the top 100 names of each sex vs. the prior year: gainers, losers, and new entrants.
 
+---
+
+### Name enrichment profile
+`GET /api/enrichment/{name}?sex=M|F`
+
+Precomputed demographic and cultural profile: estimated living population, median age, popularity wave shape, cultural catalysts (events/media tied to spikes), historical demographic profiles by era, and regional anomalies (states where the name over-indexes).
+
+---
+
+### Name diaspora
+`GET /api/diaspora/{name}?sex=M|F`
+
+Precomputed geographic spread: origin state, origin year, national peak year, state-by-state adoption spread, and states that never adopted the name.
+
+---
+
+### Debut names
+`GET /api/debuts/{year}`
+
+Every name appearing in SSA records for the first time in the given year.
+
 ## Name Classification
 
 Classifications are computed at ingest time from SSA data:

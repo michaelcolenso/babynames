@@ -120,6 +120,44 @@ const TOOLS = [
       required: ["year"],
     },
   },
+  {
+    name: "get_name_enrichment",
+    description:
+      "Returns a precomputed profile for a name: estimated living population and median age, its popularity wave shape, cultural catalysts (events/media tied to spikes), historical demographic profiles by era (top occupations, region, urban vs. rural), and regional anomalies (states where it over-indexes).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The baby name to look up" },
+        sex: { type: "string", enum: ["M", "F"], description: "Restrict to this sex (defaults to the name's most common sex)" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "get_name_diaspora",
+    description:
+      "Returns the geographic spread of a name over time: where it originated, when it peaked nationally, which states adopted it and when, and how many states never adopted it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The baby name to look up" },
+        sex: { type: "string", enum: ["M", "F"], description: "Restrict to this sex (defaults to the name's most common sex)" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "get_name_debuts",
+    description:
+      "Returns every name that appeared in SSA records for the first time in the given year — genuine linguistic novelties, celebrity imports, invented spellings, or names newly crossing the 5-birth reporting threshold.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        year: { type: "integer", minimum: 1880, description: "Birth year to find debut names for" },
+      },
+      required: ["year"],
+    },
+  },
 ];
 
 async function callTool(
@@ -164,6 +202,20 @@ async function callTool(
     }
     case "get_year_movers": {
       const res = await fetch(`${origin}/api/movers/${Number(args.year)}`);
+      return res.json();
+    }
+    case "get_name_enrichment": {
+      const sex = args.sex ? `?sex=${encodeURIComponent(String(args.sex))}` : "";
+      const res = await fetch(`${origin}/api/enrichment/${encodeURIComponent(String(args.name ?? ""))}${sex}`);
+      return res.json();
+    }
+    case "get_name_diaspora": {
+      const sex = args.sex ? `?sex=${encodeURIComponent(String(args.sex))}` : "";
+      const res = await fetch(`${origin}/api/diaspora/${encodeURIComponent(String(args.name ?? ""))}${sex}`);
+      return res.json();
+    }
+    case "get_name_debuts": {
+      const res = await fetch(`${origin}/api/debuts/${Number(args.year)}`);
       return res.json();
     }
     default:
@@ -223,7 +275,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
         "get_year_names for birth year rosters, get_decade_names for decade rosters, " +
         "get_year_movers for year-over-year gainers/losers/new entrants, " +
         "compare_names for side-by-side trajectories, get_name_twin for names with a similar " +
-        "popularity arc, and get_site_metadata for dataset overview.",
+        "popularity arc, get_name_enrichment for demographic/cultural profile data, " +
+        "get_name_diaspora for geographic spread, get_name_debuts for first-appearance names " +
+        "in a given year, and get_site_metadata for dataset overview.",
     });
   }
 
