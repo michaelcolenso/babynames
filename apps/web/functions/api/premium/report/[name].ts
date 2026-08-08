@@ -14,8 +14,30 @@
 // Express/Hono/Next, and the request-side of this protocol is just base64
 // JSON headers plus two facilitator POSTs).
 
-import { getNameWithSeries, listRelatedNames } from "@nv/shared";
+import {
+  getNameWithSeries,
+  getNameSparkForSex,
+  getCachedNameSparks,
+  decodeSpark,
+  getMeta,
+  META_KEYS,
+} from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
+
+// Same trajectory-similarity approach as /api/twin/:name (cosine similarity
+// over normalized spark_blob vectors) — the premium report claims
+// "trajectory-similar names," so it needs the real thing, not the
+// status/peak-year proxy listRelatedNames() uses for the free discovery UI.
+function cosineSim(a: number[], b: number[]): number {
+  let dot = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += (a[i] ?? 0) * (b[i] ?? 0);
+    normA += (a[i] ?? 0) ** 2;
+    normB += (b[i] ?? 0) ** 2;
+  }
+  const denom = Math.sqrt(normA) * Math.sqrt(normB);
+  return denom === 0 ? 0 : dot / denom;
+}
 
 const X402_VERSION = 1;
 const NETWORK = "base-sepolia";
@@ -132,26 +154,41 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   }
 
   const lower = decodeURIComponent(rawName).toLowerCase();
-  const rows = await getNameWithSeries(ctx.env.DB, lower);
+  const [rows, dataVersion] = await Promise.all([
+    getNameWithSeries(ctx.env.DB, lower),
+    getMeta(ctx.env.DB, META_KEYS.dataVersion),
+  ]);
   if (!rows.length) {
     return Response.json({ error: "not_found" }, { status: 404 });
   }
 
+  const allSparks = await getCachedNameSparks(ctx.env.DB, dataVersion ?? "dev");
+
   const report = await Promise.all(
-    rows.map(async ({ row, series }) => ({
-      name: row.name,
-      sex: row.sex,
-      status: row.status,
-      firstYear: row.first_year,
-      lastYear: row.last_year,
-      peakYear: row.peak_year,
-      peakCount: row.peak_count,
-      latestCount: row.latest_count,
-      totalCount: row.total_count,
-      declinePct: row.decline_pct,
-      series: Object.fromEntries(series.map((p) => [p.year, p.count])),
-      related: await listRelatedNames(ctx.env.DB, lower, row.sex, row.status, row.peak_year, 6),
-    })),
+    rows.map(async ({ row, series }) => {
+      const targetBlob = await getNameSparkForSex(ctx.env.DB, lower, row.sex);
+      const targetSpark = targetBlob ? decodeSpark(targetBlob) : new Array(60).fill(0);
+      const trajectoryMatches = allSparks
+        .filter((s) => s.name.toLowerCase() !== lower && s.sex === row.sex)
+        .map((s) => ({ name: s.name, sex: s.sex, similarity: +cosineSim(targetSpark, s.spark).toFixed(4) }))
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, 6);
+
+      return {
+        name: row.name,
+        sex: row.sex,
+        status: row.status,
+        firstYear: row.first_year,
+        lastYear: row.last_year,
+        peakYear: row.peak_year,
+        peakCount: row.peak_count,
+        latestCount: row.latest_count,
+        totalCount: row.total_count,
+        declinePct: row.decline_pct,
+        series: Object.fromEntries(series.map((p) => [p.year, p.count])),
+        trajectoryMatches,
+      };
+    }),
   );
 
   let settle: SettleResponse;

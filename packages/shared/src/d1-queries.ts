@@ -822,6 +822,21 @@ export async function getNameSpark(
   return r ?? null;
 }
 
+// Fetches the spark_blob for a specific name+sex pair (unlike getNameSpark,
+// which picks whichever sex has more total births). Used by the premium
+// report endpoint to compute trajectory similarity for each sex on record.
+export async function getNameSparkForSex(
+  db: D1Database,
+  nameLower: string,
+  sex: Sex,
+): Promise<ArrayBuffer | null> {
+  const r = await db
+    .prepare(`SELECT spark_blob FROM names WHERE name_lower = ?1 AND sex = ?2`)
+    .bind(nameLower, sex)
+    .first<{ spark_blob: ArrayBuffer | null }>();
+  return r?.spark_blob ?? null;
+}
+
 export interface RiverNameRow {
   name: string;
   sex: Sex;
