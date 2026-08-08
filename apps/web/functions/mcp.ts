@@ -66,6 +66,60 @@ const TOOLS = [
       "Returns top-10 names per year, total birth counts per year, and the full year range covered by the dataset.",
     inputSchema: { type: "object", properties: {} },
   },
+  {
+    name: "compare_names",
+    description:
+      "Side-by-side comparison of 2-3 names: full yearly series for each so trends can be plotted or contrasted directly.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        names: {
+          type: "array",
+          items: { type: "string" },
+          minItems: 2,
+          maxItems: 3,
+          description: 'Names to compare, e.g. ["Michael", "James", "David"]',
+        },
+      },
+      required: ["names"],
+    },
+  },
+  {
+    name: "get_name_twin",
+    description:
+      "Finds the names whose popularity trajectory over time is most similar to the given name (cosine similarity on the yearly series), i.e. names that rose and fell together.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The baby name to find trajectory twins for" },
+        sex: { type: "string", enum: ["M", "F"], description: "Restrict to this sex (defaults to the name's most common sex)" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "get_decade_names",
+    description: "Returns the top baby names aggregated across an entire calendar decade.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        decade: { type: "string", description: 'Decade label, e.g. "1980s"' },
+      },
+      required: ["decade"],
+    },
+  },
+  {
+    name: "get_year_movers",
+    description:
+      "Year-over-year rank changes for the top 100 names of each sex vs. the prior year: biggest gainers, biggest losers, and new entrants.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        year: { type: "integer", minimum: 1881, description: "Birth year to compare against the prior year" },
+      },
+      required: ["year"],
+    },
+  },
 ];
 
 async function callTool(
@@ -92,6 +146,24 @@ async function callTool(
     }
     case "get_site_metadata": {
       const res = await fetch(`${origin}/api/meta`);
+      return res.json();
+    }
+    case "compare_names": {
+      const names = Array.isArray(args.names) ? args.names.map(String) : [];
+      const res = await fetch(`${origin}/api/compare?names=${encodeURIComponent(names.join(","))}`);
+      return res.json();
+    }
+    case "get_name_twin": {
+      const sex = args.sex ? `?sex=${encodeURIComponent(String(args.sex))}` : "";
+      const res = await fetch(`${origin}/api/twin/${encodeURIComponent(String(args.name ?? ""))}${sex}`);
+      return res.json();
+    }
+    case "get_decade_names": {
+      const res = await fetch(`${origin}/api/decade/${encodeURIComponent(String(args.decade ?? ""))}`);
+      return res.json();
+    }
+    case "get_year_movers": {
+      const res = await fetch(`${origin}/api/movers/${Number(args.year)}`);
       return res.json();
     }
     default:
@@ -148,7 +220,10 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
         "Query US baby name popularity data from SSA records spanning 1880–2025. " +
         "Use search_names to autocomplete, get_name_data for full history and classification, " +
         "get_names_by_status for curated lists (extinct/endangered/rising/comeback), " +
-        "get_year_names for birth year rosters, and get_site_metadata for dataset overview.",
+        "get_year_names for birth year rosters, get_decade_names for decade rosters, " +
+        "get_year_movers for year-over-year gainers/losers/new entrants, " +
+        "compare_names for side-by-side trajectories, get_name_twin for names with a similar " +
+        "popularity arc, and get_site_metadata for dataset overview.",
     });
   }
 

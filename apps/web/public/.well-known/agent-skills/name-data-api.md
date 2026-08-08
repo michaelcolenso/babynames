@@ -78,6 +78,27 @@ Top names for a given birth year (1880–2025).
 
 Top names by decade. `decade` format: `1990s`, `2000s`, etc.
 
+---
+
+### Compare names
+`GET /api/compare?names=A,B,C`
+
+Side-by-side yearly series for 2-3 names.
+
+---
+
+### Trajectory twins
+`GET /api/twin/{name}?sex=M|F`
+
+Names whose popularity arc over time is most similar to `{name}` (cosine similarity on yearly counts). Returns top 5 matches.
+
+---
+
+### Year-over-year movers
+`GET /api/movers/{year}`
+
+Rank changes for the top 100 names of each sex vs. the prior year: gainers, losers, and new entrants.
+
 ## Name Classification
 
 Classifications are computed at ingest time from SSA data:
