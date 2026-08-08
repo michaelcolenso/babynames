@@ -20,8 +20,12 @@ import type {
   NameEnrichmentBundle,
   NameEnrichmentProfile,
   NameHistoricalProfile,
+  NameFacts,
   NameRegionalAnomaly,
   NameRow,
+  CollectionMemberRow,
+  CollectionMembership,
+  VariantSibling,
   RelatedName,
   SearchHit,
   Sex,
@@ -33,6 +37,82 @@ import { decodeSpark } from "./spark-blob";
 export async function getMeta(db: D1Database, key: string): Promise<string | null> {
   const r = await db.prepare("SELECT value FROM meta WHERE key = ?1").bind(key).first<{ value: string }>();
   return r?.value ?? null;
+}
+
+/**
+ * What a D1-backed page's body depends on, read in one round trip.
+ *
+ *   `data` — a new SSA ingest. Also refreshes `names.spark_blob`, which is
+ *     where the collection tables get their sparklines.
+ *   `facts` — a `name_facts` / `name_collections` rebuild. `facts_version` is
+ *     deliberately not used: it records the SSA corpus the facts were built
+ *     from, so a rebuild from that same corpus (a corrected threshold, a new
+ *     variant algorithm, added catalyst rows) changes the body and leaves the
+ *     validator identical.
+ *   `blog` — a publish or edit through scripts/blog-publish.ts touches only
+ *     `blog_posts`, moving neither meta key. Counted as well as maxed so a
+ *     deletion registers too.
+ */
+export interface ContentVersions {
+  data: string;
+  facts: string;
+  blog: string;
+  /** The most recent blog `updated_at`, for sitemap-index lastmod. */
+  blogUpdatedAt: string | null;
+}
+
+/**
+ * Which inputs a given route actually reads. Scoping matters in both
+ * directions: only the core sitemap lists blog posts, so a blog component in
+ * every key would make one publish abandon the warm cache for tens of thousands
+ * of name pages; and /sitemap-names.xml reads only the `names` table, so giving
+ * it the facts component would make every facts-only rebuild re-run
+ * listIndexableNames — a ~50k-row scan — to produce a byte-identical document.
+ *
+ *   "data"  — the `names` corpus alone.
+ *   "facts" — plus name_facts / name_collections.
+ *   "core"  — plus blog_posts.
+ */
+export type ContentScope = "data" | "facts" | "core";
+
+export async function getContentVersions(db: D1Database): Promise<ContentVersions | null> {
+  const row = await db
+    .prepare(
+      `SELECT (SELECT value FROM meta WHERE key = 'data_version') AS dataVersion,
+              (SELECT value FROM meta WHERE key = 'facts_build')  AS factsBuild,
+              (SELECT COUNT(*) FROM blog_posts) AS blogCount,
+              (SELECT MAX(updated_at) FROM blog_posts) AS blogUpdatedAt`,
+    )
+    .first<{
+      dataVersion: string | null;
+      factsBuild: string | null;
+      blogCount: number | null;
+      blogUpdatedAt: string | null;
+    }>();
+  if (!row) return null;
+  return {
+    data: row.dataVersion ?? "",
+    facts: row.factsBuild ?? "",
+    blog: `${row.blogCount ?? 0}@${row.blogUpdatedAt ?? ""}`,
+    blogUpdatedAt: row.blogUpdatedAt ?? null,
+  };
+}
+
+/**
+ * The cache key and ETag string for one scope. The middleware and the routes
+ * both build theirs from this, so the validator a client revalidates against
+ * and the edge entry it revalidates through always move together.
+ */
+export function contentVersionString(v: ContentVersions, scope: ContentScope): string | null {
+  const parts =
+    scope === "core" ? [v.data, v.facts, v.blog] : scope === "facts" ? [v.data, v.facts] : [v.data];
+  return parts.some((p) => p) ? parts.join(":") : null;
+}
+
+/** Convenience for a route that needs one scope and nothing else. */
+export async function getContentVersion(db: D1Database, scope: ContentScope): Promise<string | null> {
+  const v = await getContentVersions(db);
+  return v ? contentVersionString(v, scope) : null;
 }
 
 export async function setMeta(db: D1Database, key: string, value: string): Promise<void> {
@@ -1339,4 +1419,134 @@ function parseJsonArray<T>(raw: string): T[] {
   } catch {
     return [];
   }
+}
+
+// ---------------------------------------------------------------------------
+// Rare-name facts and editorial collections (migrations/0021_name_facts.sql).
+//
+// All five of these are single indexed lookups. The name page issues the first
+// two inside its existing Promise.all; listSpellingVariants is a dependent
+// second hop and is skipped entirely when a name has no relatives, which is the
+// common case.
+// ---------------------------------------------------------------------------
+
+/** Precomputed story metrics for one name. Null when facts have not been seeded. */
+export async function getNameFacts(
+  db: D1Database,
+  nameLower: string,
+  sex: Sex,
+): Promise<NameFacts | null> {
+  return await db
+    .prepare("SELECT * FROM name_facts WHERE name_lower = ?1 AND sex = ?2")
+    .bind(nameLower, sex)
+    .first<NameFacts>();
+}
+
+/** Which editorial collections this name belongs to. Covered by
+ *  idx_name_collections_name, so this is a index-only range scan. */
+export async function listNameCollections(
+  db: D1Database,
+  nameLower: string,
+  sex: Sex,
+  limit = 8,
+): Promise<CollectionMembership[]> {
+  const r = await db
+    .prepare(
+      `SELECT slug, rank_in, metric_label
+         FROM name_collections
+        WHERE name_lower = ?1 AND sex = ?2
+        ORDER BY rank_in
+        LIMIT ?3`,
+    )
+    .bind(nameLower, sex, Math.max(1, Math.min(limit, 25)))
+    .all<CollectionMembership>();
+  return r.results ?? [];
+}
+
+/**
+ * Other spellings in the same family. Equality on the indexed variant_key —
+ * deliberately not a LIKE or an edit-distance scan, which would be a table walk
+ * on every name page.
+ *
+ * Restricted to canonical-sex rows because the rail links to a bare
+ * `/name/<Name>/`, which resolves to whichever sex is dominant for that name.
+ * Without the filter, Daniel's male page listed Danielle from Danielle/M's
+ * 1,895-birth row while the link opened Danielle/F's 371,803-birth history —
+ * the row's numbers described a page the reader would never see. Same rule the
+ * collection tables apply, for the same reason.
+ */
+export async function listSpellingVariants(
+  db: D1Database,
+  variantKeyValue: string,
+  excludeLower: string,
+  sex: Sex,
+  limit = 6,
+): Promise<VariantSibling[]> {
+  if (!variantKeyValue) return [];
+  const r = await db
+    .prepare(
+      `SELECT f.name, f.sex, n.total_count, n.status, n.peak_year
+         FROM name_facts f
+         JOIN names n ON n.name_lower = f.name_lower AND n.sex = f.sex
+        WHERE f.variant_key = ?1 AND f.sex = ?2 AND f.name_lower <> ?3
+          AND f.is_canonical_sex = 1
+        ORDER BY n.total_count DESC
+        LIMIT ?4`,
+    )
+    .bind(variantKeyValue, sex, excludeLower, Math.max(1, Math.min(limit, 12)))
+    .all<VariantSibling>();
+  return r.results ?? [];
+}
+
+/** One page of a collection's table. Joins `names` for the sparkline blob so
+ *  collection rows render with the same mini-sparkline as the landing hubs. */
+export async function listCollectionMembers(
+  db: D1Database,
+  slug: string,
+  limit = 100,
+  offset = 0,
+): Promise<CollectionMemberRow[]> {
+  const r = await db
+    .prepare(
+      `SELECT c.name, c.sex, c.rank_in, c.metric_label, c.metric_value,
+              n.peak_year, n.peak_count, n.total_count, n.latest_count,
+              n.first_year, n.last_year, n.status, n.spark_blob
+         FROM name_collections c
+         JOIN names n ON n.name_lower = c.name_lower AND n.sex = c.sex
+        WHERE c.slug = ?1
+        ORDER BY c.rank_in
+        LIMIT ?2 OFFSET ?3`,
+    )
+    .bind(slug, Math.max(1, Math.min(limit, 250)), Math.max(0, offset))
+    .all<CollectionMemberRow>();
+  return r.results ?? [];
+}
+
+export async function countCollectionMembers(db: D1Database, slug: string): Promise<number> {
+  const r = await db
+    .prepare("SELECT COUNT(*) AS n FROM name_collections WHERE slug = ?1")
+    .bind(slug)
+    .first<{ n: number }>();
+  return r?.n ?? 0;
+}
+
+export interface CollectionSummary {
+  slug: string;
+  member_count: number;
+  /** Comma-separated sample names, for the hub cards. */
+  sample: string | null;
+}
+
+/** Every populated collection with its size and a few example names — one
+ *  query for the whole hub page. */
+export async function listCollectionSummaries(db: D1Database): Promise<CollectionSummary[]> {
+  const r = await db
+    .prepare(
+      `SELECT slug, COUNT(*) AS member_count,
+              GROUP_CONCAT(CASE WHEN rank_in <= 3 THEN name END) AS sample
+         FROM name_collections
+        GROUP BY slug`,
+    )
+    .all<CollectionSummary>();
+  return r.results ?? [];
 }

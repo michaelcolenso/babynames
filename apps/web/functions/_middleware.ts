@@ -4,7 +4,72 @@
 // hooking caches.default here means every endpoint gets edge-caching for
 // free (with the `data_version` cache-bust trick built into each handler).
 
-import type { PagesFunction } from "@cloudflare/workers-types";
+import { contentVersionString, getContentVersions, type ContentScope, type ContentVersions } from "@nv/shared";
+import type { D1Database, PagesFunction } from "@cloudflare/workers-types";
+
+// The content version folded into cache keys for every route whose body is
+// derived from D1. getContentVersion is the single definition of what "the
+// content changed" means — the routes below build their ETags from the same
+// call, so a validator and the cache entry it revalidates through cannot drift
+// apart.
+//
+// One lookup per isolate per TTL is ample. The TTL is deliberately short: the
+// window between a seed and the caches following it should be seconds.
+const CONTENT_VERSION_TTL_MS = 30_000;
+let contentVersionCache: { value: ContentVersions | null; at: number } | null = null;
+
+/** Exported for tests: clears the per-isolate memo. */
+export function __resetContentVersionCache(): void {
+  contentVersionCache = null;
+}
+
+async function contentVersionFor(db: D1Database | undefined, scope: ContentScope): Promise<string | null> {
+  if (!db) return null;
+  const now = Date.now();
+  if (!contentVersionCache || now - contentVersionCache.at >= CONTENT_VERSION_TTL_MS) {
+    try {
+      contentVersionCache = { value: await getContentVersions(db), at: now };
+    } catch {
+      // A version lookup failure must never take the page down; fall back to an
+      // unversioned key, which is exactly the pre-versioning behaviour.
+      contentVersionCache = { value: null, at: now };
+    }
+  }
+  const versions = contentVersionCache.value;
+  return versions ? contentVersionString(versions, scope) : null;
+}
+
+// Routes whose body is assembled from D1 rather than from the request.
+// caches.default keys on the request URL and cache.match never consults an
+// ETag, so a response cached before a seed survives it for the full TTL: an
+// empty collections sitemap, an empty collection page, a hub advertising
+// nothing, a core sitemap missing a just-published post. The fix is to make the
+// version participate in the key.
+function versionScopeFor(pathname: string): ContentScope | null {
+  // Only the core sitemap lists blog posts. Giving the others the blog-inclusive
+  // version would mean a single blog publish evicted every warm name-page entry
+  // and re-ran its handler for a body that could not have changed.
+  if (pathname === "/sitemap-core.xml") return "core";
+  // The name sitemap is a list of /name/ URLs drawn from `names`; a facts
+  // rebuild cannot change a byte of it, and re-running listIndexableNames over
+  // ~50k rows to reproduce the same document is the most expensive needless
+  // miss on the site.
+  if (pathname === "/sitemap-names.xml") return "data";
+  // /name/:name/twin/ reads names and the data-versioned spark cache, never
+  // name_facts. It has to be matched before the /name/ prefix below, or a facts
+  // rebuild would drop every twin page and each cold URL would re-filter, score
+  // and sort the whole spark cohort to rebuild an identical page.
+  if (/^\/name\/[^/]+\/twin\/?$/.test(pathname)) return "data";
+  if (
+    /^\/sitemap-[a-z]+\.xml$/.test(pathname) ||
+    pathname === "/collections" ||
+    pathname.startsWith("/collections/") ||
+    pathname.startsWith("/name/")
+  ) {
+    return "facts";
+  }
+  return null;
+}
 
 const CANONICAL_PAGES = new Set([
   "/about",
@@ -23,7 +88,7 @@ const CANONICAL_PAGES = new Set([
   "/year",
 ]);
 
-export const onRequest: PagesFunction = async (ctx) => {
+export const onRequest: PagesFunction<Env> = async (ctx) => {
   const startedAt = Date.now();
   const requestId = crypto.randomUUID();
   const url = new URL(ctx.request.url);
@@ -56,7 +121,7 @@ export const onRequest: PagesFunction = async (ctx) => {
   }
 };
 
-async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promise<Response> {
+async function handleRequest(ctx: Parameters<PagesFunction<Env>>[0], url: URL): Promise<Response> {
   const legacyName = url.pathname === "/" ? url.searchParams.get("name")?.trim() : "";
   if (legacyName) {
     const target = new URL(`/name/${encodeURIComponent(legacyName)}/`, url.origin);
@@ -74,6 +139,8 @@ async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promi
     }
   }
 
+  // The sitemap index is three static child URLs; it has never been worth a
+  // cache entry and is left uncached as it always has been.
   if (url.pathname === "/sitemap.xml") {
     return ctx.next();
   }
@@ -94,6 +161,25 @@ async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promi
   const wantsMarkdown = (ctx.request.headers.get("Accept") ?? "").includes("text/markdown");
   const keyUrl = new URL(ctx.request.url);
   keyUrl.searchParams.set("__nv_variant", wantsMarkdown ? "md" : "html");
+
+  // Facts-backed routes get the content version in the key rather than
+  // bypassing the cache. Bypassing looks harmless — the responses carry
+  // Cache-Control — but a Pages Function response is not placed in Cloudflare's
+  // edge cache merely because it says so, so skipping this wrapper means every
+  // hit reruns the handler and its D1 queries, `listIndexableNames` over ~50k
+  // rows included. The version is memoized per isolate (see contentVersionFor),
+  // so the common path adds no D1 read, and a seed lands on a fresh key.
+  const scope = versionScopeFor(url.pathname);
+  if (scope) {
+    const version = await contentVersionFor(ctx.env.DB, scope);
+    // No version means the lookup failed. Caching anyway would write an entry
+    // under an unversioned key that no ingest or facts rebuild can invalidate,
+    // and a later failure would serve it back — the cache-busting scheme
+    // silently switched off for a full TTL. Skip the Cache API entirely and
+    // serve from the handler: slower, but never stale in a way nothing clears.
+    if (!version) return ctx.next();
+    keyUrl.searchParams.set("__nv_ver", version);
+  }
   const cacheKey = new Request(keyUrl.toString(), { method: "GET" });
 
   const cached = await cache.match(cacheKey);
@@ -225,6 +311,15 @@ function canonicalizePath(pathname: string): string | null {
   if (pathname.endsWith("/") && CANONICAL_PAGES.has(pathname.slice(0, -1))) {
     return pathname.slice(0, -1);
   }
+
+  // Collection URLs are canonical with a trailing slash — that is what the
+  // pages render as their <link rel=canonical>, what the hub links to, and what
+  // the sitemap advertises. _routes.json routes the slashless forms to the same
+  // handlers, so without this they returned a cacheable 200 whose canonical
+  // pointed elsewhere: a duplicate public URL and a second edge-cache entry for
+  // every collection.
+  if (pathname === "/collections") return "/collections/";
+  if (/^\/collections\/[^/]+$/.test(pathname)) return `${pathname}/`;
 
   if (pathname === "/blog") return "/blog/";
   if (/^\/blog\/[^/]+$/.test(pathname)) return `${pathname}/`;

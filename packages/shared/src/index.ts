@@ -1,5 +1,8 @@
 export * from "./schema";
 export * from "./classify";
+export * from "./variant-key";
+export * from "./facts-compute";
+export * from "./collections";
 export * from "./us-states-map";
 export * from "./sparkline";
 export * from "./mini-sparkline";
@@ -10,6 +13,8 @@ export * from "./render-twin";
 export * from "./render-year";
 export * from "./render-blog";
 export * from "./render-landing";
+export * from "./render-collection";
+export * from "./sitemap-util";
 export * from "./render-shell";
 export * from "./render-shadow";
 export * from "./cf-access";

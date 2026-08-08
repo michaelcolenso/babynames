@@ -21,6 +21,7 @@ const DEFAULT_NAV: NavItem[] = [
 ];
 
 const BROWSE_NAV: NavItem[] = [
+  { label: "Collections", href: "/collections/" },
   { label: "Extinct", href: "/extinct" },
   { label: "Endangered", href: "/endangered" },
   { label: "Comebacks", href: "/comeback" },
@@ -95,7 +96,7 @@ export function siteFooter(variant: "full" | "minimal" = "full", opts: SiteFoote
     <div>NobodyNamed is a small data project about American first names.</div>
     <div class="footer-note">Data sourced from Social Security Administration birth records (1880–present).</div>
   </div>
-  <div><a href="/about">About</a> &middot; <a href="/newsletter">Newsletter</a> &middot; <a href="/press">Press</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
+  <div><a href="/collections/">Collections</a> &middot; <a href="/about">About</a> &middot; <a href="/newsletter">Newsletter</a> &middot; <a href="/press">Press</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
 </footer>`;
 }
 

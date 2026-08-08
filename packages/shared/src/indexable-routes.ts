@@ -59,7 +59,7 @@ export function canonicalRoutePath(path: string): string {
 }
 
 function shouldHaveTrailingSlash(path: string): boolean {
-  return path.startsWith("/name/") || path.startsWith("/year/") || path.startsWith("/names/") || path.startsWith("/blog/") || path === "/blog" || path === "/viz";
+  return path.startsWith("/name/") || path.startsWith("/year/") || path.startsWith("/names/") || path.startsWith("/blog/") || path.startsWith("/collections/") || path === "/blog" || path === "/collections" || path === "/viz";
 }
 
 /** The canonical URL universe consumed by sitemap, IndexNow, and link auditing. */

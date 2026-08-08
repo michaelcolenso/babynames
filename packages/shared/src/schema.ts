@@ -231,11 +231,128 @@ export const META_KEYS = {
   lastStateSsaEtag: "last_state_ssa_etag",
   schemaVersion: "schema_version",
   dataVersion: "data_version",
+  factsVersion: "facts_version",
+  /** Fingerprint of the SSA corpus the facts were built from. */
+  factsCorpus: "facts_corpus",
+  /** Changes on every facts build, including rebuilds from the same corpus. */
+  factsBuild: "facts_build",
+  variantKeyVersion: "variant_key_version",
   // The data_version that name_rankings_by_year was last fully built for.
   // Readers only trust the table when this matches data_version — see
   // rankings.ts.
   rankingsVersion: "rankings_version",
 } as const;
+
+// Rare-name story metrics — one row per (name, sex), mirroring `name_facts`.
+// Precomputed offline by scripts/build-name-facts.ts because rarity rank needs
+// a global sort and the geography fields need the per-state SSA corpus, neither
+// of which the ingest worker's streaming pager can see.
+export interface NameFacts {
+  name_lower: string;
+  sex: Sex;
+  name: string;
+
+  // Carried from `names` so a collection's select() is a pure function of one row.
+  total_count: number;
+  peak_year: number;
+  peak_count: number;
+  latest_count: number;
+  status: Status;
+
+  // Rarity. `rarity_pct_sex` is 0-100 where 100 is the rarest.
+  rarity_rank_sex: number;
+  rarity_total_sex: number;
+  rarity_pct_sex: number;
+  rarity_rank_all: number;
+  rarity_band: RarityBand;
+
+  // Lifecycle.
+  first_year: number;
+  last_year: number;
+  years_recorded: number;
+  span_years: number;
+  max_annual: number;
+  gap_years_max: number;
+  gap_start_year: number | null;
+  gap_end_year: number | null;
+  is_one_and_done: 0 | 1;
+  /** The one recorded year is the corpus's latest: a debut, not a disappearance. */
+  is_current_debut: 0 | 1;
+  is_sub_ten: 0 | 1;
+  is_verge: 0 | 1;
+
+  // A single dramatic year measured against the name's own recent baseline.
+  spike_year: number | null;
+  spike_ratio: number | null;
+  spike_baseline: number | null;
+  /** Post-spike level as a fraction of the spike year; null when unknowable. */
+  spike_post_ratio: number | null;
+  /** Strongest spike that also fell back — often a different, smaller event. */
+  spike_fellback_year: number | null;
+  spike_fellback_ratio: number | null;
+
+  // Revival after a long dormancy.
+  comeback_gap: number | null;
+  comeback_year: number | null;
+  comeback_strength: number | null;
+
+  // Geography, from name_states.
+  top_state: string | null;
+  top_state_share: number | null;
+  exclusive_state: string | null;
+  states_seen: number | null;
+
+  /** 1 when this sex is the one /name/<Name>/ resolves to. */
+  is_canonical_sex: 0 | 1;
+
+  // Spelling family (see variant-key.ts).
+  variant_key: string;
+  variant_count: number;
+  variant_is_primary: 0 | 1;
+
+  // Denormalized head of name_catalysts, for the story strip.
+  catalyst_year: number | null;
+  catalyst_title: string | null;
+  catalyst_type: string | null;
+
+  source_data_version: string | null;
+  analysis_year: number;
+}
+
+export type RarityBand = "ultra-rare" | "very-rare" | "rare" | "uncommon" | "common" | "ubiquitous";
+
+/** A name's membership in one editorial collection. */
+export interface CollectionMembership {
+  slug: string;
+  rank_in: number;
+  metric_label: string | null;
+}
+
+/** One row of a collection page's table. */
+export interface CollectionMemberRow {
+  name: string;
+  sex: Sex;
+  rank_in: number;
+  metric_label: string | null;
+  metric_value: number | null;
+  peak_year: number;
+  peak_count: number;
+  total_count: number;
+  latest_count: number;
+  first_year: number;
+  last_year: number;
+  status: Status;
+  spark_blob: ArrayBuffer | null;
+}
+
+/** A same-spelling-family sibling, surfaced on name pages. */
+export interface VariantSibling {
+  name: string;
+  sex: Sex;
+  total_count: number;
+  status: Status;
+  peak_year: number;
+}
 
 // Diaspora — per-name geographic diffusion (see name_diaspora table).
 export interface NameDiasporaRow {

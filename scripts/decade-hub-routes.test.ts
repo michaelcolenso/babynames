@@ -16,7 +16,7 @@ import { onRequestGet as decadeIndexGet } from "../apps/web/functions/names/[dec
 import { onRequestGet as methodologyGet } from "../apps/web/functions/names/[decade]/methodology/index";
 import { onRequestGet as classroomGet } from "../apps/web/functions/names/[decade]/classroom/index";
 import { onRequestGet as spellingGet } from "../apps/web/functions/names/[decade]/spelling-families/index";
-import { onRequestGet as sitemapGet } from "../apps/web/functions/sitemap.xml";
+import { onRequestGet as sitemapCoreGet } from "../apps/web/functions/sitemap-core.xml";
 
 const FIXTURE = JSON.parse(
   readFileSync(new URL("./fixtures/decade-hub-1980.fixture.json", import.meta.url), "utf8"),
@@ -401,9 +401,10 @@ test("child routes 404 when the decade_hub row is missing", async () => {
 
 // ── Sitemap ────────────────────────────────────────────────────────────────
 
+// /sitemap.xml is now an index; the hub URLs live in the core child sitemap.
 test("sitemap includes the three decade-hub child routes", async () => {
-  const response = await sitemapGet({
-    request: new Request("https://example.com/sitemap.xml"),
+  const response = await sitemapCoreGet({
+    request: new Request("https://example.com/sitemap-core.xml"),
     env: { DB: fakeDb() },
   } as never);
   assert.equal(response.status, 200);
