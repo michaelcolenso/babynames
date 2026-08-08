@@ -160,64 +160,60 @@ const TOOLS = [
   },
 ];
 
+// Fetches a REST endpoint and throws when it responds with a non-2xx status,
+// so tools/call surfaces the failure via isError instead of returning a 404
+// error body as if it were a successful result.
+async function fetchJson(url: string): Promise<unknown> {
+  const res = await fetch(url);
+  const body = await res.json();
+  if (!res.ok) {
+    const message =
+      body && typeof body === "object" && "error" in body
+        ? String((body as { error: unknown }).error)
+        : `Request failed with status ${res.status}`;
+    throw new Error(message);
+  }
+  return body;
+}
+
 async function callTool(
   name: string,
   args: Record<string, unknown>,
   origin: string,
 ): Promise<unknown> {
   switch (name) {
-    case "search_names": {
-      const res = await fetch(`${origin}/api/search?q=${encodeURIComponent(String(args.q ?? ""))}`);
-      return res.json();
-    }
-    case "get_name_data": {
-      const res = await fetch(`${origin}/api/name/${encodeURIComponent(String(args.name ?? ""))}`);
-      return res.json();
-    }
-    case "get_names_by_status": {
-      const res = await fetch(`${origin}/api/landing/${encodeURIComponent(String(args.kind ?? ""))}`);
-      return res.json();
-    }
-    case "get_year_names": {
-      const res = await fetch(`${origin}/api/year/${Number(args.year)}`);
-      return res.json();
-    }
-    case "get_site_metadata": {
-      const res = await fetch(`${origin}/api/meta`);
-      return res.json();
-    }
+    case "search_names":
+      return fetchJson(`${origin}/api/search?q=${encodeURIComponent(String(args.q ?? ""))}`);
+    case "get_name_data":
+      return fetchJson(`${origin}/api/name/${encodeURIComponent(String(args.name ?? ""))}`);
+    case "get_names_by_status":
+      return fetchJson(`${origin}/api/landing/${encodeURIComponent(String(args.kind ?? ""))}`);
+    case "get_year_names":
+      return fetchJson(`${origin}/api/year/${Number(args.year)}`);
+    case "get_site_metadata":
+      return fetchJson(`${origin}/api/meta`);
     case "compare_names": {
       const names = Array.isArray(args.names) ? args.names.map(String) : [];
-      const res = await fetch(`${origin}/api/compare?names=${encodeURIComponent(names.join(","))}`);
-      return res.json();
+      return fetchJson(`${origin}/api/compare?names=${encodeURIComponent(names.join(","))}`);
     }
     case "get_name_twin": {
       const sex = args.sex ? `?sex=${encodeURIComponent(String(args.sex))}` : "";
-      const res = await fetch(`${origin}/api/twin/${encodeURIComponent(String(args.name ?? ""))}${sex}`);
-      return res.json();
+      return fetchJson(`${origin}/api/twin/${encodeURIComponent(String(args.name ?? ""))}${sex}`);
     }
-    case "get_decade_names": {
-      const res = await fetch(`${origin}/api/decade/${encodeURIComponent(String(args.decade ?? ""))}`);
-      return res.json();
-    }
-    case "get_year_movers": {
-      const res = await fetch(`${origin}/api/movers/${Number(args.year)}`);
-      return res.json();
-    }
+    case "get_decade_names":
+      return fetchJson(`${origin}/api/decade/${encodeURIComponent(String(args.decade ?? ""))}`);
+    case "get_year_movers":
+      return fetchJson(`${origin}/api/movers/${Number(args.year)}`);
     case "get_name_enrichment": {
       const sex = args.sex ? `?sex=${encodeURIComponent(String(args.sex))}` : "";
-      const res = await fetch(`${origin}/api/enrichment/${encodeURIComponent(String(args.name ?? ""))}${sex}`);
-      return res.json();
+      return fetchJson(`${origin}/api/enrichment/${encodeURIComponent(String(args.name ?? ""))}${sex}`);
     }
     case "get_name_diaspora": {
       const sex = args.sex ? `?sex=${encodeURIComponent(String(args.sex))}` : "";
-      const res = await fetch(`${origin}/api/diaspora/${encodeURIComponent(String(args.name ?? ""))}${sex}`);
-      return res.json();
+      return fetchJson(`${origin}/api/diaspora/${encodeURIComponent(String(args.name ?? ""))}${sex}`);
     }
-    case "get_name_debuts": {
-      const res = await fetch(`${origin}/api/debuts/${Number(args.year)}`);
-      return res.json();
-    }
+    case "get_name_debuts":
+      return fetchJson(`${origin}/api/debuts/${Number(args.year)}`);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
