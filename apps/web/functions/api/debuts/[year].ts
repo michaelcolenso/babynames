@@ -11,7 +11,7 @@ import type { PagesFunction } from "@cloudflare/workers-types";
 interface DebutName {
   name: string;
   sex: "M" | "F";
-  count: number; // births in debut year (= latest_count for first-year names)
+  count: number; // births in debut year
   totalCount: number;
 }
 
@@ -49,10 +49,11 @@ export const onRequestGet: PagesFunction<Env, "year"> = async (ctx) => {
   }
 
   const rows = await ctx.env.DB.prepare(
-    `SELECT name, sex, latest_count AS count, total_count
-       FROM names
-      WHERE first_year = ?1
-      ORDER BY latest_count DESC, total_count DESC, name`,
+    `SELECT n.name, n.sex, ny.count AS count, n.total_count
+       FROM names n
+       JOIN name_years ny ON ny.name_id = n.id AND ny.year = ?1
+      WHERE n.first_year = ?1
+      ORDER BY ny.count DESC, n.total_count DESC, n.name`,
   )
     .bind(year)
     .all<{ name: string; sex: "M" | "F"; count: number; total_count: number }>();
