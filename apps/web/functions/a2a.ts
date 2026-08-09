@@ -52,6 +52,16 @@ function isValidId(id: unknown): id is string | number | null {
   return id === null || typeof id === "string" || typeof id === "number";
 }
 
+// A SendMessage call without a message (missing, `{}`, an array, null, or a
+// primitive) or with zero parts has no text for the agent to act on, so it's
+// treated as an invalid request rather than falling through to the generic
+// help prompt as if it were a successful, if unhelpful, call.
+function isValidMessage(message: unknown): message is IncomingMessage & { parts: Part[] } {
+  if (message === null || typeof message !== "object" || Array.isArray(message)) return false;
+  const parts = (message as IncomingMessage).parts;
+  return isValidParts(parts) && parts.length > 0;
+}
+
 function ok(id: unknown, result: unknown) {
   return Response.json(
     { jsonrpc: "2.0", id, result },
@@ -142,12 +152,12 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return err(id, -32601, "Method not found");
   }
 
-  const { message } = (params ?? {}) as { message?: IncomingMessage };
-  if (message?.parts !== undefined && !isValidParts(message.parts)) {
-    return err(id, -32602, "Invalid params: message.parts must be an array of text parts");
+  const { message } = (params ?? {}) as { message?: unknown };
+  if (!isValidMessage(message)) {
+    return err(id, -32602, "Invalid params: message with at least one text part is required");
   }
-  const text = (message?.parts ?? []).map((p) => p.text).join("");
+  const text = message.parts.map((p) => p.text).join("");
 
-  const replyText = await reply(text, message?.metadata?.skillId, ctx.env.DB);
-  return ok(id, { message: agentMessage(replyText, message?.contextId) });
+  const replyText = await reply(text, message.metadata?.skillId, ctx.env.DB);
+  return ok(id, { message: agentMessage(replyText, message.contextId) });
 };
