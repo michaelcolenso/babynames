@@ -27,7 +27,7 @@ type JsonRpcMessage = {
   params?: unknown;
 };
 
-type Part = { text?: string };
+type Part = { text: string };
 type IncomingMessage = {
   contextId?: string;
   parts?: Part[];
@@ -37,9 +37,19 @@ type IncomingMessage = {
 // message.parts comes straight from untrusted request JSON — a truthy
 // non-array (e.g. `{}`) or an array containing `null` would otherwise throw
 // inside .map(), which the outer middleware turns into a generic 503
-// instead of a JSON-RPC error response.
+// instead of a JSON-RPC error response. The Agent Card advertises only
+// text/plain input, so a part without a string `text` isn't a part this
+// endpoint supports — accepting it silently (as empty text) would answer
+// with the generic help prompt instead of rejecting the request.
 function isValidParts(parts: unknown): parts is Part[] {
-  return Array.isArray(parts) && parts.every((p) => p !== null && typeof p === "object");
+  return (
+    Array.isArray(parts) &&
+    parts.every((p) => p !== null && typeof p === "object" && typeof (p as Part).text === "string")
+  );
+}
+
+function isValidId(id: unknown): id is string | number | null {
+  return id === null || typeof id === "string" || typeof id === "number";
 }
 
 function ok(id: unknown, result: unknown) {
@@ -115,8 +125,18 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
     return err(null, -32600, "Invalid Request");
   }
   const msg = parsed as JsonRpcMessage;
-
+  const hasId = Object.prototype.hasOwnProperty.call(msg, "id");
   const { id, method, params } = msg;
+
+  if (msg.jsonrpc !== "2.0" || typeof method !== "string" || (hasId && !isValidId(id))) {
+    return err(hasId && isValidId(id) ? id : null, -32600, "Invalid Request");
+  }
+
+  // A request with no `id` is a JSON-RPC notification — the caller has
+  // declared it doesn't want a response, so none is sent (not even an error).
+  if (!hasId) {
+    return new Response(null, { status: 202, headers: CORS_HEADERS });
+  }
 
   if (method !== "SendMessage") {
     return err(id, -32601, "Method not found");
@@ -124,11 +144,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   const { message } = (params ?? {}) as { message?: IncomingMessage };
   if (message?.parts !== undefined && !isValidParts(message.parts)) {
-    return err(id, -32602, "Invalid params: message.parts must be an array of parts");
+    return err(id, -32602, "Invalid params: message.parts must be an array of text parts");
   }
-  const text = (message?.parts ?? [])
-    .map((p) => (typeof p.text === "string" ? p.text : ""))
-    .join("");
+  const text = (message?.parts ?? []).map((p) => p.text).join("");
 
   const replyText = await reply(text, message?.metadata?.skillId, ctx.env.DB);
   return ok(id, { message: agentMessage(replyText, message?.contextId) });
