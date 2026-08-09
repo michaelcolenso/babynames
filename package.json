@@ -35,7 +35,7 @@
     "test:decade-hub": "tsx --test scripts/decade-hub.test.ts scripts/decade-hub-classroom.test.ts scripts/decade-hub-families.test.ts scripts/decade-hub-routes.test.ts scripts/decade-hub-payload.test.ts scripts/decade-hub-1920.test.ts",
     "seed-shadow-matches": "tsx scripts/seed-shadow-matches.ts",
     "seed-shadow-matches:local": "tsx scripts/seed-shadow-matches.ts --local",
-    "test": "tsc -b apps/ingest-worker packages/shared && npm run test:shell && npm run test:mini-sparkline && npm run test:rankings && npm run test:viz-payloads && npm run test:dominant-name-sparks && npm run test:editorial && npm run test:editorial-growth && npm run test:decade-hub && npm run verify-diaspora && npm run verify-strongholds",
+    "test": "tsc -b apps/ingest-worker packages/shared && npm run test:shell && npm run test:mini-sparkline && npm run test:rankings && npm run test:viz-payloads && npm run test:dominant-name-sparks && npm run test:editorial && npm run test:editorial-growth && npm run test:decade-hub && npm run test:webbotauth && npm run verify-diaspora && npm run verify-strongholds",
     "test:shell": "tsx --test scripts/render-shell.test.ts",
     "test:mini-sparkline": "tsx --test scripts/mini-sparkline.test.ts",
     "test:rankings": "tsx --test scripts/rankings.test.ts",
@@ -54,6 +54,7 @@
     "audit:site": "npm run audit:links && npm run validate:pages",
     "test:indexable-routes": "tsx --test scripts/indexable-routes.test.ts",
     "test:editorial-growth": "tsx --test scripts/editorial-growth.test.ts",
+    "test:webbotauth": "tsx --test scripts/webbotauth.test.ts",
     "build-decade-hub:1920s": "tsx scripts/build-decade-hub-1920.ts"
   },
   "devDependencies": {

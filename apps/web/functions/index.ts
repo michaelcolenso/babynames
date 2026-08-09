@@ -68,6 +68,8 @@ Top names for a given birth year (1880–2025).
 
 - API catalog: https://nobodynamed.com/.well-known/api-catalog
 - Agent skills: https://nobodynamed.com/.well-known/agent-skills/index.json
+- MCP server card: https://nobodynamed.com/.well-known/mcp/server-card.json
+- A2A agent card: https://nobodynamed.com/.well-known/agent-card.json
 - About & methodology: https://nobodynamed.com/about
 
 ## Browser Tool Access (WebMCP)
@@ -85,6 +87,21 @@ free \`/api/name/{name}\` endpoint returns the raw timeseries only. Gated by the
 [x402 protocol](https://x402.org) (scheme \`exact\`, network \`base-sepolia\`, $0.01 USDC): request
 without an \`X-PAYMENT\` header to receive HTTP 402 with payment requirements, pay, and retry with the
 header set. Every other endpoint on this site remains free.
+
+## Agent-to-Agent (A2A)
+
+Agent Card: https://nobodynamed.com/.well-known/agent-card.json — declares a single \`JSONRPC\`
+interface at \`POST /a2a\` implementing the A2A \`SendMessage\` method (a stateless lookup agent, not a
+full task runner). Send a prefix to search (the default), or set \`message.metadata.skillId\` to
+\`"name-lookup"\` for exact-name trend history instead.
+
+## Bot Identification (Web Bot Auth)
+
+Key directory: https://nobodynamed.com/.well-known/http-message-signatures-directory — publishes the
+Ed25519 public key this site's own automated fetches (the weekly SSA data ingest) sign with, per the
+[IETF Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/) HTTP Message Signatures
+protocol. Outbound requests carry \`Signature-Agent\`, \`Signature-Input\`, and \`Signature\` headers
+covering \`@authority\` and \`signature-agent\`, verifiable against the published key.
 `;
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {

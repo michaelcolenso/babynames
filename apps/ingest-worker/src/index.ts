@@ -27,6 +27,7 @@ import type {
 
 import { fetchNamesZip, headEtag, unpackYobFiles } from "./ssa";
 import { fetchStateZip, enqueueStateRows } from "./states-ingest";
+import { webBotAuthHeaders } from "./webbotauth";
 import { parseYob } from "./parse";
 import { CHUNK_ROWS, type IngestMessage, type ChunkRow, type YearTotalRow } from "./chunks";
 import { ensureStaging, clearStagingForRun, insertRowChunk, insertStateRows, upsertYearTotals } from "./upsert";
@@ -45,6 +46,13 @@ declare global {
   interface Env {
     TRIGGER_SECRET: string;
     STATE_SSA_URL: string;
+    // Ed25519 private key (JWK, e.g. `{"kty":"OKP","crv":"Ed25519","d":"...","x":"..."}`)
+    // used to sign outbound SSA.gov fetches per Web Bot Auth. Optional — set
+    // as a Worker secret (`wrangler secret put WEBBOTAUTH_PRIVATE_KEY_JWK`).
+    // Its public half must match the key published at
+    // /.well-known/http-message-signatures-directory. Unset = fetches go out
+    // unsigned, same as before this existed.
+    WEBBOTAUTH_PRIVATE_KEY_JWK?: string;
   }
 }
 
@@ -178,7 +186,10 @@ async function runIngest(env: Env, force: boolean, r2Key: string | null): Promis
   // When an R2 key is provided, skip ETag check and read the zip directly from R2.
   if (!r2Key) {
     const lastEtag = await getMeta(env.DB, META_KEYS.lastSsaEtag);
-    const head = await headEtag(env.SSA_URL);
+    const head = await headEtag(
+      env.SSA_URL,
+      await webBotAuthHeaders(env.WEBBOTAUTH_PRIVATE_KEY_JWK, env.SSA_URL),
+    );
     if (!force && head && lastEtag && head === lastEtag) {
       console.log(JSON.stringify({ message: "ingest skipped", reason: "etag_unchanged", etag: head }));
       return;
@@ -200,7 +211,10 @@ async function runIngest(env: Env, force: boolean, r2Key: string | null): Promis
       bytes = new Uint8Array(await obj.arrayBuffer());
       etag = obj.httpEtag ?? null;
     } else {
-      const result = await fetchNamesZip(env.SSA_URL);
+      const result = await fetchNamesZip(
+        env.SSA_URL,
+        await webBotAuthHeaders(env.WEBBOTAUTH_PRIVATE_KEY_JWK, env.SSA_URL),
+      );
       bytes = result.bytes;
       etag = result.etag;
       await env.INGEST_CACHE.put(`names-${new Date().toISOString().slice(0, 10)}.zip`, bytes);
@@ -262,7 +276,10 @@ async function runIngest(env: Env, force: boolean, r2Key: string | null): Promis
 async function runStateIngest(env: Env, force: boolean, r2Key: string | null): Promise<void> {
   if (!r2Key) {
     const lastEtag = await getMeta(env.DB, META_KEYS.lastStateSsaEtag);
-    const head = await headEtag(env.STATE_SSA_URL);
+    const head = await headEtag(
+      env.STATE_SSA_URL,
+      await webBotAuthHeaders(env.WEBBOTAUTH_PRIVATE_KEY_JWK, env.STATE_SSA_URL),
+    );
     if (!force && head && lastEtag && head === lastEtag) {
       console.log(JSON.stringify({ message: "state ingest skipped", reason: "etag_unchanged", etag: head }));
       return;
@@ -280,7 +297,10 @@ async function runStateIngest(env: Env, force: boolean, r2Key: string | null): P
     bytes = new Uint8Array(await obj.arrayBuffer());
     etag = obj.httpEtag ?? null;
   } else {
-    const result = await fetchStateZip(env.STATE_SSA_URL);
+    const result = await fetchStateZip(
+      env.STATE_SSA_URL,
+      await webBotAuthHeaders(env.WEBBOTAUTH_PRIVATE_KEY_JWK, env.STATE_SSA_URL),
+    );
     bytes = result.bytes;
     etag = result.etag;
     await env.INGEST_CACHE.put(`names-by-state-${new Date().toISOString().slice(0, 10)}.zip`, bytes);
