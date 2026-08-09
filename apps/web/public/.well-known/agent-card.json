@@ -25,7 +25,7 @@
     {
       "id": "name-lookup",
       "name": "Name history lookup",
-      "description": "Given a single US baby name, returns its trend classification (rising/stable/declining/endangered/extinct), peak year, peak birth count, and most recent birth count for each sex it was recorded under.",
+      "description": "Given an exact US baby name (set message.metadata.skillId to \"name-lookup\"), returns its trend classification (rising/stable/declining/endangered/extinct), peak year, peak birth count, and most recent birth count for each sex it was recorded under.",
       "tags": ["names", "demographics", "history"],
       "examples": ["Jennifer", "Michael", "Kehlani"],
       "inputModes": ["text/plain"],
@@ -34,7 +34,7 @@
     {
       "id": "name-search",
       "name": "Name prefix search",
-      "description": "Given a partial name, returns up to 10 matching names ordered by peak historical popularity.",
+      "description": "The default skill — given a partial name, returns up to 10 matching names ordered by peak historical popularity. Set message.metadata.skillId to \"name-search\" to select it explicitly.",
       "tags": ["names", "search", "autocomplete"],
       "examples": ["Jen", "Mich", "Kehl"],
       "inputModes": ["text/plain"],

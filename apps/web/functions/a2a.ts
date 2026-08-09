@@ -28,7 +28,11 @@ type JsonRpcMessage = {
 };
 
 type Part = { text?: string };
-type IncomingMessage = { contextId?: string; parts?: Part[] };
+type IncomingMessage = {
+  contextId?: string;
+  parts?: Part[];
+  metadata?: { skillId?: string };
+};
 
 function ok(id: unknown, result: unknown) {
   return Response.json(
@@ -53,30 +57,39 @@ function agentMessage(text: string, contextId?: string) {
   };
 }
 
-const SINGLE_NAME = /^[a-zA-Z']{1,30}$/;
-
-async function reply(text: string, db: D1Database): Promise<string> {
-  const query = text.trim();
-  if (!query) {
-    return 'Ask me about a US baby name — e.g. "Jennifer" for its trend history, or a prefix like "Jen" to search.';
+// Which skill runs is selected explicitly via `message.metadata.skillId`
+// ("name-lookup" or "name-search") rather than inferred from the text —
+// inferring from "is this an exact name match" breaks the moment a search
+// prefix (e.g. "Jen", "Mich") also happens to be a real, if obscure, name
+// on file, silently making the search skill unreachable for that input.
+async function lookupName(query: string, db: D1Database): Promise<string> {
+  const rows = await getNameWithSeries(db, query.toLowerCase());
+  if (!rows.length) {
+    return `No name on file matching "${query}".`;
   }
+  const summaries = rows.map(
+    ({ row }) =>
+      `${row.sex}: ${row.status}, peaked at ${row.peak_count.toLocaleString()} births in ${row.peak_year}, ${row.latest_count.toLocaleString()} in the most recent year on record.`,
+  );
+  return `${rows[0]!.row.name} — ${summaries.join(" ")}`;
+}
 
-  if (SINGLE_NAME.test(query)) {
-    const rows = await getNameWithSeries(db, query.toLowerCase());
-    if (rows.length) {
-      const summaries = rows.map(
-        ({ row }) =>
-          `${row.sex}: ${row.status}, peaked at ${row.peak_count.toLocaleString()} births in ${row.peak_year}, ${row.latest_count.toLocaleString()} in the most recent year on record.`,
-      );
-      return `${rows[0]!.row.name} — ${summaries.join(" ")}`;
-    }
-  }
-
+async function searchNames(query: string, db: D1Database): Promise<string> {
   const hits = query.length >= 2 ? await searchByPrefix(db, query, 10) : [];
   if (!hits.length) {
     return `No names found matching "${query}".`;
   }
   return `Matches for "${query}": ${hits.map((r) => `${r.name} (${r.sex})`).join(", ")}.`;
+}
+
+async function reply(text: string, skillId: string | undefined, db: D1Database): Promise<string> {
+  const query = text.trim();
+  if (!query) {
+    return 'Ask me about a US baby name. Set message.metadata.skillId to "name-lookup" for trend ' +
+      'history on an exact name (e.g. "Jennifer"), or "name-search" (the default) for prefix matches (e.g. "Jen").';
+  }
+
+  return skillId === "name-lookup" ? lookupName(query, db) : searchNames(query, db);
 }
 
 export const onRequestOptions: PagesFunction = async () =>
@@ -97,8 +110,10 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   }
 
   const { message } = (params ?? {}) as { message?: IncomingMessage };
-  const text = message?.parts?.find((p) => typeof p.text === "string")?.text ?? "";
+  const text = (message?.parts ?? [])
+    .map((p) => (typeof p.text === "string" ? p.text : ""))
+    .join("");
 
-  const replyText = await reply(text, ctx.env.DB);
+  const replyText = await reply(text, message?.metadata?.skillId, ctx.env.DB);
   return ok(id, { message: agentMessage(replyText, message?.contextId) });
 };
