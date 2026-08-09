@@ -104,12 +104,17 @@ export const onRequestOptions: PagesFunction = async () =>
   new Response(null, { status: 204, headers: CORS_HEADERS });
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
-  let msg: JsonRpcMessage;
+  let parsed: unknown;
   try {
-    msg = (await ctx.request.json()) as JsonRpcMessage;
+    parsed = await ctx.request.json();
   } catch {
     return err(null, -32700, "Parse error");
   }
+
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return err(null, -32600, "Invalid Request");
+  }
+  const msg = parsed as JsonRpcMessage;
 
   const { id, method, params } = msg;
 

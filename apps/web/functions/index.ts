@@ -92,7 +92,8 @@ header set. Every other endpoint on this site remains free.
 
 Agent Card: https://nobodynamed.com/.well-known/agent-card.json — declares a single \`JSONRPC\`
 interface at \`POST /a2a\` implementing the A2A \`SendMessage\` method (a stateless lookup agent, not a
-full task runner). Send a name to look up its trend history, or a prefix to search.
+full task runner). Send a prefix to search (the default), or set \`message.metadata.skillId\` to
+\`"name-lookup"\` for exact-name trend history instead.
 `;
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
