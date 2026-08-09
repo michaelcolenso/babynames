@@ -13,6 +13,7 @@ export * from "./render-landing";
 export * from "./render-shell";
 export * from "./render-shadow";
 export * from "./cf-access";
+export * from "./webbotauth";
 export * from "./d1-chunk";
 export * from "./d1-queries";
 export * from "./rankings";

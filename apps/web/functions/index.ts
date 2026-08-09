@@ -94,6 +94,14 @@ Agent Card: https://nobodynamed.com/.well-known/agent-card.json — declares a s
 interface at \`POST /a2a\` implementing the A2A \`SendMessage\` method (a stateless lookup agent, not a
 full task runner). Send a prefix to search (the default), or set \`message.metadata.skillId\` to
 \`"name-lookup"\` for exact-name trend history instead.
+
+## Bot Identification (Web Bot Auth)
+
+Key directory: https://nobodynamed.com/.well-known/http-message-signatures-directory — publishes the
+Ed25519 public key this site's own automated fetches (the weekly SSA data ingest) sign with, per the
+[IETF Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/) HTTP Message Signatures
+protocol. Outbound requests carry \`Signature-Agent\`, \`Signature-Input\`, and \`Signature\` headers
+covering \`@authority\` and \`signature-agent\`, verifiable against the published key.
 `;
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
