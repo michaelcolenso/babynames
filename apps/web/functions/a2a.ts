@@ -34,6 +34,14 @@ type IncomingMessage = {
   metadata?: { skillId?: string };
 };
 
+// message.parts comes straight from untrusted request JSON — a truthy
+// non-array (e.g. `{}`) or an array containing `null` would otherwise throw
+// inside .map(), which the outer middleware turns into a generic 503
+// instead of a JSON-RPC error response.
+function isValidParts(parts: unknown): parts is Part[] {
+  return Array.isArray(parts) && parts.every((p) => p !== null && typeof p === "object");
+}
+
 function ok(id: unknown, result: unknown) {
   return Response.json(
     { jsonrpc: "2.0", id, result },
@@ -110,6 +118,9 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
   }
 
   const { message } = (params ?? {}) as { message?: IncomingMessage };
+  if (message?.parts !== undefined && !isValidParts(message.parts)) {
+    return err(id, -32602, "Invalid params: message.parts must be an array of parts");
+  }
   const text = (message?.parts ?? [])
     .map((p) => (typeof p.text === "string" ? p.text : ""))
     .join("");
