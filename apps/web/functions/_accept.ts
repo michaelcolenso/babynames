@@ -27,3 +27,32 @@ export function prefersMarkdown(accept: string | null): boolean {
   return markdownQuality !== undefined && markdownQuality > 0 &&
     (htmlQuality === undefined || markdownQuality > htmlQuality);
 }
+
+/**
+ * Decide whether a request should receive the machine-readable homepage.
+ *
+ * `Accept` can be rewritten by browser extensions and agent-enabled browsers.
+ * Fetch Metadata is a stronger signal for a top-level browser navigation, which
+ * must always receive the visual site even when its rewritten `Accept` header
+ * says that Markdown has a higher quality value.
+ */
+export function shouldServeMarkdown(request: Request): boolean {
+  const destination = request.headers.get("Sec-Fetch-Dest")?.toLowerCase();
+  const mode = request.headers.get("Sec-Fetch-Mode")?.toLowerCase();
+  const userAgent = request.headers.get("User-Agent") ?? "";
+
+  if (
+    destination === "document" ||
+    mode === "navigate" ||
+    looksLikeBrowser(userAgent)
+  ) return false;
+
+  return prefersMarkdown(request.headers.get("Accept"));
+}
+
+function looksLikeBrowser(userAgent: string): boolean {
+  // All major graphical browsers start their navigation UA with Mozilla/5.0.
+  // This fallback matters when a proxy or privacy extension strips Fetch
+  // Metadata while also replacing Accept with text/markdown.
+  return /^Mozilla\/5\.0\b/i.test(userAgent.trim());
+}

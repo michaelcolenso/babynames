@@ -1,5 +1,5 @@
 import type { PagesFunction } from "@cloudflare/workers-types";
-import { prefersMarkdown } from "./_accept";
+import { shouldServeMarkdown } from "./_accept";
 
 const LINK_HEADER =
   '</.well-known/api-catalog>; rel="api-catalog", ' +
@@ -106,7 +106,7 @@ covering \`@authority\` and \`signature-agent\`, verifiable against the publishe
 `;
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
-  if (prefersMarkdown(ctx.request.headers.get("Accept"))) {
+  if (shouldServeMarkdown(ctx.request)) {
     const tokens = Math.ceil(MARKDOWN.length / 4);
     return new Response(MARKDOWN, {
       headers: {
