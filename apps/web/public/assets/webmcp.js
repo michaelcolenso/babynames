@@ -19,7 +19,10 @@
   }
 
   async function fetchJson(url) {
-    const res = await fetch(url);
+    // Share the registration lifecycle with in-flight tool calls. Navigating
+    // away unregisters the tools and prevents their requests from continuing
+    // after the page that exposed them has gone away.
+    const res = await fetch(url, { signal });
     if (!res.ok) throw new Error(`Request failed: ${res.status}`);
     return res.json();
   }
@@ -35,6 +38,7 @@
           q: { type: "string", description: 'Name prefix to search for (e.g. "Jen", "The")' },
         },
         required: ["q"],
+        additionalProperties: false,
       },
       annotations: { readOnlyHint: true },
       async execute({ q }) {
@@ -51,6 +55,7 @@
           name: { type: "string", description: "The baby name to look up (case-insensitive)" },
         },
         required: ["name"],
+        additionalProperties: false,
       },
       annotations: { readOnlyHint: true },
       async execute({ name }) {
@@ -71,6 +76,7 @@
           },
         },
         required: ["kind"],
+        additionalProperties: false,
       },
       annotations: { readOnlyHint: true },
       async execute({ kind }) {
@@ -86,6 +92,7 @@
           year: { type: "integer", minimum: 1880, description: "Birth year" },
         },
         required: ["year"],
+        additionalProperties: false,
       },
       annotations: { readOnlyHint: true },
       async execute({ year }) {
@@ -96,7 +103,7 @@
       name: "get_site_metadata",
       description:
         "Returns top-10 names per year, total birth counts per year, and the full year range covered by the dataset.",
-      inputSchema: { type: "object", properties: {} },
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true },
       async execute() {
         return textResult(await fetchJson("/api/meta"));
@@ -112,6 +119,7 @@
           name: { type: "string", description: "The baby name to open (case-insensitive)" },
         },
         required: ["name"],
+        additionalProperties: false,
       },
       annotations: { readOnlyHint: false },
       async execute({ name }) {

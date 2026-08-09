@@ -55,6 +55,7 @@
     "test:indexable-routes": "tsx --test scripts/indexable-routes.test.ts",
     "test:editorial-growth": "tsx --test scripts/editorial-growth.test.ts",
     "test:webbotauth": "tsx --test scripts/webbotauth.test.ts",
+    "test:webmcp": "tsx --test scripts/webmcp.test.ts",
     "build-decade-hub:1920s": "tsx scripts/build-decade-hub-1920.ts"
   },
   "devDependencies": {
