@@ -5,7 +5,7 @@
 // free (with the `data_version` cache-bust trick built into each handler).
 
 import type { PagesFunction } from "@cloudflare/workers-types";
-import { shouldServeMarkdown } from "./_accept";
+import { shouldServeMarkdown } from "./_request-format";
 
 const CANONICAL_PAGES = new Set([
   "/about",

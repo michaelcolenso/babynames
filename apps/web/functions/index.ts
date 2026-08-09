@@ -1,5 +1,5 @@
 import type { PagesFunction } from "@cloudflare/workers-types";
-import { shouldServeMarkdown } from "./_accept";
+import { shouldServeMarkdown } from "./_request-format";
 
 const LINK_HEADER =
   '</.well-known/api-catalog>; rel="api-catalog", ' +
