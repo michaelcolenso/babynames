@@ -56,6 +56,7 @@
     "test:editorial-growth": "tsx --test scripts/editorial-growth.test.ts",
     "test:webbotauth": "tsx --test scripts/webbotauth.test.ts",
     "test:webmcp": "tsx --test scripts/webmcp.test.ts",
+    "test:content-negotiation": "tsx --test scripts/content-negotiation.test.ts",
     "build-decade-hub:1920s": "tsx scripts/build-decade-hub-1920.ts"
   },
   "devDependencies": {
