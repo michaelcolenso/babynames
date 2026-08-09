@@ -29,8 +29,10 @@ type JsonRpcMessage = {
 
 type Part = { text: string };
 type IncomingMessage = {
+  messageId: string;
   contextId?: string;
-  parts?: Part[];
+  role: "ROLE_USER";
+  parts: Part[];
   metadata?: { skillId?: string };
 };
 
@@ -53,13 +55,23 @@ function isValidId(id: unknown): id is string | number | null {
 }
 
 // A SendMessage call without a message (missing, `{}`, an array, null, or a
-// primitive) or with zero parts has no text for the agent to act on, so it's
-// treated as an invalid request rather than falling through to the generic
-// help prompt as if it were a successful, if unhelpful, call.
-function isValidMessage(message: unknown): message is IncomingMessage & { parts: Part[] } {
+// primitive), with zero parts, or missing the A2A Message schema's other
+// required fields (messageId, role) is treated as an invalid request rather
+// than falling through to the generic help prompt as if it were a
+// successful, if unhelpful, call. role is checked against "ROLE_USER"
+// specifically, not just "is a known Role value" — a client claiming
+// "ROLE_AGENT" for its own message is a semantically invalid message,
+// not merely an unrecognized one.
+function isValidMessage(message: unknown): message is IncomingMessage {
   if (message === null || typeof message !== "object" || Array.isArray(message)) return false;
-  const parts = (message as IncomingMessage).parts;
-  return isValidParts(parts) && parts.length > 0;
+  const m = message as Record<string, unknown>;
+  return (
+    typeof m.messageId === "string" &&
+    m.messageId.length > 0 &&
+    m.role === "ROLE_USER" &&
+    isValidParts(m.parts) &&
+    m.parts.length > 0
+  );
 }
 
 function ok(id: unknown, result: unknown) {
@@ -154,7 +166,11 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 
   const { message } = (params ?? {}) as { message?: unknown };
   if (!isValidMessage(message)) {
-    return err(id, -32602, "Invalid params: message with at least one text part is required");
+    return err(
+      id,
+      -32602,
+      'Invalid params: message requires messageId, role="ROLE_USER", and at least one text part',
+    );
   }
   const text = message.parts.map((p) => p.text).join("");
 
