@@ -5,6 +5,7 @@
 // free (with the `data_version` cache-bust trick built into each handler).
 
 import type { PagesFunction } from "@cloudflare/workers-types";
+import { prefersMarkdown } from "./_accept";
 
 const CANONICAL_PAGES = new Set([
   "/about",
@@ -91,7 +92,7 @@ async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promi
   // variant into a synthetic, internal-only cache-key URL so the two
   // representations are cached separately. `__nv_variant` never reaches a
   // client: we always return the cached/origin Response, never redirect to it.
-  const wantsMarkdown = (ctx.request.headers.get("Accept") ?? "").includes("text/markdown");
+  const wantsMarkdown = prefersMarkdown(ctx.request.headers.get("Accept"));
   const keyUrl = new URL(ctx.request.url);
   keyUrl.searchParams.set("__nv_variant", wantsMarkdown ? "md" : "html");
   const cacheKey = new Request(keyUrl.toString(), { method: "GET" });
