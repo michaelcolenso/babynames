@@ -1,4 +1,4 @@
-# Authentication
+# Auth.md
 
 NobodyNamed's public API and MCP server require **no authentication**.
 
