@@ -41,3 +41,18 @@ test("still serves Markdown to explicit non-navigation clients", () => {
 
   assert.equal(shouldServeMarkdown(request), true);
 });
+
+test("keeps agent-discovery documents out of the unpurgeable variant cache", async () => {
+  const { usesVariantCache } = await import("../apps/web/functions/_middleware");
+
+  // Entries in the variant cache are keyed by a synthetic `__nv_variant` URL
+  // that Cloudflare's purge API cannot address, so a deleted `.well-known`
+  // file would keep being served for its whole stale-while-revalidate window.
+  assert.equal(usesVariantCache("/.well-known/oauth-protected-resource"), false);
+  assert.equal(usesVariantCache("/.well-known/api-catalog"), false);
+  assert.equal(usesVariantCache("/.well-known/mcp/server-card.json"), false);
+
+  // Ordinary content-negotiated routes still use it.
+  assert.equal(usesVariantCache("/"), true);
+  assert.equal(usesVariantCache("/name/Hazel/"), true);
+});
