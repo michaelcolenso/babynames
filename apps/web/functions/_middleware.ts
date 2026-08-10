@@ -64,7 +64,7 @@ export const onRequest: PagesFunction = async (ctx) => {
  * purge API cannot address, so anything cached is effectively unevictable for
  * the lifetime of its `stale-while-revalidate` window. Agent-discovery
  * documents under `/.well-known/` change as conventions evolve and must remain
- * deletable, so they bypass it and are served from the asset layer instead.
+ * deletable, so they never enter it.
  */
 export function usesVariantCache(pathname: string): boolean {
   return !pathname.startsWith("/.well-known/");
@@ -96,22 +96,38 @@ async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promi
     return ctx.next();
   }
 
-  // Agent-discovery documents are exempt from the variant cache below.
+  // `/.well-known/oauth-protected-resource` was deleted from the repo, but the
+  // apex hostname kept serving the old body — advertising an empty
+  // `authorization_servers` list, which made MCP clients try to register
+  // against an authorization server that does not exist and broke connector
+  // setup ("Couldn't register with nobodynamed's sign-in service").
   //
-  // Entries written to caches.default under the synthetic `__nv_variant` key
-  // are not reachable by Cloudflare's purge-by-URL API (the key is not a real
-  // asset URL), and `purge_everything` does not evict them either. Combined
-  // with `stale-while-revalidate=604800` from `_headers`, that pinned a
-  // *deleted* `/.well-known/oauth-protected-resource` in production for days
-  // after it was removed from the repo: the edge reported MISS, the Worker
-  // then answered from its own cache, and the empty `authorization_servers`
-  // list it advertised made MCP clients attempt an OAuth registration against
-  // an authorization server that does not exist, breaking connector setup.
+  // The deployment itself is correct: both `name-vitals.pages.dev` and the
+  // pinned deployment URL return 404 for this path, and a request with any
+  // query string 404s too. Only the bare URL on `nobodynamed.com` served it,
+  // with a steadily climbing `Age`, and it survived repeated per-file and
+  // `purge_everything` purges. `.well-known` is not in `_routes.json`'s
+  // `include` list, so those requests never reach Functions at all — the stale
+  // copy sits in the static-asset path, where nothing in this codebase can
+  // evict it.
   //
-  // These files are small, static, already edge-cached via `_headers`, and are
-  // exactly the ones that get added and removed as agent conventions change,
-  // so they must stay evictable. Serving them straight from the asset layer
-  // means a deletion takes effect on deploy instead of being unpurgeable.
+  // Adding the path to `_routes.json` routes it here instead, so this explicit
+  // 404 is what answers. Keep the two together: dropping either the route
+  // entry or this branch resurrects the stale document.
+  if (url.pathname === "/.well-known/oauth-protected-resource") {
+    return new Response("Not Found", {
+      status: 404,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+
+  // Agent-discovery documents skip the variant cache below. Entries there are
+  // keyed by a synthetic `__nv_variant` URL that purge-by-URL cannot address,
+  // so anything stored is effectively unevictable for its whole
+  // stale-while-revalidate window. These files are added and removed as agent
+  // conventions change and must stay evictable. (Today `_routes.json` keeps
+  // most of `.well-known` out of Functions entirely, so this mainly guards
+  // against a future route entry quietly making them cacheable.)
   if (!usesVariantCache(url.pathname)) {
     return ctx.next();
   }

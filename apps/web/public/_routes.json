@@ -28,7 +28,8 @@
     "/newsletter/*",
     "/stories/*",
     "/shadow",
-    "/shadow/*"
+    "/shadow/*",
+    "/.well-known/oauth-protected-resource"
   ],
   "exclude": [
     "/assets/*",
