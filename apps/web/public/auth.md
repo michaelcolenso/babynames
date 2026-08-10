@@ -7,37 +7,59 @@ name data. There is no authorization server, and no OAuth or OIDC discovery
 metadata is published — a client attempting a sign-in handshake before reading
 data is misconfigured.
 
-## Endpoints
+## What the no-auth guarantee covers
 
-| Surface              | URL                                      | Auth                     |
-| -------------------- | ---------------------------------------- | ------------------------ |
-| MCP server           | `https://nobodynamed.com/mcp`            | None                     |
-| Name data API        | `https://nobodynamed.com/api/*`           | None (except rows below) |
-| Newsletter signup    | `POST /api/newsletter/subscribe`         | None, but rate limited   |
-| Paid report          | `GET /api/premium/report/{name}`         | Payment, not credentials |
-| Blog admin           | `/api/blog/admin`                        | **Required**             |
+It covers the **read-only name-data surface**, listed explicitly rather than as
+a wildcard so that adding an endpoint elsewhere never silently widens it:
 
-Two `/api/*` paths are exceptions to the blanket "no auth" rule above:
+| Surface                        | Auth |
+| ------------------------------ | ---- |
+| `https://nobodynamed.com/mcp`  | None |
+| `GET /api/search`              | None |
+| `GET /api/name/{name}`         | None |
+| `GET /api/meta`                | None |
+| `GET /api/landing/{kind}`      | None |
+| `GET /api/year/{year}`         | None |
+| `GET /api/decade/{decade}`     | None |
+| `GET /api/movers/{year}`       | None |
+| `GET /api/debuts/{year}`       | None |
+| `GET /api/compare`             | None |
+| `GET /api/twin/{name}`         | None |
+| `GET /api/enrichment/{name}`   | None |
+| `GET /api/diaspora/{name}`     | None |
 
-- **`/api/blog/admin`** is a private administrative endpoint. It requires either
-  a Cloudflare Access identity (`Cf-Access-Authenticated-User-Email`) or
-  `Authorization: Bearer <secret>`, and returns `401 {"error":"unauthorized"}`
-  otherwise. It is not part of the public data API and has no credentials to
-  hand out.
-- **`GET /api/premium/report/{name}`** is gated by payment rather than identity
-  — see below.
-
-See [/developers](https://nobodynamed.com/developers) for the full endpoint
-reference and MCP client setup, and
+Every MCP tool maps onto one of these. See
+[/developers](https://nobodynamed.com/developers) for the full reference and
 [/.well-known/api-catalog](https://nobodynamed.com/.well-known/api-catalog) for
 a machine-readable index.
 
+## Endpoints outside that guarantee
+
+Other paths under `/api/` are **not** part of the public data surface and each
+has its own requirement:
+
+- **`GET /api/premium/report/{name}`** — gated by payment, not identity. See
+  below.
+- **`/api/blog/admin`** — a private administrative endpoint. A bare
+  `GET` returns the admin page itself, but every operation that touches data
+  (`?list`, `?load={slug}`, `POST`, `DELETE`) requires either a Cloudflare
+  Access identity (`Cf-Access-Authenticated-User-Email`) or
+  `Authorization: Bearer <secret>`, and returns `401 {"error":"unauthorized"}`
+  without one. There are no credentials to hand out.
+- **`POST /api/newsletter/subscribe`** — no credential, but rate limited. See
+  below.
+- **`POST /api/newsletter/unsubscribe`** — requires the signed, single-purpose
+  token embedded in an unsubscribe link, supplied as a `token` query parameter
+  or form field. Without a valid one it returns
+  `400 {"status":"link-invalid"}`. The token is a capability, not an identity:
+  it is issued only in outgoing email and cannot be requested.
+
 ## Rate limits
 
-Read endpoints (name data, search, MCP tool calls) have no enforced rate limit
-today. Please keep request volume reasonable.
+The read-only name-data endpoints listed above, and MCP tool calls, have no
+enforced rate limit today. Please keep request volume reasonable.
 
-`POST /api/newsletter/subscribe` is the exception and is actively throttled:
+`POST /api/newsletter/subscribe` is throttled:
 
 | Scope          | Limit                  | On exceed                       |
 | -------------- | ---------------------- | ------------------------------- |
