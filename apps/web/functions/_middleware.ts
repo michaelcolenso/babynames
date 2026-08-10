@@ -57,6 +57,19 @@ export const onRequest: PagesFunction = async (ctx) => {
   }
 };
 
+/**
+ * Whether a path may be stored in the Worker-level variant cache.
+ *
+ * Entries there are keyed by a synthetic `__nv_variant` URL that Cloudflare's
+ * purge API cannot address, so anything cached is effectively unevictable for
+ * the lifetime of its `stale-while-revalidate` window. Agent-discovery
+ * documents under `/.well-known/` change as conventions evolve and must remain
+ * deletable, so they bypass it and are served from the asset layer instead.
+ */
+export function usesVariantCache(pathname: string): boolean {
+  return !pathname.startsWith("/.well-known/");
+}
+
 async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promise<Response> {
   const legacyName = url.pathname === "/" ? url.searchParams.get("name")?.trim() : "";
   if (legacyName) {
@@ -80,6 +93,26 @@ async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promi
   }
 
   if (ctx.request.method !== "GET") {
+    return ctx.next();
+  }
+
+  // Agent-discovery documents are exempt from the variant cache below.
+  //
+  // Entries written to caches.default under the synthetic `__nv_variant` key
+  // are not reachable by Cloudflare's purge-by-URL API (the key is not a real
+  // asset URL), and `purge_everything` does not evict them either. Combined
+  // with `stale-while-revalidate=604800` from `_headers`, that pinned a
+  // *deleted* `/.well-known/oauth-protected-resource` in production for days
+  // after it was removed from the repo: the edge reported MISS, the Worker
+  // then answered from its own cache, and the empty `authorization_servers`
+  // list it advertised made MCP clients attempt an OAuth registration against
+  // an authorization server that does not exist, breaking connector setup.
+  //
+  // These files are small, static, already edge-cached via `_headers`, and are
+  // exactly the ones that get added and removed as agent conventions change,
+  // so they must stay evictable. Serving them straight from the asset layer
+  // means a deletion takes effect on deploy instead of being unpurgeable.
+  if (!usesVariantCache(url.pathname)) {
     return ctx.next();
   }
 
