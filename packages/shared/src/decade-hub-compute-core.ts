@@ -33,6 +33,8 @@ export interface DecadeComputeConfig {
   sanityAnchors: readonly SanityAnchor[];
 }
 
+export const DEFAULT_DECADE_HUB_ALPHA = 2500;
+
 export function createDecadeComputeConfig(input: {
   startYear: number; nominalEndYear: number; classroomYear: number;
   alpha?: number; eligibilityMinBirths?: number; eligibilityTop1000MinYears?: number;
@@ -44,7 +46,7 @@ export function createDecadeComputeConfig(input: {
     startYear: input.startYear,
     nominalEndYear: input.nominalEndYear,
     classroomYear: input.classroomYear,
-    alpha: input.alpha ?? 2500,
+    alpha: input.alpha ?? DEFAULT_DECADE_HUB_ALPHA,
     eligibilityMinBirths: input.eligibilityMinBirths ?? 5000,
     eligibilityTop1000MinYears: input.eligibilityTop1000MinYears ?? 5,
     familyMinVariantBirths: input.familyMinVariantBirths ?? 1000,
@@ -71,10 +73,13 @@ export const CLASSROOM_SIZE = 30;
 export function round4(n: number): number { return Math.round(n * 1e4) / 1e4; }
 export function round6(n: number): number { return Math.round(n * 1e6) / 1e6; }
 function nameKey(sex: Sex, name: string): string { return `${sex}|${name.toLowerCase()}`; }
+export function compareLexicalNames(a: string, b: string): number {
+  const al = a.toLowerCase(); const bl = b.toLowerCase();
+  return al < bl ? -1 : al > bl ? 1 : 0;
+}
 export function compareByBirths(a: { birthsInDecade: number; name: string }, b: { birthsInDecade: number; name: string }): number {
   if (b.birthsInDecade !== a.birthsInDecade) return b.birthsInDecade - a.birthsInDecade;
-  const al = a.name.toLowerCase(); const bl = b.name.toLowerCase();
-  return al < bl ? -1 : al > bl ? 1 : 0;
+  return compareLexicalNames(a.name, b.name);
 }
 export function percentile(sortedAsc: number[], p: number): number {
   if (!sortedAsc.length) throw new Error("percentile of empty set");
@@ -109,7 +114,7 @@ export function computeTop1000YearsGeneric(records: SourceNameRecord[], config: 
     for (let year = config.startYear; year <= actualEndYear; year++) {
       const present: { name: string; count: number }[] = [];
       for (const rec of records) { if (rec.sex !== sex) continue; const count = rec.series[year] ?? 0; if (count >= 1) present.push({ name: rec.name, count }); }
-      present.sort((a, b) => b.count !== a.count ? b.count - a.count : a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+      present.sort((a, b) => b.count !== a.count ? b.count - a.count : compareLexicalNames(a.name, b.name));
       for (let i = 0; i < Math.min(1000, present.length); i++) {
         const key = nameKey(sex, present[i]!.name); result.set(key, (result.get(key) ?? 0) + 1);
       }
@@ -143,9 +148,11 @@ function rankSexSet(eligible: NameDecadeStats[], config: DecadeComputeConfig): {
   return { rows: byScore, prior };
 }
 export function computeOwnershipGeneric(stats: NameDecadeStats[], top1000Years: Map<string, number>, config: DecadeComputeConfig): OwnershipComputation {
-  const female = rankSexSet(stats.filter((s) => s.sex === "F" && isEligibleGeneric(s, top1000Years, config)), config);
-  const male = rankSexSet(stats.filter((s) => s.sex === "M" && isEligibleGeneric(s, top1000Years, config)), config);
-  const selected = [...stats.filter((s) => s.sex === "F" && isEligibleGeneric(s, top1000Years, config)), ...stats.filter((s) => s.sex === "M" && isEligibleGeneric(s, top1000Years, config))];
+  const eligibleFemale = stats.filter((s) => s.sex === "F" && isEligibleGeneric(s, top1000Years, config));
+  const eligibleMale = stats.filter((s) => s.sex === "M" && isEligibleGeneric(s, top1000Years, config));
+  const female = rankSexSet(eligibleFemale, config);
+  const male = rankSexSet(eligibleMale, config);
+  const selected = [...eligibleFemale, ...eligibleMale];
   const totalDecade = selected.reduce((n, s) => n + s.birthsInDecade, 0); const totalLifetime = selected.reduce((n, s) => n + s.lifetimeBirths, 0);
   return { female: female.rows, male: male.rows, priorDecadeShareFemale: round6(female.prior), priorDecadeShareMale: round6(male.prior), priorDecadeSharePooled: round6(totalLifetime > 0 ? totalDecade / totalLifetime : 0) };
 }
@@ -175,12 +182,12 @@ export function apportionClassroomGeneric(records: SourceNameRecord[], year: num
     const pool: { name: string; count: number; floor: number; remainder: number }[] = [];
     for (const rec of records) { if (rec.sex !== sex) continue; const count = rec.series[year] ?? 0; if (count < 1) continue; const expected = (count / sexTotal) * sexSeats; const floor = Math.floor(expected); pool.push({ name: rec.name, count, floor, remainder: expected - floor }); }
     let remaining = sexSeats - pool.reduce((n, p) => n + p.floor, 0); if (remaining < 0) throw new Error("floor apportionment overshot the seat count");
-    const ordered = [...pool].sort((a, b) => b.remainder !== a.remainder ? b.remainder - a.remainder : b.count !== a.count ? b.count - a.count : a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    const ordered = [...pool].sort((a, b) => b.remainder !== a.remainder ? b.remainder - a.remainder : b.count !== a.count ? b.count - a.count : compareLexicalNames(a.name, b.name));
     const bonus = new Set(ordered.slice(0, remaining).map((p) => p.name.toLowerCase())); remaining = Math.max(0, remaining - ordered.length);
     if (remaining > 0 && ordered.length) bonus.add(ordered[0]!.name.toLowerCase());
     for (const p of pool) { const seats = p.floor + (bonus.has(p.name.toLowerCase()) ? 1 : 0); if (seats < 1) continue; const key = nameKey(sex, p.name); const existing = seatTable.get(key); if (existing) existing.seats += seats; else seatTable.set(key, { name: p.name, slug: p.name, sex, seats }); }
   }
-  const ordered = [...seatTable.values()].sort((a, b) => b.seats !== a.seats ? b.seats - a.seats : a.name.toLowerCase() !== b.name.toLowerCase() ? a.name.toLowerCase().localeCompare(b.name.toLowerCase()) : a.sex.localeCompare(b.sex));
+  const ordered = [...seatTable.values()].sort((a, b) => b.seats !== a.seats ? b.seats - a.seats : compareLexicalNames(a.name, b.name) || (a.sex < b.sex ? -1 : a.sex > b.sex ? 1 : 0));
   for (const entry of ordered) for (let i = 0; i < entry.seats; i++) students.push({ name: entry.name, slug: entry.slug, sex: entry.sex, seats: entry.seats });
   if (students.length !== size) throw new Error(`classroom produced ${students.length} students, expected ${size}`);
   const mostRepeated = ordered[0]!; return { year, size: 30, femaleSeats, maleSeats, students, uniqueNames: ordered.length, repeatedNames: size - ordered.length, mostRepeated: { name: mostRepeated.name, slug: mostRepeated.slug, seats: mostRepeated.seats }, topShare: round4(mostRepeated.seats / size) };
@@ -202,13 +209,13 @@ export function buildSpellingFamiliesGeneric(csvText: string, records: SourceNam
     for (const v of variants) v.shareOfFamily = round6(v.birthsInDecade / total); const dominant = [...variants].sort(compareByBirths)[0]!.name; const yearly: SpellingFamilyYearPoint[] = []; for (let y = config.startYear; y <= actualEndYear; y++) { const point: SpellingFamilyYearPoint = { year: y, total: 0 }; for (const v of variantNames) { const count = yearlyByVariant.get(v)![y] ?? 0; point[v] = count; point.total += count; } yearly.push(point); } let peakYear = config.startYear; let peakTotal = -1; for (const point of yearly) if (point.total > peakTotal) { peakTotal = point.total; peakYear = point.year; }
     let combinedRank = 1; for (const value of [...decadeBirths.entries()].filter(([key]) => key.startsWith(`${sex}|`)).map(([, value]) => value).filter((value) => value > total)) combinedRank++; families.push({ id: familyId, label: group[0]!.label, canonicalDisplayName: canonical, variants, totalBirthsInDecade: total, combinedDecadeRank: combinedRank, dominantVariant: dominant, peakYear, yearly, rationale: group[0]!.rationale, reviewStatus: "approved" });
   }
-  families.sort((a, b) => b.totalBirthsInDecade - a.totalBirthsInDecade || a.id.localeCompare(b.id)); return { families, skipped };
+  families.sort((a, b) => b.totalBirthsInDecade - a.totalBirthsInDecade || compareLexicalNames(a.id, b.id)); return { families, skipped };
 }
 
 function championOf(rows: OwnershipResult[]): NameSummary { const top = [...rows].sort(compareByBirths)[0]!; return { name: top.name, slug: top.slug, sex: top.sex, birthsInDecade: top.birthsInDecade, lifetimeBirths: top.lifetimeBirths }; }
 export interface BuildProfileInputGeneric { source: DecadeHubSource; config: DecadeComputeConfig; familiesCsv: string; generatedAt: string; sourceVersion: string; gitCommit?: string; }
 export function buildDecadeProfileGeneric(input: BuildProfileInputGeneric): DecadeProfile {
-  const { source, config } = input; const coverage = computeDecadeCoverage(source, config); const stats = source.records.map((r) => summarizeRecordGeneric(r, source.maxYear, config, coverage.endYear)); const top1000 = computeTop1000YearsGeneric(source.records, config, coverage.endYear); const ownership = computeOwnershipGeneric(stats, top1000, config); const views = computeOwnershipViews(ownership.female, ownership.male); const diversity = computeDiversityMetrics(stats); const classroom = apportionClassroomGeneric(source.records, config.classroomYear, CLASSROOM_SIZE, config, statsYearTotal(source.records, config.classroomYear, "F"), statsYearTotal(source.records, config.classroomYear, "M")); const families = buildSpellingFamiliesGeneric(input.familiesCsv, source.records, config, coverage.endYear).families;
+  const { source, config } = input; const coverage = computeDecadeCoverage(source, config); const stats = source.records.map((r) => summarizeRecordGeneric(r, source.maxYear, config, coverage.endYear)); const top1000 = computeTop1000YearsGeneric(source.records, config, coverage.endYear); const ownership = computeOwnershipGeneric(stats, top1000, config); if (!ownership.female.length) throw new Error("no eligible female names in decade source"); if (!ownership.male.length) throw new Error("no eligible male names in decade source"); const views = computeOwnershipViews(ownership.female, ownership.male); const diversity = computeDiversityMetrics(stats); const classroom = apportionClassroomGeneric(source.records, config.classroomYear, CLASSROOM_SIZE, config, statsYearTotal(source.records, config.classroomYear, "F"), statsYearTotal(source.records, config.classroomYear, "M")); const families = buildSpellingFamiliesGeneric(input.familiesCsv, source.records, config, coverage.endYear).families;
   const profile: DecadeProfile = { decade: config.startYear, startYear: config.startYear, endYear: coverage.endYear, nominalEndYear: config.nominalEndYear, dataThroughYear: source.maxYear, isComplete: coverage.isComplete, totalBirths: diversity.totalBirths, femaleBirths: diversity.femaleBirths, maleBirths: diversity.maleBirths, distinctNames: diversity.distinctNames, top10Share: diversity.top10Share, top100Share: diversity.top100Share, diversityScore: diversity.diversityScore, effectiveNames: diversity.effectiveNames, concentrationScore: diversity.concentrationScore, femaleChampion: championOf(ownership.female), maleChampion: championOf(ownership.male), ownershipRankings: { female: ownership.female, male: ownership.male, mostOwned: views.mostOwned, mostPopular: views.mostPopular, popularButTimeless: views.popularButTimeless, unexpected: views.unexpected }, alpha: config.alpha, priorDecadeShare: ownership.priorDecadeSharePooled, priorDecadeShareFemale: ownership.priorDecadeShareFemale, priorDecadeShareMale: ownership.priorDecadeShareMale, classroomDefaults: classroom, spellingFamilies: families, methodologyVersion: DECADE_HUB_METHODOLOGY_VERSION, generatedAt: input.generatedAt, sourceVersion: input.sourceVersion };
   if (input.gitCommit !== undefined) profile.gitCommit = input.gitCommit; return profile;
 }

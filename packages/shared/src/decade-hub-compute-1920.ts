@@ -12,7 +12,7 @@ import type {
 import {
   apportionClassroomGeneric, buildDecadeProfileGeneric, buildSpellingFamiliesGeneric,
   computeOwnershipGeneric, computeTop1000YearsGeneric, createDecadeComputeConfig,
-  evaluateSanityAnchors, isEligibleGeneric, summarizeRecordGeneric,
+  DEFAULT_DECADE_HUB_ALPHA, evaluateSanityAnchors, isEligibleGeneric, summarizeRecordGeneric,
 } from "./decade-hub-compute-core";
 import type {
   DecadeHubSource,
@@ -34,7 +34,7 @@ export const OWNERSHIP_WEIGHT_PROMINENCE = 0.3;
 export const FAMILY_MIN_VARIANT_BIRTHS = 1000;
 export const FAMILY_MIN_TOTAL_BIRTHS = 20000;
 export const FAMILY_MIN_VARIANTS = 2;
-export const DECADE_HUB_ALPHA = 2500;
+export const DECADE_HUB_ALPHA = DEFAULT_DECADE_HUB_ALPHA;
 
 const definition = getDecadeHubDefinition("1920s")!;
 export const DECADE_COMPUTE_CONFIG = createDecadeComputeConfig({

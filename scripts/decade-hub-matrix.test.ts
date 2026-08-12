@@ -3,8 +3,10 @@ import test from "node:test";
 
 import {
   buildDecadeProfileGeneric,
+  compareLexicalNames,
   computeDecadeCoverage,
   createDecadeComputeConfig,
+  DEFAULT_DECADE_HUB_ALPHA,
   evaluateSanityAnchors,
   summarizeRecordGeneric,
 } from "../packages/shared/src/decade-hub-compute-core";
@@ -97,6 +99,27 @@ test("record-year sanity anchors must fall within actual coverage", () => {
   });
   const source: DecadeHubSource = { minYear: 2020, maxYear: 2025, records: [rec("Ava", "F", { 2025: 5 })] };
   assert.throws(() => evaluateSanityAnchors(source, config), /sanity anchor year 2028 is outside actual coverage 2020–2025/i);
+});
+
+test("profile construction fails explicitly when either sex has no eligible names", () => {
+  const config = configFor(2020, 2024);
+  const source: DecadeHubSource = { minYear: 2020, maxYear: 2025, records: [rec("Ava", "F", { 2020: 10_000, 2024: 10_000 })] };
+  assert.throws(
+    () => buildDecadeProfileGeneric({ source, config, familiesCsv: EMPTY_FAMILIES, generatedAt: "x", sourceVersion: "fixture" }),
+    /no eligible male names/i,
+  );
+});
+
+test("lexical ties match the pre-refactor lowercase code-point comparator", () => {
+  assert.ok(compareLexicalNames("Z", "Å") < 0);
+  assert.ok(compareLexicalNames("Å", "Z") > 0);
+  assert.equal(compareLexicalNames("Ada", "ada"), 0);
+});
+
+test("compatibility wrappers share the core alpha default", () => {
+  assert.equal(DEFAULT_DECADE_HUB_ALPHA, 2500);
+  assert.equal(configFor(1980).alpha, DEFAULT_DECADE_HUB_ALPHA);
+  assert.equal(configFor(1920).alpha, DEFAULT_DECADE_HUB_ALPHA);
 });
 
 test("complete generic 1920s and 1980s builds match compatibility wrappers", async () => {
