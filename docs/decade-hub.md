@@ -1,5 +1,10 @@
 # Decade hub operations guide
 
+For a reusable implementation brief covering the remaining decades, use
+[`docs/prompts/complete-decade-hubs.md`](prompts/complete-decade-hubs.md). It
+treats the production 1920s and 1980s hubs as the two completed references and
+requires small, reviewable batches rather than mass-producing thin pages.
+
 Operational reference for the 1980s decade hub (`/names/1980s/` plus its
 `methodology/`, `classroom/`, and `spelling-families/` child routes). The hub
 renders from a single precomputed `DecadeProfile` JSON payload stored in the
