@@ -2,6 +2,7 @@
   "decade": 1980,
   "startYear": 1980,
   "endYear": 1989,
+  "nominalEndYear": 1989,
   "dataThroughYear": 2017,
   "isComplete": true,
   "totalBirths": 37341900,

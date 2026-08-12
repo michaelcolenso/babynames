@@ -790,6 +790,7 @@ export function buildDecadeProfile(input: BuildProfileInput): DecadeProfile {
     decade: 1920,
     startYear: DECADE_START,
     endYear: DECADE_END,
+    nominalEndYear: DECADE_END,
     dataThroughYear,
     isComplete: true,
     totalBirths: diversity.totalBirths,
