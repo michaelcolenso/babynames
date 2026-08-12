@@ -36,7 +36,7 @@ const FEATURED_DECADES = [1920, 1980];
 
 const STATIC_ROUTES: IndexableRoute[] = [
   { path: "/", family: "static", priority: 1 },
-  ...["extinct", "endangered", "comeback", "rising"].map((slug): IndexableRoute => ({ path: `/${slug}`, family: "status", priority: 0.7 })),
+  ...["extinct", "endangered", "comeback", "rising", "emerging", "fading"].map((slug): IndexableRoute => ({ path: `/${slug}`, family: "status", priority: 0.7 })),
   { path: "/year", family: "static", priority: 0.7 },
   { path: "/about", family: "static", priority: 0.6 },
   { path: "/press", family: "static", priority: 0.6 },

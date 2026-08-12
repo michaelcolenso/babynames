@@ -7,14 +7,18 @@ import {
   listComeback,
   listDominantNamesWithSparks,
   listLandingWithSparks,
+  listMomentum,
   META_KEYS,
   pageShell,
   renderLandingTableHTML,
+  renderMomentumTableHTML,
   renderYearIndexHTML,
   SPARK_BUCKETS,
   type LandingKind,
   type LandingRow,
   type LandingTableKind,
+  type MomentumDirection,
+  type MomentumRouteName,
   type NameRow,
 } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
@@ -23,6 +27,7 @@ import type { PagesFunction } from "@cloudflare/workers-types";
 // landing.js). We server-render the top rows so the page ships crawlable
 // /name/ links in its initial HTML; the client still re-renders the full table.
 const LANDING_KINDS = new Set<LandingTableKind>(["extinct", "endangered", "rising", "comeback"]);
+const MOMENTUM_ROUTES: Record<string, MomentumDirection> = { emerging: "rising", fading: "fading" };
 const SSR_HUB_ROWS = 100;
 
 interface EditorialSection {
@@ -155,7 +160,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   // asset serving from within route functions.
   if (slug.includes(".")) return ctx.env.ASSETS.fetch(ctx.request);
   // Serve static HTML pages directly — avoids redirect loops with Cloudflare Pages Pretty URLs.
-  const staticPages = new Set(["extinct", "rising", "endangered", "comeback", "year", "about", "press"]);
+  const staticPages = new Set(["extinct", "rising", "endangered", "comeback", "year", "about", "press", "emerging", "fading"]);
   if (staticPages.has(slug)) {
     const assetRes = await ctx.env.ASSETS.fetch(new URL(`/${slug}.html`, ctx.request.url));
     let html = await assetRes.text();
@@ -172,6 +177,11 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
           getMeta(ctx.env.DB, META_KEYS.maxYear),
         ]);
         const table = renderLandingTableHTML(kind, shapeLandingRows(kind, rows), Number(yMStr ?? 0));
+        html = html.replace('<div id="t"></div>', `<div id="t">${table}</div>`);
+      } else if (slug in MOMENTUM_ROUTES) {
+        const direction = MOMENTUM_ROUTES[slug as MomentumRouteName]!;
+        const rows = await listMomentum(ctx.env.DB, direction, { limit: SSR_HUB_ROWS });
+        const table = renderMomentumTableHTML(direction, rows);
         html = html.replace('<div id="t"></div>', `<div id="t">${table}</div>`);
       } else if (slug === "year") {
         const [ymStr, yMStr] = await Promise.all([

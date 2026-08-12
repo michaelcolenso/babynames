@@ -14,6 +14,8 @@ const DEFAULT_NAV: NavItem[] = [
   { label: "Comebacks", href: "/comeback" },
   { label: "Birth year", href: "/year" },
   { label: "Rising", href: "/rising" },
+  { label: "Emerging", href: "/emerging" },
+  { label: "Fading", href: "/fading" },
   { label: "Visualizations", href: "/viz" },
   { label: "Namecalling", href: "/blog/" },
   { label: "Newsletter", href: "/newsletter" },
@@ -29,6 +31,8 @@ const BROWSE_NAV: NavItem[] = [
   { label: "By initial", href: "/names/a/" },
   { label: "By ending", href: "/names/ending/a/" },
   { label: "Rising", href: "/rising" },
+  { label: "Emerging", href: "/emerging" },
+  { label: "Fading", href: "/fading" },
   { label: "About", href: "/about" },
 ];
 

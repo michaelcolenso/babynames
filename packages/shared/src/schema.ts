@@ -112,6 +112,37 @@ export interface LandingResponse {
   rows: LandingRow[];
 }
 
+// API: GET /api/names/emerging|fading — backed by the precomputed
+// name_momentum table (see migrations/20260812T120000_name_momentum.sql).
+export type MomentumDirection = "rising" | "fading";
+export type MomentumRouteName = "emerging" | "fading";
+export type MomentumSort = "momentum" | "total" | "eta" | "az";
+
+export interface MomentumRow {
+  name: string;
+  sex: Sex;
+  firstYear: number;
+  peakYear: number;
+  peakCount: number;
+  totalCount: number;
+  // Last 5 years of the momentum window, oldest to newest.
+  y1: number;
+  y2: number;
+  y3: number;
+  y4: number;
+  y5: number;
+  momentum: number;
+  etaYear: number | null;
+}
+
+export interface MomentumResponse {
+  direction: MomentumDirection;
+  sex: Sex | null;
+  sort: MomentumSort;
+  yM: number;
+  rows: MomentumRow[];
+}
+
 // API: GET /api/meta
 export interface MetaResponse {
   ym: number;
