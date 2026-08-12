@@ -5,33 +5,36 @@ const path = require("path");
 
 const PUBLIC_DIR = path.join(__dirname, "..", "apps", "web", "public");
 
+// The "Discover" group keeps the flat nav from growing forever as more
+// status hubs are added — see packages/shared/src/render-shell.ts (the
+// canonical, single-source-of-truth version of this same structure).
+const DISCOVER_GROUP = [
+  { label: "Extinct", href: "/extinct" },
+  { label: "Endangered", href: "/endangered" },
+  { label: "Comebacks", href: "/comeback" },
+  { label: "Rising", href: "/rising" },
+  { label: "Emerging", href: "/emerging" },
+  { label: "Fading", href: "/fading" },
+];
+const TOP_LEVEL_ITEMS = [
+  { label: "Birth year", href: "/year" },
+  { label: "Visualizations", href: "/viz" },
+  { label: "Namecalling", href: "/blog/" },
+  { label: "About", href: "/about" },
+];
+
 const STANDARD_HEADER = (currentPath) => {
-  const items = [
-    { label: "Extinct", href: "/extinct" },
-    { label: "Endangered", href: "/endangered" },
-    { label: "Comebacks", href: "/comeback" },
-    { label: "Birth year", href: "/year" },
-    { label: "Rising", href: "/rising" },
-    { label: "Emerging", href: "/emerging" },
-    { label: "Fading", href: "/fading" },
-    { label: "Visualizations", href: "/viz" },
-    { label: "Namecalling", href: "/blog/" },
-    { label: "About", href: "/about" },
-  ];
-  const navLinks = items
-    .map((item) => {
-      const isActive = currentPath === item.href || (item.href !== "/" && currentPath?.startsWith(item.href));
-      const activeAttr = isActive ? ' aria-current="page"' : "";
-      return `<a href="${item.href}"${activeAttr}>${item.label}</a>`;
-    })
-    .join("");
-  const mobileLinks = items
-    .map((item) => {
-      const isActive = currentPath === item.href || (item.href !== "/" && currentPath?.startsWith(item.href));
-      const activeAttr = isActive ? ' aria-current="page"' : "";
-      return `<a href="${item.href}"${activeAttr}>${item.label}</a>`;
-    })
-    .join("");
+  const isActive = (href) => currentPath === href || (href !== "/" && currentPath?.startsWith(href));
+  const link = (item) => `<a href="${item.href}"${isActive(item.href) ? ' aria-current="page"' : ""}>${item.label}</a>`;
+
+  const groupActive = DISCOVER_GROUP.some((item) => isActive(item.href));
+  const groupClass = groupActive ? "nav-group nav-group-active" : "nav-group";
+  const navLinks = `<details class="${groupClass}"><summary>Discover</summary><div class="nav-group-panel">${DISCOVER_GROUP.map(link).join("")}</div></details>${TOP_LEVEL_ITEMS.map(link).join("")}`;
+
+  // Mobile nav stays a flat list of every leaf link — a nested disclosure
+  // inside the mobile menu's own disclosure isn't worth the interaction cost.
+  const mobileLinks = [...DISCOVER_GROUP, ...TOP_LEVEL_ITEMS].map(link).join("");
+
   return `<header class="site">
       <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="nobodynamed"></a>
       <nav aria-label="Main navigation">
