@@ -74,6 +74,58 @@ async function renderLandingTable(kind, target) {
   target.innerHTML = `<table class="table"><thead>${headers}</thead><tbody>${rows.map(row).join("")}</tbody></table>`;
 }
 
+// Mini 5-point signal sparkline (y1..y5) with a dashed floor line at
+// count=5 — mirror of momentumSpark() in @nv/shared/render-momentum.ts.
+const MOMENTUM_FLOOR = 5;
+function momentumSpark(row) {
+  const w = 120, h = 28;
+  const values = [row.y1, row.y2, row.y3, row.y4, row.y5];
+  const max = Math.max(MOMENTUM_FLOOR, ...values);
+  const yFor = (v) => h - (v / max) * (h - 2) - 1;
+  let path = "";
+  for (let i = 0; i < values.length; i++) {
+    const x = (i / (values.length - 1)) * w;
+    path += (i === 0 ? "M" : "L") + x.toFixed(1) + "," + yFor(values[i]).toFixed(1);
+  }
+  const floorY = yFor(MOMENTUM_FLOOR).toFixed(1);
+  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" class="spark momentum-spark">` +
+    `<line x1="0" y1="${floorY}" x2="${w}" y2="${floorY}" class="spark-floor"/>` +
+    `<path class="line" d="${path}"/>` +
+    `</svg>`;
+}
+
+// Render the /emerging or /fading momentum table into target.
+// direction: "rising" (backs /emerging) | "fading" (backs /fading)
+async function renderMomentumTable(direction, target, opts) {
+  const routeName = direction === "rising" ? "emerging" : "fading";
+  const params = new URLSearchParams();
+  if (opts && opts.sex) params.set("sex", opts.sex);
+  if (opts && opts.sort) params.set("sort", opts.sort);
+  if (opts && opts.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  const r = await fetch(`/api/names/${routeName}${qs ? `?${qs}` : ""}`);
+  const { rows } = await r.json();
+  const fmt = NameVitals.fmt;
+
+  const headers = direction === "rising"
+    ? `<tr><th>Name</th><th class="num">First seen</th><th class="num">Latest</th><th class="num">Momentum</th><th>Signal</th><th></th></tr>`
+    : `<tr><th>Name</th><th class="num">Peak year</th><th class="num">Peak</th><th class="num">Est. floor year</th><th>Signal</th><th></th></tr>`;
+
+  const row = (r) => {
+    const linkTo = `/name/${encodeURIComponent(r.name)}/`;
+    const sexClass = r.sex === "M" ? "momentum-sex-m" : "momentum-sex-f";
+    const nameCell = `<td><a href="${linkTo}">${r.name}</a> <span class="meta ${sexClass}">${r.sex}</span></td>`;
+    const spark = `<td class="sparkcell">${momentumSpark(r)}</td>`;
+    const cta = `<td><a href="${linkTo}">Details →</a></td>`;
+    if (direction === "rising") {
+      return `<tr>${nameCell}<td class="num">${r.firstYear}</td><td class="num">${fmt(r.y5)}</td><td class="num">${fmt(r.momentum)}</td>${spark}${cta}</tr>`;
+    }
+    return `<tr>${nameCell}<td class="num">${r.peakYear}</td><td class="num">${fmt(r.peakCount)}</td><td class="num">${r.etaYear ?? "—"}</td>${spark}${cta}</tr>`;
+  };
+
+  target.innerHTML = `<table class="table"><thead>${headers}</thead><tbody>${rows.map(row).join("")}</tbody></table>`;
+}
+
 // Render the year-of-birth top-names table into target.
 function renderYearTable(year, rows, target) {
   const fmt = NameVitals.fmt;
@@ -110,4 +162,5 @@ function renderYearTable(year, rows, target) {
 }
 
 window.renderLandingTable = renderLandingTable;
+window.renderMomentumTable = renderMomentumTable;
 window.renderYearTable = renderYearTable;

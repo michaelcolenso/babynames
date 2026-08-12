@@ -21,6 +21,9 @@ import type {
   NameEnrichmentProfile,
   NameHistoricalProfile,
   NameRegionalAnomaly,
+  MomentumDirection,
+  MomentumRow,
+  MomentumSort,
   NameRow,
   RelatedName,
   SearchHit,
@@ -442,6 +445,72 @@ export async function listLandingWithSparks(
     .bind(kind, limit)
     .all<NameRow & { spark_blob: ArrayBuffer | null }>();
   return r.results ?? [];
+}
+
+// Sort keys map to a fixed, hardcoded ORDER BY clause — never interpolate a
+// caller-supplied sort string directly.
+const MOMENTUM_SORT_COLUMNS: Record<MomentumSort, string> = {
+  momentum: "momentum DESC, name ASC",
+  total: "total_count DESC, name ASC",
+  eta: "eta_year IS NULL, eta_year ASC, momentum DESC",
+  az: "name ASC",
+};
+
+export async function listMomentum(
+  db: D1Database,
+  direction: MomentumDirection,
+  opts: { sex?: Sex; sort?: MomentumSort; limit?: number } = {},
+): Promise<MomentumRow[]> {
+  const sort = opts.sort ?? "momentum";
+  const limit = opts.limit ?? 150;
+  const orderBy = MOMENTUM_SORT_COLUMNS[sort];
+
+  const sexClause = opts.sex ? "AND sex = ?2" : "";
+  const bindings: (string | number)[] = opts.sex
+    ? [direction, opts.sex, limit]
+    : [direction, limit];
+
+  const r = await db
+    .prepare(
+      `SELECT name, sex, first_year, peak_year, peak_count, total_count,
+              y1, y2, y3, y4, y5, momentum, eta_year
+         FROM name_momentum
+        WHERE direction = ?1 ${sexClause}
+        ORDER BY ${orderBy}
+        LIMIT ?${opts.sex ? 3 : 2}`,
+    )
+    .bind(...bindings)
+    .all<{
+      name: string;
+      sex: Sex;
+      first_year: number;
+      peak_year: number;
+      peak_count: number;
+      total_count: number;
+      y1: number;
+      y2: number;
+      y3: number;
+      y4: number;
+      y5: number;
+      momentum: number;
+      eta_year: number | null;
+    }>();
+
+  return (r.results ?? []).map((row) => ({
+    name: row.name,
+    sex: row.sex,
+    firstYear: row.first_year,
+    peakYear: row.peak_year,
+    peakCount: row.peak_count,
+    totalCount: row.total_count,
+    y1: row.y1,
+    y2: row.y2,
+    y3: row.y3,
+    y4: row.y4,
+    y5: row.y5,
+    momentum: row.momentum,
+    etaYear: row.eta_year,
+  }));
 }
 
 export interface DominantNameWithSpark {

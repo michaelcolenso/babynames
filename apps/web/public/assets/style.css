@@ -913,6 +913,13 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 .table .sparkcell svg { width: 120px; height: 28px; vertical-align: middle; }
 .spark .line { fill: none; stroke: var(--accent); stroke-width: 1.35; }
 
+/* /emerging & /fading — signal sparklines with a dashed floor line at the
+   SSA's 5-births/year reporting threshold, amber/teal sex coding. */
+.momentum-spark .spark-floor { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2.5 2.5; }
+.momentum-spark .line { stroke: var(--emerald); }
+.table .meta.momentum-sex-m { color: var(--amber); }
+.table .meta.momentum-sex-f { color: var(--emerald); }
+
 .report {
   position: relative;
   display: grid;

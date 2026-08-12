@@ -12,6 +12,8 @@ const STANDARD_HEADER = (currentPath) => {
     { label: "Comebacks", href: "/comeback" },
     { label: "Birth year", href: "/year" },
     { label: "Rising", href: "/rising" },
+    { label: "Emerging", href: "/emerging" },
+    { label: "Fading", href: "/fading" },
     { label: "Visualizations", href: "/viz" },
     { label: "Namecalling", href: "/blog/" },
     { label: "About", href: "/about" },
@@ -63,6 +65,8 @@ const FILES = {
   "extinct.html": { currentPath: "/extinct", footer: "minimal", mainId: "main-content" },
   "endangered.html": { currentPath: "/endangered", footer: "minimal", mainId: "main-content" },
   "rising.html": { currentPath: "/rising", footer: "minimal", mainId: "main-content" },
+  "emerging.html": { currentPath: "/emerging", footer: "minimal", mainId: "main-content" },
+  "fading.html": { currentPath: "/fading", footer: "minimal", mainId: "main-content" },
   "comeback.html": { currentPath: "/comeback", footer: "minimal", mainId: "main-content" },
   "press.html": { currentPath: "/press", footer: "full", mainId: "main-content" },
 };
