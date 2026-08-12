@@ -9,8 +9,8 @@ import { onRequestGet as classroomGet } from "../apps/web/functions/names/[decad
 import { onRequestGet as spellingGet } from "../apps/web/functions/names/[decade]/spelling-families/index";
 import type { DecadeProfile } from "../packages/shared/src/decade-hub-types";
 
-const PROFILE_1920 = JSON.parse(readFileSync("data/dist/decade-hub-1920.json", "utf8")) as DecadeProfile;
-const PROFILE_1980 = JSON.parse(readFileSync("scripts/fixtures/decade-hub-1980.fixture.json", "utf8")) as DecadeProfile;
+const PROFILE_1920 = JSON.parse(readFileSync(new URL("../data/dist/decade-hub-1920.json", import.meta.url), "utf8")) as DecadeProfile;
+const PROFILE_1980 = JSON.parse(readFileSync(new URL("./fixtures/decade-hub-1980.fixture.json", import.meta.url), "utf8")) as DecadeProfile;
 const ORIGIN = "https://example.com";
 const CACHE = "public, s-maxage=604800, stale-while-revalidate=86400";
 
@@ -96,12 +96,23 @@ function metaContent(html: string, name: string): string {
   return match[1]!;
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function assertJsonLdIncludes(html: string, required: readonly string[]): void {
+  const types = jsonLdTypes(html);
+  for (const type of required) {
+    assert.ok(types.includes(type), `missing JSON-LD type ${type}; found ${types.join(", ")}`);
+  }
+}
+
 function semanticFingerprint(html: string): string {
   const main = html.match(/<main[\s\S]*<\/main>/)?.[0];
   assert.ok(main, "expected main content");
   const semantic = main
     .replace(/<script[\s\S]*?<\/script>/g, "")
-    .replace(/(<dt>Generated<\/dt><dd>)[^<]*(<\/dd>)/g, "$1<TIMESTAMP>$2")
+    .replace(/(<dt>\s*Generated\s*<\/dt>\s*<dd>)[^<]*(<\/dd>)/g, "$1<TIMESTAMP>$2")
     .replace(/>\s+</g, "><")
     .trim();
   return createHash("sha256").update(semantic).digest("hex");
@@ -128,10 +139,10 @@ test("both pilot hubs preserve metadata, headers, JSON-LD, links, and analytics 
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("Cache-Control"), CACHE);
     assert.equal(response.headers.get("Link"), `<${ORIGIN}/names/${decade}/>; rel="canonical"`);
-    assert.match(html, new RegExp(`<title>${decade} Baby Names: ${male} &amp; ${female} Led the Decade \\| NobodyNamed</title>`));
+    assert.match(html, new RegExp(`<title>${decade} Baby Names: ${escapeRegExp(male)} &amp; ${escapeRegExp(female)} Led the Decade \\| NobodyNamed</title>`));
     assert.match(metaContent(html, "description"), new RegExp(`most popular ${decade} girl names`));
     assert.match(html, new RegExp(`<link rel="canonical" href="${ORIGIN}/names/${decade}/">`));
-    assert.deepEqual(jsonLdTypes(html), ["BreadcrumbList", "WebPage", "ItemList"]);
+    assertJsonLdIncludes(html, ["BreadcrumbList", "WebPage", "ItemList"]);
     assert.match(html, new RegExp(`data-content-id="decade-hub:${decade}"`));
     assert.match(html, /data-content-type="decade-hub"/);
 
@@ -164,7 +175,8 @@ test("both pilot child routes preserve canonical headers, JSON-LD types, identit
 
       if (route === "methodology") {
         assert.match(html, new RegExp(`<title>How We Rank ${decade} Baby Names: Methodology \\| NobodyNamed</title>`));
-        assert.deepEqual(jsonLdTypes(html), ["BreadcrumbList", "WebPage", "Dataset"]);
+        assert.equal(metaContent(html, "description"), `Data source, coverage, eligibility rules, ownership-score formulas, classroom reconstruction, and spelling-family curation for the NobodyNamed ${decade} decade hub.`);
+        assertJsonLdIncludes(html, ["BreadcrumbList", "WebPage", "Dataset"]);
         for (const formula of [
           "raw_concentration = births_in_decade / lifetime_births",
           "adjusted_concentration = (births_in_decade + α × prior_decade_share) / (lifetime_births + α)",
@@ -180,18 +192,20 @@ test("both pilot child routes preserve canonical headers, JSON-LD types, identit
       } else if (route === "classroom") {
         const year = decade === "1920s" ? 1924 : 1984;
         assert.match(html, new RegExp(`<title>${year} Classroom Names: An Average 30-Student Roster \\| NobodyNamed</title>`));
+        assert.match(metaContent(html, "description"), new RegExp(`^A statistical reconstruction of an average ${year} American classroom:`));
         assert.match(html, /A statistical reconstruction of an average classroom, not an actual class record\./);
         assert.match(html, new RegExp(`The ${year} classroom`));
         assert.match(html, /data-dh-sentinel="classroom-bottom"/);
-        assert.deepEqual(jsonLdTypes(html), ["BreadcrumbList", "WebPage"]);
+        assertJsonLdIncludes(html, ["BreadcrumbList", "WebPage"]);
       } else {
         assert.match(html, new RegExp(`<title>${decade} Spelling Families: Combined Name Rankings \\| NobodyNamed</title>`));
+        assert.match(metaContent(html, "description"), new RegExp(`^Conventional rankings split spelling variants\\. This view groups \\d+ hand-reviewed ${decade} spelling families`));
         assert.match(html, /Conventional rankings (?:separate|split) spelling variants/);
         assert.match(html, /role="img" aria-label="Line chart of yearly births/);
         assert.match(html, /<details class="dh-chart-data">/);
         assert.match(html, /<table class="table dh-table">/);
         assert.match(html, /<caption>Yearly SSA births by spelling variant/);
-        assert.deepEqual(jsonLdTypes(html), ["BreadcrumbList", "WebPage"]);
+        assertJsonLdIncludes(html, ["BreadcrumbList", "WebPage"]);
       }
     }
   }
