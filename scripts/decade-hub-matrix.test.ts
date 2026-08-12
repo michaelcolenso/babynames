@@ -5,6 +5,7 @@ import {
   buildDecadeProfileGeneric,
   computeDecadeCoverage,
   createDecadeComputeConfig,
+  evaluateSanityAnchors,
   summarizeRecordGeneric,
 } from "../packages/shared/src/decade-hub-compute-core";
 import { buildDecadeProfile as build1980Profile } from "../packages/shared/src/decade-hub-compute";
@@ -79,6 +80,23 @@ test("classroom year outside partial actual coverage fails clearly", () => {
     () => buildDecadeProfileGeneric({ source, config, familiesCsv: EMPTY_FAMILIES, generatedAt: "x", sourceVersion: "fixture" }),
     /classroom year 2028.*coverage 2020–2025/i,
   );
+});
+
+test("coverage rejects sources that begin after the configured decade start", () => {
+  const config = configFor(2020, 2024);
+  const source: DecadeHubSource = { minYear: 2023, maxYear: 2029, records: [] };
+  assert.throws(() => computeDecadeCoverage(source, config), /source min year 2023 is after decade start 2020/i);
+});
+
+test("record-year sanity anchors must fall within actual coverage", () => {
+  const config = createDecadeComputeConfig({
+    startYear: 2020,
+    nominalEndYear: 2029,
+    classroomYear: 2024,
+    sanityAnchors: [{ kind: "record-year-count", name: "Ava", sex: "F", year: 2028, min: 0, max: 10 }],
+  });
+  const source: DecadeHubSource = { minYear: 2020, maxYear: 2025, records: [rec("Ava", "F", { 2025: 5 })] };
+  assert.throws(() => evaluateSanityAnchors(source, config), /sanity anchor year 2028 is outside actual coverage 2020–2025/i);
 });
 
 test("complete generic 1920s and 1980s builds match compatibility wrappers", async () => {
