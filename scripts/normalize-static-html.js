@@ -78,29 +78,30 @@ function normalizeFile(filename, opts) {
   const filepath = path.join(PUBLIC_DIR, filename);
   let html = fs.readFileSync(filepath, "utf-8");
 
+  // These both preserve whatever ?v=N the stylesheet link already carries —
+  // never strip it. /assets/style.css caches for 24h in the browser
+  // (Cache-Control: max-age=86400) with no other cache-busting mechanism for
+  // static pages, so an unversioned link means any CSS change (like this
+  // one) goes unseen by returning visitors for up to a day. Bump the number
+  // by hand (matching STYLESHEET_HREF in render-shell.ts) whenever
+  // style.css changes.
+  const STYLESHEET_LINK_RE = /<link rel="stylesheet" href="\/assets\/style\.css(\?v=\d+)?">/;
+
   // Add favicon if missing
   if (!html.includes('<link rel="icon"')) {
     html = html.replace(
-      '<link rel="stylesheet" href="/assets/style.css">',
-      '<link rel="icon" href="/favicon.svg" type="image/svg+xml">\n  <link rel="stylesheet" href="/assets/style.css">'
-    );
-    // Also handle versioned CSS
-    html = html.replace(
-      /<link rel="stylesheet" href="\/assets\/style.css\?v=\d+">/,
-      '<link rel="icon" href="/favicon.svg" type="image/svg+xml">\n  <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">\n  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">\n  <link rel="stylesheet" href="/assets/style.css">'
+      STYLESHEET_LINK_RE,
+      (match) => `<link rel="icon" href="/favicon.svg" type="image/svg+xml">\n  ${match}`
     );
   }
 
   // Add theme-color if missing
   if (!html.includes('name="theme-color"')) {
     html = html.replace(
-      '<link rel="stylesheet" href="/assets/style.css">',
-      '<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">\n  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">\n  <link rel="stylesheet" href="/assets/style.css">'
+      STYLESHEET_LINK_RE,
+      (match) => `<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">\n  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">\n  ${match}`
     );
   }
-
-  // Replace CSS version query strings
-  html = html.replace(/\/assets\/style.css\?v=\d+/g, "/assets/style.css");
 
   // Replace header
   const headerRegex = /<header class="site">[\s\S]*?<\/header>/;
