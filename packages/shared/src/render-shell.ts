@@ -41,7 +41,7 @@ const DEFAULT_NAV: NavEntry[] = [
   { label: "About", href: "/about" },
 ];
 
-const STYLESHEET_HREF = "/assets/style.css?v=19";
+const STYLESHEET_HREF = "/assets/style.css?v=21";
 
 // Runs synchronously before the stylesheet is applied, so an explicit
 // dark/light choice from a prior visit takes effect on first paint instead
