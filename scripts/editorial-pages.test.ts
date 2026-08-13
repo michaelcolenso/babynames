@@ -121,7 +121,11 @@ test("classic name cards render six ordered accessible SSR sparklines and preser
   const { response, html, getSparkQueryCount } = await renderClassicNames(classicRows());
 
   assert.equal(response.status, 200);
-  assert.match(html, /<link rel="stylesheet" href="\/assets\/style\.css\?v=19">/);
+  assert.match(
+    html,
+    /<link rel="stylesheet" href="\/assets\/style\.css\?v=\d+">/,
+    "page shell should load a cache-busted production stylesheet",
+  );
   assert.equal(getSparkQueryCount(), 1, "classic spark rows should be fetched in one query");
   assert.deepEqual(cardLinks(html), CLASSIC_NAMES);
   assert.equal((html.match(/<svg class="mini-sparkline"/g) ?? []).length, 6);
