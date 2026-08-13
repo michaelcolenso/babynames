@@ -40,6 +40,10 @@ const STANDARD_HEADER = (currentPath) => {
       <nav aria-label="Main navigation">
         ${navLinks}
       </nav>
+      <button type="button" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
+  <svg class="theme-toggle-icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+  <svg class="theme-toggle-icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>
+</button>
       <details class="mobile-nav">
         <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
         <nav aria-label="Mobile navigation">
@@ -48,6 +52,11 @@ const STANDARD_HEADER = (currentPath) => {
       </details>
     </header>`;
 };
+
+// Kept in sync by hand with THEME_INIT_SCRIPT / THEME_TOGGLE_HTML in
+// packages/shared/src/render-shell.ts — see that file for why each exists.
+const THEME_INIT_SCRIPT = '<script>(function(){try{var t=localStorage.getItem("nv-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>';
+const THEME_JS_TAG = '<script src="/assets/theme.js" defer></script>';
 
 const STANDARD_FOOTER_FULL = `<footer class="site">
       <div>
@@ -99,8 +108,20 @@ function normalizeFile(filename, opts) {
   if (!html.includes('name="theme-color"')) {
     html = html.replace(
       STYLESHEET_LINK_RE,
-      (match) => `<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">\n  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">\n  ${match}`
+      (match) => `<meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">\n  <meta name="theme-color" content="#14161d" media="(prefers-color-scheme: dark)">\n  ${match}`
     );
+  }
+
+  // theme.js, right after the stylesheet link
+  if (!html.includes("assets/theme.js")) {
+    html = html.replace(STYLESHEET_LINK_RE, (match) => `${match}\n  ${THEME_JS_TAG}`);
+  }
+
+  // Inline FOUC-prevention script, right after charset — must run before the
+  // stylesheet is applied, so keep it early regardless of where other head
+  // injections above land.
+  if (!html.includes("nv-theme")) {
+    html = html.replace('<meta charset="utf-8">', `<meta charset="utf-8">\n  ${THEME_INIT_SCRIPT}`);
   }
 
   // Replace header

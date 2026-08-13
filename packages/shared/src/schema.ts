@@ -133,6 +133,11 @@ export interface MomentumRow {
   y5: number;
   momentum: number;
   etaYear: number | null;
+  // The 5-year window y1..y5 were computed over — lets clients label a
+  // composite chart's x-axis correctly without hardcoding a year range that
+  // silently goes stale after the next annual refresh.
+  windowStart: number;
+  windowEnd: number;
 }
 
 export interface MomentumResponse {
