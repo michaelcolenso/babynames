@@ -266,9 +266,9 @@ test("methodology renders formulas, provenance, and Dataset JSON-LD", async () =
 
   // Provenance rendered from payload; coverage never beyond dataThroughYear.
   assert.match(html, /decade-hub\/v1\.0\.0/);
-  assert.match(html, /ssa-national-2017/);
+  assert.match(html, /ssa-national-2025/);
   assert.match(html, /2026-06-01T00:00:00\.000Z/);
-  assert.match(html, /lifetime data through 2017/);
+  assert.match(html, /lifetime data through 2025/);
   assert.doesNotMatch(html, /through 2024/);
 
   // Limitations + verbatim curation copy.

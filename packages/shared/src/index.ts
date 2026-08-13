@@ -27,6 +27,12 @@ export * from "./decade-hub-types";
 export * from "./decade-hub-validate";
 export * from "./content/decade-hub-definitions";
 export * from "./render-decade-hub";
+export {
+  renderDecadeHubGeneric,
+  renderDecadeClassroomGeneric,
+  renderDecadeSpellingFamiliesGeneric,
+  renderDecadeMethodologyGeneric,
+} from "./render-decade-hub-core";
 export * from "./content/decade-theses";
 export * from "./story-package";
 export * from "./newsletter";

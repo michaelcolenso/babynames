@@ -3,7 +3,7 @@
   "startYear": 1980,
   "endYear": 1989,
   "nominalEndYear": 1989,
-  "dataThroughYear": 2017,
+  "dataThroughYear": 2025,
   "isComplete": true,
   "totalBirths": 37341900,
   "femaleBirths": 18208000,
@@ -2055,6 +2055,6 @@
   ],
   "methodologyVersion": "decade-hub/v1.0.0",
   "generatedAt": "2026-06-01T00:00:00.000Z",
-  "sourceVersion": "ssa-national-2017",
+  "sourceVersion": "ssa-national-2025",
   "gitCommit": "fixture0000000"
 }

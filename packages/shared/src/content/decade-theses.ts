@@ -10,10 +10,16 @@
 export interface DecadeThesis {
   heading: string;
   paragraphs: string[];
+  sourceVersion: string;
+  heroOrder?: "scorecard-lede-thesis" | "lede-thesis-scorecard";
+  generationLink?: { href: string; label: string; targetId?: string; copy?: string };
 }
 
 export const DECADE_THESES: Record<string, DecadeThesis> = {
   "1920s": {
+    sourceVersion: "ssa-national-2025",
+    heroOrder: "scorecard-lede-thesis",
+    generationLink: { href: "/millennial-names", label: "Millennial names", targetId: "editorial:millennial-names", copy: "the classroom names of the 1980s and 1990s" },
     heading: "A concentrated decade, and a wider story",
     paragraphs: [
       "The 1920s include 22,972,053 births recorded in the Social Security data: 11,952,683 girls and 11,019,370 boys across 18,108 name-and-sex records. Mary led girls with 701,755 births, while Robert led boys with 576,374. The ten largest name-and-sex combinations accounted for 19.03% of all recorded births, and the top hundred accounted for 54.58%.",
@@ -25,6 +31,9 @@ export const DECADE_THESES: Record<string, DecadeThesis> = {
     ],
   },
   "1980s": {
+    sourceVersion: "ssa-national-2025",
+    heroOrder: "lede-thesis-scorecard",
+    generationLink: { href: "/millennial-names", label: "Millennial names", targetId: "editorial:millennial-names", copy: "the classroom names of the 1980s and 1990s" },
     heading: "A hundred names for half the decade",
     paragraphs: [
       "The 1980s include 35,634,486 American births in the Social Security data, with 17,175,557 girls and 18,458,929 boys, across 38,615 recorded names. Michael led the boys with 663,807 births. Jessica led the girls with 469,510. The ten most popular name-and-sex combinations accounted for 12.48% of all recorded births, and the top 100 accounted for 49.91%. Roughly half the decade's children carried one of a hundred names.",

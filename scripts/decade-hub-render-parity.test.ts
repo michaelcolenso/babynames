@@ -7,12 +7,30 @@ import { onRequestGet as decadeIndexGet } from "../apps/web/functions/names/[dec
 import { onRequestGet as methodologyGet } from "../apps/web/functions/names/[decade]/methodology/index";
 import { onRequestGet as classroomGet } from "../apps/web/functions/names/[decade]/classroom/index";
 import { onRequestGet as spellingGet } from "../apps/web/functions/names/[decade]/spelling-families/index";
+import { renderDecadeClassroomGeneric, renderDecadeHubGeneric, renderDecadeMethodologyGeneric, renderDecadeSpellingFamiliesGeneric } from "../packages/shared/src/render-decade-hub-core";
+import { DecadeHero as DecadeHero1980, renderDecadeHub } from "../packages/shared/src/render-decade-hub";
+import { DecadeHero as DecadeHero1920, renderDecadeHub1920 } from "../packages/shared/src/render-decade-hub-1920";
 import type { DecadeProfile } from "../packages/shared/src/decade-hub-types";
+import type { DecadeHubDefinition } from "../packages/shared/src/content/decade-hub-definitions";
+import type { DecadeThesis } from "../packages/shared/src/content/decade-theses";
 
 const PROFILE_1920 = JSON.parse(readFileSync(new URL("../data/dist/decade-hub-1920.json", import.meta.url), "utf8")) as DecadeProfile;
 const PROFILE_1980 = JSON.parse(readFileSync(new URL("./fixtures/decade-hub-1980.fixture.json", import.meta.url), "utf8")) as DecadeProfile;
 const ORIGIN = "https://example.com";
 const CACHE = "public, s-maxage=604800, stale-while-revalidate=86400";
+
+function profileForDefinition(profile: DecadeProfile, definition: DecadeHubDefinition, sourceVersion = "fixture"): DecadeProfile {
+  return {
+    ...profile,
+    decade: definition.startYear,
+    startYear: definition.startYear,
+    endYear: definition.nominalEndYear,
+    nominalEndYear: definition.nominalEndYear,
+    dataThroughYear: definition.nominalEndYear,
+    isComplete: true,
+    sourceVersion,
+  };
+}
 
 type Decade = "1920s" | "1980s";
 type Route = "hub" | "methodology" | "classroom" | "spelling-families";
@@ -124,11 +142,94 @@ const EXPECTED_FINGERPRINTS: Record<string, string> = {
   "1920s/methodology": "8e5679370e896da68f0154ba9409053f8031a6b2be2d0a36c65a00a1edaf8bc1",
   "1920s/classroom": "82b06300f1f3a179f1916193ea6d8fabd45bbf432c739cdba115c09498a12b97",
   "1920s/spelling-families": "28ba073fad1da3f3e90efdf32ba15ed89def99ebe9538416473e5993992d50e5",
-  "1980s/hub": "0154a691c842e43cac91e817f133a350202dd6cb08ea1d7dd68639746dbecb80",
-  "1980s/methodology": "61b45c12a4efdb0868f6063bf233f658878a5150fa85c32b8f0e705a86069136",
-  "1980s/classroom": "390a6193ac0c0f2917d53585965c1819b5d458f2b9bcc0377ddef5e004cffbde",
-  "1980s/spelling-families": "46d4cfd47f04cc27abc98c90c695f510bef11fc346e5f0e20d4ec317dfeafa63",
+  "1980s/hub": "d843d96908fa9639b6304edc3438a660ebc0e30a855c287c5623d0039104a915",
+  "1980s/methodology": "f9b171775fe5be99d981eb29ee6ec5fa6bd01403304bd4e506f4f0f6ba95fd6c",
+  "1980s/classroom": "bc20cd8ca3c9cc6db3a6170deb702a340057f71d04d161fc7d36efc03554d46c",
+  "1980s/spelling-families": "f9270051b60261749a6a212464b9273b601be64e56cf2fa4d3a16896e629cc14",
 };
+
+test("generic renderer accepts a non-pilot definition and derives its decade identity", () => {
+  const definition: DecadeHubDefinition = {
+    slug: "1970s",
+    startYear: 1970,
+    nominalEndYear: 1979,
+    classroomYear: 1974,
+    thesisSourceVersion: "fixture",
+    sanityAnchors: [],
+    familyFile: "fixture",
+    rolloutState: "draft",
+  };
+  const thesis: DecadeThesis = {
+    sourceVersion: "fixture",
+    heading: "Fixture decade",
+    paragraphs: ["Reviewed fixture copy."],
+  };
+  const html = renderDecadeHubGeneric(profileForDefinition(PROFILE_1980, definition), { origin: ORIGIN, definition, thesis });
+  assert.match(html, /data-content-id="decade-hub:1970s"/);
+  assert.match(html, /<h1>1970s baby names<\/h1>/);
+  assert.match(html, /Reviewed fixture copy\./);
+  assert.match(html, /href="\/year\/1970\/"/);
+});
+
+
+test("generic renderer shows an honest empty spelling-family state", () => {
+  const definition: DecadeHubDefinition = {
+    slug: "1970s", startYear: 1970, nominalEndYear: 1979, classroomYear: 1974,
+    thesisSourceVersion: "fixture", sanityAnchors: [], familyFile: "fixture", rolloutState: "draft",
+  };
+  const html = renderDecadeHubGeneric({ ...profileForDefinition(PROFILE_1980, definition), spellingFamilies: [] }, {
+    origin: ORIGIN, definition, thesis: { sourceVersion: "fixture", heading: "Fixture decade", paragraphs: ["Reviewed fixture copy."] },
+  });
+  assert.match(html, /No reviewed spelling families meet the published thresholds/);
+  assert.doesNotMatch(html, /Explore all 0 spelling families/);
+  assert.doesNotMatch(html, /data-dh-chart=/);
+});
+
+test("generic renderer limits partial-decade language, labels, and dataset coverage", () => {
+  const definition: DecadeHubDefinition = {
+    slug: "2020s", startYear: 2020, nominalEndYear: 2029, classroomYear: 2024,
+    thesisSourceVersion: "fixture", sanityAnchors: [], familyFile: "fixture", rolloutState: "draft",
+  };
+  const profile = { ...PROFILE_1980, decade: 2020, startYear: 2020, endYear: 2025, nominalEndYear: 2029, dataThroughYear: 2025, isComplete: false, sourceVersion: "ssa-national-2025", spellingFamilies: [] };
+  const html = renderDecadeHubGeneric(profile, { origin: ORIGIN, definition, thesis: { sourceVersion: "ssa-national-2025", heading: "Reviewed so far", paragraphs: ["Explicit fixture copy."] } });
+  assert.match(html, /2020s so far · data through 2025/);
+  assert.match(html, /Data coverage<\/dt><dd>Decade 2020–2025/);
+  assert.doesNotMatch(html, /href="\/year\/202[6-9]\//);
+  assert.doesNotMatch(html, /2020[6-9]–2029/);
+  const methodology = renderDecadeMethodologyGeneric(profile, { origin: ORIGIN, definition, thesis: { sourceVersion: "ssa-national-2025", heading: "Reviewed so far", paragraphs: [] } });
+  assert.match(methodology, /temporalCoverage":"2020\/2025/);
+});
+
+test("generic renderers reject mismatched profile, definition, and thesis identities", () => {
+  const definition: DecadeHubDefinition = {
+    slug: "1970s", startYear: 1970, nominalEndYear: 1979, classroomYear: 1974,
+    thesisSourceVersion: "fixture", sanityAnchors: [], familyFile: "fixture", rolloutState: "reviewed",
+  };
+  const thesis: DecadeThesis = { sourceVersion: "fixture", heading: "Reviewed fixture", paragraphs: [] };
+  const matching = profileForDefinition(PROFILE_1980, definition);
+  const renderers = [renderDecadeHubGeneric, renderDecadeClassroomGeneric, renderDecadeSpellingFamiliesGeneric, renderDecadeMethodologyGeneric];
+  for (const render of renderers) {
+    assert.throws(() => render(PROFILE_1980, { origin: ORIGIN, definition, thesis }), /profile decade/i);
+    assert.throws(() => render(matching, { origin: ORIGIN, definition: { ...definition, slug: "1980s" }, thesis }), /definition slug/i);
+    assert.throws(() => render(matching, { origin: ORIGIN, definition, thesis: { ...thesis, sourceVersion: "stale" } }), /thesis source/i);
+  }
+});
+
+test("pilot wrappers reject stale profiles and preserve the historical DecadeHero signature", () => {
+  assert.throws(() => renderDecadeHub({ ...PROFILE_1980, sourceVersion: "ssa-national-2017" }, { origin: ORIGIN }), /thesis source/i);
+  assert.throws(() => renderDecadeHub1920({ ...PROFILE_1920, sourceVersion: "ssa-national-2017" }, { origin: ORIGIN }), /thesis source/i);
+  assert.match(DecadeHero1980(PROFILE_1980, { heading: "Legacy heading", paragraphs: ["Legacy paragraph."] }), /Legacy heading/);
+  assert.match(DecadeHero1920(PROFILE_1920, { heading: "Legacy heading", paragraphs: ["Legacy paragraph."] }), /Legacy heading/);
+
+  const staleEditorial = {
+    heading: "Stale heading",
+    paragraphs: ["Stale paragraph."],
+    sourceVersion: "ssa-national-2017",
+  } as { heading: string; paragraphs: string[] } & { sourceVersion: string };
+  assert.throws(() => DecadeHero1980(PROFILE_1980, staleEditorial), /thesis source/i);
+  assert.throws(() => DecadeHero1920(PROFILE_1920, staleEditorial), /thesis source/i);
+});
+
 
 test("both pilot hubs preserve metadata, headers, JSON-LD, links, and analytics identity", async () => {
   for (const decade of ["1920s", "1980s"] as const) {
