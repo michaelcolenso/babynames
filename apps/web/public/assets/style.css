@@ -133,6 +133,62 @@ header.site nav a {
 header.site nav a:hover,
 header.site nav a[aria-current="page"] { color: var(--ink); }
 
+/* Grouped nav dropdown ("Discover") — a <details> among the flat nav links,
+   consistent with the no-JS disclosure pattern used by .mobile-nav / .faq-q
+   elsewhere on the site. Links stay in the raw HTML at all times, open or
+   closed, so grouping never affects crawlability. */
+header.site nav .nav-group {
+  position: relative;
+}
+header.site nav .nav-group > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--muted);
+  font-size: 0.83rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+header.site nav .nav-group > summary::-webkit-details-marker { display: none; }
+header.site nav .nav-group > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+header.site nav .nav-group > summary::after {
+  content: "▾";
+  font-size: 0.7em;
+  color: var(--brand-faded-contrast);
+}
+header.site nav .nav-group[open] > summary::after { content: "▴"; }
+header.site nav .nav-group > summary:hover,
+header.site nav .nav-group.nav-group-active > summary { color: var(--ink); }
+header.site nav .nav-group-panel {
+  position: absolute;
+  top: calc(100% + 9px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 168px;
+  padding: 0.4rem 0;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+header.site nav .nav-group-panel a {
+  padding: 0.5rem 1rem;
+  color: var(--muted);
+  font-size: 0.83rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+header.site nav .nav-group-panel a:hover,
+header.site nav .nav-group-panel a[aria-current="page"] { color: var(--ink); background: var(--surface-2); }
+
 footer.site {
   border-top: 1px solid var(--rule);
   margin-top: 4rem;

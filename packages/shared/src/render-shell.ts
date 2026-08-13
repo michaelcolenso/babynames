@@ -8,59 +8,77 @@ export interface NavItem {
   href: string;
 }
 
-const DEFAULT_NAV: NavItem[] = [
-  { label: "Extinct", href: "/extinct" },
-  { label: "Endangered", href: "/endangered" },
-  { label: "Comebacks", href: "/comeback" },
+// A grouped disclosure entry in the top-level nav — renders as a
+// <details>/<summary> dropdown so the flat link count doesn't grow forever
+// as more status hubs are added. See renderNav()/renderMobileNav().
+export interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+export type NavEntry = NavItem | NavGroup;
+
+function isNavGroup(entry: NavEntry): entry is NavGroup {
+  return "items" in entry;
+}
+
+const DEFAULT_NAV: NavEntry[] = [
+  {
+    label: "Discover",
+    items: [
+      { label: "Extinct", href: "/extinct" },
+      { label: "Endangered", href: "/endangered" },
+      { label: "Comebacks", href: "/comeback" },
+      { label: "Rising", href: "/rising" },
+      { label: "Emerging", href: "/emerging" },
+      { label: "Fading", href: "/fading" },
+    ],
+  },
   { label: "Birth year", href: "/year" },
-  { label: "Rising", href: "/rising" },
-  { label: "Emerging", href: "/emerging" },
-  { label: "Fading", href: "/fading" },
   { label: "Visualizations", href: "/viz" },
   { label: "Namecalling", href: "/blog/" },
   { label: "Newsletter", href: "/newsletter" },
   { label: "About", href: "/about" },
 ];
 
-const BROWSE_NAV: NavItem[] = [
-  { label: "Extinct", href: "/extinct" },
-  { label: "Endangered", href: "/endangered" },
-  { label: "Comebacks", href: "/comeback" },
-  { label: "Birth year", href: "/year" },
-  { label: "By decade", href: "/names/1980s/" },
-  { label: "By initial", href: "/names/a/" },
-  { label: "By ending", href: "/names/ending/a/" },
-  { label: "Rising", href: "/rising" },
-  { label: "Emerging", href: "/emerging" },
-  { label: "Fading", href: "/fading" },
-  { label: "About", href: "/about" },
-];
-
-const STYLESHEET_HREF = "/assets/style.css?v=18";
+const STYLESHEET_HREF = "/assets/style.css?v=19";
 
 function escape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function renderNav(items: NavItem[], currentPath?: string): string {
-  const links = items
-    .map((item) => {
-      const isActive = currentPath === item.href || (item.href !== "/" && currentPath?.startsWith(item.href));
-      const activeAttr = isActive ? ' aria-current="page"' : "";
-      return `<a href="${escape(item.href)}"${activeAttr}>${escape(item.label)}</a>`;
-    })
-    .join("");
-  return `<nav aria-label="Main navigation">${links}</nav>`;
+function isItemActive(item: NavItem, currentPath?: string): boolean {
+  return currentPath === item.href || (item.href !== "/" && currentPath?.startsWith(item.href) === true);
 }
 
-function renderMobileNav(items: NavItem[], currentPath?: string): string {
-  const links = items
-    .map((item) => {
-      const isActive = currentPath === item.href || (item.href !== "/" && currentPath?.startsWith(item.href));
-      const activeAttr = isActive ? ' aria-current="page"' : "";
-      return `<a href="${escape(item.href)}"${activeAttr}>${escape(item.label)}</a>`;
-    })
-    .join("");
+function renderNavLink(item: NavItem, currentPath?: string): string {
+  const activeAttr = isItemActive(item, currentPath) ? ' aria-current="page"' : "";
+  return `<a href="${escape(item.href)}"${activeAttr}>${escape(item.label)}</a>`;
+}
+
+// Top-level nav entries render flat; a NavGroup renders as a <details>
+// dropdown with real <a href> links in its panel, so grouped items stay
+// crawlable in the raw HTML regardless of open/closed state — no JS involved.
+function renderNav(entries: NavEntry[], currentPath?: string): string {
+  const parts = entries.map((entry) => {
+    if (!isNavGroup(entry)) return renderNavLink(entry, currentPath);
+    const groupActive = entry.items.some((item) => isItemActive(item, currentPath));
+    const activeClass = groupActive ? " nav-group-active" : "";
+    const links = entry.items.map((item) => renderNavLink(item, currentPath)).join("");
+    return `<details class="nav-group${activeClass}">
+    <summary>${escape(entry.label)}</summary>
+    <div class="nav-group-panel">${links}</div>
+  </details>`;
+  });
+  return `<nav aria-label="Main navigation">${parts.join("")}</nav>`;
+}
+
+// Mobile nav flattens groups into a single list — a nested disclosure inside
+// the mobile menu's own disclosure isn't worth the interaction cost at that
+// size, and this list is short enough (leaf items only) to scan directly.
+function renderMobileNav(entries: NavEntry[], currentPath?: string): string {
+  const leaves = entries.flatMap((entry) => (isNavGroup(entry) ? entry.items : [entry]));
+  const links = leaves.map((item) => renderNavLink(item, currentPath)).join("");
   return `<details class="mobile-nav">
   <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
   <nav aria-label="Mobile navigation">${links}</nav>
@@ -69,7 +87,7 @@ function renderMobileNav(items: NavItem[], currentPath?: string): string {
 
 export interface SiteHeaderOpts {
   mobileNav?: boolean;
-  navItems?: NavItem[];
+  navItems?: NavEntry[];
 }
 
 export function siteHeader(currentPath?: string, opts: SiteHeaderOpts = {}): string {
