@@ -473,7 +473,7 @@ export async function listMomentum(
   const r = await db
     .prepare(
       `SELECT name, sex, first_year, peak_year, peak_count, total_count,
-              y1, y2, y3, y4, y5, momentum, eta_year
+              y1, y2, y3, y4, y5, momentum, eta_year, window_start, window_end
          FROM name_momentum
         WHERE direction = ?1 ${sexClause}
         ORDER BY ${orderBy}
@@ -494,6 +494,8 @@ export async function listMomentum(
       y5: number;
       momentum: number;
       eta_year: number | null;
+      window_start: number;
+      window_end: number;
     }>();
 
   return (r.results ?? []).map((row) => ({
@@ -510,6 +512,8 @@ export async function listMomentum(
     y5: row.y5,
     momentum: row.momentum,
     etaYear: row.eta_year,
+    windowStart: row.window_start,
+    windowEnd: row.window_end,
   }));
 }
 

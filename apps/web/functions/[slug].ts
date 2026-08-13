@@ -11,7 +11,7 @@ import {
   META_KEYS,
   pageShell,
   renderLandingTableHTML,
-  renderMomentumTableHTML,
+  renderMomentumGridHTML,
   renderYearIndexHTML,
   SPARK_BUCKETS,
   type LandingKind,
@@ -181,8 +181,8 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
       } else if (slug in MOMENTUM_ROUTES) {
         const direction = MOMENTUM_ROUTES[slug as MomentumRouteName]!;
         const rows = await listMomentum(ctx.env.DB, direction, { limit: SSR_HUB_ROWS });
-        const table = renderMomentumTableHTML(direction, rows);
-        html = html.replace('<div id="t"></div>', `<div id="t">${table}</div>`);
+        const grid = renderMomentumGridHTML(direction, rows);
+        html = html.replace('<div id="t"></div>', `<div id="t">${grid}</div>`);
       } else if (slug === "year") {
         const [ymStr, yMStr] = await Promise.all([
           getMeta(ctx.env.DB, META_KEYS.minYear),

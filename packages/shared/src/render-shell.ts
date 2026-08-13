@@ -41,7 +41,13 @@ const DEFAULT_NAV: NavEntry[] = [
   { label: "About", href: "/about" },
 ];
 
-const STYLESHEET_HREF = "/assets/style.css?v=20";
+const STYLESHEET_HREF = "/assets/style.css?v=21";
+
+// Runs synchronously before the stylesheet is applied, so an explicit
+// dark/light choice from a prior visit takes effect on first paint instead
+// of flashing the OS-preference theme and then snapping to the stored one.
+// Keep this in sync with the [data-theme] read in assets/theme.js.
+export const THEME_INIT_SCRIPT = `<script>(function(){try{var t=localStorage.getItem("nv-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>`;
 
 function escape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -85,6 +91,14 @@ function renderMobileNav(entries: NavEntry[], currentPath?: string): string {
 </details>`;
 }
 
+// Both icons always render; style.css shows only the one matching the
+// current effective theme (data-theme attribute, falling back to OS
+// preference) via CSS, so this needs no JS to paint correctly on first load.
+export const THEME_TOGGLE_HTML = `<button type="button" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
+  <svg class="theme-toggle-icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+  <svg class="theme-toggle-icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>
+</button>`;
+
 export interface SiteHeaderOpts {
   mobileNav?: boolean;
   navItems?: NavEntry[];
@@ -96,6 +110,7 @@ export function siteHeader(currentPath?: string, opts: SiteHeaderOpts = {}): str
   return `<header class="site">
   <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="NobodyNamed"></a>
   ${renderNav(items, currentPath)}
+  ${THEME_TOGGLE_HTML}
   ${mobileNav}
 </header>`;
 }
@@ -153,7 +168,7 @@ export function pageShell(opts: PageShellOpts): string {
   const ogType = opts.ogType ?? "website";
   const twitterCard = opts.twitterCard ?? "summary_large_image";
   const themeLight = opts.themeColorLight ?? "#f7f5f2";
-  const themeDark = opts.themeColorDark ?? "#151412";
+  const themeDark = opts.themeColorDark ?? "#14161d";
   const favicon = opts.favicon ?? "/favicon.svg";
   const mainId = opts.mainId ?? "main-content";
 
@@ -186,6 +201,7 @@ export function pageShell(opts: PageShellOpts): string {
 <html lang="en">
 <head>
 <meta charset="utf-8">
+${THEME_INIT_SCRIPT}
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
 <meta name="description" content="${desc}">
@@ -217,6 +233,7 @@ ${skipLink}
   </main>
   ${siteFooter(opts.footerVariant, { yearRange: opts.footerYearRange })}
 </div>
+<script src="/assets/theme.js" defer></script>
 <script src="/assets/analytics.js" defer></script>
 <script src="/assets/webmcp.js" defer></script>
 ${scriptTags}

@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <script>(function(){try{var t=localStorage.getItem("nv-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Emerging Baby Names | NobodyNamed</title>
   <meta name="description" content="Names climbing out of the SSA's reporting floor (5 births/year) — real, sustained growth 2021–2025, still small enough to feel undiscovered.">
@@ -16,8 +17,9 @@
   <meta name="twitter:image" content="https://nobodynamed.com/api/og/default">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-  <link rel="stylesheet" href="/assets/style.css?v=20">
+  <meta name="theme-color" content="#14161d" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="/assets/style.css?v=21">
+  <script src="/assets/theme.js" defer></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -37,6 +39,10 @@
       <nav aria-label="Main navigation">
         <details class="nav-group nav-group-active"><summary>Discover</summary><div class="nav-group-panel"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/rising">Rising</a><a href="/emerging" aria-current="page">Emerging</a><a href="/fading">Fading</a></div></details><a href="/year">Birth year</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a>
       </nav>
+      <button type="button" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
+  <svg class="theme-toggle-icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+  <svg class="theme-toggle-icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>
+</button>
       <details class="mobile-nav">
         <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
         <nav aria-label="Mobile navigation">
@@ -48,10 +54,45 @@
     <h1>Emerging baby names</h1>
         <p class="lede">Names climbing out of the SSA's reporting floor (5 births/year) — real, sustained growth 2021–2025, still small enough to feel undiscovered.</p>
 
+        <div class="momentum-stat-row">
+          <div class="momentum-stat"><div class="n" id="momentumStatTotal">—</div><div class="l">names tracked</div></div>
+          <div class="momentum-stat"><div class="n">5</div><div class="l">SSA reporting floor</div></div>
+          <div class="momentum-stat"><div class="n">2021–25</div><div class="l">momentum window</div></div>
+          <div class="momentum-stat"><div class="n" id="momentumStatCritical">—</div><div class="l">under 10 in 2025</div></div>
+        </div>
+
+        <div class="momentum-scope">
+          <div class="momentum-scope-head">
+            <span>composite trace — top 18 by momentum</span>
+            <span>2021 → 2025</span>
+          </div>
+          <svg id="momentumScope" viewBox="0 0 1120 220" preserveAspectRatio="none"></svg>
+          <div class="momentum-scope-legend">
+            <span><i style="background:var(--amber)"></i>boy names</span>
+            <span><i style="background:var(--emerald)"></i>girl names</span>
+            <span><i style="border-top:1px dashed var(--amber)"></i>reporting floor (5)</span>
+          </div>
+        </div>
+
         <div class="search">
           <input id="q" type="text" placeholder="Run another name" autocomplete="off">
           <button id="go">Run Name Vitals</button>
           <div id="suggestions" class="suggestions hidden"></div>
+        </div>
+
+        <div class="momentum-controls">
+          <div class="search"><input id="momentumSearch" type="text" placeholder="Filter these names…" autocomplete="off"></div>
+          <div class="sex-segments" id="momentumSex">
+            <button type="button" data-sex="ALL" class="active">All</button>
+            <button type="button" data-sex="M">Boys</button>
+            <button type="button" data-sex="F">Girls</button>
+          </div>
+          <select id="momentumSort">
+            <option value="momentum">Sort: momentum</option>
+            <option value="total">Sort: total births</option>
+            <option value="az">Sort: A–Z</option>
+          </select>
+          <div class="momentum-count" id="momentumCount"></div>
         </div>
 
         <div id="t"></div>
@@ -68,7 +109,7 @@
   <script src="/assets/landing.js"></script>
   <script>
     NameVitals.setupSearch(document.getElementById("q"), document.getElementById("suggestions"), document.getElementById("go"));
-    renderMomentumTable("rising", document.getElementById("t"));
+    renderMomentumGrid("rising", document.getElementById("t"));
   </script>
 </body>
 </html>
