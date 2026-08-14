@@ -12,7 +12,7 @@ const EVENT_NAMES: readonly AnalyticsEventName[] = [
   "newsletter_signup_start",
   "newsletter_signup_complete",
   "return_visit",
-  // 1980s decade hub (SPEC §10).
+  // Registry-driven decade hubs (stable event vocabulary).
   "decade_hub_view",
   "decade_hub_scroll_depth",
   "decade_hub_engaged_time",

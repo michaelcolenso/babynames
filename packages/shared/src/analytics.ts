@@ -8,7 +8,7 @@ export type AnalyticsEventName =
   | "newsletter_signup_start"
   | "newsletter_signup_complete"
   | "return_visit"
-  // 1980s decade hub (SPEC §10 — contract is sacred; keep in sync with
+  // Registry-driven decade hubs (event contract is stable; keep in sync with
   // apps/web/functions/api/analytics/event.ts EVENT_NAMES).
   | "decade_hub_view"
   | "decade_hub_scroll_depth"
