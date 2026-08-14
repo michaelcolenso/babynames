@@ -56,27 +56,43 @@ seeding, and re-trim `scripts/fixtures/decade-hub-1980.real.fixture.json` (top
 100 ownership rows per sex, everything else intact) so the payload contract
 test runs against the shipped artifact.
 
-## Apply the migration and seed D1 (repo owner only)
+## Preflight and seed D1 (repo owner only)
 
-Migrations are applied manually by the repo owner — never by CI or
-contributors. `apps/web/wrangler.toml` must exist locally with the real
-`database_id` (it is gitignored; see README setup steps). Then:
+Build reviewed artifacts from current D1 first. The managed artifact directory
+contains the manifest and canonical profile hashes consumed by the seeder:
 
 ```bash
-wrangler d1 migrations apply name-vitals --remote --config apps/web/wrangler.toml
-npx tsx scripts/seed-decade-hub.ts           # dry run: prints current vs artifact
-npx tsx scripts/seed-decade-hub.ts --apply   # writes and verifies the row
+npm run build-decade-hubs -- --all --source=d1
+npm run seed-decade-hubs -- --decade=1930       # dry run; no writes
+npm run seed-decade-hubs -- --all-reviewed      # validates every reviewed artifact; no writes
 ```
 
-The first command applies `0021_decade_hub.sql`; the second seeds the `1980s`
-row from `data/dist/decade-hub-1980.json`.
+Use `--artifacts=/absolute/path` to inspect a separately generated managed
+artifact directory. Dry run is always the default. Writing requires the explicit
+`--apply` flag:
 
-**Do not seed with `wrangler d1 execute --file=data/dist/decade-hub-1980.sql`.**
-That file inlines the ~840 KB payload as one SQL string literal and D1 rejects
-the statement with `SQLITE_TOOBIG` — the limit is on the SQL text, not on the
-stored value. `scripts/seed-decade-hub.ts` binds the payload as a query
-parameter instead, which stores identical bytes. The `.sql` artifact is kept
-for inspection and diffing.
+```bash
+npm run seed-decade-hubs -- --decade=1930 --apply
+npm run seed-decade-hubs -- --all-reviewed --apply
+```
+
+Before its first write the seeder validates the entire selected set: manifest
+schema, non-validation source, registry rollout state, thesis/source version,
+methodology and profile shape, exact SHA-256 and UTF-8 byte count, D1 `max_year`,
+partial-decade coverage, and live-row downgrade protection. It never executes
+the generated `.sql`; each payload is passed as a bound parameter.
+
+For `--all-reviewed --apply`, every artifact and live-row preflight completes
+before row one is changed. D1 does not offer a transaction across these HTTP
+requests, so writes proceed one row at a time. Each write is read back and all
+metadata plus the complete payload bytes must match exactly. On failure the
+command stops and names every earlier row that changed. On success it prints the
+hub, methodology, classroom, and spelling-family cache paths for every changed
+decade. Purging or deploying is a separate explicit operation.
+
+**Do not seed with `wrangler d1 execute --file=...`.** Large payloads can exceed
+the SQL statement limit when inlined. Bound parameters keep the SQL short and
+preserve exact payload bytes; generated SQL is inspection-only.
 
 ### Vintage bumps have no safe deploy order
 
