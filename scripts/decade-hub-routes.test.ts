@@ -255,7 +255,7 @@ test("stale reviewed payloads are route ineligibility, not renderer errors", asy
   }
 });
 
-test("all registry slugs use hubs only when seeded and bind the requested slug", async () => {
+test("all reviewed registry slugs query the requested slug and missing rows fall back", async () => {
   const queried: string[] = [];
   const db = fakeDb({
     hubPayloads: {
@@ -274,7 +274,7 @@ test("all registry slugs use hubs only when seeded and bind the requested slug",
     else assert.match(html, new RegExp(`<h1>${definition.slug} baby names<\\/h1>`), definition.slug);
   }
 
-  assert.deepEqual(queried, ["1920s", "1980s"]);
+  assert.deepEqual(queried, DECADE_HUB_DEFINITIONS.map((definition) => definition.slug));
 });
 
 test("other decades keep the legacy page even when the hub row exists", async () => {
@@ -536,7 +536,7 @@ test("expected storage and payload failures fall back on hubs and 404 on childre
   }
 });
 
-test("partial 2020s payload stays unroutable while its definition is draft", async () => {
+test("invalid partial 2020s payload falls back on the hub and 404s on children", async () => {
   const partial = {
     ...FIXTURE,
     decade: 2020,
@@ -560,7 +560,7 @@ test("partial 2020s payload stays unroutable while its definition is draft", asy
   for (const get of [getMethodology, getClassroom, getSpelling]) {
     assert.equal((await get("/names/2020s/methodology/", "2020s", db)).status, 404);
   }
-  assert.deepEqual(queried, [], "draft definitions must be rejected before D1 lookup");
+  assert.deepEqual(queried, ["2020s", "2020s", "2020s", "2020s"]);
 });
 
 test("renderer programmer errors propagate instead of becoming data absence", async () => {

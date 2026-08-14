@@ -1,0 +1,14 @@
+family_id,label,canonical,variant,review_status,rationale
+brian,Brian family,Brian,Brian,approved,Brian and Bryan are established spelling forms recorded separately; this family combines their counts while retaining each variant as its own entry.
+brian,Brian family,Brian,Bryan,approved,Brian and Bryan are established spelling forms recorded separately; this family combines their counts while retaining each variant as its own entry.
+michelle,Michelle family,Michelle,Michelle,approved,Michelle and Michele are established spellings that chart separately; the family view combines only their same-sex decade records.
+michelle,Michelle family,Michelle,Michele,approved,Michelle and Michele are established spellings that chart separately; the family view combines only their same-sex decade records.
+steven,Steven family,Steven,Steven,approved,Steven and Stephen are established U.S. spelling forms with a shared conventional pronunciation in most use; the family view keeps both underlying records visible.
+steven,Steven family,Steven,Stephen,approved,Steven and Stephen are established U.S. spelling forms with a shared conventional pronunciation in most use; the family view keeps both underlying records visible.
+jeffrey,Jeffrey family,Jeffrey,Jeffrey,approved,Jeffrey and Jeffery are direct transposition spellings recorded separately by SSA; Geoffrey is deliberately excluded as a less certain semantic match.
+jeffrey,Jeffrey family,Jeffrey,Jeffery,approved,Jeffrey and Jeffery are direct transposition spellings recorded separately by SSA; Geoffrey is deliberately excluded as a less certain semantic match.
+eric,Eric family,Eric,Eric,approved,Eric and Erik are established English and Scandinavian spelling forms; this reviewed grouping exposes their combined U.S. footprint without erasing the distinction.
+eric,Eric family,Eric,Erik,approved,Eric and Erik are established English and Scandinavian spelling forms; this reviewed grouping exposes their combined U.S. footprint without erasing the distinction.
+sean,Sean family,Sean,Sean,approved,"Sean, Shawn, and Shaun are established U.S. spelling forms with separate rankings; grouping them shows the broader sound-and-spelling pattern."
+sean,Sean family,Sean,Shawn,approved,"Sean, Shawn, and Shaun are established U.S. spelling forms with separate rankings; grouping them shows the broader sound-and-spelling pattern."
+sean,Sean family,Sean,Shaun,approved,"Sean, Shawn, and Shaun are established U.S. spelling forms with separate rankings; grouping them shows the broader sound-and-spelling pattern."

@@ -27,9 +27,13 @@ const FIXED_TIME = "2026-01-01T00:00:00.000Z";
 function sourceThrough(maxYear = 2025, validationOnly = false): LoadedSource {
   const female: Record<number, number> = {};
   const male: Record<number, number> = {};
+  const emma: Record<number, number> = {};
+  const liam: Record<number, number> = {};
   for (let year = 1880; year <= maxYear; year++) {
-    female[year] = 10_000;
-    male[year] = 11_000;
+    female[year] = year >= 2010 && year <= 2019 ? 1_840_000 : year >= 2020 ? 1_650_000 : 10_000;
+    male[year] = year >= 2010 && year <= 2019 ? 1_840_000 : year >= 2020 ? 1_650_000 : 11_000;
+    if (year >= 2010 && year <= 2019) emma[year] = 19_507;
+    if (year >= 2020) liam[year] = 20_807;
   }
   const source: DecadeHubSource = {
     minYear: 1880,
@@ -37,6 +41,8 @@ function sourceThrough(maxYear = 2025, validationOnly = false): LoadedSource {
     records: [
       { name: "Ava", sex: "F", series: female },
       { name: "Adam", sex: "M", series: male },
+      { name: "Emma", sex: "F", series: emma },
+      { name: "Liam", sex: "M", series: liam },
     ],
   };
   return {
@@ -95,21 +101,21 @@ test("validation-only sources require an explicit write override", async () => {
   await assert.rejects(() => fs.stat(out), /ENOENT/);
 });
 
-test("current-source draft build loads once, emits partial coverage, and marks the profile validation-only", async () => {
+test("current-source reviewed build loads once and emits honest partial coverage", async () => {
   const root = await tempDir("decade-current-draft-");
   const out = path.join(root, "out");
   let loads = 0;
   const result = await buildArtifacts(args(out), async () => { loads += 1; return sourceThrough(); });
   assert.equal(loads, 1);
   assert.equal(result.manifest.source.validationOnly, false);
-  assert.equal(result.manifest.validationOnly, true, "draft/no-family output is not shipping-capable");
+  assert.equal(result.manifest.validationOnly, false);
   assert.equal(result.manifest.profiles.length, 1);
   const entry = result.manifest.profiles[0]!;
   assert.equal(entry.slug, "2020s");
   assert.equal(entry.endYear, 2025);
   assert.equal(entry.nominalEndYear, 2029);
   assert.equal(entry.isComplete, false);
-  assert.equal(entry.familyStatus, "none-draft");
+  assert.equal(entry.familyStatus, "reviewed");
   const profile = JSON.parse(await fs.readFile(path.join(out, "decade-hub-2020.json"), "utf8"));
   assert.equal(profile.spellingFamilies.length, 0);
   assert.equal(profile.spellingFamilies.every((family: { yearly: unknown[] }) => family.yearly.length === 6), true);

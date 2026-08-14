@@ -56,12 +56,18 @@ test("runtime boundary binds the requested seeded slug and returns validated inp
   }
 });
 
-test("draft and unknown definitions are rejected before persistence lookup", async () => {
+test("explicit draft and unknown definitions are rejected before persistence lookup", async () => {
   const binds: string[] = [];
-  assert.deepEqual(await loadDecadeHubRuntime(fakeDb(JSON.stringify(PROFILE), { binds }), "1970s"), {
+  const definition = getDecadeHubDefinition("1970s")!;
+  const draft = { ...definition, rolloutState: "draft" as const };
+  assert.deepEqual(await loadDecadeHubRuntimeForDefinition(
+    fakeDb(JSON.stringify(PROFILE), { binds }),
+    draft,
+    DECADE_THESES["1970s"],
+  ), {
     status: "ineligible",
     reason: "draft-definition",
-    definition: getDecadeHubDefinition("1970s"),
+    definition: draft,
   });
   assert.deepEqual(await loadDecadeHubRuntime(fakeDb(JSON.stringify(PROFILE), { binds }), "1981s"), {
     status: "ineligible",
