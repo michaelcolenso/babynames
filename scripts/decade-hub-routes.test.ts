@@ -19,6 +19,7 @@ import { onRequestGet as spellingGet } from "../apps/web/functions/names/[decade
 import { onRequestGet as sitemapGet } from "../apps/web/functions/sitemap.xml";
 import { DECADE_HUB_DEFINITIONS } from "../packages/shared/src/content/decade-hub-definitions";
 import { DECADE_THESES } from "../packages/shared/src/content/decade-theses";
+import { validateDecadeHubProfile } from "../packages/shared/src/decade-hub-validate";
 
 const FIXTURE = JSON.parse(
   readFileSync(new URL("./fixtures/decade-hub-1980.fixture.json", import.meta.url), "utf8"),
@@ -506,7 +507,13 @@ test("child routes 404 when the decade_hub row is missing", async () => {
   }
 });
 
-test("all registry child routes are gated by rollout state and valid payload", async () => {
+test("all registry child routes render for reviewed definitions with valid payloads and 404 otherwise", async () => {
+  // Child-route eligibility is gated on `draft` + a valid persisted payload
+  // (decade-hub-runtime.ts), NOT on `seeded`. `seeded` gates only sitemap
+  // discovery (indexable-routes.ts). This test pins that contract: the two
+  // legacy pilot fixtures are validator-passing, so their children render 200
+  // even though the definitions are currently `reviewed`; every other reviewed
+  // decade has no row here and must 404.
   const db = fakeDb({
     hubPayloads: {
       "1920s": JSON.stringify(FIXTURE_1920),
@@ -514,16 +521,34 @@ test("all registry child routes are gated by rollout state and valid payload", a
     },
   });
 
+  const legacyFixturePayloads = new Map([
+    ["1920s", JSON.stringify(FIXTURE_1920)],
+    ["1980s", JSON.stringify(FIXTURE)],
+  ]);
+  const payloadPassesValidator = new Map<string, boolean>();
   for (const definition of DECADE_HUB_DEFINITIONS) {
+    const payloadText = legacyFixturePayloads.get(definition.slug);
+    if (payloadText && !payloadPassesValidator.has(definition.slug)) {
+      payloadPassesValidator.set(
+        definition.slug,
+        validateDecadeHubProfile(JSON.parse(payloadText), definition).ok,
+      );
+    }
+    const servesChildren = definition.rolloutState !== "draft" && payloadPassesValidator.get(definition.slug) === true;
     for (const [get, child] of [
       [getMethodology, "methodology"],
       [getClassroom, "classroom"],
       [getSpelling, "spelling-families"],
     ] as const) {
       const response = await get(`/names/${definition.slug}/${child}/`, definition.slug, db);
-      assert.equal(response.status, definition.rolloutState === "seeded" ? 200 : 404, `${definition.slug}/${child}`);
+      assert.equal(response.status, servesChildren ? 200 : 404, `${definition.slug}/${child}`);
     }
   }
+  assert.equal(
+    DECADE_HUB_DEFINITIONS.filter((definition) => definition.rolloutState === "seeded").length,
+    0,
+    "no decade is sitemap-seeded until its production row passes the strict validator",
+  );
 });
 
 test("expected storage and payload failures fall back on hubs and 404 on children", async () => {

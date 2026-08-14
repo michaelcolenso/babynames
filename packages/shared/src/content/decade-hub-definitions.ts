@@ -54,6 +54,9 @@ export const DECADE_HUB_DEFINITIONS = [
   reviewed(1900, { yearMin: 398_000, yearMax: 409_000, champion: "Mary", sex: "F", championMin: 153_000, championMax: 170_000 }),
   reviewed(1910, { yearMin: 1_395_000, yearMax: 1_438_000, champion: "Mary", sex: "F", championMin: 454_000, championMax: 503_000 }),
   {
+    // Reviewed, not seeded: the legacy live row predates the strict validator
+    // (missing nominalEndYear). Replace the row during the first approved
+    // rollout window, verify exact readback, then flip to "seeded".
     slug: "1920s",
     startYear: 1920,
     nominalEndYear: 1929,
@@ -61,7 +64,7 @@ export const DECADE_HUB_DEFINITIONS = [
     thesisSourceVersion: "ssa-national-2025",
     sanityAnchors: pilot1920Anchors,
     familyFile: "data/manual/spelling-families-1920.csv",
-    rolloutState: "seeded",
+    rolloutState: "reviewed",
   },
   reviewed(1930, { yearMin: 2_045_000, yearMax: 2_108_000, champion: "Robert", sex: "M", championMin: 561_000, championMax: 621_000 }),
   reviewed(1940, { yearMin: 2_650_000, yearMax: 2_732_000, champion: "James", sex: "M", championMin: 756_000, championMax: 836_000 }),
@@ -69,6 +72,10 @@ export const DECADE_HUB_DEFINITIONS = [
   reviewed(1960, { yearMin: 3_827_000, yearMax: 3_947_000, champion: "Michael", sex: "M", championMin: 791_000, championMax: 875_000 }),
   reviewed(1970, { yearMin: 2_993_000, yearMax: 3_087_000, champion: "Michael", sex: "M", championMin: 671_000, championMax: 743_000 }),
   {
+    // Reviewed, not seeded: the legacy live row predates the strict validator
+    // (ssa-national-2017 source vs reviewed 2025 thesis). Replace the row during
+    // the first approved rollout window, verify exact readback, then flip to
+    // "seeded".
     slug: "1980s",
     startYear: 1980,
     nominalEndYear: 1989,
@@ -76,7 +83,7 @@ export const DECADE_HUB_DEFINITIONS = [
     thesisSourceVersion: "ssa-national-2025",
     sanityAnchors: pilot1980Anchors,
     familyFile: "data/manual/spelling-families-1980.csv",
-    rolloutState: "seeded",
+    rolloutState: "reviewed",
   },
   reviewed(1990, { yearMin: 3_660_000, yearMax: 3_776_000, champion: "Michael", sex: "M", championMin: 439_000, championMax: 486_000 }),
   reviewed(2000, { yearMin: 3_761_000, yearMax: 3_881_000, champion: "Jacob", sex: "M", championMin: 260_000, championMax: 289_000 }),

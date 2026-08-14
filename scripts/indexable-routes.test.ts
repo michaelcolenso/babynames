@@ -70,3 +70,42 @@ test("year pages link back to their canonical decade route", () => {
   });
   assert.match(html, /href="\/names\/1980s\/"[^>]*>Explore the 1980s decade<\/a>/);
 });
+
+test("ending pages derive the decade navigation link from live minimum-year metadata", async () => {
+  const { onRequestGet } = await import("../apps/web/functions/names/ending/[letter]/index");
+  const db = {
+    prepare(sql: string) {
+      return {
+        bind(...values: unknown[]) {
+          return {
+            async first<T>() {
+              if (/FROM meta/.test(sql)) {
+                const key = String(values[0]);
+                const value = key === "min_year" ? "1880" : key === "max_year" ? "2025" : "test-version";
+                return { value } as T;
+              }
+              return null as T;
+            },
+            async all<T>() {
+              return { results: [
+                { name: "Ashley", sex: "F", total_count: 100, peak_year: 1987 },
+                { name: "Jessica", sex: "F", total_count: 90, peak_year: 1987 },
+                { name: "Jeremy", sex: "M", total_count: 80, peak_year: 1977 },
+                { name: "Timothy", sex: "M", total_count: 70, peak_year: 1960 },
+              ] } as T;
+            },
+          };
+        },
+      };
+    },
+  };
+  const response = await onRequestGet({
+    params: { letter: "y" },
+    request: new Request("https://example.com/names/ending/y/"),
+    env: { DB: db },
+  } as never);
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /<a href="\/names\/1880s\/">By decade<\/a>/);
+  assert.doesNotMatch(html, /href="\/names\/1980s\/">By decade/);
+});

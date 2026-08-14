@@ -130,21 +130,21 @@ byte-identical to the approved candidate. A differing legacy row fails closed;
 never stamp a guessed fingerprint onto it.
 
 The historical pilot rows predate this contract and will therefore fail closed:
-the committed 1980s artifact is `ssa-national-2017` while current candidates are
-`ssa-national-2025`, and every fresh build changes `generated_at`. That refusal
-is intended. To adopt the contract, backfill the fingerprint only from an
-artifact that is the exact same payload the row already contains:
+the 1980s row was built from `ssa-national-2017` (the generated `.sql` under
+`data/dist/` is gitignored; the tracked JSON artifact retains that vintage)
+while current candidates are `ssa-national-2025`, and every fresh build changes
+`generated_at`. That refusal is intended. To adopt the contract, backfill the
+fingerprint only from an artifact that is the exact same payload the row
+already contains:
 
 ```bash
-# 1. Identify the exact payload bytes of the live row.
-npm run seed-decade-hubs -- --decade=1980   # dry run reports the refusal
+# 1. Confirm the refusal before doing anything.
+npm run seed-decade-hubs -- --decade=1980   # dry run reports the mismatch
 
-# 2. After an approved production window, either:
-#    a. seed the reviewed replacement row for the decade (new payload), or
-#    b. for a byte-identical legacy row, run the approved candidate with a
-#       pinned generated-at value:
-npm run build-decade-hubs -- --decade=1980 --generated-at=2026-08-12T11:33:53.891Z
-npm run seed-decade-hubs -- --decade=1980 --apply --artifacts=/path/to/pinned-build
+# 2. After an approved production window, seed the reviewed replacement row.
+#    (No pinned-timestamp rebuild can reproduce the 2017-era payload byte-for-byte;
+#    the only honest path is to seed a current reviewed artifact.)
+npm run seed-decade-hubs -- --decade=1980 --apply --artifacts=/path/to/reviewed-build
 ```
 
 Never delete a live row merely to bypass the fingerprint check; replace it with
@@ -172,11 +172,16 @@ passes. Those are independent approval gates.
 ## Cache and rollout
 
 `reviewed` means approved content, not production availability. The sitemap emits
-specialized child routes only for definitions marked `seeded`. For each rollout
-batch, deploy reviewed code and the provenance migration first, seed and smoke
-the D1 rows while they remain `reviewed`, then change only the verified batch to
-`seeded` in a follow-up deploy. This ordering may briefly leave working child
-routes undiscoverable, but it never advertises child URLs that return 404.
+specialized child routes only for definitions marked `seeded`, and right now
+**no decade is `seeded`**: both legacy pilot rows predate the strict runtime
+validator (the 1920s row lacks `nominalEndYear`; the 1980s row predates the
+reviewed 2025 thesis source), so their children correctly return 404 and must
+not be advertised. A first rollout batch replaces the 1920s/1980s rows with the
+current validator-passing artifacts, verifies exact readback, and only then
+flips those definitions to `seeded` in a follow-up deploy. The same
+deploy→seed→smoke→flip sequence applies to every later batch. This ordering may
+briefly leave working child routes undiscoverable, but it never advertises
+child URLs that return 404.
 
 For every changed decade the seeder prints these paths:
 
