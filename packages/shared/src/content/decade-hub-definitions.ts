@@ -49,10 +49,11 @@ const reviewed = (startYear: number, evidence: ReviewedEvidence): DecadeHubDefin
 
 /** The only checked-in list of decade hubs, in chronological order. */
 export const DECADE_HUB_DEFINITIONS = [
-  reviewed(1880, { yearMin: 240_000, yearMax: 247_000, champion: "Mary", sex: "F", championMin: 87_000, championMax: 97_000 }),
-  reviewed(1890, { yearMin: 334_000, yearMax: 343_000, champion: "Mary", sex: "F", championMin: 124_000, championMax: 138_000 }),
-  reviewed(1900, { yearMin: 398_000, yearMax: 409_000, champion: "Mary", sex: "F", championMin: 153_000, championMax: 170_000 }),
-  reviewed(1910, { yearMin: 1_395_000, yearMax: 1_438_000, champion: "Mary", sex: "F", championMin: 454_000, championMax: 503_000 }),
+  // Seeded 2026-08-14: batch 1 (1880s-1910s), exact readback verified.
+  { ...reviewed(1880, { yearMin: 240_000, yearMax: 247_000, champion: "Mary", sex: "F", championMin: 87_000, championMax: 97_000 }), rolloutState: "seeded" as const },
+  { ...reviewed(1890, { yearMin: 334_000, yearMax: 343_000, champion: "Mary", sex: "F", championMin: 124_000, championMax: 138_000 }), rolloutState: "seeded" as const },
+  { ...reviewed(1900, { yearMin: 398_000, yearMax: 409_000, champion: "Mary", sex: "F", championMin: 153_000, championMax: 170_000 }), rolloutState: "seeded" as const },
+  { ...reviewed(1910, { yearMin: 1_395_000, yearMax: 1_438_000, champion: "Mary", sex: "F", championMin: 454_000, championMax: 503_000 }), rolloutState: "seeded" as const },
   {
     // Seeded 2026-08-14: legacy row replaced with the ssa-national-2025 artifact,
     // exact readback verified (826,553 bytes), fingerprint-stamped.
