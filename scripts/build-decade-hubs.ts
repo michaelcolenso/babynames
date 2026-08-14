@@ -93,10 +93,11 @@ export function parseBuildArgs(argv: string[]): BuildArgs {
   return { selector, source, sqlitePath, zipPath, outDir, generatedAt, allowValidationArtifacts };
 }
 
-export function profileToSql(profile: DecadeProfile): string {
+export function profileToSql(profile: DecadeProfile, sourceFingerprint: string): string {
   const payload = stableStringify(profile).replace(/'/g, "''");
-  return "INSERT OR REPLACE INTO decade_hub(decade,methodology_version,source_version,generated_at,payload) VALUES(" +
-    `'${profile.decade}s','${profile.methodologyVersion}','${profile.sourceVersion}','${profile.generatedAt}','${payload}');\n`;
+  const fingerprint = sourceFingerprint.replace(/'/g, "''");
+  return "INSERT OR REPLACE INTO decade_hub(decade,methodology_version,source_version,source_fingerprint,generated_at,payload) VALUES(" +
+    `'${profile.decade}s','${profile.methodologyVersion}','${profile.sourceVersion}','${fingerprint}','${profile.generatedAt}','${payload}');\n`;
 }
 
 function definitionsFor(selector: BuildSelector): DecadeHubDefinition[] {
@@ -172,7 +173,7 @@ export async function buildArtifacts(args: BuildArgs, sourceLoader: (options: So
     await fs.mkdir(tempDir);
     for (const { profile } of profiles) {
       await writeDurable(path.join(tempDir, `decade-hub-${profile.decade}.json`), stableStringify(profile, true) + "\n");
-      await writeDurable(path.join(tempDir, `decade-hub-${profile.decade}.sql`), profileToSql(profile));
+      await writeDurable(path.join(tempDir, `decade-hub-${profile.decade}.sql`), profileToSql(profile, source.fingerprint));
     }
     await writeDurable(path.join(tempDir, "decade-hub-manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
     const existing = await fs.stat(outputDir).catch(() => undefined);

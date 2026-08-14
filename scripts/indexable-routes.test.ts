@@ -30,10 +30,10 @@ test("route limit reserves space for structural routes before names", () => {
   assert.ok(!routes.some((route) => route.family === "name"));
 });
 
-test("decade routes and reviewed children derive from the registry exactly once", () => {
+test("decade routes and production-seeded children derive from the registry exactly once", () => {
   const routes = buildIndexableRoutes({ minYear: 1880, maxYear: 2025 });
   const paths = routes.map((route) => route.path);
-  const reviewed = DECADE_HUB_DEFINITIONS.filter((definition) => definition.rolloutState !== "draft");
+  const seeded = DECADE_HUB_DEFINITIONS.filter((definition) => definition.rolloutState === "seeded");
 
   for (const definition of DECADE_HUB_DEFINITIONS) {
     assert.equal(paths.filter((path) => path === `/names/${definition.slug}/`).length, 1, `${definition.slug} main route`);
@@ -41,12 +41,12 @@ test("decade routes and reviewed children derive from the registry exactly once"
       const path = `/names/${definition.slug}/${child}/`;
       assert.equal(
         paths.filter((candidate) => candidate === path).length,
-        definition.rolloutState === "draft" ? 0 : 1,
+        definition.rolloutState === "seeded" ? 1 : 0,
         path,
       );
     }
   }
-  assert.equal(routes.filter((route) => route.family === "decade-child").length, reviewed.length * 3);
+  assert.equal(routes.filter((route) => route.family === "decade-child").length, seeded.length * 3);
   assert.ok(routes.length < 50_000);
   const decadePaths = routes.filter((route) => route.family === "decade" || route.family === "decade-child").map((route) => route.path);
   assert.ok(decadePaths.every((path) => path.endsWith("/")));

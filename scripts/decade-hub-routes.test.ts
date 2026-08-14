@@ -223,6 +223,20 @@ test("hub falls back to the legacy decade page when the decade_hub row is missin
   assert.doesNotMatch(html, /dh-table/);
 });
 
+test("partial 2020s fallback uses honest coverage copy and derived decade navigation", async () => {
+  const response = await getHub("/names/2020s/", "2020s", fakeDb({ hubPayload: null, maxYear: "2025" }));
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /<title>2020s Baby Names So Far: .* Through 2025 \| NobodyNamed<\/title>/);
+  assert.match(html, /2020–2025/);
+  assert.match(html, /so far/i);
+  assert.doesNotMatch(html, /Led the Decade|led the decade|dominated the decade/);
+  assert.match(html, /"endYear":2025/);
+  assert.match(html, /"isComplete":false/);
+  assert.match(html, /<a href="\/names\/1880s\/">By decade<\/a>/);
+  assert.match(html, /"name":"Names by decade","item":"https:\/\/example\.com\/names\/1880s\/"/);
+});
+
 test("hub falls back to the legacy page when the decade_hub query throws (pre-migration)", async () => {
   const response = await getHub("/names/1980s/", "1980s", fakeDb({ hubThrows: true }));
   assert.equal(response.status, 200);
@@ -595,7 +609,7 @@ test("renderer programmer errors propagate instead of becoming data absence", as
 
 // ── Sitemap ────────────────────────────────────────────────────────────────
 
-test("sitemap includes each reviewed decade child exactly once and excludes drafts", async () => {
+test("sitemap includes only production-seeded decade children", async () => {
   const response = await sitemapGet({
     request: new Request("https://example.com/sitemap.xml"),
     env: { DB: fakeDb({ maxYear: "2025" }) },
@@ -606,7 +620,7 @@ test("sitemap includes each reviewed decade child exactly once and excludes draf
     assert.equal((xml.match(new RegExp(`<loc>https://example\\.com/names/${definition.slug}/</loc>`, "g")) ?? []).length, 1);
     for (const child of ["methodology", "classroom", "spelling-families"]) {
       const count = (xml.match(new RegExp(`<loc>https://example\\.com/names/${definition.slug}/${child}/</loc>`, "g")) ?? []).length;
-      assert.equal(count, definition.rolloutState === "draft" ? 0 : 1, `${definition.slug}/${child}`);
+      assert.equal(count, definition.rolloutState === "seeded" ? 1 : 0, `${definition.slug}/${child}`);
     }
   }
 });

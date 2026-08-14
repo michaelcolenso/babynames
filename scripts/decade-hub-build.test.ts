@@ -127,6 +127,9 @@ test("current-source reviewed build loads once and emits honest partial coverage
   const compact = stableStringify(profile);
   assert.equal(entry.payloadBytes, Buffer.byteLength(compact, "utf8"));
   assert.equal(entry.profileSha256, createHash("sha256").update(compact).digest("hex"));
+  const sql = await fs.readFile(path.join(out, "decade-hub-2020.sql"), "utf8");
+  assert.match(sql, /source_fingerprint/);
+  assert.match(sql, /fixture-2025/);
 });
 
 test("a late pre-swap failure leaves an existing managed destination byte-identical", async () => {

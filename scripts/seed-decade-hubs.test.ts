@@ -185,16 +185,190 @@ test("refuses artifacts older than D1 or an existing live row", async () => {
     ),
     /older than D1|max_year/i,
   );
+  const futureProfile = { ...fakeProfile(1930), sourceVersion: "ssa-national-2026" };
   await assert.rejects(
     seedDecadeHubs(
       { selector: { kind: "decade", startYear: 1930 }, apply: false, artifactsDir: "/artifacts" },
       deps(files, async (sql) => {
         if (sql.includes("FROM meta")) return [{ max_year: "2025" }] as never;
-        return [{ decade: "1930s", methodology_version: "decade-hub/v1.0.0", source_version: "ssa-national-2026", generated_at: "2026-08-14T00:00:00.000Z", payload: "live" }] as never;
+        return [{
+          decade: "1930s",
+          methodology_version: futureProfile.methodologyVersion,
+          source_version: futureProfile.sourceVersion,
+          source_fingerprint: "future-scan",
+          generated_at: futureProfile.generatedAt,
+          payload: stableStringify(futureProfile),
+        }] as never;
       }),
     ),
     /downgrade/i,
   );
+});
+
+test("rejects same-vintage fingerprint drift and malformed live metadata", async () => {
+  const files = fixture([1930]);
+  const candidatePayload = stableStringify(fakeProfile(1930));
+  const baseRow = {
+    decade: "1930s",
+    methodology_version: "decade-hub/v1.0.0",
+    source_version: "ssa-national-2025",
+    source_fingerprint: "test",
+    generated_at: "2026-08-14T00:00:00.000Z",
+    payload: candidatePayload,
+  };
+
+  for (const [row, message] of [
+    [{ ...baseRow, source_fingerprint: "different-scan" }, /fingerprint/i],
+    [{ ...baseRow, methodology_version: "bad" }, /methodology/i],
+    [{ ...baseRow, generated_at: "bad" }, /generated_at/i],
+    [{ ...baseRow, payload: "{}" }, /payload/i],
+  ] as const) {
+    await assert.rejects(
+      seedDecadeHubs(
+        { selector: { kind: "decade", startYear: 1930 }, apply: false, artifactsDir: "/artifacts" },
+        deps(files, async (sql) => sql.includes("FROM meta") ? [{ max_year: "2025" }] as never : [row] as never),
+      ),
+      message,
+    );
+  }
+});
+
+test("rejects an older same-vintage artifact even when the source fingerprint matches", async () => {
+  const files = fixture([1930]);
+  await assert.rejects(
+    seedDecadeHubs(
+      { selector: { kind: "decade", startYear: 1930 }, apply: false, artifactsDir: "/artifacts" },
+      deps(files, async (sql) => {
+        if (sql.includes("FROM meta")) return [{ max_year: "2025" }] as never;
+        return [{
+          decade: "1930s",
+          methodology_version: "decade-hub/v1.0.0",
+          source_version: "ssa-national-2025",
+          source_fingerprint: "test",
+          generated_at: "2026-08-15T00:00:00.000Z",
+          payload: stableStringify({ ...fakeProfile(1930), generatedAt: "2026-08-15T00:00:00.000Z" }),
+        }] as never;
+      }),
+    ),
+    /older|generated_at|downgrade/i,
+  );
+});
+
+test("exact legacy rows can conditionally backfill a missing fingerprint", async () => {
+  const files = fixture([1930]);
+  const payload = stableStringify(fakeProfile(1930));
+  const legacy = {
+    decade: "1930s",
+    methodology_version: "decade-hub/v1.0.0",
+    source_version: "ssa-national-2025",
+    source_fingerprint: null,
+    generated_at: "2026-08-14T00:00:00.000Z",
+    payload,
+  };
+  let reads = 0;
+  const result = await seedDecadeHubs(
+    { selector: { kind: "decade", startYear: 1930 }, apply: true, artifactsDir: "/artifacts" },
+    deps(files, async (sql, parameters = []) => {
+      if (sql.includes("FROM meta")) return [{ max_year: "2025" }] as never;
+      if (sql.startsWith("SELECT decade")) {
+        reads += 1;
+        return [reads === 1 ? legacy : { ...legacy, source_fingerprint: "test" }] as never;
+      }
+      if (sql.startsWith("UPDATE")) {
+        assert.match(sql, /source_fingerprint IS NULL/);
+        assert.doesNotMatch(sql, /INSERT OR REPLACE/);
+        assert.equal(parameters[8], legacy.generated_at);
+        assert.equal(parameters[9], legacy.payload);
+        return [{ ...legacy, source_fingerprint: "test" }] as never;
+      }
+      return [] as never;
+    }),
+  );
+  assert.deepEqual(result.changed, ["1930s"]);
+});
+
+test("conditional write rejects a live-row mutation after preflight", async () => {
+  const files = fixture([1930]);
+  const oldPayload = stableStringify({ ...fakeProfile(1930), generatedAt: "2026-08-13T00:00:00.000Z" });
+  let selected = 0;
+  await assert.rejects(
+    seedDecadeHubs(
+      { selector: { kind: "decade", startYear: 1930 }, apply: true, artifactsDir: "/artifacts" },
+      deps(files, async (sql, parameters = []) => {
+        if (sql.includes("FROM meta")) return [{ max_year: "2025" }] as never;
+        if (sql.includes("SELECT decade")) {
+          selected += 1;
+          if (selected === 1) return [{
+            decade: "1930s",
+            methodology_version: "decade-hub/v1.0.0",
+            source_version: "ssa-national-2025",
+            source_fingerprint: "test",
+            generated_at: "2026-08-13T00:00:00.000Z",
+            payload: oldPayload,
+          }] as never;
+          return [{
+            decade: "1930s",
+            methodology_version: String(parameters[1] ?? "decade-hub/v1.0.0"),
+            source_version: "ssa-national-2025",
+            source_fingerprint: "test",
+            generated_at: "2026-08-14T00:00:00.000Z",
+            payload: stableStringify(fakeProfile(1930)),
+          }] as never;
+        }
+        if (sql.startsWith("UPDATE")) {
+          assert.match(sql, /source_fingerprint = \?9/);
+          assert.match(sql, /RETURNING/);
+          assert.equal(parameters[8], "test");
+          assert.equal(parameters[9], "2026-08-13T00:00:00.000Z");
+          assert.equal(parameters[10], oldPayload);
+          return [] as never;
+        }
+        return [] as never;
+      }),
+    ),
+    /changed after preflight|concurrent/i,
+  );
+});
+
+test("conditional insert rejects a concurrent row appearing after preflight", async () => {
+  const files = fixture([1930]);
+  let selected = 0;
+  await assert.rejects(
+    seedDecadeHubs(
+      { selector: { kind: "decade", startYear: 1930 }, apply: true, artifactsDir: "/artifacts" },
+      deps(files, async (sql) => {
+        if (sql.includes("FROM meta")) return [{ max_year: "2025" }] as never;
+        if (sql.startsWith("SELECT decade")) {
+          selected += 1;
+          return [] as never;
+        }
+        if (sql.startsWith("INSERT")) {
+          assert.equal(selected, 1, "concurrent insert must be observed after preflight");
+          return [] as never;
+        }
+        return [] as never;
+      }),
+    ),
+    /changed after preflight|concurrent/i,
+  );
+  assert.equal(selected, 1);
+});
+
+test("pre-migration tables fail closed before any write", async () => {
+  const files = fixture([1930]);
+  let writes = 0;
+  await assert.rejects(
+    seedDecadeHubs(
+      { selector: { kind: "decade", startYear: 1930 }, apply: true, artifactsDir: "/artifacts" },
+      deps(files, async (sql) => {
+        if (sql.includes("FROM meta")) return [{ max_year: "2025" }] as never;
+        if (/INSERT|UPDATE/.test(sql)) writes += 1;
+        throw new Error("no such column: source_fingerprint");
+      }),
+    ),
+    /source_fingerprint|no such column/i,
+  );
+  assert.equal(writes, 0);
 });
 
 test("all-reviewed validates every artifact before the first write", async () => {
@@ -215,15 +389,33 @@ test("all-reviewed validates every artifact before the first write", async () =>
 test("apply binds payloads, verifies exact readback, and reports earlier changed rows on failure", async () => {
   const years = [1930, 1940];
   const files = fixture(years);
-  const stored = new Map<string, string>();
+  const stored = new Map<string, {
+    decade: string;
+    methodology_version: string;
+    source_version: string;
+    source_fingerprint: string;
+    generated_at: string;
+    payload: string;
+  }>();
   const query: SeedDependencies["query"] = async (sql, parameters = []) => {
     if (sql.includes("FROM meta")) return [{ max_year: "2025" }] as never;
-    if (/INSERT|REPLACE/.test(sql)) { stored.set(String(parameters[0]), String(parameters[4])); return [] as never; }
-    if (sql.includes("payload FROM decade_hub")) {
+    if (/^INSERT/.test(sql)) {
+      const row = {
+        decade: String(parameters[0]),
+        methodology_version: String(parameters[1]),
+        source_version: String(parameters[2]),
+        source_fingerprint: String(parameters[3]),
+        generated_at: String(parameters[4]),
+        payload: String(parameters[5]),
+      };
+      stored.set(row.decade, row);
+      return [row] as never;
+    }
+    if (sql.startsWith("SELECT decade")) {
       const slug = String(parameters[0]);
-      const payload = stored.get(slug);
-      if (!payload) return [] as never;
-      return [{ decade: slug, methodology_version: "decade-hub/v1.0.0", source_version: "ssa-national-2025", generated_at: "2026-08-14T00:00:00.000Z", payload: slug === "1940s" ? `${payload}x` : payload }] as never;
+      const row = stored.get(slug);
+      if (!row) return [] as never;
+      return [{ ...row, payload: slug === "1940s" ? `${row.payload}x` : row.payload }] as never;
     }
     return [] as never;
   };

@@ -77,7 +77,7 @@ export function buildIndexableRoutes(options: IndexableRouteOptions): IndexableR
   const minDecade = Math.floor(minYear / 10) * 10;
   const maxDecade = Math.floor(maxYear / 10) * 10;
   for (const definition of DECADE_HUB_DEFINITIONS) {
-    if (definition.rolloutState === "draft" || definition.startYear < minDecade || definition.startYear > maxDecade) continue;
+    if (definition.rolloutState !== "seeded" || definition.startYear < minDecade || definition.startYear > maxDecade) continue;
     for (const child of DECADE_CHILDREN) {
       routes.push({ path: `/names/${definition.slug}/${child}/`, family: "decade-child", lastmod: dataDate, priority: 0.5 });
     }

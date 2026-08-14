@@ -116,10 +116,39 @@ npm run seed-decade-hubs -- --all-reviewed
 ```
 
 Use `--artifacts=/absolute/path` to inspect another managed output directory.
-The seeder validates the complete selected set before its first D1 request or
-write: manifest schema/status, registry state, runtime profile shape,
-thesis/profile/manifest source agreement, methodology, exact hash/bytes,
-coverage, strict D1 `meta.max_year`, and live-row downgrade protection.
+Apply `migrations/20260814T060000_decade_hub_source_fingerprint.sql` before
+using this seeder version. The seeder validates the complete selected set before
+its first D1 request or write: manifest schema/status, registry state, runtime
+profile shape, thesis/profile/manifest source agreement, methodology, exact
+hash/bytes, coverage, strict D1 `meta.max_year`, the complete source
+fingerprint, canonical live-row metadata/payload consistency, and downgrade
+protection.
+
+Rows created before the fingerprint migration remain nullable. The seeder may
+backfill such a row only when its payload and all existing metadata are exactly
+byte-identical to the approved candidate. A differing legacy row fails closed;
+never stamp a guessed fingerprint onto it.
+
+The historical pilot rows predate this contract and will therefore fail closed:
+the committed 1980s artifact is `ssa-national-2017` while current candidates are
+`ssa-national-2025`, and every fresh build changes `generated_at`. That refusal
+is intended. To adopt the contract, backfill the fingerprint only from an
+artifact that is the exact same payload the row already contains:
+
+```bash
+# 1. Identify the exact payload bytes of the live row.
+npm run seed-decade-hubs -- --decade=1980   # dry run reports the refusal
+
+# 2. After an approved production window, either:
+#    a. seed the reviewed replacement row for the decade (new payload), or
+#    b. for a byte-identical legacy row, run the approved candidate with a
+#       pinned generated-at value:
+npm run build-decade-hubs -- --decade=1980 --generated-at=2026-08-12T11:33:53.891Z
+npm run seed-decade-hubs -- --decade=1980 --apply --artifacts=/path/to/pinned-build
+```
+
+Never delete a live row merely to bypass the fingerprint check; replace it with
+an approved candidate or leave it untouched.
 
 Writing is a separate production action and requires explicit approval plus the
 `--apply` flag:
@@ -130,15 +159,24 @@ npm run seed-decade-hubs -- --all-reviewed --apply
 ```
 
 The seeder never executes generated SQL. It uses bound parameters, skips exact
-existing payloads, writes one row at a time, and reads back the complete payload
-plus metadata byte-for-byte. D1 cannot provide a transaction across HTTP
-requests. On failure, the command stops and reports the failing row and every
-earlier changed row.
+existing payloads, and writes one row at a time with optimistic concurrency:
+an insert must still find no row, and an update must still match every field
+read during preflight. Each successful conditional write is followed by a
+second complete payload-and-metadata readback. D1 cannot provide a transaction
+across HTTP requests. On failure, the command stops and reports the failing row
+and every earlier changed row.
 
 Do not deploy, seed production, purge caches, or merge merely because a dry run
 passes. Those are independent approval gates.
 
 ## Cache and rollout
+
+`reviewed` means approved content, not production availability. The sitemap emits
+specialized child routes only for definitions marked `seeded`. For each rollout
+batch, deploy reviewed code and the provenance migration first, seed and smoke
+the D1 rows while they remain `reviewed`, then change only the verified batch to
+`seeded` in a follow-up deploy. This ordering may briefly leave working child
+routes undiscoverable, but it never advertises child URLs that return 404.
 
 For every changed decade the seeder prints these paths:
 
@@ -168,10 +206,15 @@ Run this sequence for each new SSA vintage:
 4. Review changed family files and rerun all tests.
 5. Run the seeder in dry-run mode and independently review its candidate set.
 6. Obtain approval for the production window.
-7. Deploy renderer/content changes.
+7. Deploy renderer/content changes and any required provenance migration while
+   affected definitions remain `reviewed`.
 8. Seed reviewed rows promptly so compiled copy and payload stay aligned.
-9. Purge every affected hub and child route cache.
-10. Run production smoke checks and record source/data versions and readback.
+9. Smoke all four routes for each seeded row and verify exact D1 readback.
+10. Change only those verified definitions to `seeded` and deploy that registry
+    transition so their children enter the sitemap.
+11. Purge every affected hub and child route cache.
+12. Re-fetch the sitemap, audit its links, and record source/data versions and
+    readback evidence.
 
 There is no perfectly safe order for a vintage change when compiled thesis copy
 and D1 payload figures change together: deploy-first briefly serves new copy with
