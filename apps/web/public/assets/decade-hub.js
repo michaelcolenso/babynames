@@ -1,11 +1,11 @@
-// nobodynamed — 1980s decade hub enhancement layer.
+// nobodynamed — registry-driven decade hub enhancement layer.
 //
 // Everything here is an enhancement: all primary content is server-rendered,
 // and every feature degrades gracefully when this file never loads (tabs stay
 // anchored sections, tables stay in their SSR order, share controls stay
 // hidden) or when window.nvTrack is absent (analytics no-op; UI still works).
 //
-// Analytics contract (SPEC §10): events ride the closed vocabulary in
+// Analytics events ride the closed vocabulary in
 // packages/shared/src/analytics.ts onto the analytics_events D1 columns.
 // content_id/content_type come from the page wrapper's data-content-*
 // attributes; per-event targets and source_placement are set at each call

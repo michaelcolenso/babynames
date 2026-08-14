@@ -4,7 +4,7 @@
 // Example: /names/a/ shows popular baby names starting with A.
 // Follows the same shell + embedded-data pattern as /era/:year/.
 
-import { getMeta, pageShell, topByDecade, topByInitial, META_KEYS, fetchDecadeHubProfile, renderDecadeHub, fetchDecadeHubProfile1920, renderDecadeHub1920 } from "@nv/shared";
+import { getMeta, pageShell, topByDecade, topByInitial, META_KEYS, loadDecadeHubRuntime, renderDecadeHubGeneric } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 function parseDecade(raw: string): { label: string; start: number; end: number } | null {
@@ -42,24 +42,21 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
     return new Response("names segment must be a letter or decade like 1980s", { status: 400 });
   }
 
-  // 1980s decade hub flagship: when the precomputed decade_hub row exists,
-  // render the new hub and skip the legacy page entirely (including its dead
-  // window.renderDecadeTable hydration hook). Any miss/failure falls through
-  // to the legacy implementation unchanged.
-  if (decade.label === "1980s" || decade.label === "1920s") {
-    const is1920s = decade.label === "1920s";
-    const profile = is1920s ? await fetchDecadeHubProfile1920(ctx.env.DB) : await fetchDecadeHubProfile(ctx.env.DB);
-    if (profile) {
-      const origin = new URL(ctx.request.url).origin;
-      const canonical = `${origin}/names/${decade.label}/`;
-      return new Response(is1920s ? renderDecadeHub1920(profile, { origin }) : renderDecadeHub(profile, { origin }), {
-        headers: {
-          "Content-Type": "text/html; charset=utf-8",
-          "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
-          Link: `<${canonical}>; rel="canonical"`,
-        },
-      });
-    }
+  const runtime = await loadDecadeHubRuntime(ctx.env.DB, decade.label);
+  if (runtime.status === "eligible") {
+    const origin = new URL(ctx.request.url).origin;
+    const canonical = `${origin}/names/${runtime.definition.slug}/`;
+    return new Response(renderDecadeHubGeneric(runtime.profile, {
+      origin,
+      definition: runtime.definition,
+      thesis: runtime.thesis,
+    }), {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
+        Link: `<${canonical}>; rel="canonical"`,
+      },
+    });
   }
 
   const [rows, yMStr, ymStr] = await Promise.all([
@@ -90,9 +87,18 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
   const topGirl = girls[0];
   const topBoy = boys[0];
   const classroom = [...girls.slice(0, 2), ...boys.slice(0, 2)].map((r) => r.name);
+  const firstAvailableYear = Math.max(decade.start, ym);
+  const lastAvailableYear = Math.min(decade.end, yM);
+  const isPartial = lastAvailableYear < decade.end;
+  const unavailableYears = Math.max(0, decade.end - lastAvailableYear);
+  const coverageLabel = `${firstAvailableYear}–${lastAvailableYear}`;
 
-  const title = `${decade.label} Baby Names: ${topBoy ? escapeHtml(topBoy.name) : ""} & ${topGirl ? escapeHtml(topGirl.name) : ""} Led the Decade | NobodyNamed`;
-  const desc = `The most popular baby names of the ${decade.label}, ranked by SSA births. ${topGirl ? escapeHtml(topGirl.name) : ""} and ${topBoy ? escapeHtml(topBoy.name) : ""} led the decade — see the full top 25.`;
+  const title = isPartial
+    ? `${decade.label} Baby Names So Far: ${topBoy ? escapeHtml(topBoy.name) : ""} & ${topGirl ? escapeHtml(topGirl.name) : ""} Through ${lastAvailableYear} | NobodyNamed`
+    : `${decade.label} Baby Names: ${topBoy ? escapeHtml(topBoy.name) : ""} & ${topGirl ? escapeHtml(topGirl.name) : ""} Led the Decade | NobodyNamed`;
+  const desc = isPartial
+    ? `The most popular baby names of the ${decade.label} so far, ranked by SSA births from ${coverageLabel}. ${topGirl ? escapeHtml(topGirl.name) : ""} and ${topBoy ? escapeHtml(topBoy.name) : ""} lead through ${lastAvailableYear}.`
+    : `The most popular baby names of the ${decade.label}, ranked by SSA births. ${topGirl ? escapeHtml(topGirl.name) : ""} and ${topBoy ? escapeHtml(topBoy.name) : ""} led the decade — see the full top 25.`;
   const url = new URL(ctx.request.url);
   const origin = url.origin;
   const canonical = `${origin}/names/${decade.label}/`;
@@ -114,6 +120,10 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
   ]
     .filter(Boolean)
     .join(" ");
+  const yearLinks = Array.from(
+    { length: lastAvailableYear - firstAvailableYear + 1 },
+    (_, index) => firstAvailableYear + index,
+  ).map((year) => `<a href="/year/${year}/">${year}</a>`).join(" ");
 
   // Build list of all decades in range for cross-linking
   const decadeStart = Math.floor(ym / 10) * 10;
@@ -122,11 +132,13 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
   for (let d = decadeStart; d <= decadeEnd; d += 10) {
     allDecades.push(`${d}s`);
   }
+  const decadeCollectionPath = `/names/${allDecades[0] ?? decade.label}/`;
 
   const dataJson = JSON.stringify({
     decade: decade.label,
-    startYear: decade.start,
-    endYear: decade.end,
+    startYear: firstAvailableYear,
+    endYear: lastAvailableYear,
+    isComplete: !isPartial,
     rows,
   }).replace(/</g, "\\u003c");
 
@@ -144,7 +156,7 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
       { label: "Endangered", href: "/endangered" },
       { label: "Comebacks", href: "/comeback" },
       { label: "Birth year", href: "/year" },
-      { label: "By decade", href: "/names/1980s/" },
+      { label: "By decade", href: decadeCollectionPath },
       { label: "By initial", href: "/names/a/" },
       { label: "By ending", href: "/names/ending/a/" },
       { label: "Rising", href: "/rising" },
@@ -153,10 +165,15 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
     body: `
     <p class="eyebrow">Decade dossier</p>
     <h1>${decade.label} baby names</h1>
-    <p class="lede">The names that defined the ${decade.label}: ${topBoy ? escapeHtml(topBoy.name) : ""} and ${topGirl ? escapeHtml(topGirl.name) : ""} led the decade, but the full roster tells a richer story.</p>
-    <h2 class="year-story">What defined ${decade.label} baby names</h2>
-    <p class="year-story">The ${decade.label} were defined by names that now read as cultural artifacts. ${escapeHtml(topBoy ? topBoy.name : "The era")} and ${escapeHtml(topGirl ? topGirl.name : "its leading names")} dominated the decade — names that crossed class lines and regional divides. Some have become vintage revival candidates; others remain frozen in time. Browse the full rankings below to see which names defined the ${decade.label} classroom.</p>
+    <p class="lede">${isPartial
+      ? `From ${coverageLabel}, ${topBoy ? escapeHtml(topBoy.name) : ""} and ${topGirl ? escapeHtml(topGirl.name) : ""} lead the ${decade.label} so far, but the available roster already tells a richer story.`
+      : `The names that defined the ${decade.label}: ${topBoy ? escapeHtml(topBoy.name) : ""} and ${topGirl ? escapeHtml(topGirl.name) : ""} led the decade, but the full roster tells a richer story.`}</p>
+    <h2 class="year-story">${isPartial ? `What has defined ${decade.label} baby names so far` : `What defined ${decade.label} baby names`}</h2>
+    <p class="year-story">${isPartial
+      ? `The available ${coverageLabel} records show the names shaping the ${decade.label} so far. ${escapeHtml(topBoy ? topBoy.name : "The leading boys’ names")} and ${escapeHtml(topGirl ? topGirl.name : "the leading girls’ names")} lead through ${lastAvailableYear}, with ${unavailableYears} ${unavailableYears === 1 ? "year" : "years"} still unavailable. Browse the rankings below as a partial-decade snapshot, not a final verdict.`
+      : `The ${decade.label} were defined by names that now read as cultural artifacts. ${escapeHtml(topBoy ? topBoy.name : "The era")} and ${escapeHtml(topGirl ? topGirl.name : "its leading names")} dominated the decade — names that crossed class lines and regional divides. Some have become vintage revival candidates; others remain frozen in time. Browse the full rankings below to see which names defined the ${decade.label} classroom.`}</p>
     ${prevDecade || nextDecade ? `<nav class="decade-nav" aria-label="Adjacent decades">${decadeNav}</nav>` : ""}
+    <nav class="decade-nav dh-year-links" aria-label="Year-by-year pages, ${firstAvailableYear} to ${lastAvailableYear}">${yearLinks}</nav>
     <div class="year-result-grid">
       <div class="year-col">
         <h3>Girls</h3>
@@ -187,7 +204,7 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Home", item: origin + "/" },
-          { "@type": "ListItem", position: 2, name: "Names by decade", item: origin + "/names/1980s/" },
+          { "@type": "ListItem", position: 2, name: "Names by decade", item: origin + decadeCollectionPath },
           { "@type": "ListItem", position: 3, name: decade.label + " baby names", item: canonical },
         ],
       },
@@ -310,7 +327,7 @@ async function renderInitialPage(ctx: EventContext<Env, "decade", unknown>, init
       { label: "Endangered", href: "/endangered" },
       { label: "Comebacks", href: "/comeback" },
       { label: "Birth year", href: "/year" },
-      { label: "By decade", href: "/names/1980s/" },
+      { label: "By decade", href: `/names/${Math.floor(ym / 10) * 10}s/` },
       { label: "By initial", href: "/names/a/" },
       { label: "By ending", href: "/names/ending/a/" },
       { label: "Rising", href: "/rising" },

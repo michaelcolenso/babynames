@@ -110,7 +110,7 @@ export const onRequestGet: PagesFunction<Env, "letter"> = async (ctx) => {
       { label: "Endangered", href: "/endangered" },
       { label: "Comebacks", href: "/comeback" },
       { label: "Birth year", href: "/year" },
-      { label: "By decade", href: "/names/1980s/" },
+      { label: "By decade", href: `/names/${Math.floor(ym / 10) * 10}s/` },
       { label: "By initial", href: "/names/a/" },
       { label: "By ending", href: "/names/ending/a/" },
       { label: "Rising", href: "/rising" },

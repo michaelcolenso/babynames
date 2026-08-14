@@ -8,6 +8,33 @@
 
 export const DECADE_HUB_METHODOLOGY_VERSION = "decade-hub/v1.0.0";
 
+export type SanityAnchor =
+  | {
+      readonly kind: "year-total";
+      readonly year: number;
+      readonly min: number;
+      readonly max: number;
+    }
+  | {
+      readonly kind: "record-year-count";
+      readonly name: string;
+      readonly sex: "F" | "M";
+      readonly year: number;
+      readonly min: number;
+      readonly max: number;
+    }
+  | {
+      readonly kind: "record-decade-count";
+      readonly name: string;
+      readonly sex: "F" | "M";
+      readonly min: number;
+      readonly max?: number;
+    }
+  | {
+      readonly kind: "minimum-decade-total";
+      readonly min: number;
+    };
+
 export interface NameSummary {
   name: string; // display casing, e.g. "Michael"
   slug: string; // URL segment casing per repo convention (name pages 301 to canonical case)
@@ -81,8 +108,10 @@ export interface DecadeProfile {
   decade: number;
   startYear: number;
   endYear: number;
+  /** Calendar end of the nominal decade, even when actual coverage is partial. */
+  nominalEndYear: number;
   dataThroughYear: number;
-  isComplete: true;
+  isComplete: boolean;
   totalBirths: number;
   femaleBirths: number;
   maleBirths: number;

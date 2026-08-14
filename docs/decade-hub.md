@@ -1,265 +1,259 @@
 # Decade hub operations guide
 
-For a reusable implementation brief covering the remaining decades, use
-[`docs/prompts/complete-decade-hubs.md`](prompts/complete-decade-hubs.md). It
-treats the production 1920s and 1980s hubs as the two completed references and
-requires small, reviewable batches rather than mass-producing thin pages.
+This is the canonical runbook for the 15 registry-driven decade hubs from the
+1880s through the partial 2020s. Each hub has a main page plus `methodology/`,
+`classroom/`, and `spelling-families/` children. Primary content is SSR; the
+browser script adds progressive enhancement only.
 
-Operational reference for the 1980s decade hub (`/names/1980s/` plus its
-`methodology/`, `classroom/`, and `spelling-families/` child routes). The hub
-renders from a single precomputed `DecadeProfile` JSON payload stored in the
-`decade_hub` D1 table (migration `migrations/0021_decade_hub.sql`), one row per
-decade, read by primary key at request time. Methodology version:
-`decade-hub/v1.0.0`.
+The original phased implementation brief remains at
+[`docs/prompts/complete-decade-hubs.md`](prompts/complete-decade-hubs.md), but
+this operations guide supersedes its pre-rollout status assumptions.
 
-## Regenerate the data
+## Architecture and source of truth
 
-The build is offline and deterministic: same source data + same
-`DECADE_HUB_METHODOLOGY_VERSION` ⇒ byte-identical JSON except `generatedAt`.
+- Registry: `packages/shared/src/content/decade-hub-definitions.ts`
+- Editorial theses: `packages/shared/src/content/decade-theses.ts`
+- Family reviews: `data/manual/spelling-families-YYYY.csv`
+- Builder: `scripts/build-decade-hubs.ts`
+- Runtime validator: `packages/shared/src/decade-hub-validate.ts`
+- Seeder: `scripts/seed-decade-hub.ts`
+- D1 table: `decade_hub`, one compact JSON payload per decade slug
+- Methodology: `decade-hub/v1.0.0`
 
-```bash
-npm run build-decade-hub
-```
+Registry rollout states have distinct meanings:
 
-This runs `tsx scripts/build-decade-hub.ts`, which:
+- `draft`: local validation only; not eligible for specialized routes or seed.
+- `reviewed`: editorial inputs and provenance are approved; eligible to seed.
+- `seeded`: reviewed hub known to exist in production.
 
-1. Resolves the source data (`--source` flag; the parser only accepts the
-   equals form, e.g. `--source=shards`):
-   - `--source=auto` (default) — prefers the live `name-vitals` D1 database,
-     then an SSA zip (a local zip in `data/raw/ssa-national/` if one is
-     present, otherwise the ssa.gov download), then the tracked shards in
-     `viz/name-vitals/data/`.
-   - `--source=d1` — force the live D1 database. Reads `CLOUDFLARE_ACCOUNT_ID`
-     and `CLOUDFLARE_API_TOKEN` and queries the D1 HTTP API (read-only). This
-     is the newest vintage available to the project, since the ingest worker
-     refreshes D1 from SSA every year.
-   - `--source=shards` — force the tracked shards. These are frozen at the
-     2017 vintage; use them only offline, and never for a shipped payload —
-     lifetime-based measures such as the ownership score are wrong when a
-     name's recorded history is truncated eight years early.
-   - `--source=zip` — force download of `https://www.ssa.gov/oact/babynames/names.zip`
-     (same mechanism as `scripts/ingest-ssa.ts`).
-   - `--zip=./names.zip` — use a local SSA zip file instead of downloading.
-2. Asserts the sanity anchors (1984 total births 3.49M±3% — SSA ≥5-occurrence
-   sums; 3.66M is registered births —; Michael (M) 1984 count in the 60k–70k
-   range; Jennifer (F) 1980s decade total > 350k).
-3. Writes two gitignored artifacts:
-   - `data/dist/decade-hub-1980.json` — the full payload as pretty JSON
-     (inspection, tests, fixtures).
-   - `data/dist/decade-hub-1980.sql` — a single `INSERT OR REPLACE INTO
-     decade_hub` statement.
-4. Prints a stdout summary (top-10 ownership per sex, alpha, counts).
+Coverage comes from the source, not the nominal decade label. The 2020s profile
+currently covers 2020–2025 and must remain `isComplete: false`. Never invent
+future years.
 
-The current payload was built from `ssa-national-2025` (records through 2025)
-via `--source=d1`; `sourceVersion` and `generatedAt` are recorded inside the
-payload and rendered on the methodology page.
+## Build all profiles from current D1
 
-Rebuilding on a newer vintage changes every figure on the hub, including the
-hand-written thesis copy in `packages/shared/src/content/decade-theses.ts`.
-Re-check that copy against the new `data/dist/decade-hub-1980.json` before
-seeding, and re-trim `scripts/fixtures/decade-hub-1980.real.fixture.json` (top
-100 ownership rows per sex, everything else intact) so the payload contract
-test runs against the shipped artifact.
-
-## Apply the migration and seed D1 (repo owner only)
-
-Migrations are applied manually by the repo owner — never by CI or
-contributors. `apps/web/wrangler.toml` must exist locally with the real
-`database_id` (it is gitignored; see README setup steps). Then:
+Use live D1 for any shipping candidate:
 
 ```bash
-wrangler d1 migrations apply name-vitals --remote --config apps/web/wrangler.toml
-npx tsx scripts/seed-decade-hub.ts           # dry run: prints current vs artifact
-npx tsx scripts/seed-decade-hub.ts --apply   # writes and verifies the row
+npm run build-decade-hubs -- --all --source=d1
 ```
 
-The first command applies `0021_decade_hub.sql`; the second seeds the `1980s`
-row from `data/dist/decade-hub-1980.json`.
+The managed output directory is `data/dist/decade-hubs/` by default. It contains
+one JSON and one inspection-only SQL file per selected decade plus
+`decade-hub-manifest.json`. The manifest records source identity, source bounds,
+validation-only state, methodology, compact-payload SHA-256, and UTF-8 byte
+length. The builder loads the source once, validates the complete output set,
+and atomically swaps the managed directory.
 
-**Do not seed with `wrangler d1 execute --file=data/dist/decade-hub-1980.sql`.**
-That file inlines the ~840 KB payload as one SQL string literal and D1 rejects
-the statement with `SQLITE_TOOBIG` — the limit is on the SQL text, not on the
-stored value. `scripts/seed-decade-hub.ts` binds the payload as a query
-parameter instead, which stores identical bytes. The `.sql` artifact is kept
-for inspection and diffing.
-
-### Vintage bumps have no safe deploy order
-
-The first seed is safe: until the row exists at all, the hub route
-feature-detects the missing row and falls back to the legacy decade page.
-
-**Re-seeding on a new vintage is different, and neither order avoids a
-mismatch.** The scorecard and rankings come from the payload, while the thesis
-copy in `packages/shared/src/content/decade-theses.ts` is compiled into the
-Pages bundle. The two carry the same figures and must move together:
-
-- Seed first → new scorecard above old copy.
-- Deploy first → new copy below old scorecard.
-
-So do not think of it as picking the safe order. Run the two steps back to back
-and keep the window to minutes, and remember the hub route sets
-`s-maxage=604800`, so an edge-cached copy of the mismatched page can outlive
-the window by a long way — purge the cache for `/names/<decade>/` afterwards
-rather than assuming it drains.
-
-The durable fix, if this becomes a recurring chore, is to make the mismatch
-detectable instead of merely brief: record in `decade-theses.ts` which
-`sourceVersion` each thesis was written against, and have the hub route treat a
-payload whose `sourceVersion` differs as a miss, falling back to the legacy
-page exactly as it does for a missing row. That trades a mixed-vintage page for
-a plain one during the window. It is not implemented today.
-
-## Run the tests
+Useful alternatives:
 
 ```bash
-npm run test:decade-hub
+npm run build-decade-hubs -- --decade=1930 --source=d1
+npm run build-decade-hubs -- --all --source=sqlite --sqlite=/path/to/current.sqlite
+npm run build-decade-hubs -- --all --source=zip --zip=/path/to/names.zip
 ```
 
-Runs five suites (39 tests): methodology/ownership (`decade-hub.test.ts`),
-classroom (`decade-hub-classroom.test.ts`), spelling families
-(`decade-hub-families.test.ts`), routes with a fake D1
-(`decade-hub-routes.test.ts`), and the payload contract of the real artifact
-(`decade-hub-payload.test.ts`, pure JSON — no D1 needed).
+Tracked shards stop at 2017. They are validation-only and must never be seeded.
+The explicit `--allow-validation-artifacts` flag permits local artifact writing;
+it does not make those artifacts production-safe.
 
-`test:decade-hub` is wired into the root `npm test` script after the editorial
-suites. The `verify-*` scripts require a live D1 and are not part of local
-checks.
+## Review before seed
 
-## Revise spelling families
+A build is not an approval. Before changing D1:
 
-Families are curated only through `data/manual/spelling-families.csv` (one row
-per variant):
+1. Diff the manifest and profiles against the last reviewed generation.
+2. Reconcile profile totals, champions, classroom output, family totals, source
+   bounds, and sanity anchors against independent current-source evidence.
+3. Re-check every numeric thesis claim in `decade-theses.ts`.
+4. Review every changed family semantically as well as numerically.
+5. Confirm every shipping manifest entry has `familyStatus: "reviewed"` and is
+   not validation-only.
+6. Run the full verification gates below and obtain independent review.
 
-```
+Family CSV schema:
+
+```text
 family_id,label,canonical,variant,review_status,rationale
 ```
 
-Rules:
+Only approved rows are considered. A shipped family requires at least two
+approved variants, at least 1,000 decade births per variant, at least 20,000
+combined births, no cross-family variant overlap, and a defensible semantic
+relationship. An explicit header-only file is valid when review finds no honest
+family, as in the 1880s.
 
-- Only rows with `review_status=approved` are used.
-- A family ships only if it has ≥2 approved variants, each variant has ≥1,000
-  births in the decade, and the combined total is ≥20,000.
-- No variant may appear in two approved families (the tests enforce this).
-- Every variant must exist in the source data (also enforced by tests).
+## Verification gates
 
-After editing the CSV, rebuild:
+Run narrow checks first, then broad checks:
 
 ```bash
-npm run build-decade-hub
+npx tsx --test scripts/seed-decade-hubs.test.ts
 npm run test:decade-hub
+npm run typecheck
+npm run test:indexable-routes
+npm run audit:links
+npm test
+npm run build
 ```
 
-Then update any copy that quotes family figures (thesis, video briefs) against
-the new `data/dist/decade-hub-1980.json`.
+`test:decade-hub` is the aggregate decade contract. It covers computation,
+classrooms, families, all-decade builds, registry/provenance, runtime validation,
+routes, pilot parity, editorial claims, and seeding safeguards. Do not document
+a fixed test count; the aggregate suite is intentionally extended as rollout
+coverage grows.
 
-## Change alpha (ownership shrinkage)
+Task 12 adds rendered verification across all 60 hub/child pages. Before any
+production write, also inspect representative complete, partial, empty-family,
+and multi-family pages on mobile and desktop.
 
-Alpha is the `DECADE_HUB_ALPHA` constant in
-`packages/shared/src/decade-hub-compute.ts` (currently `2500`).
+## D1 preflight and seed
 
-1. Run the sensitivity sweep first — it does not depend on the constant:
-
-   ```bash
-   npm run sensitivity:decade-hub
-   ```
-
-   This writes `data/dist/decade-hub-sensitivity.md`: top-25 per
-   α ∈ {500, 1000, 2500, 5000, 10000}, rank churn vs α=500, and the
-   smallest-α low-volume intrusion count (names with <5,000 decade births in
-   the top-25).
-2. Inspect the report. Choose the smallest α with zero low-volume intrusions
-   in the top-25 that preserves intuitive ordering of substantial names
-   (expected landing zone 1000–2500; if all candidates allow intrusions, use
-   10000 and flag it).
-3. Edit `DECADE_HUB_ALPHA`, rebuild (`npm run build-decade-hub`), re-run
-   `npm run test:decade-hub`, and record the choice + rationale in the
-   methodology payload section and the PR note.
-
-## Add another decade
-
-Checklist (every 1980s-specific guard to generalize):
-
-- [ ] Compute: `DECADE_START`/`DECADE_END` constants in
-      `packages/shared/src/decade-hub-compute.ts` and the decade literals in
-      `scripts/build-decade-hub.ts` (sanity anchors are 1980s-specific; write
-      new anchors for the target decade).
-- [ ] Types: `DecadeProfile.decade/startYear/endYear` are literal-typed to
-      1980/1980/1989 in `packages/shared/src/decade-hub-types.ts`.
-- [ ] Route guards: the `decade !== "1980s"` 404 guards in
-      `apps/web/functions/names/[decade]/methodology/index.ts`,
-      `.../classroom/index.ts`, `.../spelling-families/index.ts`, and the
-      1980s branch in `apps/web/functions/names/[decade]/index.ts`.
-- [ ] Thesis: add an entry to `DECADE_THESES` in
-      `packages/shared/src/content/decade-theses.ts` (hand-written, real
-      figures, no causal claims).
-- [ ] Sitemap: `decadeHubUrls()` in `apps/web/functions/sitemap.xml.ts`.
-- [ ] Spelling families: add verified families for the decade to
-      `data/manual/spelling-families.csv` (same threshold rules).
-- [ ] Fixtures/tests: new fixture + payload test copy for the decade.
-- [ ] Seed: owner runs the build SQL for the new decade row.
-
-## Analytics event contract
-
-All events use `content_id = decade-hub:1980s` on the hub and
-`decade-hub:1980s/<child>` on child routes, `content_type = decade-hub`.
-Every event is a no-op if `window.nvTrack` is absent (JS enhancement only).
-Fired from `apps/web/public/assets/decade-hub.js` unless noted.
-
-| Event name | When it fires | source_placement | target |
-|---|---|---|---|
-| `decade_hub_view` | Every hub pageview (explicit; the automatic `landing` event also fires via `data-content-*` attributes) | route path | — |
-| `decade_hub_scroll_depth` | Scroll depth thresholds crossed (fire-once per threshold per session) | `25` / `50` / `75` / `100` | — |
-| `decade_hub_engaged_time` | `pagehide`, via `sendBeacon` | bucket: `lt15s` / `30s` / `60s` / `120s` / `300s` / `300s+` | — |
-| `decade_hub_internal_click` | Delegated click on hub internal anchors | control/section id | destination content id (e.g. `name:heather`, `year:1984`) |
-| `decade_hub_share` | Share control activated | control id | — |
-| `decade_hub_copy_link` | Copy-link control activated | control id | — |
-| `ownership_tab_changed` | Ownership ranking tab switched | tab id | — |
-| `ownership_sort_changed` | Ownership table column sort changed | column id | — |
-| `ownership_name_clicked` | Name inside the ownership module clicked | — (not sent) | `name:<lower>` |
-| `ownership_methodology_clicked` | Methodology link from ownership section clicked | section id | — |
-| `classroom_loaded` | Roster enters viewport (IntersectionObserver, 25% threshold, once) | route path | — |
-| `classroom_name_clicked` | Roster name clicked | — (not sent) | `name:<lower>` |
-| `classroom_duplicate_clicked` | Roster name with seats > 1 clicked | — (not sent) | `name:<lower>` |
-| `classroom_completed` | Roster bottom sentinel visible (once) | route path | — |
-| `spelling_family_expanded` | Family card/details expanded | family id | — |
-| `spelling_family_chart_interacted` | Hover/focus interaction with a family chart | family id | — |
-| `spelling_variant_clicked` | Variant name clicked | — (not sent) | `name:<lower>` |
-| `spelling_methodology_clicked` | Methodology link from spelling section clicked | section id | — |
-
-Fire-once dedupe (the `once()` guards above) is per page view: the keys live
-in a page-load-scoped map, so reloading the page re-arms every once-event.
-
-Event names are a closed vocabulary, validated in both
-`packages/shared/src/analytics.ts` (`AnalyticsEventName`) and
-`apps/web/functions/api/analytics/event.ts` (`EVENT_NAMES`); both lists must be
-extended together. Events map onto the existing `analytics_events` D1 schema —
-no schema change.
-
-## Deployment notes
-
-1. Open the PR; CI deploys Pages via `wrangler pages deploy public` on merge.
-2. The stylesheet cache-buster was bumped (`/assets/style.css?v=18` in
-   `packages/shared/src/render-shell.ts`) so the appended `dh-*` CSS block is
-   picked up immediately.
-3. The repo owner applies migration `0021_decade_hub.sql` and seeds the `1980s`
-   row with the two wrangler commands above.
-4. Zero-downtime behavior: until the D1 row exists, the hub route
-   feature-detects the missing row and falls back to the legacy decade page
-   unchanged; child routes 404 as before. Seeding the row (or removing it)
-   flips the hub on (or off) with no deploy.
-
-## 1920s flagship
-
-The 1920s hub reuses the established precomputed D1 profile, renderer, analytics,
-and accessible chart architecture. Regenerate its deterministic artifact with:
+Dry run is always the default:
 
 ```bash
-npm run build-decade-hub:1920s -- --source=d1
-npm run build-decade-hub:1920s -- --source=shards # offline validation only
+npm run seed-decade-hubs -- --decade=1930
+npm run seed-decade-hubs -- --all-reviewed
 ```
 
-Its manually reviewed families live in `data/manual/spelling-families-1920.csv`.
-The classroom reference year is 1924. Formula changes still require incrementing
-`DECADE_HUB_METHODOLOGY_VERSION`; alpha remains 2,500 and should be reassessed
-with the sensitivity procedure described above. The four repository-controlled
-video briefs live under `content/video-briefs/1920s/`.
+Use `--artifacts=/absolute/path` to inspect another managed output directory.
+Apply `migrations/20260814T060000_decade_hub_source_fingerprint.sql` before
+using this seeder version. The seeder validates the complete selected set before
+its first D1 request or write: manifest schema/status, registry state, runtime
+profile shape, thesis/profile/manifest source agreement, methodology, exact
+hash/bytes, coverage, strict D1 `meta.max_year`, the complete source
+fingerprint, canonical live-row metadata/payload consistency, and downgrade
+protection.
+
+Rows created before the fingerprint migration remain nullable. The seeder may
+backfill such a row only when its payload and all existing metadata are exactly
+byte-identical to the approved candidate. A differing legacy row fails closed;
+never stamp a guessed fingerprint onto it.
+
+The historical pilot rows predate this contract and will therefore fail closed:
+the 1980s row was built from `ssa-national-2017` (the generated `.sql` under
+`data/dist/` is gitignored; the tracked JSON artifact retains that vintage)
+while current candidates are `ssa-national-2025`, and every fresh build changes
+`generated_at`. That refusal is intended. To adopt the contract, backfill the
+fingerprint only from an artifact that is the exact same payload the row
+already contains:
+
+```bash
+# 1. Confirm the refusal before doing anything.
+npm run seed-decade-hubs -- --decade=1980   # dry run reports the mismatch
+
+# 2. After an approved production window, seed the reviewed replacement row.
+#    (No pinned-timestamp rebuild can reproduce the 2017-era payload byte-for-byte;
+#    the only honest path is to seed a current reviewed artifact.)
+npm run seed-decade-hubs -- --decade=1980 --apply --artifacts=/path/to/reviewed-build
+```
+
+Never delete a live row merely to bypass the fingerprint check; replace it with
+an approved candidate or leave it untouched.
+
+Writing is a separate production action and requires explicit approval plus the
+`--apply` flag:
+
+```bash
+npm run seed-decade-hubs -- --decade=1930 --apply
+npm run seed-decade-hubs -- --all-reviewed --apply
+```
+
+The seeder never executes generated SQL. It uses bound parameters, skips exact
+existing payloads, and writes one row at a time with optimistic concurrency:
+an insert must still find no row, and an update must still match every field
+read during preflight. Each successful conditional write is followed by a
+second complete payload-and-metadata readback. D1 cannot provide a transaction
+across HTTP requests. On failure, the command stops and reports the failing row
+and every earlier changed row.
+
+Do not deploy, seed production, purge caches, or merge merely because a dry run
+passes. Those are independent approval gates.
+
+## Cache and rollout
+
+`reviewed` means approved content, not production availability. The sitemap emits
+specialized child routes only for definitions marked `seeded`, and right now
+**no decade is `seeded`**: both legacy pilot rows predate the strict runtime
+validator (the 1920s row lacks `nominalEndYear`; the 1980s row predates the
+reviewed 2025 thesis source), so their children correctly return 404 and must
+not be advertised. A first rollout batch replaces the 1920s/1980s rows with the
+current validator-passing artifacts, verifies exact readback, and only then
+flips those definitions to `seeded` in a follow-up deploy. The same
+deploy→seed→smoke→flip sequence applies to every later batch. This ordering may
+briefly leave working child routes undiscoverable, but it never advertises
+child URLs that return 404.
+
+For every changed decade the seeder prints these paths:
+
+```text
+/names/YYYYs/
+/names/YYYYs/methodology/
+/names/YYYYs/classroom/
+/names/YYYYs/spelling-families/
+```
+
+Hub responses use long edge caching. After an approved deploy and seed, purge or
+version-invalidate every printed path; otherwise old rendered HTML can survive
+the rollout. Then smoke all affected routes and confirm canonical headers,
+source/version copy, child navigation, and partial coverage.
+
+A missing or rejected `decade_hub` row fails soft: the main route falls back to
+the legacy decade page and specialized children return 404. Renderer programmer
+errors must still surface rather than being disguised as missing data.
+
+## Annual SSA refresh order
+
+Run this sequence for each new SSA vintage:
+
+1. Build all profiles from current D1.
+2. Review manifest/profile diffs and every thesis claim.
+3. Update `thesisSourceVersion` only after the copy matches the new evidence.
+4. Review changed family files and rerun all tests.
+5. Run the seeder in dry-run mode and independently review its candidate set.
+6. Obtain approval for the production window.
+7. Deploy renderer/content changes and any required provenance migration while
+   affected definitions remain `reviewed`.
+8. Seed reviewed rows promptly so compiled copy and payload stay aligned.
+9. Smoke all four routes for each seeded row and verify exact D1 readback.
+10. Change only those verified definitions to `seeded` and deploy that registry
+    transition so their children enter the sitemap.
+11. Purge every affected hub and child route cache.
+12. Re-fetch the sitemap, audit its links, and record source/data versions and
+    readback evidence.
+
+There is no perfectly safe order for a vintage change when compiled thesis copy
+and D1 payload figures change together: deploy-first briefly serves new copy with
+old data; seed-first briefly serves old copy with new data. Keep the approved
+window short, seed promptly after deploy, purge immediately, and smoke the exact
+changed routes.
+
+## Analytics contract
+
+Event names are stable and decade-neutral. Keep the closed vocabulary synchronized
+between `packages/shared/src/analytics.ts` and
+`apps/web/functions/api/analytics/event.ts`.
+
+Identity varies by route:
+
+- Main hub: `content_id = decade-hub:YYYYs`
+- Child: `content_id = decade-hub:YYYYs/<child>`
+- All: `content_type = decade-hub`
+
+The SSR wrapper supplies `data-content-*`; `apps/web/public/assets/decade-hub.js`
+reads that identity rather than embedding a decade literal. Existing event names
+such as `decade_hub_view`, `ownership_sort_changed`, `classroom_completed`, and
+`spelling_variant_clicked` must not be renamed during rollout. All browser
+analytics remain no-op enhancements when `window.nvTrack` is absent.
+
+## Methodology changes
+
+`DECADE_HUB_ALPHA` controls ownership-score shrinkage. Before changing it, run:
+
+```bash
+npm run sensitivity:decade-hub
+```
+
+Review rank churn and low-volume intrusion, update the methodology version for
+formula changes, rebuild all profiles, re-review all affected thesis claims,
+and repeat the complete verification/deploy/seed/purge sequence. Never mix two
+methodology versions under one registry/thesis approval state.
