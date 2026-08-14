@@ -136,16 +136,18 @@ function semanticFingerprint(html: string): string {
   return createHash("sha256").update(semantic).digest("hex");
 }
 
-// Filled from the pilot output after the characterization assertions below are green.
+// Task 8 intentionally adds one registry-derived, 15-link all-decade nav to
+// each hub route and one four-link child-cluster nav to every child route. A
+// clean 1e7b640 comparison confirmed those as the only semantic deltas.
 const EXPECTED_FINGERPRINTS: Record<string, string> = {
-  "1920s/hub": "775ac8779e3409a7dd0868895ce023c072b4a49333dc819cd1f5a0e06bb4cd8b",
-  "1920s/methodology": "8e5679370e896da68f0154ba9409053f8031a6b2be2d0a36c65a00a1edaf8bc1",
-  "1920s/classroom": "82b06300f1f3a179f1916193ea6d8fabd45bbf432c739cdba115c09498a12b97",
-  "1920s/spelling-families": "28ba073fad1da3f3e90efdf32ba15ed89def99ebe9538416473e5993992d50e5",
-  "1980s/hub": "d843d96908fa9639b6304edc3438a660ebc0e30a855c287c5623d0039104a915",
-  "1980s/methodology": "f9b171775fe5be99d981eb29ee6ec5fa6bd01403304bd4e506f4f0f6ba95fd6c",
-  "1980s/classroom": "bc20cd8ca3c9cc6db3a6170deb702a340057f71d04d161fc7d36efc03554d46c",
-  "1980s/spelling-families": "f9270051b60261749a6a212464b9273b601be64e56cf2fa4d3a16896e629cc14",
+  "1920s/hub": "20d135931fd5e9ce71eed0e491f2984160d0d3a0ec3e0598b432c2d2dd545f22",
+  "1920s/methodology": "beab3535065a9cdf1ce8204d3607f04424a5b52572e4e5ddc937e824dab1b844",
+  "1920s/classroom": "9947bb77696a03a4402c91ae00b69dbe7ce4809742e470717468abf5af7dda48",
+  "1920s/spelling-families": "5d6423fa2f006ad744981e875cec4eedf989d838395798b0c2991c2953e1a7cb",
+  "1980s/hub": "bc680263f12b58096076cd9e7c94d02622796a2576db2e9121d7ee17780b639f",
+  "1980s/methodology": "92025730d985c5dc7e329fb7fb957ed808c78e9763c91e86044c62b968a8e38a",
+  "1980s/classroom": "608b9906af69b48af2fccb0df4173861dbc0c55f8b149319286fb218707f79ba",
+  "1980s/spelling-families": "4110d5c8fa33693b9db1f115f9de7ef163a4d774e6fc65fefb21f7c10c4b1a52",
 };
 
 test("generic renderer accepts a non-pilot definition and derives its decade identity", () => {
@@ -194,6 +196,9 @@ test("generic renderer limits partial-decade language, labels, and dataset cover
   const html = renderDecadeHubGeneric(profile, { origin: ORIGIN, definition, thesis: { sourceVersion: "ssa-national-2025", heading: "Reviewed so far", paragraphs: ["Explicit fixture copy."] } });
   assert.match(html, /2020s so far · data through 2025/);
   assert.match(html, /Data coverage<\/dt><dd>Decade 2020–2025/);
+  for (let year = 2020; year <= 2025; year++) {
+    assert.equal((html.match(new RegExp(`href="/year/${year}/"`, "g")) ?? []).length, 1, `partial year ${year}`);
+  }
   assert.doesNotMatch(html, /href="\/year\/202[6-9]\//);
   assert.doesNotMatch(html, /2020[6-9]–2029/);
   const methodology = renderDecadeMethodologyGeneric(profile, { origin: ORIGIN, definition, thesis: { sourceVersion: "ssa-national-2025", heading: "Reviewed so far", paragraphs: [] } });

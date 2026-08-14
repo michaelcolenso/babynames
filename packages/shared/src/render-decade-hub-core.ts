@@ -86,7 +86,7 @@ export function DecadeHero(profile: DecadeProfile, thesis: DecadeThesis | undefi
   const next = c.next ? `<a href="/names/${c.next.slug}/" data-dh-target-id="decade:${c.next.slug}" data-dh-target-type="decade">${c.next.slug} →</a>` : "";
   const coverage = !profile.isComplete || c.end < c.nominalEnd ? `\n  <p class="dh-coverage-label">${escapeHtml(c.slug)} so far · data through ${c.end}</p>` : "";
   const allDecades = c.decadeNavigation === "registry"
-    ? `\n    ${DECADE_HUB_DEFINITIONS.map((definition) => `<a href="/names/${definition.slug}/" data-dh-target-id="decade:${definition.slug}" data-dh-target-type="decade">${definition.slug}</a>`).join(" ")}`
+    ? `<nav class="decade-nav" aria-label="All decades">${DECADE_HUB_DEFINITIONS.map((definition) => `<a href="/names/${definition.slug}/" data-dh-target-id="decade:${definition.slug}" data-dh-target-type="decade">${definition.slug}</a>`).join(" ")}</nav>`
     : "";
   return `<header class="dh-hero">
   <p class="eyebrow">Decade hub</p>
@@ -94,8 +94,9 @@ export function DecadeHero(profile: DecadeProfile, thesis: DecadeThesis | undefi
   ${heroContent}${coverage}
   <nav class="decade-nav" aria-label="Adjacent decades">
     ${previous}
-    ${next}${allDecades}
+    ${next}
   </nav>
+  ${allDecades}
   ${DecadeYearLinks(profile, c)}
   <div class="dh-share" hidden>
     <button type="button" id="dh-share" class="dh-share-btn">Share this page</button>
@@ -141,6 +142,10 @@ export function DecadeYearLinks(profile: DecadeProfile, c?: DecadeRenderContext)
     links.push(`<a href="/year/${y}/" data-dh-target-id="year:${y}" data-dh-target-type="year">${y}</a>`);
   }
   return `<nav class="decade-nav dh-year-links" aria-label="Year-by-year pages, __START_YEAR__ to __END_YEAR__">${links.join(" ")}</nav>`;
+}
+
+function DecadeChildNavigation(): string {
+  return `<nav class="decade-nav" aria-label="Decade hub pages"><a href="${HUB_PATH}">Overview</a> <a href="${METHODOLOGY_PATH}">Methodology</a> <a href="${CLASSROOM_PATH}">Classroom</a> <a href="${SPELLING_PATH}">Spelling families</a></nav>`;
 }
 
 // ── OwnershipExplainer ────────────────────────────────────────────────────
@@ -637,6 +642,7 @@ export function renderDecadeClassroomGeneric(profile: DecadeProfile, opts: Decad
     `<p class="eyebrow">Decade hub · representative classroom</p>
 <h1>The __CLASSROOM_YEAR__ classroom</h1>
 <p class="lede">What did an average American classroom sound like in __CLASSROOM_YEAR__? Apportion 30 seats across the names actually recorded that year — ${classroom.femaleSeats} girls and ${classroom.maleSeats} boys, matching the real __CLASSROOM_YEAR__ birth distribution — and ${rosterOutcome}.</p>
+${DecadeChildNavigation()}
 <p class="dh-label">${RECONSTRUCTION_LABEL}</p>
 <section class="dh-classroom" data-dh-module="classroom">
   <h2>The roster</h2>
@@ -695,6 +701,7 @@ export function renderDecadeSpellingFamiliesGeneric(profile: DecadeProfile, opts
     `<p class="eyebrow">Decade hub · spelling families</p>
 <h1>__DECADE_SLUG__ spelling families</h1>
 <p class="lede">${escapeHtml(SPELLING_FAMILY_COPY_RULE)}</p>
+${DecadeChildNavigation()}
 <section class="dh-families" data-dh-module="spelling">
   <h2>Why rankings understate these names</h2>
   <p>A name recorded under several common spellings is counted once per spelling in conventional tables, so each variant ranks lower than the combined phenomenon. The families below are not inferred by an algorithm: every grouping was reviewed by hand, ships only when at least two variants each cleared 1,000 recorded __DECADE_SLUG__ births with a combined 20,000 or more, and is documented with its rationale. Variants are related spellings, not interchangeable names.</p>
@@ -804,6 +811,7 @@ export function renderDecadeMethodologyGeneric(profile: DecadeProfile, opts: Dec
     `<p class="eyebrow">Decade hub · methodology</p>
 <h1>Methodology: the __DECADE_SLUG__ decade hub</h1>
 <p class="lede">Exactly what every number on this hub measures, how it is computed, and where the data falls short. Written for a general reader; formulas included in full.</p>
+${DecadeChildNavigation()}
 ${DataCoverageBadge(profile)}
 
 <section class="dh-method-section">

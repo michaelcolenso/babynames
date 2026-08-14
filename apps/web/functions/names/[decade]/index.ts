@@ -50,7 +50,6 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
       origin,
       definition: runtime.definition,
       thesis: runtime.thesis,
-      decadeNavigation: "adjacent-only",
     }), {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
@@ -112,6 +111,12 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
   ]
     .filter(Boolean)
     .join(" ");
+  const firstAvailableYear = Math.max(decade.start, ym);
+  const lastAvailableYear = Math.min(decade.end, yM);
+  const yearLinks = Array.from(
+    { length: lastAvailableYear - firstAvailableYear + 1 },
+    (_, index) => firstAvailableYear + index,
+  ).map((year) => `<a href="/year/${year}/">${year}</a>`).join(" ");
 
   // Build list of all decades in range for cross-linking
   const decadeStart = Math.floor(ym / 10) * 10;
@@ -155,6 +160,7 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
     <h2 class="year-story">What defined ${decade.label} baby names</h2>
     <p class="year-story">The ${decade.label} were defined by names that now read as cultural artifacts. ${escapeHtml(topBoy ? topBoy.name : "The era")} and ${escapeHtml(topGirl ? topGirl.name : "its leading names")} dominated the decade — names that crossed class lines and regional divides. Some have become vintage revival candidates; others remain frozen in time. Browse the full rankings below to see which names defined the ${decade.label} classroom.</p>
     ${prevDecade || nextDecade ? `<nav class="decade-nav" aria-label="Adjacent decades">${decadeNav}</nav>` : ""}
+    <nav class="decade-nav dh-year-links" aria-label="Year-by-year pages, ${firstAvailableYear} to ${lastAvailableYear}">${yearLinks}</nav>
     <div class="year-result-grid">
       <div class="year-col">
         <h3>Girls</h3>

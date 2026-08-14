@@ -178,6 +178,11 @@ test("hub renders 200 with SSR ownership table, canonicals, and metadata", async
   }
   assert.match(html, /href="\/names\/1970s\/"/);
   assert.match(html, /href="\/names\/1990s\/"/);
+  const allDecades = /<nav class="decade-nav" aria-label="All decades">([\s\S]*?)<\/nav>/.exec(html)?.[1] ?? "";
+  assert.ok(allDecades, "reviewed hubs must expose a distinct all-decade navigation");
+  for (const definition of DECADE_HUB_DEFINITIONS) {
+    assert.equal((allDecades.match(new RegExp(`href="/names/${definition.slug}/"`, "g")) ?? []).length, 1, definition.slug);
+  }
   assert.match(html, /href="\/names\/1980s\/methodology\/"/);
   assert.match(html, /href="\/names\/1980s\/classroom\/"/);
   assert.match(html, /href="\/names\/1980s\/spelling-families\/"/);
@@ -444,6 +449,28 @@ test("spelling families render verbatim copy rule, charts, and tabular fallbacks
   assert.match(html, /data-content-id="decade-hub:1980s\/spelling-families"/);
 });
 
+test("reviewed child pages cross-link the complete child route cluster", async () => {
+  const routes = [
+    [getMethodology, "/names/1980s/methodology/"],
+    [getClassroom, "/names/1980s/classroom/"],
+    [getSpelling, "/names/1980s/spelling-families/"],
+  ] as const;
+  for (const [get, path] of routes) {
+    const html = await (await get(path, "1980s", fakeDb())).text();
+    assert.match(html, /aria-label="Decade hub pages"/);
+    for (const child of ["methodology", "classroom", "spelling-families"]) {
+      assert.match(html, new RegExp(`href="/names/1980s/${child}/"`), `${path} -> ${child}`);
+    }
+  }
+});
+
+test("legacy decade pages link to every available year in their decade", async () => {
+  const html = await (await getHub("/names/1880s/", "1880s", fakeDb({ maxYear: "2025" }))).text();
+  for (let year = 1880; year <= 1889; year++) {
+    assert.equal((html.match(new RegExp(`href="/year/${year}/"`, "g")) ?? []).length, 1, String(year));
+  }
+});
+
 // ── Child route guards ─────────────────────────────────────────────────────
 
 test("child routes 404 for non-1980s decades", async () => {
@@ -568,16 +595,18 @@ test("renderer programmer errors propagate instead of becoming data absence", as
 
 // ── Sitemap ────────────────────────────────────────────────────────────────
 
-test("sitemap includes the three decade-hub child routes", async () => {
+test("sitemap includes each reviewed decade child exactly once and excludes drafts", async () => {
   const response = await sitemapGet({
     request: new Request("https://example.com/sitemap.xml"),
-    env: { DB: fakeDb() },
+    env: { DB: fakeDb({ maxYear: "2025" }) },
   } as never);
   assert.equal(response.status, 200);
   const xml = await response.text();
-  assert.match(xml, /<loc>https:\/\/example\.com\/names\/1980s\/methodology\/<\/loc>/);
-  assert.match(xml, /<loc>https:\/\/example\.com\/names\/1980s\/classroom\/<\/loc>/);
-  assert.match(xml, /<loc>https:\/\/example\.com\/names\/1980s\/spelling-families\/<\/loc>/);
-  // Hub itself stays in the decade list exactly once.
-  assert.equal((xml.match(/<loc>https:\/\/example\.com\/names\/1980s\/<\/loc>/g) ?? []).length, 1);
+  for (const definition of DECADE_HUB_DEFINITIONS) {
+    assert.equal((xml.match(new RegExp(`<loc>https://example\\.com/names/${definition.slug}/</loc>`, "g")) ?? []).length, 1);
+    for (const child of ["methodology", "classroom", "spelling-families"]) {
+      const count = (xml.match(new RegExp(`<loc>https://example\\.com/names/${definition.slug}/${child}/</loc>`, "g")) ?? []).length;
+      assert.equal(count, definition.rolloutState === "draft" ? 0 : 1, `${definition.slug}/${child}`);
+    }
+  }
 });

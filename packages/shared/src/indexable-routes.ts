@@ -1,3 +1,5 @@
+import { DECADE_HUB_DEFINITIONS } from "./content/decade-hub-definitions";
+
 export type IndexableRouteFamily =
   | "static"
   | "name"
@@ -32,7 +34,6 @@ export interface IndexableRouteOptions {
 
 const LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
 const DECADE_CHILDREN = ["methodology", "classroom", "spelling-families"];
-const FEATURED_DECADES = [1920, 1980];
 
 const STATIC_ROUTES: IndexableRoute[] = [
   { path: "/", family: "static", priority: 1 },
@@ -73,8 +74,13 @@ export function buildIndexableRoutes(options: IndexableRouteOptions): IndexableR
   for (let decade = Math.floor(minYear / 10) * 10; decade <= Math.floor(maxYear / 10) * 10; decade += 10) {
     routes.push({ path: `/names/${decade}s/`, family: "decade", lastmod: `${Math.min(decade + 9, maxYear)}-05-15`, priority: 0.5 });
   }
-  for (const decade of FEATURED_DECADES) for (const child of DECADE_CHILDREN) {
-    routes.push({ path: `/names/${decade}s/${child}/`, family: "decade-child", lastmod: dataDate, priority: 0.5 });
+  const minDecade = Math.floor(minYear / 10) * 10;
+  const maxDecade = Math.floor(maxYear / 10) * 10;
+  for (const definition of DECADE_HUB_DEFINITIONS) {
+    if (definition.rolloutState === "draft" || definition.startYear < minDecade || definition.startYear > maxDecade) continue;
+    for (const child of DECADE_CHILDREN) {
+      routes.push({ path: `/names/${definition.slug}/${child}/`, family: "decade-child", lastmod: dataDate, priority: 0.5 });
+    }
   }
   for (const letter of LETTERS) {
     routes.push({ path: `/names/${letter}/`, family: "initial", lastmod: dataDate, priority: 0.4 });
