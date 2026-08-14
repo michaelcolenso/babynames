@@ -172,16 +172,14 @@ passes. Those are independent approval gates.
 ## Cache and rollout
 
 `reviewed` means approved content, not production availability. The sitemap emits
-specialized child routes only for definitions marked `seeded`, and right now
-**no decade is `seeded`**: both legacy pilot rows predate the strict runtime
-validator (the 1920s row lacks `nominalEndYear`; the 1980s row predates the
-reviewed 2025 thesis source), so their children correctly return 404 and must
-not be advertised. A first rollout batch replaces the 1920s/1980s rows with the
-current validator-passing artifacts, verifies exact readback, and only then
-flips those definitions to `seeded` in a follow-up deploy. The same
-deploy→seed→smoke→flip sequence applies to every later batch. This ordering may
-briefly leave working child routes undiscoverable, but it never advertises
-child URLs that return 404.
+specialized child routes only for definitions marked `seeded`. As of 2026-08-14
+the 1920s and 1980s pilots are `seeded`: their legacy rows were replaced with
+validator-passing `ssa-national-2025` artifacts (exact readback verified) and
+the registry was flipped in a follow-up deploy. Every later batch follows the
+same deploy→seed→smoke→flip sequence: seed while the batch stays `reviewed`,
+verify exact readback, then flip to `seeded` in a follow-up deploy. This
+ordering may briefly leave working child routes undiscoverable, but it never
+advertises child URLs that return 404.
 
 For every changed decade the seeder prints these paths:
 

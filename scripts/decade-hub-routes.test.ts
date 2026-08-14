@@ -544,10 +544,10 @@ test("all registry child routes render for reviewed definitions with valid paylo
       assert.equal(response.status, servesChildren ? 200 : 404, `${definition.slug}/${child}`);
     }
   }
-  assert.equal(
-    DECADE_HUB_DEFINITIONS.filter((definition) => definition.rolloutState === "seeded").length,
-    0,
-    "no decade is sitemap-seeded until its production row passes the strict validator",
+  assert.deepEqual(
+    DECADE_HUB_DEFINITIONS.filter((definition) => definition.rolloutState === "seeded").map((definition) => definition.slug),
+    ["1920s", "1980s"],
+    "only the re-seeded pilots advertise child routes in the sitemap",
   );
 });
 
