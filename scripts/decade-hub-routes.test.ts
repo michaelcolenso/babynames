@@ -285,7 +285,10 @@ test("all reviewed registry slugs query the requested slug and missing rows fall
     const response = await getHub(`/names/${definition.slug}/`, definition.slug, db);
     assert.equal(response.status, 200, definition.slug);
     const html = await response.text();
-    if (definition.rolloutState === "seeded") assert.match(html, /class="dh-page"/, definition.slug);
+    // Hub shell renders only when the definition is non-draft AND the fake D1
+    // holds a validator-passing row for it (here: the two pilot fixtures).
+    const servesHub = definition.rolloutState !== "draft" && (definition.slug === "1920s" || definition.slug === "1980s");
+    if (servesHub) assert.match(html, /class="dh-page"/, definition.slug);
     else assert.match(html, new RegExp(`<h1>${definition.slug} baby names<\\/h1>`), definition.slug);
   }
 
@@ -546,8 +549,8 @@ test("all registry child routes render for reviewed definitions with valid paylo
   }
   assert.deepEqual(
     DECADE_HUB_DEFINITIONS.filter((definition) => definition.rolloutState === "seeded").map((definition) => definition.slug),
-    ["1920s", "1980s"],
-    "only the re-seeded pilots advertise child routes in the sitemap",
+    ["1880s", "1890s", "1900s", "1910s", "1920s", "1980s"],
+    "only the seeded decades advertise child routes in the sitemap",
   );
 });
 
