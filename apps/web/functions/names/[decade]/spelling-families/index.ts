@@ -1,31 +1,30 @@
 // GET /names/:decade/spelling-families/ — spelling-families child route.
-// Ships for the precomputed 1920s and 1980s hubs; other decades get a plain 404.
+// Ships for any reviewed/seeded hub with a valid persisted profile.
 
-import { fetchDecadeHubProfile, renderDecadeSpellingFamilies, fetchDecadeHubProfile1920, renderDecadeSpellingFamilies1920 } from "@nv/shared";
+import { loadDecadeHubRuntime, renderDecadeSpellingFamiliesGeneric } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 
 function notFound(decade: string): Response {
   return new Response(
-    `<!doctype html><html><body><h1>Not found</h1><p>No spelling-families page exists for ${decade}. Flagship child pages are available for the <a href="/names/1920s/">1920s</a> and <a href="/names/1980s/">1980s</a>.</p></body></html>`,
+    `<!doctype html><html><body><h1>Not found</h1><p>No spelling-families page exists for ${escapeHtml(decade)}.</p></body></html>`,
     { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } },
   );
 }
 
 export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
   const decade = typeof ctx.params.decade === "string" ? ctx.params.decade : "";
-  if (decade !== "1980s" && decade !== "1920s") {
-    return notFound(decade);
-  }
-
-  const is1920s = decade === "1920s";
-  const profile = is1920s ? await fetchDecadeHubProfile1920(ctx.env.DB) : await fetchDecadeHubProfile(ctx.env.DB);
-  if (!profile) {
+  const runtime = await loadDecadeHubRuntime(ctx.env.DB, decade);
+  if (runtime.status !== "eligible") {
     return notFound(decade);
   }
 
   const origin = new URL(ctx.request.url).origin;
   const canonical = `${origin}/names/${decade}/spelling-families/`;
-  return new Response(is1920s ? renderDecadeSpellingFamilies1920(profile, { origin }) : renderDecadeSpellingFamilies(profile, { origin }), {
+  return new Response(renderDecadeSpellingFamiliesGeneric(runtime.profile, { origin, definition: runtime.definition, thesis: runtime.thesis }), {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",

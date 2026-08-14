@@ -25,6 +25,7 @@ export * from "./analytics";
 export * from "./indexable-routes";
 export * from "./decade-hub-types";
 export * from "./decade-hub-validate";
+export * from "./decade-hub-runtime";
 export * from "./content/decade-hub-definitions";
 export * from "./render-decade-hub";
 export {

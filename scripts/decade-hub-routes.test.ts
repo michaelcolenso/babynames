@@ -17,14 +17,21 @@ import { onRequestGet as methodologyGet } from "../apps/web/functions/names/[dec
 import { onRequestGet as classroomGet } from "../apps/web/functions/names/[decade]/classroom/index";
 import { onRequestGet as spellingGet } from "../apps/web/functions/names/[decade]/spelling-families/index";
 import { onRequestGet as sitemapGet } from "../apps/web/functions/sitemap.xml";
+import { DECADE_HUB_DEFINITIONS } from "../packages/shared/src/content/decade-hub-definitions";
+import { DECADE_THESES } from "../packages/shared/src/content/decade-theses";
 
 const FIXTURE = JSON.parse(
   readFileSync(new URL("./fixtures/decade-hub-1980.fixture.json", import.meta.url), "utf8"),
 );
+const FIXTURE_1920 = JSON.parse(
+  readFileSync(new URL("../data/dist/decade-hub-1920.json", import.meta.url), "utf8"),
+);
 
 interface FakeDbOptions {
   hubPayload?: string | null;
+  hubPayloads?: Readonly<Record<string, string | null>>;
   hubThrows?: boolean;
+  onHubQuery?: (slug: string) => void;
   decadeRows?: { name: string; sex: "F" | "M"; decade_total: number; rank: number }[];
   initialRows?: { name: string; sex: "F" | "M"; total_count: number; peak_year: number; latest_count: number; status: string; rank: number }[];
   minYear?: string;
@@ -33,7 +40,9 @@ interface FakeDbOptions {
 
 function fakeDb({
   hubPayload = JSON.stringify(FIXTURE),
+  hubPayloads,
   hubThrows = false,
+  onHubQuery,
   decadeRows = [
     { name: "Jessica", sex: "F", decade_total: 469439, rank: 1 },
     { name: "Jennifer", sex: "F", decade_total: 440859, rank: 2 },
@@ -54,9 +63,12 @@ function fakeDb({
           if (/FROM decade_hub/.test(sql)) {
             return {
               async first<T>() {
+                const slug = String(values[0]);
+                onHubQuery?.(slug);
                 if (hubThrows) throw new Error("no such table: decade_hub");
-                if (hubPayload === null) return null;
-                return { payload: hubPayload } as T;
+                const payload = hubPayloads ? hubPayloads[slug] ?? null : hubPayload;
+                if (payload === null) return null;
+                return { payload } as T;
               },
             };
           }
@@ -221,6 +233,45 @@ test("hub falls back to the legacy page when the payload is malformed", async ()
   assert.match(html, /<h1>1980s baby names<\/h1>/);
 });
 
+test("stale reviewed payloads are route ineligibility, not renderer errors", async () => {
+  const stale = { ...FIXTURE, sourceVersion: "ssa-national-2017", dataThroughYear: 2017 };
+  const db = fakeDb({ hubPayload: JSON.stringify(stale) });
+
+  const hub = await getHub("/names/1980s/", "1980s", db);
+  assert.equal(hub.status, 200);
+  assert.match(await hub.text(), /<h1>1980s baby names<\/h1>/);
+
+  for (const [get, path] of [
+    [getMethodology, "/names/1980s/methodology/"],
+    [getClassroom, "/names/1980s/classroom/"],
+    [getSpelling, "/names/1980s/spelling-families/"],
+  ] as const) {
+    assert.equal((await get(path, "1980s", db)).status, 404);
+  }
+});
+
+test("all registry slugs use hubs only when seeded and bind the requested slug", async () => {
+  const queried: string[] = [];
+  const db = fakeDb({
+    hubPayloads: {
+      "1920s": JSON.stringify(FIXTURE_1920),
+      "1980s": JSON.stringify(FIXTURE),
+    },
+    onHubQuery: (slug) => queried.push(slug),
+    maxYear: "2025",
+  });
+
+  for (const definition of DECADE_HUB_DEFINITIONS) {
+    const response = await getHub(`/names/${definition.slug}/`, definition.slug, db);
+    assert.equal(response.status, 200, definition.slug);
+    const html = await response.text();
+    if (definition.rolloutState === "seeded") assert.match(html, /class="dh-page"/, definition.slug);
+    else assert.match(html, new RegExp(`<h1>${definition.slug} baby names<\\/h1>`), definition.slug);
+  }
+
+  assert.deepEqual(queried, ["1920s", "1980s"]);
+});
+
 test("other decades keep the legacy page even when the hub row exists", async () => {
   const response = await getHub("/names/1970s/", "1970s", fakeDb());
   assert.equal(response.status, 200);
@@ -230,11 +281,29 @@ test("other decades keep the legacy page even when the hub row exists", async ()
 });
 
 test("single-letter /names/:initial/ behavior is preserved", async () => {
-  const response = await getHub("/names/a/", "a", fakeDb());
+  const queried: string[] = [];
+  const response = await getHub("/names/a/", "a", fakeDb({ onHubQuery: (slug) => queried.push(slug) }));
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /<h1>Baby names that start with A<\/h1>/);
   assert.match(html, /href="\/name\/Ashley\/"/);
+  assert.deepEqual(queried, [], "initial routes must bypass decade-hub lookup");
+});
+
+test("unknown and malformed decade segments never query the hub table", async () => {
+  const queried: string[] = [];
+  const db = fakeDb({ onHubQuery: (slug) => queried.push(slug), maxYear: "2025" });
+
+  assert.equal((await getHub("/names/not-a-decade/", "not-a-decade", db)).status, 400);
+  assert.equal((await getHub("/names/1981s/", "1981s", db)).status, 200);
+  for (const get of [getMethodology, getClassroom, getSpelling]) {
+    assert.equal((await get("/names/1981s/methodology/", "1981s", db)).status, 404);
+    const hostile = await get("/names/hostile/methodology/", `<img src=x onerror="alert(1)">`, db);
+    const html = await hostile.text();
+    assert.doesNotMatch(html, /<img src=x/);
+    assert.match(html, /&lt;img src=x onerror=&quot;alert\(1\)&quot;&gt;/);
+  }
+  assert.deepEqual(queried, []);
 });
 
 // ── Methodology route ──────────────────────────────────────────────────────
@@ -314,7 +383,7 @@ test("classroom handles the zero-repeat state as first-class copy", async () => 
   const noRepeats = JSON.parse(JSON.stringify(FIXTURE));
   noRepeats.classroomDefaults.uniqueNames = 30;
   noRepeats.classroomDefaults.repeatedNames = 0;
-  noRepeats.classroomDefaults.mostRepeated = { name: "Michael", slug: "Michael", seats: 1 };
+  noRepeats.classroomDefaults.mostRepeated = { name: "Amanda", slug: "Amanda", seats: 1 };
   noRepeats.classroomDefaults.topShare = 1 / 30;
   // 30 distinct names, one seat each — the real-data apportionment outcome.
   const girlNames = ["Jessica", "Jennifer", "Amanda", "Ashley", "Sarah", "Stephanie", "Nicole", "Elizabeth", "Heather", "Megan", "Melissa", "Tiffany", "Michelle", "Amber", "Christina"];
@@ -335,17 +404,14 @@ test("classroom handles the zero-repeat state as first-class copy", async () => 
 test("classroom renders a unique-name (non-expanded) roster payload correctly", async () => {
   // Defensive path: students arrive as unique names with seat counts.
   const compact = JSON.parse(JSON.stringify(FIXTURE));
-  compact.classroomDefaults.students = [
-    { name: "Jennifer", slug: "Jennifer", sex: "F", seats: 3 },
-    { name: "Michael", slug: "Michael", sex: "M", seats: 3 },
-    { name: "Ashley", slug: "Ashley", sex: "F", seats: 2 },
-    { name: "Amanda", slug: "Amanda", sex: "F", seats: 1 },
-  ];
+  compact.classroomDefaults.students = [...new Map(
+    compact.classroomDefaults.students.map((student: { slug: string; sex: string }) => [`${student.sex}|${student.slug}`, student]),
+  ).values()];
 
   const response = await getClassroom("/names/1980s/classroom/", "1980s", fakeDb({ hubPayload: JSON.stringify(compact) }));
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.equal((html.match(/<li class="dh-student/g) ?? []).length, 9, "3+3+2+1 seats should render as 9 cards");
+  assert.equal((html.match(/<li class="dh-student/g) ?? []).length, 30, "compact seat counts should expand to all 30 cards");
   assert.match(html, /aria-label="3 students named Jennifer"/);
 });
 
@@ -396,6 +462,107 @@ test("child routes 404 when the decade_hub row is missing", async () => {
   ] as const) {
     const response = await get(path, "1980s", db);
     assert.equal(response.status, 404);
+  }
+});
+
+test("all registry child routes are gated by rollout state and valid payload", async () => {
+  const db = fakeDb({
+    hubPayloads: {
+      "1920s": JSON.stringify(FIXTURE_1920),
+      "1980s": JSON.stringify(FIXTURE),
+    },
+  });
+
+  for (const definition of DECADE_HUB_DEFINITIONS) {
+    for (const [get, child] of [
+      [getMethodology, "methodology"],
+      [getClassroom, "classroom"],
+      [getSpelling, "spelling-families"],
+    ] as const) {
+      const response = await get(`/names/${definition.slug}/${child}/`, definition.slug, db);
+      assert.equal(response.status, definition.rolloutState === "seeded" ? 200 : 404, `${definition.slug}/${child}`);
+    }
+  }
+});
+
+test("expected storage and payload failures fall back on hubs and 404 on children", async () => {
+  const wrongDecade = { ...FIXTURE, decade: 1970, startYear: 1970 };
+  const cases = [
+    ["missing row", fakeDb({ hubPayload: null })],
+    ["query failure", fakeDb({ hubThrows: true })],
+    ["malformed JSON", fakeDb({ hubPayload: "{" })],
+    ["invalid profile", fakeDb({ hubPayload: JSON.stringify({ decade: 1980 }) })],
+    ["wrong decade", fakeDb({ hubPayload: JSON.stringify(wrongDecade) })],
+  ] as const;
+
+  for (const [label, db] of cases) {
+    const hub = await getHub("/names/1980s/", "1980s", db);
+    assert.equal(hub.status, 200, `${label}: hub`);
+    assert.match(await hub.text(), /<h1>1980s baby names<\/h1>/, `${label}: legacy fallback`);
+    for (const [get, child] of [
+      [getMethodology, "methodology"],
+      [getClassroom, "classroom"],
+      [getSpelling, "spelling-families"],
+    ] as const) {
+      assert.equal((await get(`/names/1980s/${child}/`, "1980s", db)).status, 404, `${label}: ${child}`);
+    }
+  }
+});
+
+test("partial 2020s payload stays unroutable while its definition is draft", async () => {
+  const partial = {
+    ...FIXTURE,
+    decade: 2020,
+    startYear: 2020,
+    endYear: 2025,
+    nominalEndYear: 2029,
+    dataThroughYear: 2025,
+    isComplete: false,
+    sourceVersion: "ssa-national-2025",
+  };
+  const queried: string[] = [];
+  const db = fakeDb({
+    hubPayloads: { "2020s": JSON.stringify(partial) },
+    onHubQuery: (slug) => queried.push(slug),
+    maxYear: "2025",
+  });
+
+  const hub = await getHub("/names/2020s/", "2020s", db);
+  assert.equal(hub.status, 200);
+  assert.match(await hub.text(), /<h1>2020s baby names<\/h1>/);
+  for (const get of [getMethodology, getClassroom, getSpelling]) {
+    assert.equal((await get("/names/2020s/methodology/", "2020s", db)).status, 404);
+  }
+  assert.deepEqual(queried, [], "draft definitions must be rejected before D1 lookup");
+});
+
+test("renderer programmer errors propagate instead of becoming data absence", async () => {
+  const original = DECADE_THESES["1980s"]!;
+  const throwing = { ...original };
+  Object.defineProperty(throwing, "heading", {
+    enumerable: true,
+    get() {
+      throw new Error("renderer sentinel");
+    },
+  });
+  DECADE_THESES["1980s"] = throwing;
+  try {
+    await assert.rejects(
+      () => getHub("/names/1980s/", "1980s", fakeDb()),
+      /renderer sentinel/,
+    );
+  } finally {
+    DECADE_THESES["1980s"] = original;
+  }
+
+  for (const relative of [
+    "../apps/web/functions/names/[decade]/index.ts",
+    "../apps/web/functions/names/[decade]/methodology/index.ts",
+    "../apps/web/functions/names/[decade]/classroom/index.ts",
+    "../apps/web/functions/names/[decade]/spelling-families/index.ts",
+  ]) {
+    const source = readFileSync(new URL(relative, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /\btry\s*\{|\bcatch\s*[({]/, `${relative}: rendering must remain outside persistence catches`);
   }
 });
 

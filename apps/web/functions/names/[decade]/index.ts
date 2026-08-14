@@ -4,7 +4,7 @@
 // Example: /names/a/ shows popular baby names starting with A.
 // Follows the same shell + embedded-data pattern as /era/:year/.
 
-import { getMeta, pageShell, topByDecade, topByInitial, META_KEYS, fetchDecadeHubProfile, renderDecadeHub, fetchDecadeHubProfile1920, renderDecadeHub1920 } from "@nv/shared";
+import { getMeta, pageShell, topByDecade, topByInitial, META_KEYS, loadDecadeHubRuntime, renderDecadeHubGeneric } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 function parseDecade(raw: string): { label: string; start: number; end: number } | null {
@@ -42,24 +42,22 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
     return new Response("names segment must be a letter or decade like 1980s", { status: 400 });
   }
 
-  // 1980s decade hub flagship: when the precomputed decade_hub row exists,
-  // render the new hub and skip the legacy page entirely (including its dead
-  // window.renderDecadeTable hydration hook). Any miss/failure falls through
-  // to the legacy implementation unchanged.
-  if (decade.label === "1980s" || decade.label === "1920s") {
-    const is1920s = decade.label === "1920s";
-    const profile = is1920s ? await fetchDecadeHubProfile1920(ctx.env.DB) : await fetchDecadeHubProfile(ctx.env.DB);
-    if (profile) {
-      const origin = new URL(ctx.request.url).origin;
-      const canonical = `${origin}/names/${decade.label}/`;
-      return new Response(is1920s ? renderDecadeHub1920(profile, { origin }) : renderDecadeHub(profile, { origin }), {
-        headers: {
-          "Content-Type": "text/html; charset=utf-8",
-          "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
-          Link: `<${canonical}>; rel="canonical"`,
-        },
-      });
-    }
+  const runtime = await loadDecadeHubRuntime(ctx.env.DB, decade.label);
+  if (runtime.status === "eligible") {
+    const origin = new URL(ctx.request.url).origin;
+    const canonical = `${origin}/names/${runtime.definition.slug}/`;
+    return new Response(renderDecadeHubGeneric(runtime.profile, {
+      origin,
+      definition: runtime.definition,
+      thesis: runtime.thesis,
+      decadeNavigation: "adjacent-only",
+    }), {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
+        Link: `<${canonical}>; rel="canonical"`,
+      },
+    });
   }
 
   const [rows, yMStr, ymStr] = await Promise.all([
