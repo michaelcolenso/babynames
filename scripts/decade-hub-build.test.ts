@@ -24,6 +24,11 @@ import {
 
 const FIXED_TIME = "2026-01-01T00:00:00.000Z";
 
+const nodeVersion = (globalThis as { process?: { versions?: { node?: string } } }).process?.versions?.node ?? "0";
+const sqliteSkip = Number.parseInt(nodeVersion.split(".")[0] ?? "0", 10) >= 22
+  ? false
+  : "requires node:sqlite (Node 22+)";
+
 function sourceThrough(maxYear = 2025, validationOnly = false): LoadedSource {
   const female: Record<number, number> = {};
   const male: Record<number, number> = {};
@@ -208,19 +213,19 @@ test("source year bounds are iterative and safe for production-sized row counts"
   assert.deepEqual(sourceYearBounds([{ name: "Scale", sex: "F", series }]), { minYear: 1880, maxYear: 151_879 });
 });
 
-test("SQLite source loader validates complete tables and emits the D1-compatible source identity", async () => {
+test("SQLite source loader validates complete tables and emits the D1-compatible source identity", { skip: sqliteSkip }, async () => {
   const source = await loadSqliteSource(await createSqliteFixture());
   assert.equal(source.sourceVersion, "ssa-national-2021");
   assert.equal(source.source.records.length, 2);
   assert.match(source.fingerprint, /^fixture-v1\|2\|70\|110\|sha256:[a-f0-9]{64}$/);
 });
 
-test("SQLite source loader accepts a lagging names rollup while using granular rows", async () => {
+test("SQLite source loader accepts a lagging names rollup while using granular rows", { skip: sqliteSkip }, async () => {
   const source = await loadSqliteSource(await createSqliteFixture({ laggingNameTotal: true }));
   assert.equal(source.source.records[0]!.series[2021], 20);
 });
 
-test("SQLite source loader rejects orphaned names, missing totals, and missing coverage metadata", async () => {
+test("SQLite source loader rejects orphaned names, missing totals, and missing coverage metadata", { skip: sqliteSkip }, async () => {
   for (const [fixture, message] of [
     [{ orphanName: true }, /names row.*without name_years/i],
     [{ missingTotal: true }, /missing year_totals/i],
