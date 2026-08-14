@@ -3,6 +3,7 @@
   "include": [
     "/",
     "/mcp",
+    "/a2a",
     "/name/*",
     "/names/*",
     "/compare/*",
@@ -14,6 +15,8 @@
     "/endangered",
     "/comeback",
     "/rising",
+    "/emerging",
+    "/fading",
     "/year",
     "/about",
     "/comebacks",
@@ -27,7 +30,8 @@
     "/newsletter/*",
     "/stories/*",
     "/shadow",
-    "/shadow/*"
+    "/shadow/*",
+    "/.well-known/oauth-protected-resource"
   ],
   "exclude": [
     "/assets/*",

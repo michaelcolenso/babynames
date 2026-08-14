@@ -8,64 +8,100 @@ export interface NavItem {
   href: string;
 }
 
-const DEFAULT_NAV: NavItem[] = [
-  { label: "Extinct", href: "/extinct" },
-  { label: "Endangered", href: "/endangered" },
-  { label: "Comebacks", href: "/comeback" },
+// A grouped disclosure entry in the top-level nav — renders as a
+// <details>/<summary> dropdown so the flat link count doesn't grow forever
+// as more status hubs are added. See renderNav()/renderMobileNav().
+export interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+export type NavEntry = NavItem | NavGroup;
+
+function isNavGroup(entry: NavEntry): entry is NavGroup {
+  return "items" in entry;
+}
+
+const DEFAULT_NAV: NavEntry[] = [
+  {
+    label: "Discover",
+    items: [
+      { label: "Extinct", href: "/extinct" },
+      { label: "Endangered", href: "/endangered" },
+      { label: "Comebacks", href: "/comeback" },
+      { label: "Rising", href: "/rising" },
+      { label: "Emerging", href: "/emerging" },
+      { label: "Fading", href: "/fading" },
+    ],
+  },
   { label: "Birth year", href: "/year" },
-  { label: "Rising", href: "/rising" },
   { label: "Visualizations", href: "/viz" },
   { label: "Namecalling", href: "/blog/" },
   { label: "Newsletter", href: "/newsletter" },
   { label: "About", href: "/about" },
 ];
 
-const BROWSE_NAV: NavItem[] = [
-  { label: "Extinct", href: "/extinct" },
-  { label: "Endangered", href: "/endangered" },
-  { label: "Comebacks", href: "/comeback" },
-  { label: "Birth year", href: "/year" },
-  { label: "By decade", href: "/names/1980s/" },
-  { label: "By initial", href: "/names/a/" },
-  { label: "By ending", href: "/names/ending/a/" },
-  { label: "Rising", href: "/rising" },
-  { label: "About", href: "/about" },
-];
+const STYLESHEET_HREF = "/assets/style.css?v=21";
 
-const STYLESHEET_HREF = "/assets/style.css?v=18";
+// Runs synchronously before the stylesheet is applied, so an explicit
+// dark/light choice from a prior visit takes effect on first paint instead
+// of flashing the OS-preference theme and then snapping to the stored one.
+// Keep this in sync with the [data-theme] read in assets/theme.js.
+export const THEME_INIT_SCRIPT = `<script>(function(){try{var t=localStorage.getItem("nv-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>`;
 
 function escape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function renderNav(items: NavItem[], currentPath?: string): string {
-  const links = items
-    .map((item) => {
-      const isActive = currentPath === item.href || (item.href !== "/" && currentPath?.startsWith(item.href));
-      const activeAttr = isActive ? ' aria-current="page"' : "";
-      return `<a href="${escape(item.href)}"${activeAttr}>${escape(item.label)}</a>`;
-    })
-    .join("");
-  return `<nav aria-label="Main navigation">${links}</nav>`;
+function isItemActive(item: NavItem, currentPath?: string): boolean {
+  return currentPath === item.href || (item.href !== "/" && currentPath?.startsWith(item.href) === true);
 }
 
-function renderMobileNav(items: NavItem[], currentPath?: string): string {
-  const links = items
-    .map((item) => {
-      const isActive = currentPath === item.href || (item.href !== "/" && currentPath?.startsWith(item.href));
-      const activeAttr = isActive ? ' aria-current="page"' : "";
-      return `<a href="${escape(item.href)}"${activeAttr}>${escape(item.label)}</a>`;
-    })
-    .join("");
+function renderNavLink(item: NavItem, currentPath?: string): string {
+  const activeAttr = isItemActive(item, currentPath) ? ' aria-current="page"' : "";
+  return `<a href="${escape(item.href)}"${activeAttr}>${escape(item.label)}</a>`;
+}
+
+// Top-level nav entries render flat; a NavGroup renders as a <details>
+// dropdown with real <a href> links in its panel, so grouped items stay
+// crawlable in the raw HTML regardless of open/closed state — no JS involved.
+function renderNav(entries: NavEntry[], currentPath?: string): string {
+  const parts = entries.map((entry) => {
+    if (!isNavGroup(entry)) return renderNavLink(entry, currentPath);
+    const groupActive = entry.items.some((item) => isItemActive(item, currentPath));
+    const activeClass = groupActive ? " nav-group-active" : "";
+    const links = entry.items.map((item) => renderNavLink(item, currentPath)).join("");
+    return `<details class="nav-group${activeClass}">
+    <summary>${escape(entry.label)}</summary>
+    <div class="nav-group-panel">${links}</div>
+  </details>`;
+  });
+  return `<nav aria-label="Main navigation">${parts.join("")}</nav>`;
+}
+
+// Mobile nav flattens groups into a single list — a nested disclosure inside
+// the mobile menu's own disclosure isn't worth the interaction cost at that
+// size, and this list is short enough (leaf items only) to scan directly.
+function renderMobileNav(entries: NavEntry[], currentPath?: string): string {
+  const leaves = entries.flatMap((entry) => (isNavGroup(entry) ? entry.items : [entry]));
+  const links = leaves.map((item) => renderNavLink(item, currentPath)).join("");
   return `<details class="mobile-nav">
   <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
   <nav aria-label="Mobile navigation">${links}</nav>
 </details>`;
 }
 
+// Both icons always render; style.css shows only the one matching the
+// current effective theme (data-theme attribute, falling back to OS
+// preference) via CSS, so this needs no JS to paint correctly on first load.
+export const THEME_TOGGLE_HTML = `<button type="button" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
+  <svg class="theme-toggle-icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+  <svg class="theme-toggle-icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>
+</button>`;
+
 export interface SiteHeaderOpts {
   mobileNav?: boolean;
-  navItems?: NavItem[];
+  navItems?: NavEntry[];
 }
 
 export function siteHeader(currentPath?: string, opts: SiteHeaderOpts = {}): string {
@@ -74,6 +110,7 @@ export function siteHeader(currentPath?: string, opts: SiteHeaderOpts = {}): str
   return `<header class="site">
   <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="NobodyNamed"></a>
   ${renderNav(items, currentPath)}
+  ${THEME_TOGGLE_HTML}
   ${mobileNav}
 </header>`;
 }
@@ -131,7 +168,7 @@ export function pageShell(opts: PageShellOpts): string {
   const ogType = opts.ogType ?? "website";
   const twitterCard = opts.twitterCard ?? "summary_large_image";
   const themeLight = opts.themeColorLight ?? "#f7f5f2";
-  const themeDark = opts.themeColorDark ?? "#151412";
+  const themeDark = opts.themeColorDark ?? "#14161d";
   const favicon = opts.favicon ?? "/favicon.svg";
   const mainId = opts.mainId ?? "main-content";
 
@@ -164,6 +201,7 @@ export function pageShell(opts: PageShellOpts): string {
 <html lang="en">
 <head>
 <meta charset="utf-8">
+${THEME_INIT_SCRIPT}
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
 <meta name="description" content="${desc}">
@@ -195,6 +233,7 @@ ${skipLink}
   </main>
   ${siteFooter(opts.footerVariant, { yearRange: opts.footerYearRange })}
 </div>
+<script src="/assets/theme.js" defer></script>
 <script src="/assets/analytics.js" defer></script>
 <script src="/assets/webmcp.js" defer></script>
 ${scriptTags}

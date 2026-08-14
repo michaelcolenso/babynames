@@ -1,0 +1,44 @@
+{
+  "name": "NobodyNamed",
+  "description": "Agent that looks up US baby name popularity, trend classification, and history from Social Security Administration birth records spanning 1880 to the present.",
+  "supportedInterfaces": [
+    {
+      "url": "https://nobodynamed.com/a2a",
+      "protocolBinding": "JSONRPC",
+      "protocolVersion": "1.0"
+    }
+  ],
+  "provider": {
+    "organization": "NobodyNamed",
+    "url": "https://nobodynamed.com"
+  },
+  "version": "1.0.0",
+  "documentationUrl": "https://nobodynamed.com/about",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "extendedAgentCard": false
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"],
+  "skills": [
+    {
+      "id": "name-lookup",
+      "name": "Name history lookup",
+      "description": "Given an exact US baby name (set message.metadata.skillId to \"name-lookup\"), returns its trend classification (rising/stable/declining/endangered/extinct), peak year, peak birth count, and most recent birth count for each sex it was recorded under.",
+      "tags": ["names", "demographics", "history"],
+      "examples": ["Jennifer", "Michael", "Kehlani"],
+      "inputModes": ["text/plain"],
+      "outputModes": ["text/plain"]
+    },
+    {
+      "id": "name-search",
+      "name": "Name prefix search",
+      "description": "The default skill — given a partial name, returns up to 10 matching names ordered by peak historical popularity. Set message.metadata.skillId to \"name-search\" to select it explicitly.",
+      "tags": ["names", "search", "autocomplete"],
+      "examples": ["Jen", "Mich", "Kehl"],
+      "inputModes": ["text/plain"],
+      "outputModes": ["text/plain"]
+    }
+  ]
+}

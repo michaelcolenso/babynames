@@ -17,9 +17,12 @@ export interface StateFetchResult {
 const MAX_ZIP_BYTES = 100 * 1024 * 1024; // 100MB — well above the ~25MB state zip.
 const UA = "name-vitals-ingest/1.0 (+https://github.com/michaelcolenso/babynames)";
 
-export async function fetchStateZip(url: string): Promise<StateFetchResult> {
+export async function fetchStateZip(
+  url: string,
+  extraHeaders: Record<string, string> = {},
+): Promise<StateFetchResult> {
   const r = await fetch(url, {
-    headers: { "User-Agent": UA },
+    headers: { "User-Agent": UA, ...extraHeaders },
     cf: { cacheTtl: 0 },
   } as RequestInit);
   if (!r.ok) throw new Error(`SSA state fetch failed: ${r.status} ${r.statusText}`);

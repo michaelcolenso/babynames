@@ -5,6 +5,7 @@
 // free (with the `data_version` cache-bust trick built into each handler).
 
 import type { PagesFunction } from "@cloudflare/workers-types";
+import { shouldServeMarkdown } from "./_accept";
 
 const CANONICAL_PAGES = new Set([
   "/about",
@@ -56,6 +57,19 @@ export const onRequest: PagesFunction = async (ctx) => {
   }
 };
 
+/**
+ * Whether a path may be stored in the Worker-level variant cache.
+ *
+ * Entries there are keyed by a synthetic `__nv_variant` URL that Cloudflare's
+ * purge API cannot address, so anything cached is effectively unevictable for
+ * the lifetime of its `stale-while-revalidate` window. Agent-discovery
+ * documents under `/.well-known/` change as conventions evolve and must remain
+ * deletable, so they never enter it.
+ */
+export function usesVariantCache(pathname: string): boolean {
+  return !pathname.startsWith("/.well-known/");
+}
+
 async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promise<Response> {
   const legacyName = url.pathname === "/" ? url.searchParams.get("name")?.trim() : "";
   if (legacyName) {
@@ -82,6 +96,42 @@ async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promi
     return ctx.next();
   }
 
+  // `/.well-known/oauth-protected-resource` was deleted from the repo, but the
+  // apex hostname kept serving the old body — advertising an empty
+  // `authorization_servers` list, which made MCP clients try to register
+  // against an authorization server that does not exist and broke connector
+  // setup ("Couldn't register with nobodynamed's sign-in service").
+  //
+  // The deployment itself is correct: both `name-vitals.pages.dev` and the
+  // pinned deployment URL return 404 for this path, and a request with any
+  // query string 404s too. Only the bare URL on `nobodynamed.com` served it,
+  // with a steadily climbing `Age`, and it survived repeated per-file and
+  // `purge_everything` purges. `.well-known` is not in `_routes.json`'s
+  // `include` list, so those requests never reach Functions at all — the stale
+  // copy sits in the static-asset path, where nothing in this codebase can
+  // evict it.
+  //
+  // Adding the path to `_routes.json` routes it here instead, so this explicit
+  // 404 is what answers. Keep the two together: dropping either the route
+  // entry or this branch resurrects the stale document.
+  if (url.pathname === "/.well-known/oauth-protected-resource") {
+    return new Response("Not Found", {
+      status: 404,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+
+  // Agent-discovery documents skip the variant cache below. Entries there are
+  // keyed by a synthetic `__nv_variant` URL that purge-by-URL cannot address,
+  // so anything stored is effectively unevictable for its whole
+  // stale-while-revalidate window. These files are added and removed as agent
+  // conventions change and must stay evictable. (Today `_routes.json` keeps
+  // most of `.well-known` out of Functions entirely, so this mainly guards
+  // against a future route entry quietly making them cacheable.)
+  if (!usesVariantCache(url.pathname)) {
+    return ctx.next();
+  }
+
   const cache = caches.default;
   // The Cloudflare Cache API keys on the request URL, not on arbitrary request
   // headers. Content-negotiated routes (the homepage serves HTML to browsers
@@ -91,7 +141,7 @@ async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promi
   // variant into a synthetic, internal-only cache-key URL so the two
   // representations are cached separately. `__nv_variant` never reaches a
   // client: we always return the cached/origin Response, never redirect to it.
-  const wantsMarkdown = (ctx.request.headers.get("Accept") ?? "").includes("text/markdown");
+  const wantsMarkdown = shouldServeMarkdown(ctx.request);
   const keyUrl = new URL(ctx.request.url);
   keyUrl.searchParams.set("__nv_variant", wantsMarkdown ? "md" : "html");
   const cacheKey = new Request(keyUrl.toString(), { method: "GET" });

@@ -5,6 +5,10 @@ This is the canonical runbook for the 15 registry-driven decade hubs from the
 `classroom/`, and `spelling-families/` children. Primary content is SSR; the
 browser script adds progressive enhancement only.
 
+The original phased implementation brief remains at
+[`docs/prompts/complete-decade-hubs.md`](prompts/complete-decade-hubs.md), but
+this operations guide supersedes its pre-rollout status assumptions.
+
 ## Architecture and source of truth
 
 - Registry: `packages/shared/src/content/decade-hub-definitions.ts`
