@@ -34,6 +34,7 @@
     "build-decade-hubs": "tsx scripts/build-decade-hubs.ts",
     "seed-decade-hubs": "tsx scripts/seed-decade-hub.ts",
     "sensitivity:decade-hub": "tsx scripts/decade-hub-sensitivity.ts",
+    "verify:decade-hubs": "tsx scripts/verify-decade-hubs.ts",
     "test:decade-hub": "tsx --test scripts/decade-hub.test.ts scripts/decade-hub-classroom.test.ts scripts/decade-hub-families.test.ts scripts/decade-hub-matrix.test.ts scripts/decade-hub-routes.test.ts scripts/decade-hub-runtime.test.ts scripts/decade-hub-payload.test.ts scripts/decade-hub-validation.test.ts scripts/decade-hub-1920.test.ts scripts/decade-hub-render-parity.test.ts scripts/decade-hub-definitions.test.ts scripts/decade-hub-editorial.test.ts scripts/decade-hub-build.test.ts scripts/seed-decade-hubs.test.ts",
     "seed-shadow-matches": "tsx scripts/seed-shadow-matches.ts",
     "seed-shadow-matches:local": "tsx scripts/seed-shadow-matches.ts --local",
