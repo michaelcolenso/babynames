@@ -7,7 +7,7 @@
   --paper-deep: #e8dfd0;
   --ink: #171511;
   --ink-soft: #4d4941;
-  --muted: #787064;
+  --muted: #6b6459;
   --rule: #d8cdbb;
   --surface: #fbf8f1;
   --surface-2: #eee5d6;
@@ -325,8 +325,8 @@ header.site nav .nav-group-panel a[aria-current="page"] { color: var(--ink); bac
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   margin-left: 0.4rem;
   background: none;
@@ -845,6 +845,10 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+  /* Populated client-side by tapestry.js after an async fetch; reserving
+     roughly the rendered height up front (3 decade rows × card grid, sized
+     per breakpoint below) avoids a layout shift when it pops in. */
+  min-height: 400px;
 }
 .tapestry-by-decade {
   display: flex;
@@ -915,7 +919,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   font-size: 0.6rem;
   font-weight: 400;
   letter-spacing: 0.04em;
-  color: var(--brand-faded-contrast);
+  color: var(--ink-soft);
   margin-bottom: 0.3rem;
 }
 .tapestry-spark-wrap {
@@ -2178,6 +2182,10 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   .tapestry-row-cards {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  .river-hero-tapestry {
+    /* 3 columns wraps 5 cards into 2 rows per decade. */
+    min-height: 700px;
+  }
   .report-sidebar { position: static; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -2275,6 +2283,10 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   .dossier-grid { grid-template-columns: 1fr; }
   .tapestry-row-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .river-hero-tapestry {
+    /* 2 columns wraps 5 cards into 3 rows per decade. */
+    min-height: 1000px;
   }
   .insight-row { grid-template-columns: 1fr; gap: 0.2rem; }
   .chart-caption { flex-direction: column; }

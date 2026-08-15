@@ -41,7 +41,7 @@ const DEFAULT_NAV: NavEntry[] = [
   { label: "About", href: "/about" },
 ];
 
-const STYLESHEET_HREF = "/assets/style.css?v=22";
+const STYLESHEET_HREF = "/assets/style.css?v=23";
 
 // Runs synchronously before the stylesheet is applied, so an explicit
 // dark/light choice from a prior visit takes effect on first paint instead
@@ -51,6 +51,25 @@ export const THEME_INIT_SCRIPT = `<script>(function(){try{var t=localStorage.get
 
 function escape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Most og:image values are dynamic /api/og/* routes, which always render PNG.
+// A handful (blog post hero images) are static assets with their own
+// extension — trust that when present instead of always claiming PNG, since
+// a wrong og:image:type can make some link-preview crawlers reject the image.
+function ogImageType(url: string): string {
+  const ext = (url.split(/[?#]/)[0] ?? "").split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "webp":
+      return "image/webp";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "svg":
+      return "image/svg+xml";
+    default:
+      return "image/png";
+  }
 }
 
 function isItemActive(item: NavItem, currentPath?: string): boolean {
@@ -186,7 +205,7 @@ export function pageShell(opts: PageShellOpts): string {
   const mainId = opts.mainId ?? "main-content";
 
   const ogImageMeta = opts.ogImage
-    ? `<meta property="og:image" content="${escape(opts.ogImage)}">\n<meta property="og:image:type" content="image/png">`
+    ? `<meta property="og:image" content="${escape(opts.ogImage)}">\n<meta property="og:image:type" content="${ogImageType(opts.ogImage)}">`
     : "";
   const ogImageAltMeta = opts.ogImageAlt
     ? `<meta property="og:image:alt" content="${escape(opts.ogImageAlt)}">`
