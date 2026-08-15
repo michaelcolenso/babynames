@@ -138,7 +138,7 @@ test("classic name cards render six ordered accessible SSR sparklines and preser
   assert.equal((html.match(/<text class="mini-sparkline-year"[^>]*>2025<\/text>/g) ?? []).length, 6);
   assert.doesNotMatch(html, /mini-sparkline-years/);
 
-  const cardGrid = html.match(/<div class="diagnosis-grid">([\s\S]*?)<\/div>/)?.[1] ?? "";
+  const cardGrid = html.match(/<div class="diagnosis-grid"[^>]*>([\s\S]*?)<\/div>/)?.[1] ?? "";
   assert.equal((cardGrid.match(/<svg class="mini-sparkline"/g) ?? []).length, 6);
   assert.doesNotMatch(cardGrid, /<script/);
 });

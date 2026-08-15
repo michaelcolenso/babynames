@@ -76,6 +76,8 @@ function renderTapestryCard(entry) {
   const card = document.createElement("a");
   card.className = "tapestry-cell";
   card.href = `/name/${encodeURIComponent(entry.name)}/`;
+  card.dataset.trackTargetId = `name:${entry.name.toLowerCase()}`;
+  card.dataset.trackTargetType = "name-page";
 
   const label = document.createElement("div");
   label.className = "tapestry-label";
@@ -117,9 +119,13 @@ export async function renderTapestry(targetEl) {
     return;
   }
 
-  for (const decade of decades) {
+  // Only the most recent decades — a full 15-row tapestry buried the hero
+  // under a wall of mostly-redundant cards (see homepage redesign notes).
+  const RECENT_DECADES = 3;
+  for (const decade of decades.slice(0, RECENT_DECADES)) {
     const row = document.createElement("div");
     row.className = "tapestry-row";
+    row.dataset.sourcePlacement = "homepage-tapestry";
 
     const header = document.createElement("div");
     header.className = "tapestry-row-header";
@@ -128,6 +134,8 @@ export async function renderTapestry(targetEl) {
     decadeLink.className = "tapestry-decade";
     decadeLink.href = `/names/${decade.label}/`;
     decadeLink.textContent = decade.label;
+    decadeLink.dataset.trackTargetId = `decade-hub:${decade.label}`;
+    decadeLink.dataset.trackTargetType = "decade-hub";
     header.appendChild(decadeLink);
 
     row.appendChild(header);

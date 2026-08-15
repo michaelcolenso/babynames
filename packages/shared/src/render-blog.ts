@@ -3,6 +3,7 @@
 //   - /blog/ — post index
 //   - /blog/:slug/ — single post
 
+import { contentId, contentIdentityMeta } from "./content-identity";
 import { chunkedIn } from "./d1-chunk";
 import { pageShell } from "./render-shell";
 import type { BlogPost, BlogPostSummary } from "./schema";
@@ -389,7 +390,7 @@ export function renderBlogIndex(posts: BlogPostSummary[], opts: { canonical: str
     <p class="eyebrow">Journal</p>
     <h1>Namecalling</h1>
     <p class="lede">${escape(desc)}</p>
-    <div class="blog-index">
+    <div class="blog-index" ${contentIdentityMeta({ contentId: contentId("article", "blog"), contentType: "article", slug: "blog" })}>
       ${cards}
     </div>
   `,
@@ -468,7 +469,7 @@ export function renderBlogPost(post: BlogPost, opts: { canonical: string; origin
     ogType: "article",
     currentPath: "/blog",
     body: `
-    <article class="blog-post">
+    <article class="blog-post" ${contentIdentityMeta({ contentId: contentId("article", post.slug), contentType: "article", slug: post.slug })}>
       <header class="blog-post-header">
         <p class="eyebrow"><a href="/blog/">← Namecalling</a></p>
         <h1>${escape(post.title)}</h1>
