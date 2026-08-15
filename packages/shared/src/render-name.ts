@@ -46,7 +46,7 @@ function generationForYear(year: number): string {
   return "Greatest Generation";
 }
 
-function describeStatus(
+export function describeStatus(
   record: NameRecord,
   a: ClassifyResult,
 ): {
@@ -880,20 +880,21 @@ function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   const links: string[] = [];
   const statusLink = cohort[a.status];
   if (statusLink) {
-    links.push(`<a href="${statusLink[1]}">${statusLink[0]}</a>`);
+    links.push(`<a href="${statusLink[1]}" data-track-target-id="${contentId("article", statusLink[1])}" data-track-target-type="article">${statusLink[0]}</a>`);
   }
   const ed = editorialLink(a);
   if (ed && ed[1] !== (statusLink?.[1] ?? "")) {
-    links.push(`<a href="${ed[1]}">${ed[0]}</a>`);
+    links.push(`<a href="${ed[1]}" data-track-target-id="${contentId("article", ed[1])}" data-track-target-type="article">${ed[0]}</a>`);
   }
-  links.push(`<a href="/year/${a.peakYear}/">Top baby names from ${a.peakYear}</a>`);
-  links.push(`<a href="/names/${decadeLabel(a.peakYear)}/">${decadeLabel(a.peakYear)} baby names</a>`);
-  links.push(`<a href="/names/${encodeURIComponent(record.name.charAt(0).toLowerCase())}/">Names starting with ${escape(record.name.charAt(0).toUpperCase())}</a>`);
-  links.push(`<a href="/names/ending/${encodeURIComponent(record.name.charAt(record.name.length - 1).toLowerCase())}/">Names ending in ${escape(record.name.charAt(record.name.length - 1).toUpperCase())}</a>`);
-  links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/">Names like ${escape(record.name)}</a>`);
-  links.push(`<a href="/shadow/${encodeURIComponent(record.name)}/${record.yM}/?sex=${record.sex}">Meet your shadow</a>`);
+  const peakDecade = decadeLabel(a.peakYear);
+  links.push(`<a href="/year/${a.peakYear}/" data-track-target-id="${contentId("article", `year-${a.peakYear}`)}" data-track-target-type="article">Top baby names from ${a.peakYear}</a>`);
+  links.push(`<a href="/names/${peakDecade}/" data-track-target-id="decade-hub:${peakDecade}" data-track-target-type="decade-hub">${peakDecade} baby names</a>`);
+  links.push(`<a href="/names/${encodeURIComponent(record.name.charAt(0).toLowerCase())}/" data-track-target-id="${contentId("article", `letter-${record.name.charAt(0).toLowerCase()}`)}" data-track-target-type="article">Names starting with ${escape(record.name.charAt(0).toUpperCase())}</a>`);
+  links.push(`<a href="/names/ending/${encodeURIComponent(record.name.charAt(record.name.length - 1).toLowerCase())}/" data-track-target-id="${contentId("article", `ending-${record.name.charAt(record.name.length - 1).toLowerCase()}`)}" data-track-target-type="article">Names ending in ${escape(record.name.charAt(record.name.length - 1).toUpperCase())}</a>`);
+  links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/" data-track-target-id="${contentId("article", `twin-${record.name}`)}" data-track-target-type="article">Names like ${escape(record.name)}</a>`);
+  links.push(`<a href="/shadow/${encodeURIComponent(record.name)}/${record.yM}/?sex=${record.sex}" data-track-target-id="${contentId("article", `shadow-${record.name}`)}" data-track-target-type="article">Meet your shadow</a>`);
 
-  return `<nav class="report-links" aria-label="Explore more name data">${links.join("")}</nav>`;
+  return `<nav class="report-links" aria-label="Explore more name data" data-source-placement="name-page-explore-links">${links.join("")}</nav>`;
 }
 
 function renderRelatedNames(relatedNames: RelatedName[]): string {
@@ -901,13 +902,13 @@ function renderRelatedNames(relatedNames: RelatedName[]): string {
   const items = relatedNames
     .map((r) => {
       const sexLabel = r.sex === "M" ? "Masculine" : "Feminine";
-      return `<a href="/name/${encodeURIComponent(r.name)}/">
+      return `<a href="/name/${encodeURIComponent(r.name)}/" data-track-target-id="name:${r.name.toLowerCase()}" data-track-target-type="name-page">
   <strong>${escape(r.name)}</strong>
   <span>${sexLabel} · ${labelStatus(r.status)} · peak ${r.peak_year}</span>
 </a>`;
     })
     .join("");
-  return `<section class="related-names" aria-labelledby="related-names-title">
+  return `<section class="related-names" aria-labelledby="related-names-title" data-source-placement="name-page-related-names">
   <h2 id="related-names-title">Related names</h2>
   <div class="related-grid">${items}</div>
 </section>`;
@@ -925,7 +926,7 @@ function renderDiscoveryModule(module: NameDiscoveryModule | undefined): string 
     })
     .join("");
 
-  return `<section class="related-names discovery-module" aria-labelledby="discovery-module-title">
+  return `<section class="related-names discovery-module" aria-labelledby="discovery-module-title" data-source-placement="name-page-discovery-module">
   <h2 id="discovery-module-title">Browse nearby names</h2>
   ${clusters}
 </section>`;
@@ -933,7 +934,7 @@ function renderDiscoveryModule(module: NameDiscoveryModule | undefined): string 
 
 function renderDiscoveryCard(card: NameDiscoveryCard, kind: NameDiscoveryClusterKind): string {
   const detail = discoveryDetail(card, kind);
-  return `<a href="/name/${encodeURIComponent(card.name)}/">
+  return `<a href="/name/${encodeURIComponent(card.name)}/" data-track-target-id="name:${card.name.toLowerCase()}" data-track-target-type="name-page">
   <strong>${escape(card.name)}</strong>
   <span>${escape(detail)}</span>
 </a>`;
