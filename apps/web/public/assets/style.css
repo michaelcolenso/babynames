@@ -770,7 +770,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 }
 .tapestry-row-cards {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.55rem;
 }
 .tapestry-cell {
@@ -2062,8 +2062,8 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
     gap: 1.5rem;
     padding-top: 1rem;
   }
-  .river-hero-tapestry {
-    grid-template-columns: repeat(3, 1fr);
+  .tapestry-row-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .report-sidebar { position: static; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2159,8 +2159,8 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   .year-form input[type="number"] { max-width: none; }
   .year-result-grid,
   .dossier-grid { grid-template-columns: 1fr; }
-  .river-hero-tapestry {
-    grid-template-columns: repeat(2, 1fr);
+  .tapestry-row-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .insight-row { grid-template-columns: 1fr; gap: 0.2rem; }
   .chart-caption { flex-direction: column; }
