@@ -95,3 +95,23 @@ The sitemap carries ~17,000 URLs, almost entirely programmatic (`/name/:name/`, 
 3. **Wordmark alt-text fix** (#3) — two-line fix, removes an inconsistency screen reader users will notice.
 4. **Blog hero image** (#5) — convert to WebP, add explicit dimensions.
 5. Everything else is lower severity or already a documented tradeoff (font stack, muted-text contrast) worth a deliberate decision rather than a reflexive fix.
+
+## Fix status (2026-08-15)
+
+All findings with a concrete, low-risk fix have been implemented:
+
+- **#1 Tapestry contrast** — `.tapestry-meta` now uses `--ink-soft` instead of `--brand-faded-contrast`. Verified with a WCAG luminance calculation: light mode 2.71:1 → 8.22:1, dark mode was already passing (6.13:1) and is unaffected by this selector-level change.
+- **#2 Lede/body contrast** — `--muted` (light mode only; dark mode already passed) darkened from `#787064` to `#6b6459`, raising body/lede text from 4.29:1 to 5.14:1. This token is used in 76 places, so the fix is a single source-of-truth change rather than per-selector edits.
+- **#3 Wordmark alt-text** — `emerging.html` and `fading.html` now match every other template (`alt=""` + `loading="lazy"`, since the parent link already carries `aria-label`).
+- **#4 Tapestry CLS** — `.river-hero-tapestry` now reserves `min-height` at each of the three breakpoints that change the card grid's column count (desktop 400px / ≤850px tablet 700px / ≤620px mobile 1000px), derived from the actual card, header, and gap dimensions in the CSS. These are computed estimates, not pixel-measured — recommend confirming against real Lighthouse CLS numbers post-deploy and nudging if needed.
+- **#5 Blog hero image** — `press-start-hero.png` (284KB) converted to `press-start-hero.webp` (47KB, same 1200×630, visually verified) via Pillow; the old PNG is removed since nothing else referenced it. `content/blog/press-start-to-name.md` now points its `og_image` and inline `<img>` at the WebP, with explicit `width`/`height` attributes added (there were none before, on either format). Publishing this needs the generated migration `migrations/20260815T080318_publish_press_start_to_name.sql` applied to D1 (`npm run blog:apply:remote -- migrations/20260815T080318_publish_press_start_to_name.sql`, or it'll be swept up by the standard `npm run migrations:apply` since it lives in the same `migrations/` directory) — a plain `deploy:web` does not touch D1 content.
+- **#7 Theme toggle touch target** — bumped from 30×30px to 40×40px; the 16px icon inside is unchanged, so this only grows the tappable area.
+- **#9 About title tag** — shortened from 73 to 54 characters ("About NobodyNamed — Baby Name Vital Status Since 1880"), keeping the "vital status" phrase that matches the site's own classification language instead of generic filler.
+
+Bonus fix found while implementing #5: `pageShell()`'s `og:image:type` meta was hardcoded to `image/png` for every page, including the `/api/og/*` PNG routes (correct) and blog posts with static-asset `og_image` values (not correct, once one of those is a WebP). Added `ogImageType()` in `render-shell.ts` to derive the MIME type from the URL's extension, defaulting to `image/png` for the extensionless `/api/og/*` routes. Without this, the #5 fix would have shipped a page correctly rendering a WebP image while lying to social-media crawlers that it's a PNG.
+
+**Not changed — flagged for a deliberate decision, not a reflexive fix:**
+- **#6 Font stack** — Apple-exclusive typefaces (`Avenir Next`, `Iowan Old Style`) are a brand-identity choice, not a bug. Fixing it properly means selecting and licensing a cross-platform webfont pairing that preserves the site's editorial character, which is a design decision for the site owner rather than something to guess at while implementing an audit fix list. Left as documented above (#6) for a follow-up decision.
+- **#10 Programmatic content depth at scale** — not a defect, a monitoring recommendation; no code change applies.
+
+All changes verified with `npm run typecheck`, `npm run build`, and the relevant test suites (`test:shell`, `test:editorial`, `test:editorial-growth`, `test:indexable-routes`, `blog:test`) — all passing.
