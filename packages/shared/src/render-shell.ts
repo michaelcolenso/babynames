@@ -41,7 +41,7 @@ const DEFAULT_NAV: NavEntry[] = [
   { label: "About", href: "/about" },
 ];
 
-const STYLESHEET_HREF = "/assets/style.css?v=23";
+const STYLESHEET_HREF = "/assets/style.css?v=25";
 
 // Runs synchronously before the stylesheet is applied, so an explicit
 // dark/light choice from a prior visit takes effect on first paint instead
@@ -139,7 +139,7 @@ export function siteHeader(currentPath?: string, opts: SiteHeaderOpts = {}): str
   const items = opts.navItems ?? DEFAULT_NAV;
   const mobileNav = opts.mobileNav !== false ? renderMobileNav(items, currentPath) : "";
   return `<header class="site">
-  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="NobodyNamed"></a>
+  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo brand-logo-light" src="/assets/brand/wordmark.svg" alt="NobodyNamed" loading="lazy"><img class="brand-logo brand-logo-dark" src="/assets/brand/wordmark-dark.svg" alt="NobodyNamed" loading="lazy"></a>
   ${renderNav(items, currentPath)}
   ${HEADER_SEARCH_HTML}
   ${THEME_TOGGLE_HTML}

@@ -194,9 +194,21 @@ header.site .brand-logo {
   aspect-ratio: 240 / 44;
   height: auto;
 }
+/* Two wordmark variants ship pre-rendered (light ink on light surfaces, pale
+   ink on dark) rather than relying on the raster <img> to repaint itself —
+   CSS just shows the one matching the current theme, same pattern as the
+   sun/moon theme-toggle icons below. */
+header.site .brand-logo-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) header.site .brand-logo-light { display: none; }
+  :root:not([data-theme="light"]) header.site .brand-logo-dark { display: block; }
+}
+:root[data-theme="dark"] header.site .brand-logo-light { display: none; }
+:root[data-theme="dark"] header.site .brand-logo-dark { display: block; }
 header.site nav {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
   min-width: 0;
   gap: 0.2rem 0.8rem;
@@ -253,6 +265,8 @@ header.site nav a[aria-current="page"] { color: var(--ink); }
    elsewhere on the site. Links stay in the raw HTML at all times, open or
    closed, so grouping never affects crawlability. */
 header.site nav .nav-group {
+  display: flex;
+  align-items: center;
   position: relative;
 }
 header.site nav .nav-group > summary {
