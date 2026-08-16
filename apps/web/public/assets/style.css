@@ -208,6 +208,7 @@ header.site .brand-logo-dark { display: none; }
 header.site nav {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
   min-width: 0;
   gap: 0.2rem 0.8rem;
@@ -264,6 +265,8 @@ header.site nav a[aria-current="page"] { color: var(--ink); }
    elsewhere on the site. Links stay in the raw HTML at all times, open or
    closed, so grouping never affects crawlability. */
 header.site nav .nav-group {
+  display: flex;
+  align-items: center;
   position: relative;
 }
 header.site nav .nav-group > summary {
