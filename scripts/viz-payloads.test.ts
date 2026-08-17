@@ -28,7 +28,8 @@ import {
   type NameSurvivalResponse,
 } from "../packages/shared/src/viz-payloads";
 
-// node:sqlite is Node 22+; the repo targets Node 20. Resolve lazily and skip.
+// node:sqlite is Node 22+, which CI now runs. Resolve lazily so an older
+// local Node skips rather than failing the run.
 type SqliteDb = {
   exec(sql: string): void;
   prepare(sql: string): { all(...p: never[]): unknown[]; get(...p: never[]): unknown; run(...p: never[]): unknown };

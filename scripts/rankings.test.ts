@@ -24,10 +24,10 @@ import {
   rankedNameYears,
 } from "../packages/shared/src/d1-queries";
 
-// node:sqlite ships in Node 22+. The repo still targets Node 20 (see
-// .github/workflows/deploy-cloudflare.yml), where importing it throws
-// ERR_UNKNOWN_BUILTIN_MODULE — so resolve it lazily and skip rather than
-// failing the whole `npm test` run on the older runtime.
+// node:sqlite ships in Node 22+, which CI now runs (see
+// .github/workflows/validate.yml). Older runtimes throw
+// ERR_UNKNOWN_BUILTIN_MODULE on import, so resolve it lazily and skip rather
+// than failing the whole `npm test` run for someone on an older local Node.
 type SqliteDb = {
   exec(sql: string): void;
   prepare(sql: string): { all(...p: never[]): unknown[]; get(...p: never[]): unknown; run(...p: never[]): unknown };
