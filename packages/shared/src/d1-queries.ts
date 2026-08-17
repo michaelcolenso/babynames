@@ -257,6 +257,65 @@ export async function getShadowName(
   };
 }
 
+// The three "neighbour" queries below all want the rows nearest some target
+// value: nearest peak_year, nearest total_count. Expressed directly that is
+// `ORDER BY ABS(col - ?)`, which no index can satisfy — SQLite has to read
+// every row matching the other filters and rank them in a temp b-tree. On the
+// name page that meant scanning tens of thousands of rows to return four, and
+// D1 bills rows examined rather than rows returned; these queries alone were
+// ~50% of the database's total read volume.
+//
+// Instead, walk outward from the target in both directions along an ordinary
+// index on that column: take `limit` rows at or above the target ascending,
+// `limit` rows below it descending, then merge. The `limit` nearest rows
+// overall are necessarily contained in those 2 x `limit` candidates, so
+// re-ranking the union by the original ORDER BY reproduces the old result.
+// scripts/name-neighbors.test.ts asserts that row-for-row against the
+// pre-rewrite SQL over a randomised corpus built to be dense in ties.
+//
+// The one deliberate difference: listRelatedNames' original ordering had no
+// final tie-break, so rows equal on both sort keys came back in arbitrary scan
+// order. It now falls back to `name` — see the note on that function.
+//
+// Each side scan needs its own index (see
+// migrations/20260817T190000_name_page_read_indexes.sql); without them the
+// planner falls back to a scan and the rewrite buys nothing.
+
+type Comparator<T> = (a: T, b: T) => number;
+
+// Merges the two directional scans, drops the duplicate that appears when both
+// sides reach the same row, re-ranks by the caller's ordering and truncates.
+function mergeNeighbors<T extends { name: string; sex: Sex }>(
+  up: T[],
+  down: T[],
+  compare: Comparator<T>,
+  limit: number,
+): T[] {
+  const seen = new Set<string>();
+  const merged: T[] = [];
+  for (const row of [...up, ...down]) {
+    const key = `${row.name}|${row.sex}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(row);
+  }
+  return merged.sort(compare).slice(0, limit);
+}
+
+// Chains comparators, using the first that returns a non-zero ordering.
+function byThen<T>(...comparators: Comparator<T>[]): Comparator<T> {
+  return (a, b) => {
+    for (const compare of comparators) {
+      const ordering = compare(a, b);
+      if (ordering !== 0) return ordering;
+    }
+    return 0;
+  };
+}
+
+const RELATED_COLUMNS = "name, sex, status, peak_year, peak_count, total_count";
+const DISCOVERY_COLUMNS = `${RELATED_COLUMNS}, latest_count`;
+
 export async function listRelatedNames(
   db: D1Database,
   currentNameLower: string,
@@ -266,20 +325,41 @@ export async function listRelatedNames(
   limit = 6,
 ): Promise<RelatedName[]> {
   const cappedLimit = Math.max(1, Math.min(12, Math.floor(limit)));
-  const r = await db
-    .prepare(
-      `SELECT name, sex, status, peak_year, peak_count, total_count
-         FROM names
-        WHERE name_lower <> ?1
-          AND sex = ?2
-          AND status = ?3
-          AND (total_count >= 1000 OR peak_count >= 100)
-        ORDER BY ABS(peak_year - ?4), total_count DESC
-        LIMIT ?5`,
-    )
-    .bind(currentNameLower, sex, status, peakYear, cappedLimit)
-    .all<RelatedName>();
-  return r.results ?? [];
+
+  // Original ordering: ABS(peak_year - ?), total_count DESC — which left rows
+  // tied on *both* keys in whatever order the scan happened to produce. The
+  // outward walk needs a total order to merge its two sides deterministically,
+  // so `name` is appended as a final tie-break. That is the one intentional
+  // behavioural change here: names at equal distance and equal total_count now
+  // come back in a stable order instead of an arbitrary one.
+  const side = (direction: "up" | "down") =>
+    db
+      .prepare(
+        `SELECT ${RELATED_COLUMNS}
+           FROM names
+          WHERE name_lower <> ?1
+            AND sex = ?2
+            AND status = ?3
+            AND peak_year ${direction === "up" ? ">=" : "<"} ?4
+            AND (total_count >= 1000 OR peak_count >= 100)
+          ORDER BY peak_year ${direction === "up" ? "ASC" : "DESC"}, total_count DESC, name
+          LIMIT ?5`,
+      )
+      .bind(currentNameLower, sex, status, peakYear, cappedLimit)
+      .all<RelatedName>();
+
+  const [up, down] = await Promise.all([side("up"), side("down")]);
+
+  return mergeNeighbors(
+    up.results ?? [],
+    down.results ?? [],
+    byThen<RelatedName>(
+      (a, b) => Math.abs(a.peak_year - peakYear) - Math.abs(b.peak_year - peakYear),
+      (a, b) => b.total_count - a.total_count,
+      (a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0),
+    ),
+    cappedLimit,
+  );
 }
 
 export async function listStatusNeighbors(
@@ -291,25 +371,43 @@ export async function listStatusNeighbors(
   limit = 4,
 ): Promise<NameDiscoveryCard[]> {
   const cappedLimit = Math.max(1, Math.min(8, Math.floor(limit)));
-  const r = await db
-    .prepare(
-      `SELECT name, sex, status, peak_year, peak_count, total_count, latest_count
-         FROM names
-        WHERE name_lower <> ?1
-          AND sex = ?2
-          AND status = ?3
-          AND (
-            total_count >= 750
-            OR peak_count >= 75
-            OR latest_count >= 25
-            OR COALESCE(curr_decade, 0) >= 100
-          )
-        ORDER BY ABS(total_count - ?4), peak_count DESC, latest_count DESC, name
-        LIMIT ?5`,
-    )
-    .bind(currentNameLower, sex, status, totalCount, cappedLimit)
-    .all<NameDiscoveryCard>();
-  return r.results ?? [];
+
+  // Original ordering: ABS(total_count - ?), peak_count DESC, latest_count DESC, name.
+  const side = (direction: "up" | "down") =>
+    db
+      .prepare(
+        `SELECT ${DISCOVERY_COLUMNS}
+           FROM names
+          WHERE name_lower <> ?1
+            AND sex = ?2
+            AND status = ?3
+            AND total_count ${direction === "up" ? ">=" : "<"} ?4
+            AND (
+              total_count >= 750
+              OR peak_count >= 75
+              OR latest_count >= 25
+              OR COALESCE(curr_decade, 0) >= 100
+            )
+          ORDER BY total_count ${direction === "up" ? "ASC" : "DESC"},
+                   peak_count DESC, latest_count DESC, name
+          LIMIT ?5`,
+      )
+      .bind(currentNameLower, sex, status, totalCount, cappedLimit)
+      .all<NameDiscoveryCard>();
+
+  const [up, down] = await Promise.all([side("up"), side("down")]);
+
+  return mergeNeighbors(
+    up.results ?? [],
+    down.results ?? [],
+    byThen<NameDiscoveryCard>(
+      (a, b) => Math.abs(a.total_count - totalCount) - Math.abs(b.total_count - totalCount),
+      (a, b) => b.peak_count - a.peak_count,
+      (a, b) => b.latest_count - a.latest_count,
+      (a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0),
+    ),
+    cappedLimit,
+  );
 }
 
 export async function listPeakEraNeighbors(
@@ -320,27 +418,56 @@ export async function listPeakEraNeighbors(
   limit = 4,
 ): Promise<NameDiscoveryCard[]> {
   const cappedLimit = Math.max(1, Math.min(8, Math.floor(limit)));
-  const r = await db
-    .prepare(
-      `SELECT name, sex, status, peak_year, peak_count, total_count, latest_count
-         FROM names
-        WHERE name_lower <> ?1
-          AND sex = ?2
-          AND peak_year BETWEEN ?3 AND ?4
-          AND (
-            total_count >= 750
-            OR peak_count >= 75
-            OR latest_count >= 25
-          )
-        ORDER BY ABS(peak_year - ?5), peak_count DESC, total_count DESC, name
-        LIMIT ?6`,
-    )
-    .bind(currentNameLower, sex, peakYear - 8, peakYear + 8, peakYear, cappedLimit)
-    .all<NameDiscoveryCard>();
-  return r.results ?? [];
+
+  // Original ordering: ABS(peak_year - ?), peak_count DESC, total_count DESC, name,
+  // over the closed window peak_year BETWEEN ? - 8 AND ? + 8. Each side keeps
+  // its half of that window so the union covers exactly the same rows.
+  const side = (direction: "up" | "down") =>
+    db
+      .prepare(
+        `SELECT ${DISCOVERY_COLUMNS}
+           FROM names
+          WHERE name_lower <> ?1
+            AND sex = ?2
+            AND peak_year BETWEEN ?3 AND ?4
+            AND (
+              total_count >= 750
+              OR peak_count >= 75
+              OR latest_count >= 25
+            )
+          ORDER BY peak_year ${direction === "up" ? "ASC" : "DESC"},
+                   peak_count DESC, total_count DESC, name
+          LIMIT ?5`,
+      )
+      .bind(
+        currentNameLower,
+        sex,
+        direction === "up" ? peakYear : peakYear - 8,
+        direction === "up" ? peakYear + 8 : peakYear - 1,
+        cappedLimit,
+      )
+      .all<NameDiscoveryCard>();
+
+  const [up, down] = await Promise.all([side("up"), side("down")]);
+
+  return mergeNeighbors(
+    up.results ?? [],
+    down.results ?? [],
+    byThen<NameDiscoveryCard>(
+      (a, b) => Math.abs(a.peak_year - peakYear) - Math.abs(b.peak_year - peakYear),
+      (a, b) => b.peak_count - a.peak_count,
+      (a, b) => b.total_count - a.total_count,
+      (a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0),
+    ),
+    cappedLimit,
+  );
 }
 
+// Unlike the three above this one already orders by an indexable expression;
+// names_sex_latest covers the whole ORDER BY, so the LIMIT stops the scan after
+// a handful of rows rather than ranking every live name of that sex.
 export async function listCurrentAlternatives(
+
   db: D1Database,
   currentNameLower: string,
   sex: Sex,

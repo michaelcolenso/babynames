@@ -65,6 +65,13 @@ Shared by both apps (same `database_id` in both `wrangler.toml` files). Key tabl
 - **`viz_payloads`** — One row per whole-dataset viz endpoint (`concentration`, `terminal-letters`, `suffix-waves`, `name-survival`), holding the finished JSON response. Those aggregates read 4.4M–15.3M rows apiece when computed live; the payload turns each into a single PK read. Built by ingest finalize and by `npm run backfill-viz-payloads`. Each row carries the `source_version` it was built from — readers require it to match `meta.data_version`, so a stale or half-written payload falls back to the live query instead of being served.
 - **`meta`** — Singleton key/value store (min/max year, schema version, `data_version` UUID for cache busting, `rankings_version` readiness marker, last SSA ETag).
 
+**Rows read is the cost driver, not query count.** D1 bills every row a query *examines*. A `LIMIT 4` that has no usable index still reads the whole table. Two rules follow:
+
+- Any `ORDER BY ABS(col - ?)` is unindexable and forces a full scan + temp b-tree sort. Where the "nearest N rows to a value" is wanted, walk outward from the target on an ordinary index instead — `limit` rows ascending from the target plus `limit` rows descending covers the true nearest `limit` — then merge and re-rank in JS. `listRelatedNames` / `listStatusNeighbors` / `listPeakEraNeighbors` do this; `scripts/name-neighbors.test.ts` pins them to the SQL they replaced.
+- An uncorrelated `MAX(col)` subquery is only cheap when `col` leads an index. `getNameStrongholds` read all 27k rows of `name_regional_anomalies` per name page purely to resolve `MAX(era_start_year)`, which is the last column of that table's PK.
+
+Indexes on `names` must be listed in `rebuildIndexesIfNeeded()` (`apps/ingest-worker/src/compute.ts`) as well as in a migration. Ingest finalize renames `names_staging` → `names` and drops the old table, taking its indexes with it — an index missing from that function disappears at the next ingest and the loss is invisible except as a jump in rows read.
+
 ### Ingest Pipeline
 
 `scheduled()` → ETag check → fetch SSA zip → store in R2 → parse `yob*.txt` files → enqueue row chunks → `queue()` consumer inserts into staging tables → `finalize()` swaps staging → live in one transaction.
