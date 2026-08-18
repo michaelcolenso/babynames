@@ -299,11 +299,18 @@ async function rebuildIndexesIfNeeded(db: D1Database): Promise<void> {
     db.prepare(
       "CREATE INDEX IF NOT EXISTS names_sex_latest ON names(sex, latest_count DESC, curr_decade DESC, peak_count DESC, name)",
     ),
+    // Widened by migrations/20260818T110000_widen_name_page_neighbor_indexes.sql:
+    // production's peak_year distribution is lopsided enough (1,272 F names
+    // share peak_year=2014) that the original narrower index still left a
+    // same-peak_year group to sort per call. Folding the rest of the ORDER BY
+    // into the index lets the bounded walk in listPeakEraNeighbors terminate
+    // at LIMIT without a temp b-tree sort.
     db.prepare(
-      "CREATE INDEX IF NOT EXISTS names_sex_peak_year ON names(sex, peak_year)",
+      "CREATE INDEX IF NOT EXISTS names_sex_peak_year ON names(sex, peak_year, peak_count DESC, total_count DESC, name)",
     ),
+    // Same reasoning, for listRelatedNames' walk over (sex, status, peak_year).
     db.prepare(
-      "CREATE INDEX IF NOT EXISTS names_sex_status_peak_year ON names(sex, status, peak_year)",
+      "CREATE INDEX IF NOT EXISTS names_sex_status_peak_year ON names(sex, status, peak_year, total_count DESC, name)",
     ),
     db.prepare(
       "CREATE INDEX IF NOT EXISTS names_sex_status_total ON names(sex, status, total_count)",
