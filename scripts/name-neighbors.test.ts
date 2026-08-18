@@ -73,10 +73,17 @@ function seed(): D1Database {
       prev_decade INTEGER, curr_decade INTEGER, growth_x REAL, spark_blob BLOB,
       UNIQUE(name, sex));
     CREATE INDEX names_sex_peak_year
-      ON names(sex, peak_year, peak_count DESC, total_count DESC, name);
+      ON names(sex, peak_year ASC, peak_count DESC, total_count DESC, name);
+    CREATE INDEX names_sex_peak_year_desc
+      ON names(sex, peak_year DESC, peak_count DESC, total_count DESC, name);
     CREATE INDEX names_sex_status_peak_year
-      ON names(sex, status, peak_year, total_count DESC, name);
-    CREATE INDEX names_sex_status_total     ON names(sex, status, total_count);`);
+      ON names(sex, status, peak_year ASC, total_count DESC, name);
+    CREATE INDEX names_sex_status_peak_year_desc
+      ON names(sex, status, peak_year DESC, total_count DESC, name);
+    CREATE INDEX names_sex_status_total_asc
+      ON names(sex, status, total_count ASC, peak_count DESC, latest_count DESC, name);
+    CREATE INDEX names_sex_status_total_desc
+      ON names(sex, status, total_count DESC, peak_count DESC, latest_count DESC, name);`);
 
   const insert = sqlite.prepare(
     `INSERT INTO names (id,name,name_lower,sex,first_year,last_year,peak_year,peak_count,

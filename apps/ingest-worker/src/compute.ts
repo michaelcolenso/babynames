@@ -303,17 +303,38 @@ async function rebuildIndexesIfNeeded(db: D1Database): Promise<void> {
     // production's peak_year distribution is lopsided enough (1,272 F names
     // share peak_year=2014) that the original narrower index still left a
     // same-peak_year group to sort per call. Folding the rest of the ORDER BY
-    // into the index lets the bounded walk in listPeakEraNeighbors terminate
-    // at LIMIT without a temp b-tree sort.
+    // into the index lets the bounded walk's "up" (ascending) side in
+    // listPeakEraNeighbors terminate at LIMIT without a temp b-tree sort.
     db.prepare(
       "CREATE INDEX IF NOT EXISTS names_sex_peak_year ON names(sex, peak_year, peak_count DESC, total_count DESC, name)",
     ),
-    // Same reasoning, for listRelatedNames' walk over (sex, status, peak_year).
+    // Same reasoning, for listRelatedNames' "up" side over (sex, status, peak_year).
     db.prepare(
       "CREATE INDEX IF NOT EXISTS names_sex_status_peak_year ON names(sex, status, peak_year, total_count DESC, name)",
     ),
+    // migrations/20260818T113000_direction_paired_name_page_indexes.sql:
+    // reversing an index scan reverses *every* column's effective order, not
+    // just the leading one, so the two indexes above only ever served the
+    // ascending ("up") side of their walk. The "down" side needs its own
+    // index with just the range column's direction flipped — the tie-break
+    // columns stay in the same direction as the "up" index, since they order
+    // "given this exact peak_year" and don't flip when the peak_year walk
+    // does.
     db.prepare(
-      "CREATE INDEX IF NOT EXISTS names_sex_status_total ON names(sex, status, total_count)",
+      "CREATE INDEX IF NOT EXISTS names_sex_peak_year_desc ON names(sex, peak_year DESC, peak_count DESC, total_count DESC, name)",
+    ),
+    db.prepare(
+      "CREATE INDEX IF NOT EXISTS names_sex_status_peak_year_desc ON names(sex, status, peak_year DESC, total_count DESC, name)",
+    ),
+    // listStatusNeighbors walks total_count in both directions; unlike the
+    // two pairs above, its original index (from 20260817T190000) never
+    // covered the ORDER BY's tie-break columns at all, so both directions
+    // paid for a temp sort until this pair replaced it.
+    db.prepare(
+      "CREATE INDEX IF NOT EXISTS names_sex_status_total_asc ON names(sex, status, total_count ASC, peak_count DESC, latest_count DESC, name)",
+    ),
+    db.prepare(
+      "CREATE INDEX IF NOT EXISTS names_sex_status_total_desc ON names(sex, status, total_count DESC, peak_count DESC, latest_count DESC, name)",
     ),
   ]);
 }
