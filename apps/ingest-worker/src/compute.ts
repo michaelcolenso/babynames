@@ -274,8 +274,12 @@ async function swapStagingIntoLive(db: D1Database): Promise<void> {
 }
 
 async function rebuildIndexesIfNeeded(db: D1Database): Promise<void> {
-  // Indexes are part of the migration; ALTER TABLE ... RENAME does not
-  // detach them, but explicitly recreating is cheap and idempotent.
+  // The staging swap renames names_staging -> names and drops names_old, so
+  // every index the migrations created on the *previous* names table goes with
+  // it. Anything not listed here is silently absent after an ingest run, which
+  // is invisible in the API's output and only shows up as a jump in D1 rows
+  // read — keep this list in sync with the CREATE INDEX statements in
+  // migrations/ for the `names` table.
   await db.batch([
     db.prepare(
       "CREATE INDEX IF NOT EXISTS names_lower_peak ON names(name_lower, peak_count DESC)",
@@ -288,6 +292,21 @@ async function rebuildIndexesIfNeeded(db: D1Database): Promise<void> {
     ),
     db.prepare(
       "CREATE INDEX IF NOT EXISTS name_years_year_count ON name_years(year, count DESC)",
+    ),
+    // Added with migrations/20260817T190000_name_page_read_indexes.sql — these
+    // back the /name/:name discovery queries, which were ~90% of all rows read
+    // before they were indexed.
+    db.prepare(
+      "CREATE INDEX IF NOT EXISTS names_sex_latest ON names(sex, latest_count DESC, curr_decade DESC, peak_count DESC, name)",
+    ),
+    db.prepare(
+      "CREATE INDEX IF NOT EXISTS names_sex_peak_year ON names(sex, peak_year)",
+    ),
+    db.prepare(
+      "CREATE INDEX IF NOT EXISTS names_sex_status_peak_year ON names(sex, status, peak_year)",
+    ),
+    db.prepare(
+      "CREATE INDEX IF NOT EXISTS names_sex_status_total ON names(sex, status, total_count)",
     ),
   ]);
 }
