@@ -2159,6 +2159,10 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   .year-form input[type="number"] { max-width: none; }
   .year-result-grid,
   .dossier-grid { grid-template-columns: 1fr; }
+  /* Generation hubs put ranking tables inside the two-column year grid. Let
+     the grid track shrink to the viewport so the tables scroll horizontally
+     (see .table below) instead of forcing the column wider than the screen. */
+  .year-result-grid .year-col { min-width: 0; }
   .river-hero-tapestry {
     grid-template-columns: repeat(2, 1fr);
   }

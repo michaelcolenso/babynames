@@ -1,4 +1,5 @@
 import { DECADE_HUB_DEFINITIONS } from "./content/decade-hub-definitions";
+import { GENERATION_DEFINITIONS } from "./content/generation-definitions";
 
 export type IndexableRouteFamily =
   | "static"
@@ -6,6 +7,7 @@ export type IndexableRouteFamily =
   | "year"
   | "decade"
   | "decade-child"
+  | "generation"
   | "initial"
   | "ending"
   | "status"
@@ -81,6 +83,10 @@ export function buildIndexableRoutes(options: IndexableRouteOptions): IndexableR
     for (const child of DECADE_CHILDREN) {
       routes.push({ path: `/names/${definition.slug}/${child}/`, family: "decade-child", lastmod: dataDate, priority: 0.5 });
     }
+  }
+  for (const definition of GENERATION_DEFINITIONS) {
+    if (definition.rolloutState !== "live") continue;
+    routes.push({ path: `/names/${definition.slug}/`, family: "generation", lastmod: dataDate, priority: 0.5 });
   }
   for (const letter of LETTERS) {
     routes.push({ path: `/names/${letter}/`, family: "initial", lastmod: dataDate, priority: 0.4 });

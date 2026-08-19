@@ -1018,6 +1018,63 @@ export interface DecadeTopRow {
   rank: number;
 }
 
+/** One (name, sex) row ranked inside an arbitrary year range. */
+export interface YearRangeNameRow {
+  name: string;
+  sex: Sex;
+  /** Recorded births inside the requested range. */
+  window_total: number;
+  /** Recorded births across the whole SSA span (1880–dataThroughYear). */
+  lifetime_total: number;
+  rank: number;
+}
+
+/**
+ * Top names aggregated across an arbitrary inclusive year range (used by the
+ * generation hubs, whose windows cross calendar decades). Mirrors
+ * topByDecade's window-function shape but also returns each name's lifetime
+ * total so "share of the generation's births" can be computed in one query.
+ */
+export async function topNamesInYearRange(
+  db: D1Database,
+  startYear: number,
+  endYear: number,
+  perSex = 25,
+): Promise<YearRangeNameRow[]> {
+  const r = await db
+    .prepare(
+      `WITH windowed AS (
+         SELECT n.id, n.name, n.sex, n.total_count,
+                SUM(ny.count) AS window_total,
+                ROW_NUMBER() OVER (PARTITION BY n.sex ORDER BY SUM(ny.count) DESC) AS rank
+           FROM name_years ny
+           JOIN names n ON n.id = ny.name_id
+          WHERE ny.year >= ?1 AND ny.year <= ?2
+          GROUP BY n.id
+       )
+       SELECT name, sex, total_count AS lifetime_total, window_total, rank
+         FROM windowed
+        WHERE rank <= ?3
+        ORDER BY sex, rank`,
+    )
+    .bind(startYear, endYear, perSex)
+    .all<YearRangeNameRow>();
+  return r.results ?? [];
+}
+
+/** Annual recorded births per sex across an inclusive year range. */
+export async function yearRangeTotals(
+  db: D1Database,
+  startYear: number,
+  endYear: number,
+): Promise<YearTotal[]> {
+  const r = await db
+    .prepare(`SELECT year, sex, total FROM year_totals WHERE year >= ?1 AND year <= ?2 ORDER BY year`)
+    .bind(startYear, endYear)
+    .all<YearTotal>();
+  return r.results ?? [];
+}
+
 export interface DecadeTopSparkRow {
   name: string;
   sex: Sex;
