@@ -6,6 +6,7 @@
 
 import type { PagesFunction } from "@cloudflare/workers-types";
 import { shouldServeMarkdown } from "./_accept";
+import { getGenerationDefinition } from "@nv/shared";
 
 const CANONICAL_PAGES = new Set([
   "/about",
@@ -290,6 +291,10 @@ function canonicalizePath(pathname: string): string | null {
     return ensureTrailingSlash(pathname.toLowerCase());
   }
   if (/^\/names\/[a-z]$/.test(pathname)) return `${pathname}/`;
+  // Generation hubs (/names/millennials, /names/boomers) canonicalize to the
+  // trailing-slash form like every other /names/ route.
+  const generationSegment = /^\/names\/([a-z][a-z0-9-]*)$/.exec(pathname);
+  if (generationSegment && getGenerationDefinition(generationSegment[1]!)) return `${pathname}/`;
   if (/^\/names\/(?:18|19|20)\d{2}s$/.test(pathname)) return `${pathname}/`;
   if (/^\/names\/(?:18|19|20)\d{2}s\/(?:methodology|classroom|spelling-families)$/.test(pathname)) return `${pathname}/`;
   if (/^\/names\/ending\/[A-Z]\/?$/.test(pathname)) {

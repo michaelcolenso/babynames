@@ -4,7 +4,7 @@
 // Example: /names/a/ shows popular baby names starting with A.
 // Follows the same shell + embedded-data pattern as /era/:year/.
 
-import { getMeta, pageShell, topByDecade, topByInitial, META_KEYS, loadDecadeHubRuntime, renderDecadeHubGeneric } from "@nv/shared";
+import { getMeta, pageShell, topByDecade, topByInitial, META_KEYS, loadDecadeHubRuntime, renderDecadeHubGeneric, getGenerationDefinition, loadGenerationHubProfile, renderGenerationHub } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 function parseDecade(raw: string): { label: string; start: number; end: number } | null {
@@ -30,6 +30,32 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
   const raw = ctx.params.decade;
   if (typeof raw !== "string") {
     return new Response("bad request", { status: 400 });
+  }
+
+  // Generation hubs (e.g. /names/millennials/) live under the same /names/
+  // collection as decades and initials. Only "live" registry entries render;
+  // draft windows are comparison baselines and 404 here.
+  const generation = getGenerationDefinition(raw);
+  if (generation) {
+    if (generation.rolloutState !== "live") {
+      return new Response("not found", { status: 404 });
+    }
+    const profile = await loadGenerationHubProfile(ctx.env.DB, generation);
+    if (!profile) {
+      return new Response(
+        `<!doctype html><html><body><h1>No data</h1><p>No data for the ${escapeHtml(generation.label)} window (${generation.startYear}–${generation.endYear}).</p></body></html>`,
+        { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } },
+      );
+    }
+    const origin = new URL(ctx.request.url).origin;
+    const canonical = `${origin}/names/${generation.slug}/`;
+    return new Response(renderGenerationHub({ origin, definition: generation, profile }), {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
+        Link: `<${canonical}>; rel="canonical"`,
+      },
+    });
   }
 
   const initial = parseInitial(raw);

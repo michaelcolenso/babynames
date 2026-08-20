@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { absoluteIndexableUrl, buildIndexableRoutes, canonicalRoutePath } from "../packages/shared/src/indexable-routes";
 import { DECADE_HUB_DEFINITIONS } from "../packages/shared/src/content/decade-hub-definitions";
+import { GENERATION_DEFINITIONS } from "../packages/shared/src/content/generation-definitions";
 import { renderYearPage } from "../packages/shared/src/render-year";
 
 test("registry normalizes and deduplicates canonical routes", () => {
@@ -69,6 +70,20 @@ test("year pages link back to their canonical decade route", () => {
     nextYear: 1985,
   });
   assert.match(html, /href="\/names\/1980s\/"[^>]*>Explore the 1980s decade<\/a>/);
+});
+
+test("generation hubs derive from the registry exactly once and canonicalize with a trailing slash", () => {
+  const routes = buildIndexableRoutes({ minYear: 1880, maxYear: 2025 });
+  const generationRoutes = routes.filter((route) => route.family === "generation");
+  const live = GENERATION_DEFINITIONS.filter((definition) => definition.rolloutState === "live");
+  assert.equal(generationRoutes.length, live.length);
+  assert.deepEqual(
+    generationRoutes.map((route) => route.path).sort(),
+    live.map((definition) => `/names/${definition.slug}/`).sort(),
+  );
+  assert.equal(canonicalRoutePath("/names/millennials"), "/names/millennials/");
+  assert.equal(canonicalRoutePath("/names/boomers/"), "/names/boomers/");
+  for (const route of generationRoutes) assert.ok(route.path.endsWith("/"));
 });
 
 test("ending pages derive the decade navigation link from live minimum-year metadata", async () => {
