@@ -41,7 +41,7 @@ const DEFAULT_NAV: NavEntry[] = [
   { label: "About", href: "/about" },
 ];
 
-const STYLESHEET_HREF = "/assets/style.css?v=22";
+const STYLESHEET_HREF = "/assets/style.css?v=25";
 
 // Runs synchronously before the stylesheet is applied, so an explicit
 // dark/light choice from a prior visit takes effect on first paint instead
@@ -51,6 +51,25 @@ export const THEME_INIT_SCRIPT = `<script>(function(){try{var t=localStorage.get
 
 function escape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Most og:image values are dynamic /api/og/* routes, which always render PNG.
+// A handful (blog post hero images) are static assets with their own
+// extension — trust that when present instead of always claiming PNG, since
+// a wrong og:image:type can make some link-preview crawlers reject the image.
+function ogImageType(url: string): string {
+  const ext = (url.split(/[?#]/)[0] ?? "").split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "webp":
+      return "image/webp";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "svg":
+      return "image/svg+xml";
+    default:
+      return "image/png";
+  }
 }
 
 function isItemActive(item: NavItem, currentPath?: string): boolean {
@@ -104,12 +123,25 @@ export interface SiteHeaderOpts {
   navItems?: NavEntry[];
 }
 
+// A compact search box embedded in the shared header so every page built on
+// pageShell() — not just "/" — lets visitors search a new name without
+// backtracking home first. Wired up by assets/header-search.js, which
+// pageShell() loads unconditionally (see below).
+const HEADER_SEARCH_HTML = `<div class="header-search">
+  <input id="header-q" type="text" placeholder="Search a name…" autocomplete="off" spellcheck="false" aria-label="Search a name" aria-autocomplete="list" aria-controls="header-suggestions" aria-expanded="false">
+  <button type="button" id="header-go" aria-label="Search">
+    <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><line x1="16.3" y1="16.3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div id="header-suggestions" class="suggestions hidden" role="listbox" aria-label="Name suggestions"></div>
+</div>`;
+
 export function siteHeader(currentPath?: string, opts: SiteHeaderOpts = {}): string {
   const items = opts.navItems ?? DEFAULT_NAV;
   const mobileNav = opts.mobileNav !== false ? renderMobileNav(items, currentPath) : "";
   return `<header class="site">
-  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="NobodyNamed"></a>
+  <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo brand-logo-light" src="/assets/brand/wordmark.svg" alt="NobodyNamed" loading="lazy"><img class="brand-logo brand-logo-dark" src="/assets/brand/wordmark-dark.svg" alt="NobodyNamed" loading="lazy"></a>
   ${renderNav(items, currentPath)}
+  ${HEADER_SEARCH_HTML}
   ${THEME_TOGGLE_HTML}
   ${mobileNav}
 </header>`;
@@ -173,7 +205,7 @@ export function pageShell(opts: PageShellOpts): string {
   const mainId = opts.mainId ?? "main-content";
 
   const ogImageMeta = opts.ogImage
-    ? `<meta property="og:image" content="${escape(opts.ogImage)}">\n<meta property="og:image:type" content="image/png">`
+    ? `<meta property="og:image" content="${escape(opts.ogImage)}">\n<meta property="og:image:type" content="${ogImageType(opts.ogImage)}">`
     : "";
   const ogImageAltMeta = opts.ogImageAlt
     ? `<meta property="og:image:alt" content="${escape(opts.ogImageAlt)}">`
@@ -235,6 +267,7 @@ ${skipLink}
 </div>
 <script src="/assets/theme.js" defer></script>
 <script src="/assets/analytics.js" defer></script>
+<script src="/assets/header-search.js" defer></script>
 <script src="/assets/webmcp.js" defer></script>
 ${scriptTags}
 ${jsonBlocks}

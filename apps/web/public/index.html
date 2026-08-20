@@ -18,7 +18,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#14161d" media="(prefers-color-scheme: dark)">
-  <link rel="stylesheet" href="/assets/style.css?v=22">
+  <link rel="stylesheet" href="/assets/style.css?v=25">
   <script src="/assets/theme.js" defer></script>
   <script src="/assets/analytics.js" defer></script>
   <script src="/assets/webmcp.js" defer></script>
@@ -50,7 +50,7 @@
   <a href="#main-content" class="skip-link">Skip to content</a>
   <div class="page" data-content-id="article:home" data-content-type="article" data-content-slug="home">
     <header class="site">
-      <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo" src="/assets/brand/wordmark.svg" alt="" loading="lazy"></a>
+      <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo brand-logo-light" src="/assets/brand/wordmark.svg" alt="NobodyNamed" loading="lazy"><img class="brand-logo brand-logo-dark" src="/assets/brand/wordmark-dark.svg" alt="NobodyNamed" loading="lazy"></a>
       <nav aria-label="Main navigation"><details class="nav-group"><summary>Discover</summary><div class="nav-group-panel"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/rising">Rising</a><a href="/emerging">Emerging</a><a href="/fading">Fading</a></div></details><a href="/year">Birth year</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a></nav>
       <button type="button" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
   <svg class="theme-toggle-icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
@@ -88,24 +88,31 @@
               <div id="suggestions" class="suggestions hidden" role="listbox" aria-label="Name suggestions"></div>
             </div>
             <p class="search-hint">No account. No tracking. Just the story a name leaves in the data.</p>
+            <div class="hero-examples" data-source-placement="homepage-hero-examples">
+              <span class="hero-examples-label">Try one:</span>
+              <button type="button" class="hero-example-chip" data-example="Michael" data-track-target-id="name:michael" data-track-target-type="name-page">Michael</button>
+              <button type="button" class="hero-example-chip" data-example="Karen" data-track-target-id="name:karen" data-track-target-type="name-page">Karen</button>
+              <button type="button" class="hero-example-chip" data-example="Hazel" data-track-target-id="name:hazel" data-track-target-type="name-page">Hazel</button>
+            </div>
+            <div id="hero-preview" class="hero-preview hidden" aria-live="polite"></div>
             <div class="decade-browse">
               <span class="decade-browse-label">Browse by decade</span>
-              <div class="decade-links">
-                <a href="/names/1880s/">1880s</a>
-                <a href="/names/1890s/">1890s</a>
-                <a href="/names/1900s/">1900s</a>
-                <a href="/names/1910s/">1910s</a>
-                <a href="/names/1920s/">1920s</a>
-                <a href="/names/1930s/">1930s</a>
-                <a href="/names/1940s/">1940s</a>
-                <a href="/names/1950s/">1950s</a>
-                <a href="/names/1960s/">1960s</a>
-                <a href="/names/1970s/">1970s</a>
-                <a href="/names/1980s/">1980s</a>
-                <a href="/names/1990s/">1990s</a>
-                <a href="/names/2000s/">2000s</a>
-                <a href="/names/2010s/">2010s</a>
-                <a href="/names/2020s/">2020s</a>
+              <div class="decade-links" data-source-placement="homepage-decade-browse">
+                <a href="/names/1880s/" data-track-target-id="decade-hub:1880s" data-track-target-type="decade-hub">1880s</a>
+                <a href="/names/1890s/" data-track-target-id="decade-hub:1890s" data-track-target-type="decade-hub">1890s</a>
+                <a href="/names/1900s/" data-track-target-id="decade-hub:1900s" data-track-target-type="decade-hub">1900s</a>
+                <a href="/names/1910s/" data-track-target-id="decade-hub:1910s" data-track-target-type="decade-hub">1910s</a>
+                <a href="/names/1920s/" data-track-target-id="decade-hub:1920s" data-track-target-type="decade-hub">1920s</a>
+                <a href="/names/1930s/" data-track-target-id="decade-hub:1930s" data-track-target-type="decade-hub">1930s</a>
+                <a href="/names/1940s/" data-track-target-id="decade-hub:1940s" data-track-target-type="decade-hub">1940s</a>
+                <a href="/names/1950s/" data-track-target-id="decade-hub:1950s" data-track-target-type="decade-hub">1950s</a>
+                <a href="/names/1960s/" data-track-target-id="decade-hub:1960s" data-track-target-type="decade-hub">1960s</a>
+                <a href="/names/1970s/" data-track-target-id="decade-hub:1970s" data-track-target-type="decade-hub">1970s</a>
+                <a href="/names/1980s/" data-track-target-id="decade-hub:1980s" data-track-target-type="decade-hub">1980s</a>
+                <a href="/names/1990s/" data-track-target-id="decade-hub:1990s" data-track-target-type="decade-hub">1990s</a>
+                <a href="/names/2000s/" data-track-target-id="decade-hub:2000s" data-track-target-type="decade-hub">2000s</a>
+                <a href="/names/2010s/" data-track-target-id="decade-hub:2010s" data-track-target-type="decade-hub">2010s</a>
+                <a href="/names/2020s/" data-track-target-id="decade-hub:2020s" data-track-target-type="decade-hub">2020s</a>
               </div>
             </div>
           </div>
@@ -137,12 +144,12 @@
           </div>
           <p class="lede">A few names with obvious cultural patterns: collapse, recovery, endurance, and the occasional national event.</p>
         </div>
-        <div class="diagnosis-grid">
-          <a class="diagnosis-card tone-endangered" href="/name/Linda/"><span class="card-name">Linda</span><span class="card-status">Critically endangered</span><p class="card-note">A mid-century giant now living mostly in memory.</p></a>
-          <a class="diagnosis-card tone-resurgent" href="/name/Theodore/"><span class="card-name">Theodore</span><span class="card-status">Full recovery</span><p class="card-note">The old name returned with institutional confidence.</p></a>
-          <a class="diagnosis-card tone-endangered" href="/name/Ashley/"><span class="card-name">Ashley</span><span class="card-status">Rapid decline</span><p class="card-note">A generation-defining spike that became timestamped.</p></a>
-          <a class="diagnosis-card tone-explosive" href="/name/Karen/"><span class="card-name">Karen</span><span class="card-status">Cultural event</span><p class="card-note">A normal name forced into public mythology.</p></a>
-          <a class="diagnosis-card tone-rising" href="/name/Hazel/"><span class="card-name">Hazel</span><span class="card-status">Resurgent</span><p class="card-note">A dormant classic reissued for a new century.</p></a>
+        <div id="radar-grid" class="diagnosis-grid" data-source-placement="homepage-radar">
+          <a class="diagnosis-card tone-endangered" href="/name/Linda/" data-track-target-id="name:linda" data-track-target-type="name-page"><span class="card-name">Linda</span><span class="card-status">Critically endangered</span><p class="card-note">A mid-century giant now living mostly in memory.</p></a>
+          <a class="diagnosis-card tone-resurgent" href="/name/Theodore/" data-track-target-id="name:theodore" data-track-target-type="name-page"><span class="card-name">Theodore</span><span class="card-status">Full recovery</span><p class="card-note">The old name returned with institutional confidence.</p></a>
+          <a class="diagnosis-card tone-endangered" href="/name/Ashley/" data-track-target-id="name:ashley" data-track-target-type="name-page"><span class="card-name">Ashley</span><span class="card-status">Rapid decline</span><p class="card-note">A generation-defining spike that became timestamped.</p></a>
+          <a class="diagnosis-card tone-explosive" href="/name/Karen/" data-track-target-id="name:karen" data-track-target-type="name-page"><span class="card-name">Karen</span><span class="card-status">Cultural event</span><p class="card-note">A normal name forced into public mythology.</p></a>
+          <a class="diagnosis-card tone-rising" href="/name/Hazel/" data-track-target-id="name:hazel" data-track-target-type="name-page"><span class="card-name">Hazel</span><span class="card-status">Resurgent</span><p class="card-note">A dormant classic reissued for a new century.</p></a>
         </div>
       </section>
 
@@ -154,11 +161,11 @@
           </div>
           <p class="lede">Not bad names. Not gone forever. Just waiting below the statistical floor, carrying a century of dust.</p>
         </div>
-        <div class="graveyard-grid">
-          <a class="graveyard-card tone-extinct" href="/name/Bertha/"><span class="card-name">Bertha</span><span class="card-status">Dormant</span></a>
-          <a class="graveyard-card tone-extinct" href="/name/Mildred/"><span class="card-name">Mildred</span><span class="card-status">Near extinction</span></a>
-          <a class="graveyard-card tone-extinct" href="/name/Elmer/"><span class="card-name">Elmer</span><span class="card-status">Rare survivor</span></a>
-          <a class="graveyard-card tone-resurgent" href="/name/Gertrude/"><span class="card-name">Gertrude</span><span class="card-status">Revival candidate</span></a>
+        <div id="graveyard-grid" class="graveyard-grid" data-source-placement="homepage-graveyard">
+          <a class="graveyard-card tone-extinct" href="/name/Bertha/" data-track-target-id="name:bertha" data-track-target-type="name-page"><span class="card-name">Bertha</span><span class="card-status">Dormant</span></a>
+          <a class="graveyard-card tone-extinct" href="/name/Mildred/" data-track-target-id="name:mildred" data-track-target-type="name-page"><span class="card-name">Mildred</span><span class="card-status">Near extinction</span></a>
+          <a class="graveyard-card tone-extinct" href="/name/Elmer/" data-track-target-id="name:elmer" data-track-target-type="name-page"><span class="card-name">Elmer</span><span class="card-status">Rare survivor</span></a>
+          <a class="graveyard-card tone-resurgent" href="/name/Gertrude/" data-track-target-id="name:gertrude" data-track-target-type="name-page"><span class="card-name">Gertrude</span><span class="card-status">Revival candidate</span></a>
         </div>
       </section>
 
@@ -171,12 +178,12 @@
           <p class="lede">Thirty interactive views of the same 145 years — extinctions, revivals, gender crossings, the collapse of the top-10 monopoly. <a href="/viz/">Browse all visualizations &rarr;</a></p>
         </div>
         <div class="diagnosis-grid">
-          <a class="diagnosis-card tone-extinct" href="/viz/graveyard"><span class="card-name">The Graveyard</span><span class="card-status">Every extinct name</span><p class="card-note">Each dot was once given to thousands of children. Hover to read the epitaph.</p></a>
-          <a class="diagnosis-card tone-resurgent" href="/viz/heartbeats"><span class="card-name">Heartbeats</span><span class="card-status">Comeback EKGs</span><p class="card-note">Names that flatlined, then came roaring back — traced pulse by pulse.</p></a>
+          <a class="diagnosis-card tone-extinct" href="/viz/graveyard" data-track-target-id="visualization:graveyard" data-track-target-type="visualization" data-track-source-placement="homepage-viz-strip"><span class="card-name">The Graveyard</span><span class="card-status">Every extinct name</span><p class="card-note">Each dot was once given to thousands of children. Hover to read the epitaph.</p></a>
+          <a class="diagnosis-card tone-resurgent" href="/viz/heartbeats" data-track-target-id="visualization:heartbeats" data-track-target-type="visualization" data-track-source-placement="homepage-viz-strip"><span class="card-name">Heartbeats</span><span class="card-status">Comeback EKGs</span><p class="card-note">Names that flatlined, then came roaring back — traced pulse by pulse.</p></a>
           <a class="diagnosis-card tone-explosive" href="/viz/debut-of-the-year" data-track-target-id="visualization:debut-of-the-year" data-track-target-type="visualization" data-track-source-placement="homepage-viz-strip"><span class="card-name">The Debuts</span><span class="card-status">Biggest arrivals</span><p class="card-note">The names that made the loudest first-year entrance, every year since 1880.</p></a>
           <a class="diagnosis-card tone-stable" href="/viz/living-treemap" data-track-target-id="visualization:living-treemap" data-track-target-type="visualization" data-track-source-placement="homepage-viz-strip"><span class="card-name">Name Map</span><span class="card-status">Who bears each name now</span><p class="card-note">Not what parents choose — what the living American name map looks like today.</p></a>
-          <a class="diagnosis-card tone-resurgent" href="/viz/heartbeats" data-track-target-id="visualization:heartbeats" data-track-target-type="visualization" data-track-source-placement="homepage-viz-strip"><span class="card-name">Heartbeats</span><span class="card-status">Comeback EKGs</span><p class="card-note">Names that flatlined, then came roaring back — traced pulse by pulse.</p></a>
-
+          <a class="diagnosis-card tone-stable" href="/viz/crossings" data-track-target-id="visualization:crossings" data-track-target-type="visualization" data-track-source-placement="homepage-viz-strip"><span class="card-name">The Gender Crossing</span><span class="card-status">Names that switched sides</span><p class="card-note">Names that started as one sex, crossed the line, and never came back.</p></a>
+        </div>
       </section>
 
       <section class="section" aria-labelledby="explainer-title">
@@ -197,28 +204,28 @@
           </div>
           <p class="lede">Top names from the latest year on record, included as a living control group.</p>
         </div>
-        <div id="popular-grid" class="featured-grid">
-          <a href="/name/Olivia/"><strong>Olivia</strong><span class="suffix">Female</span></a>
-          <a href="/name/Charlotte/"><strong>Charlotte</strong><span class="suffix">Female</span></a>
-          <a href="/name/Emma/"><strong>Emma</strong><span class="suffix">Female</span></a>
-          <a href="/name/Amelia/"><strong>Amelia</strong><span class="suffix">Female</span></a>
-          <a href="/name/Sophia/"><strong>Sophia</strong><span class="suffix">Female</span></a>
-          <a href="/name/Liam/"><strong>Liam</strong><span class="suffix">Male</span></a>
-          <a href="/name/Noah/"><strong>Noah</strong><span class="suffix">Male</span></a>
-          <a href="/name/Oliver/"><strong>Oliver</strong><span class="suffix">Male</span></a>
-          <a href="/name/James/"><strong>James</strong><span class="suffix">Male</span></a>
-          <a href="/name/Elijah/"><strong>Elijah</strong><span class="suffix">Male</span></a>
+        <div id="popular-grid" class="featured-grid" data-source-placement="homepage-popular">
+          <a href="/name/Olivia/" data-track-target-id="name:olivia" data-track-target-type="name-page"><strong>Olivia</strong><span class="suffix">Female</span></a>
+          <a href="/name/Charlotte/" data-track-target-id="name:charlotte" data-track-target-type="name-page"><strong>Charlotte</strong><span class="suffix">Female</span></a>
+          <a href="/name/Emma/" data-track-target-id="name:emma" data-track-target-type="name-page"><strong>Emma</strong><span class="suffix">Female</span></a>
+          <a href="/name/Amelia/" data-track-target-id="name:amelia" data-track-target-type="name-page"><strong>Amelia</strong><span class="suffix">Female</span></a>
+          <a href="/name/Sophia/" data-track-target-id="name:sophia" data-track-target-type="name-page"><strong>Sophia</strong><span class="suffix">Female</span></a>
+          <a href="/name/Liam/" data-track-target-id="name:liam" data-track-target-type="name-page"><strong>Liam</strong><span class="suffix">Male</span></a>
+          <a href="/name/Noah/" data-track-target-id="name:noah" data-track-target-type="name-page"><strong>Noah</strong><span class="suffix">Male</span></a>
+          <a href="/name/Oliver/" data-track-target-id="name:oliver" data-track-target-type="name-page"><strong>Oliver</strong><span class="suffix">Male</span></a>
+          <a href="/name/James/" data-track-target-id="name:james" data-track-target-type="name-page"><strong>James</strong><span class="suffix">Male</span></a>
+          <a href="/name/Elijah/" data-track-target-id="name:elijah" data-track-target-type="name-page"><strong>Elijah</strong><span class="suffix">Male</span></a>
         </div>
       </section>
     </main>
 
     <div id="view-name"></div>
-    <nav class="editorial-nav" aria-label="Browse by generation">
-      <a href="/comeback">Comeback names</a>
-      <a href="/millennial-names">Millennial names</a>
-      <a href="/gen-z-names">Gen Z names</a>
-      <a href="/classic-names">Classic names</a>
-      <a href="/future-grandparent-names">Future grandparent names</a>
+    <nav class="editorial-nav" aria-label="Browse by generation" data-source-placement="homepage-editorial-nav">
+      <a href="/comeback" data-track-target-id="article:comeback" data-track-target-type="article">Comeback names</a>
+      <a href="/millennial-names" data-track-target-id="article:millennial-names" data-track-target-type="article">Millennial names</a>
+      <a href="/gen-z-names" data-track-target-id="article:gen-z-names" data-track-target-type="article">Gen Z names</a>
+      <a href="/classic-names" data-track-target-id="article:classic-names" data-track-target-type="article">Classic names</a>
+      <a href="/future-grandparent-names" data-track-target-id="article:future-grandparent-names" data-track-target-type="article">Future grandparent names</a>
     </nav>
     <footer class="site">
       <div>
@@ -231,7 +238,7 @@
         <script src="/assets/app.js" defer></script>
         <script src="/assets/landing.js" defer></script>
     <script type="module">
-      import { renderTapestry } from "/assets/tapestry.js?v=7";
+      import { renderTapestry } from "/assets/tapestry.js?v=8";
 
       (async () => {
         const qs = new URLSearchParams(location.search);
@@ -271,6 +278,56 @@
         });
         searchBox.addEventListener("mousedown", () => clearTimeout(blurTimer));
 
+        /* Live hero preview — type or pick an example name and see its
+           verdict inline, no navigation required. */
+        const heroPreview = document.getElementById("hero-preview");
+        const escapeHtml = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const STATUS_TONE = { rising: "rising", stable: "stable", declining: "stable", endangered: "endangered", extinct: "extinct" };
+        let previewToken = 0;
+        const showPreview = async (rawName) => {
+          const name = rawName.trim();
+          if (!name) { heroPreview.classList.add("hidden"); return; }
+          const token = ++previewToken;
+          try {
+            const r = await fetch(`/api/name/${encodeURIComponent(name)}`);
+            if (token !== previewToken) return; // a newer request superseded this one
+            if (!r.ok) { heroPreview.classList.add("hidden"); return; }
+            const data = await r.json();
+            const tone = STATUS_TONE[data.status] || "stable";
+            const spark = NameVitals.buildSparkline(data, { width: 520, height: 100 });
+            const stat = data.declinePct && data.declinePct > 5
+              ? `Peaked at ${NameVitals.fmt(data.peakCount)} in ${data.peakYear} — down ${data.declinePct}% since.`
+              : `Peaked at ${NameVitals.fmt(data.peakCount)} in ${data.peakYear}.`;
+            heroPreview.className = `hero-preview tone-${tone}`;
+            heroPreview.innerHTML = `
+              <div class="hero-preview-head">
+                <span class="hero-preview-name">${escapeHtml(data.name)}</span>
+                <span class="hero-preview-status">${escapeHtml(data.displayStatus || "")}</span>
+              </div>
+              <div class="hero-preview-chart">${spark}</div>
+              <p class="hero-preview-stat">${escapeHtml(stat)} <a href="/name/${encodeURIComponent(data.name)}/">Full report &rarr;</a></p>
+            `;
+            heroPreview.classList.remove("hidden");
+          } catch (err) {
+            if (token === previewToken) heroPreview.classList.add("hidden");
+          }
+        };
+        let previewDebounce;
+        input.addEventListener("input", () => {
+          clearTimeout(previewDebounce);
+          const value = input.value;
+          previewDebounce = setTimeout(() => showPreview(value), 400);
+        });
+        document.querySelectorAll(".hero-example-chip").forEach((chip) => {
+          chip.addEventListener("click", () => {
+            const name = chip.dataset.example;
+            input.value = name;
+            setExpanded(true);
+            clearTimeout(previewDebounce);
+            showPreview(name);
+          });
+        });
+
         const yrInput = document.getElementById("yr-home");
         const yrBtn = document.getElementById("yr-go-home");
         const yrResult = document.getElementById("yr-home-result");
@@ -294,18 +351,13 @@
           const top = meta.top10PerYear[String(latest)] || [];
           const topF = top.filter(r => r[1] === "F").slice(0, 10);
           const topM = top.filter(r => r[1] === "M").slice(0, 10);
-          const row = (name, sex) => `<a href="/name/${encodeURIComponent(name)}/"><strong>${name}</strong><span
+          const row = (name, sex) => `<a href="/name/${encodeURIComponent(name)}/" data-track-target-id="name:${name.toLowerCase()}" data-track-target-type="name-page"><strong>${name}</strong><span
   class="suffix">${sex === "F" ? "Female" : "Male"}</span></a>`;
           document.getElementById("popular-grid").innerHTML =
             topF.map(r => row(r[0], r[1])).join("") +
             topM.map(r => row(r[0], r[1])).join("");
         } catch (err) {
-          const fallback = [["Olivia", "F"], ["Emma", "F"], ["Charlotte", "F"], ["Amelia", "F"], ["Sophia", "F"],
-  ["Liam", "M"], ["Noah", "M"], ["Oliver", "M"], ["James", "M"], ["Elijah", "M"]];
-          document.getElementById("popular-grid").innerHTML = fallback
-            .map(([name, sex]) => `<a href="/name/${encodeURIComponent(name)}/"><strong>${name}</strong><span
-  class="suffix">${sex === "F" ? "Female" : "Male"}</span></a>`)
-            .join("");
+          /* keep the server-rendered fallback grid already in the HTML */
         }
 
         try {
@@ -313,6 +365,54 @@
           if (tapestry) await renderTapestry(tapestry);
         } catch (err) {
           /* tapestry is decorative — never block search on its failure */
+        }
+
+        /* ── "On the radar" + "Name graveyard": real D1-backed picks,        ─
+           rotating weekly so the page isn't the same five names forever.    */
+        try {
+          const yearStart = Date.UTC(new Date().getUTCFullYear(), 0, 1);
+          const isoWeek = Math.floor((Date.now() - yearStart) / 6.048e8); // ms in a week
+          const pick = (list, count, offset) => {
+            if (!list.length) return [];
+            const start = (isoWeek + offset) % list.length;
+            const out = [];
+            for (let i = 0; i < count && i < list.length; i++) out.push(list[(start + i) % list.length]);
+            return out;
+          };
+          const fetchLanding = (kind) => fetch(`/api/landing/${kind}`).then((r) => (r.ok ? r.json() : { rows: [] })).catch(() => ({ rows: [] }));
+
+          const [endangered, comeback, rising, extinct] = await Promise.all([
+            fetchLanding("endangered"),
+            fetchLanding("comeback"),
+            fetchLanding("rising"),
+            fetchLanding("extinct"),
+          ]);
+
+          const radarCard = (r, tone, status, note) => `<a class="diagnosis-card tone-${tone}" href="/name/${encodeURIComponent(r.name)}/" data-track-target-id="name:${r.name.toLowerCase()}" data-track-target-type="name-page"><span class="card-name">${r.name}</span><span class="card-status">${status}</span><p class="card-note">${note}</p></a>`;
+
+          const radarPool = [
+            ...pick(endangered.rows.slice(0, 15), 2, 0).map((r) => radarCard(
+              r, "endangered",
+              (r.declinePct ?? 0) >= 90 ? "Critically endangered" : "Endangered",
+              `Down ${r.declinePct ?? "—"}% from its ${r.peakYear} peak.`,
+            )),
+            ...pick(comeback.rows.slice(0, 15), 2, 3).map((r) => radarCard(
+              r, "resurgent", "Resurgent",
+              r.growthX && r.growthX > 1 ? `${r.growthX}× more common than a decade ago.` : `Still going strong since its ${r.peakYear} peak.`,
+            )),
+            ...pick(rising.rows.slice(0, 15), 1, 7).map((r) => radarCard(
+              r, "rising", "Rising",
+              r.growthX && r.growthX > 1 ? `${r.growthX}× growth over the last decade.` : "Gaining share right now.",
+            )),
+          ];
+          if (radarPool.length) document.getElementById("radar-grid").innerHTML = radarPool.join("");
+
+          const graveyardPool = pick(extinct.rows.slice(0, 20), 4, 0).map((r) =>
+            `<a class="graveyard-card tone-extinct" href="/name/${encodeURIComponent(r.name)}/" data-track-target-id="name:${r.name.toLowerCase()}" data-track-target-type="name-page"><span class="card-name">${r.name}</span><span class="card-status">Last recorded in ${r.lastYearSeen ?? "—"}</span></a>`
+          );
+          if (graveyardPool.length) document.getElementById("graveyard-grid").innerHTML = graveyardPool.join("");
+        } catch (err) {
+          /* keep the server-rendered fallback cards already in the HTML */
         }
       })();
     </script>

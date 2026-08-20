@@ -90,6 +90,13 @@ export interface NameRecord {
   yM: number;
   series: Record<number, number>;
   other?: { sex: Sex; series: Record<number, number> };
+  // Pre-computed classification (see classify.ts) — present on API reads
+  // that pass it through; never recomputed in the browser.
+  status?: Status;
+  displayStatus?: string;
+  peakYear?: number;
+  peakCount?: number;
+  declinePct?: number | null;
 }
 
 // API: GET /api/landing/:kind

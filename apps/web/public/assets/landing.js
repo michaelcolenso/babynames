@@ -71,7 +71,11 @@ async function renderLandingTable(kind, target) {
     </tr>`;
   };
 
-  target.innerHTML = `<table class="table"><thead>${headers}</thead><tbody>${rows.map(row).join("")}</tbody></table>`;
+  // Matches contentIdentityMeta({contentId: contentId("article", kind), ...})
+  // in packages/shared/src/render-landing.ts — this client re-render must
+  // carry the same identity the server-rendered table shipped with, or the
+  // page silently drops out of analytics the moment this fetch resolves.
+  target.innerHTML = `<table class="table" data-content-id="article:${kind}" data-content-type="article" data-content-slug="${kind}"><thead>${headers}</thead><tbody>${rows.map(row).join("")}</tbody></table>`;
 }
 
 // /emerging & /fading — card grid + composite chart. Data fetched once
@@ -205,11 +209,17 @@ async function renderMomentumGrid(direction, target) {
       default: filtered.sort((a, b) => Math.abs(b.momentum) - Math.abs(a.momentum));
     }
     if (countReadout) countReadout.innerHTML = `<b>${filtered.length}</b> of ${rows.length} signals`;
+    // Matches contentIdentityMeta({contentId: contentId("article", routeName), ...})
+    // in packages/shared/src/render-momentum.ts — this client re-render
+    // replaces #t's whole subtree, including the server-rendered identity
+    // wrapper, so it has to carry the same tag or the page drops out of
+    // analytics the moment this fetch resolves.
+    const identityAttrs = `data-content-id="article:${routeName}" data-content-type="article" data-content-slug="${routeName}"`;
     if (filtered.length === 0) {
-      target.innerHTML = `<div class="momentum-empty">no signals match — try clearing filters</div>`;
+      target.innerHTML = `<div class="momentum-grid" ${identityAttrs}><div class="momentum-empty">no signals match — try clearing filters</div></div>`;
       return;
     }
-    target.innerHTML = filtered.map((d, i) => momentumCardHTML(direction, d, `mgrad-${routeName}-${i}`)).join("");
+    target.innerHTML = `<div class="momentum-grid" ${identityAttrs}>${filtered.map((d, i) => momentumCardHTML(direction, d, `mgrad-${routeName}-${i}`)).join("")}</div>`;
   }
 
   if (searchInput) {

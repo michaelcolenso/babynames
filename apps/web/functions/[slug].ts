@@ -2,6 +2,8 @@
 
 import {
   buildMiniSparkline,
+  contentId,
+  contentIdentityMeta,
   decodeSpark,
   getMeta,
   listComeback,
@@ -294,7 +296,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
     <h1>${page.title.replace(" — NobodyNamed", "")}</h1>
     <p class="lede">${page.lede}</p>
     <p class="archive-note">${page.body}</p>
-    <div class="diagnosis-grid">${cards}</div>
+    <div class="diagnosis-grid" ${contentIdentityMeta({ contentId: contentId("article", slug), contentType: "article", slug })}>${cards}</div>
     ${editorialSections}
     ${table}
   `,
