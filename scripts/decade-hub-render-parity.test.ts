@@ -136,11 +136,10 @@ function semanticFingerprint(html: string): string {
   return createHash("sha256").update(semantic).digest("hex");
 }
 
-// Task 8 intentionally adds one registry-derived, 15-link all-decade nav to
-// each hub route and one four-link child-cluster nav to every child route. A
-// clean 1e7b640 comparison confirmed those as the only semantic deltas.
+// The 1920s pilot also adds a registry-gated search-acquisition surface with
+// popular-name ItemList schema; all other routes retain their prior semantics.
 const EXPECTED_FINGERPRINTS: Record<string, string> = {
-  "1920s/hub": "20d135931fd5e9ce71eed0e491f2984160d0d3a0ec3e0598b432c2d2dd545f22",
+  "1920s/hub": "678b0364b488377f19644622a0cdc6cd4458d55c67c356024a243ed5de5486e8",
   "1920s/methodology": "beab3535065a9cdf1ce8204d3607f04424a5b52572e4e5ddc937e824dab1b844",
   "1920s/classroom": "9947bb77696a03a4402c91ae00b69dbe7ce4809742e470717468abf5af7dda48",
   "1920s/spelling-families": "5d6423fa2f006ad744981e875cec4eedf989d838395798b0c2991c2953e1a7cb",
@@ -236,6 +235,26 @@ test("pilot wrappers reject stale profiles and preserve the historical DecadeHer
 });
 
 
+test("1920s hub exposes a search-acquisition surface in server-rendered HTML", async () => {
+  const { response, html } = await renderRoute("1920s", "hub");
+  assert.equal(response.status, 200);
+  assert.match(html, /<title>1920s Names: Popular Baby Names \| NobodyNamed<\/title>/);
+  assert.match(metaContent(html, "description"), /^Popular 1920s names from SSA records: Mary and Robert led/);
+  assert.match(html, /<h1>1920s names<\/h1>/);
+  assert.match(html, /<h2>Popular 1920s baby names<\/h2>/);
+  assert.match(html, /<h3>Popular girls' names<\/h3>/);
+  assert.match(html, /<h3>Popular boys' names<\/h3>/);
+  assert.match(html, /Dorothy and Seymour/);
+  assert.match(html, /Source: Social Security Administration national birth-name records/);
+  assert.match(html, /href="\/names\/1910s\/"/);
+  assert.match(html, /href="\/names\/1930s\/"/);
+  for (const name of ["Mary", "Dorothy", "Helen", "Betty", "Margaret", "Robert", "John", "James", "William", "Charles"]) {
+    assert.match(html, new RegExp(`href=\"/name/${name}/\"`), `representative name link ${name}`);
+  }
+  assert.match(html, /Popular 1920s baby names/);
+  assert.match(html, /"name":"Popular 1920s baby names"[\s\S]*"numberOfItems":10/);
+});
+
 test("both pilot hubs preserve metadata, headers, JSON-LD, links, and analytics identity", async () => {
   for (const decade of ["1920s", "1980s"] as const) {
     const profile = profiles[decade];
@@ -245,8 +264,9 @@ test("both pilot hubs preserve metadata, headers, JSON-LD, links, and analytics 
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("Cache-Control"), CACHE);
     assert.equal(response.headers.get("Link"), `<${ORIGIN}/names/${decade}/>; rel="canonical"`);
-    assert.match(html, new RegExp(`<title>${decade} Baby Names: ${escapeRegExp(male)} &amp; ${escapeRegExp(female)} Led the Decade \\| NobodyNamed</title>`));
-    assert.match(metaContent(html, "description"), new RegExp(`most popular ${decade} girl names`));
+    assert.match(html, new RegExp(`<title>${decade === "1920s" ? "1920s Names: Popular Baby Names" : `${decade} Baby Names: ${escapeRegExp(male)} &amp; ${escapeRegExp(female)} Led the Decade`} \\| NobodyNamed</title>`));
+    if (decade === "1920s") assert.match(metaContent(html, "description"), /^Popular 1920s names from SSA records/);
+    else assert.match(metaContent(html, "description"), new RegExp(`most popular ${decade} girl names`));
     assert.match(html, new RegExp(`<link rel="canonical" href="${ORIGIN}/names/${decade}/">`));
     assertJsonLdIncludes(html, ["BreadcrumbList", "WebPage", "ItemList"]);
     assert.match(html, new RegExp(`data-content-id="decade-hub:${decade}"`));

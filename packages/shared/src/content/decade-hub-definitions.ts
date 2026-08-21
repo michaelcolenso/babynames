@@ -11,6 +11,8 @@ export interface DecadeHubDefinition {
   readonly sanityAnchors: readonly SanityAnchor[];
   readonly familyFile: string;
   readonly rolloutState: DecadeHubRolloutState;
+  /** Render the intent-aligned, server-rendered acquisition summary on this hub. */
+  readonly searchSurface?: boolean;
 }
 
 const pilot1920Anchors = [
@@ -65,6 +67,7 @@ export const DECADE_HUB_DEFINITIONS = [
     sanityAnchors: pilot1920Anchors,
     familyFile: "data/manual/spelling-families-1920.csv",
     rolloutState: "seeded",
+    searchSurface: true,
   },
   reviewed(1930, { yearMin: 2_045_000, yearMax: 2_108_000, champion: "Robert", sex: "M", championMin: 561_000, championMax: 621_000 }),
   reviewed(1940, { yearMin: 2_650_000, yearMax: 2_732_000, champion: "James", sex: "M", championMin: 756_000, championMax: 836_000 }),

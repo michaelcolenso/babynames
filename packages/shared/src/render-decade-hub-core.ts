@@ -15,6 +15,7 @@ export interface DecadeRenderContext {
   slug: string; start: number; end: number; nominalEnd: number; classroomYear: number;
   hubPath: string; methodologyPath: string; classroomPath: string; spellingPath: string; contentId: string;
   previous?: DecadeHubDefinition; next?: DecadeHubDefinition; decadeNavigation: "registry" | "adjacent-only";
+  searchSurface: boolean;
 }
 const CONTENT_TYPE = "decade-hub";
 const HUB_PATH = "__HUB_PATH__";
@@ -65,7 +66,7 @@ export function createDecadeRenderContext(profile: DecadeProfile, opts: DecadeRe
   }
   const index = DECADE_HUB_DEFINITIONS.findIndex((d) => d.slug === opts.definition.slug);
   const end = Math.min(profile.endYear, opts.definition.nominalEndYear);
-  return { definition: opts.definition, profile, thesis: opts.thesis, origin: opts.origin, slug: opts.definition.slug, start: opts.definition.startYear, end, nominalEnd: opts.definition.nominalEndYear, classroomYear: opts.definition.classroomYear, hubPath:`/names/${opts.definition.slug}/`, methodologyPath:`/names/${opts.definition.slug}/methodology/`, classroomPath:`/names/${opts.definition.slug}/classroom/`, spellingPath:`/names/${opts.definition.slug}/spelling-families/`, contentId:`decade-hub:${opts.definition.slug}`, previous:index>0?DECADE_HUB_DEFINITIONS[index-1]:undefined, next:index>=0&&index<DECADE_HUB_DEFINITIONS.length-1?DECADE_HUB_DEFINITIONS[index+1]:undefined, decadeNavigation: opts.decadeNavigation ?? "registry" };
+  return { definition: opts.definition, profile, thesis: opts.thesis, origin: opts.origin, slug: opts.definition.slug, start: opts.definition.startYear, end, nominalEnd: opts.definition.nominalEndYear, classroomYear: opts.definition.classroomYear, hubPath:`/names/${opts.definition.slug}/`, methodologyPath:`/names/${opts.definition.slug}/methodology/`, classroomPath:`/names/${opts.definition.slug}/classroom/`, spellingPath:`/names/${opts.definition.slug}/spelling-families/`, contentId:`decade-hub:${opts.definition.slug}`, previous:index>0?DECADE_HUB_DEFINITIONS[index-1]:undefined, next:index>=0&&index<DECADE_HUB_DEFINITIONS.length-1?DECADE_HUB_DEFINITIONS[index+1]:undefined, decadeNavigation: opts.decadeNavigation ?? "registry", searchSurface: opts.definition.searchSurface === true };
 }
 function materialize(html: string, c: DecadeRenderContext): string {
   const generation = c.thesis?.generationLink ? `<p>For the generation-scale view, see <a href="${escapeHtml(c.thesis.generationLink.href)}" data-dh-target-id="${escapeHtml(c.thesis.generationLink.targetId ?? "editorial:generation-names")}" data-dh-target-type="editorial">${escapeHtml(c.thesis.generationLink.label)}</a>${c.thesis.generationLink.copy ? ` — ${escapeHtml(c.thesis.generationLink.copy)}` : ""}.</p>` : "";
@@ -90,7 +91,7 @@ export function DecadeHero(profile: DecadeProfile, thesis: DecadeThesis | undefi
     : "";
   return `<header class="dh-hero">
   <p class="eyebrow">Decade hub</p>
-  <h1>${escapeHtml(c.slug)} baby names</h1>
+  <h1>${c.searchSurface ? `${escapeHtml(c.slug)} names` : `${escapeHtml(c.slug)} baby names`}</h1>
   ${heroContent}${coverage}
   <nav class="decade-nav" aria-label="Adjacent decades">
     ${previous}
@@ -561,14 +562,56 @@ export function DataCoverageBadge(profile: DecadeProfile): string {
 }
 
 
+function popularityRows(profile: DecadeProfile, sex: "F" | "M"): OwnershipResult[] {
+  const rows = sex === "F" ? profile.ownershipRankings.female : profile.ownershipRankings.male;
+  return rows.slice().sort((a, b) => a.popularityRank - b.popularityRank || a.name.localeCompare(b.name)).slice(0, 5);
+}
+
+function popularNamesList(rows: OwnershipResult[]): string {
+  return rows.map((row) => `<li><span class="rank">#${row.popularityRank}</span><a href="${nameHref(row.slug)}" data-dh-name="${escapeHtml(row.name.toLowerCase())}" data-dh-target-id="name:${escapeHtml(row.name.toLowerCase())}" data-dh-target-type="name-page">${escapeHtml(row.name)}</a><span class="count">${fmt(row.birthsInDecade)} births</span></li>`).join("\n");
+}
+
+function PopularNamesSurface(profile: DecadeProfile, c: DecadeRenderContext): string {
+  if (!c.searchSurface) return "";
+  const girls = popularityRows(profile, "F");
+  const boys = popularityRows(profile, "M");
+  const femaleOwner = profile.ownershipRankings.female[0];
+  const maleOwner = profile.ownershipRankings.male[0];
+  const adjacent = [
+    c.previous ? `<a href="/names/${escapeHtml(c.previous.slug)}/" data-dh-target-id="decade:${escapeHtml(c.previous.slug)}" data-dh-target-type="decade">${escapeHtml(c.previous.slug)}</a>` : "",
+    c.next ? `<a href="/names/${escapeHtml(c.next.slug)}/" data-dh-target-id="decade:${escapeHtml(c.next.slug)}" data-dh-target-type="decade">${escapeHtml(c.next.slug)}</a>` : "",
+  ].filter(Boolean).join(" · ");
+  return `<section class="dh-explainer dh-search-surface" data-dh-module="search-acquisition">
+  <h2>Popular __DECADE_SLUG__ baby names</h2>
+  <p>Looking for popular __DECADE_SLUG__ names? These are the five highest-ranked girls' and boys' names in the SSA records for __PERIOD__, with every name linked to its full dossier.</p>
+  <div class="year-result-grid">
+    <div class="year-col">
+      <h3>Popular girls' names</h3>
+      <ol class="year-name-list">${popularNamesList(girls)}</ol>
+    </div>
+    <div class="year-col">
+      <h3>Popular boys' names</h3>
+      <ol class="year-name-list">${popularNamesList(boys)}</ol>
+    </div>
+  </div>
+  <p><strong>Popularity is not the whole story.</strong> ${escapeHtml(femaleOwner?.name ?? "The leading girls' ownership name")} and ${escapeHtml(maleOwner?.name ?? "the leading boys' ownership name")} rank highest on decade ownership, which measures how concentrated a name's recorded lifetime is inside __PERIOD__ rather than how many births it had.</p>
+  ${adjacent ? `<p><strong>Compare nearby decades:</strong> ${adjacent}</p>` : ""}
+  <p class="dh-label">Source: Social Security Administration national birth-name records for __PERIOD__; counts below five per name-year are suppressed. <a href="${METHODOLOGY_PATH}">Read the methodology and source limits</a>.</p>
+</section>`;
+}
+
 export function renderDecadeHubGeneric(profile: DecadeProfile, opts: DecadeRenderOptions): string {
   const c = createDecadeRenderContext(profile, opts);
   const origin = opts.origin;
   const canonical = `${origin}${HUB_PATH}`;
   const female = profile.femaleChampion;
   const male = profile.maleChampion;
-  const title = profile.isComplete ? `__DECADE_SLUG__ Baby Names: ${male.name} & ${female.name} Led the Decade | NobodyNamed` : `__DECADE_SLUG__ Baby Names So Far: ${male.name} & ${female.name} | NobodyNamed`;
-  const desc = `The most popular __DECADE_SLUG__ girl names and boy names from SSA records — plus the names that truly belonged to the decade, an average __CLASSROOM_YEAR__ classroom, and spelling families.`;
+  const title = c.searchSurface
+    ? `__DECADE_SLUG__ Names: Popular Baby Names | NobodyNamed`
+    : profile.isComplete ? `__DECADE_SLUG__ Baby Names: ${male.name} & ${female.name} Led the Decade | NobodyNamed` : `__DECADE_SLUG__ Baby Names So Far: ${male.name} & ${female.name} | NobodyNamed`;
+  const desc = c.searchSurface
+    ? `Popular __DECADE_SLUG__ names from SSA records: ${female.name} and ${male.name} led the girls' and boys' rankings. See top names, decade ownership, and __DECADE_SLUG__ naming data.`
+    : `The most popular __DECADE_SLUG__ girl names and boy names from SSA records — plus the names that truly belonged to the decade, an average __CLASSROOM_YEAR__ classroom, and spelling families.`;
 
   const thesis = opts.thesis ?? DECADE_THESES[opts.definition.slug];
   const families = profile.spellingFamilies ?? [];
@@ -577,6 +620,7 @@ export function renderDecadeHubGeneric(profile: DecadeProfile, opts: DecadeRende
     HUB_CONTENT_ID,
     HUB_PATH,
     `${DecadeHero(profile, thesis, c)}
+${PopularNamesSurface(profile, c)}
 ${OwnershipRanking(profile)}
 ${ClassroomSummary(profile.classroomDefaults)}
 <section class="dh-families-summary" data-dh-module="spelling">
@@ -603,6 +647,17 @@ ${DataCoverageBadge(profile)}`,
       item: { "@type": "Thing", name: r.name, url: origin + nameHref(r.slug) },
     })),
   };
+  const popularRows = c.searchSurface
+    ? [...popularityRows(profile, "F"), ...popularityRows(profile, "M")].sort((a, b) => b.birthsInDecade - a.birthsInDecade || a.name.localeCompare(b.name))
+    : [];
+  const popularItemList = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: "Popular __DECADE_SLUG__ baby names",
+    itemListOrder: "https://schema.org/ItemListOrderDescending",
+    numberOfItems: popularRows.length,
+    itemListElement: popularRows.map((r, i) => ({ "@type": "ListItem", position: i + 1, item: { "@type": "Thing", name: r.name, url: origin + nameHref(r.slug) } })),
+  };
 
   return materialize(pageShell({
     title,
@@ -617,6 +672,7 @@ ${DataCoverageBadge(profile)}`,
       breadcrumb(origin, [{ name: "__DECADE_SLUG__", path: HUB_PATH }]),
       webPage(origin, title, desc, canonical),
       itemList,
+      ...(c.searchSurface ? [popularItemList] : []),
     ],
     scripts: ["/assets/app.js"],
     headExtras: DECADE_HUB_SCRIPT,
