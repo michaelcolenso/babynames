@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tenure — Reddit / Share Composition · NobodyNamed</title>
+<meta name="robots" content="noindex">
+<style>
+  *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:#d8d5cf} body{display:grid;place-items:center;padding:20px;font-family:'Avenir Next',Avenir,system-ui,sans-serif}.frame{width:min(1080px,100%);aspect-ratio:4/5;background:#f4f0e7;box-shadow:0 24px 80px rgba(0,0,0,.18)}svg{display:block;width:100%;height:100%}.loading{font:600 24px/1 ui-monospace,monospace;fill:#787064;letter-spacing:.08em}.back{position:fixed;left:16px;top:16px;padding:9px 12px;border-radius:999px;background:#171511;color:#f4f0e7;text-decoration:none;font:600 11px/1 ui-monospace,monospace}@media(max-width:700px){body{padding:0}.frame{width:100%;box-shadow:none}.back{opacity:.82}}
+</style>
+</head>
+<body>
+<a class="back" href="/viz/tenure">← Interactive</a>
+<div class="frame"><svg id="poster" viewBox="0 0 1080 1350" role="img" aria-label="Editorial chart of enduring and returning U.S. Top 100 baby names from 1880 through 2025"><text class="loading" x="540" y="675" text-anchor="middle">LOADING RECORD…</text></svg></div>
+<script>
+(() => {
+  const NS='http://www.w3.org/2000/svg';
+  const svg=document.getElementById('poster');
+  const selectedGirls=['Elizabeth','Mary','Katherine','Emma','Evelyn','Eleanor','Hazel','Alice','Lillian','Olivia'];
+  const selectedBoys=['William','James','John','Robert','Michael','Charles','David','Joseph','Thomas','Daniel','Andrew','Samuel','Richard','Theodore','Arthur','Jack','Liam'];
+  const C={paper:'#f4f0e7',ink:'#171511',muted:'#716a60',rule:'#d7d1c5',rose:'#d34f73',blue:'#386fae',amber:'#b67a14'};
+  const el=(tag,a={},text)=>{const n=document.createElementNS(NS,tag);for(const[k,v]of Object.entries(a))n.setAttribute(k,String(v));if(text!=null)n.textContent=text;return n};
+  const add=(tag,a,text)=>{const n=el(tag,a,text);svg.append(n);return n};
+  function multiline(x,y,lines,attrs={},leading=28){lines.forEach((line,i)=>add('text',{x,y:y+i*leading,...attrs},line));}
+  function metrics(d,ym,yM){const lengths=d.spans.map(([s,e])=>e-s+1);const first=d.firstTop100??d.spans[0][0];const last=d.lastTop100??d.spans[d.spans.length-1][1];const active=d.active??last>=yM-1;const continuousSinceDebut=d.continuousSinceDebut??(d.spans.length===1&&active);return {...d,firstTop100:first,lastTop100:last,longestStreak:d.longestStreak??Math.max(...lengths),continuousFullRecord:d.continuousFullRecord??(continuousSinceDebut&&first<=ym),gapYears:d.gapYears??Math.max(0,last-first+1-d.totalYears)};}
+  function largestGap(d){let best=0;for(let i=1;i<d.spans.length;i++)best=Math.max(best,d.spans[i][0]-d.spans[i-1][1]-1);return best;}
+  function render(raw){
+    const {ym,yM}=raw;const all=raw.names.map(d=>metrics(d,ym,yM));const byKey=new Map(all.map(d=>[`${d.sex}:${d.name}`,d]));
+    const girls=selectedGirls.map(n=>byKey.get(`F:${n}`)).filter(Boolean);const boys=selectedBoys.map(n=>byKey.get(`M:${n}`)).filter(Boolean);
+    const fullGirls=all.filter(d=>d.sex==='F'&&d.continuousFullRecord).length;const fullBoys=all.filter(d=>d.sex==='M'&&d.continuousFullRecord).length;
+    svg.innerHTML='';add('rect',{width:1080,height:1350,fill:C.paper});
+    add('text',{x:62,y:70,fill:C.amber,'font-size':18,'font-family':'ui-monospace, monospace','font-weight':700,'letter-spacing':2},'NOBODYNAMED · THE LONG GAME');
+    const girlWord=fullGirls===1?'girls’ name':'girls’ names';const boyVerb=fullBoys===1?'has':'have';
+    multiline(62,122,[`Only ${fullGirls} ${girlWord} ${fullGirls===1?'has':'have'} stayed in`,`America’s Top 100 since ${ym}.`,` ${fullBoys} boys’ names ${boyVerb}.`],{'font-size':48,'font-weight':760,fill:C.ink,'letter-spacing':-1.5},52);
+    multiline(62,290,[`Every year each name ranked in the U.S. Top 100. Gaps show years outside it.`,`Selected enduring, disappearing, and returning names · ${ym}–${yM}`],{'font-size':20,fill:C.muted},28);
+
+    const labelX=62, chartX=190, chartW=650, valueX=865, noteX=895, axisY=362;
+    const x=year=>chartX+((year-ym)/(yM+1-ym))*chartW;
+    [ym,1900,1920,1940,1960,1980,2000,yM].filter((v,i,a)=>a.indexOf(v)===i).forEach((year,i,arr)=>{const xx=x(year);add('line',{x1:xx,x2:xx,y1:axisY+10,y2:1192,stroke:C.rule,'stroke-width':1});add('text',{x:xx,y:axisY,'text-anchor':i===0?'start':i===arr.length-1?'end':'middle',fill:C.muted,'font-size':13,'font-family':'ui-monospace, monospace','font-weight':600},year)});
+    add('text',{x:valueX,y:axisY,'text-anchor':'end',fill:C.muted,'font-size':11,'font-family':'ui-monospace, monospace','font-weight':700},'LONGEST');
+    add('text',{x:valueX,y:axisY+13,'text-anchor':'end',fill:C.muted,'font-size':11,'font-family':'ui-monospace, monospace','font-weight':700},'STREAK');
+
+    function section(title,items,startY,color){add('text',{x:labelX,y:startY,fill:color,'font-size':19,'font-weight':760,'letter-spacing':.5},title);let y=startY+31;items.forEach(d=>{const cy=y+10;add('text',{x:labelX,y:cy+4,fill:C.ink,'font-size':15,'font-weight':d.continuousFullRecord?700:520},d.name);add('line',{x1:chartX,x2:chartX+chartW,y1:cy,y2:cy,stroke:C.rule,'stroke-width':7,'stroke-linecap':'round'});d.spans.forEach(([s,e])=>add('rect',{x:x(s),y:cy-4,width:Math.max(2,x(e+1)-x(s)),height:8,rx:4,fill:color}));if(d.continuousFullRecord)add('text',{x:chartX-10,y:cy+4,'text-anchor':'end',fill:C.amber,'font-size':10},'◆');add('text',{x:valueX,y:cy+4,'text-anchor':'end',fill:color,'font-size':14,'font-family':'ui-monospace, monospace','font-weight':700},`${d.longestStreak}y`);y+=27});return y;}
+    let y=section('GIRLS’ NAMES',girls,405,C.rose);y+=22;y=section('BOYS’ NAMES',boys,y,C.blue);
+
+    const elizabeth=byKey.get('F:Elizabeth'),mary=byKey.get('F:Mary'),katherine=byKey.get('F:Katherine'),eleanor=byKey.get('F:Eleanor');
+    const callouts=[];
+    if(elizabeth)callouts.push({n:'1',name:'ELIZABETH',lines:[`The only girls’ name in this`,`selection with a full-record`,`Top-100 streak: ${elizabeth.longestStreak} years.`],color:C.rose});
+    if(mary)callouts.push({n:'2',name:'MARY',lines:[`${mary.totalYears} total Top-100 years.`,`Longest uninterrupted run:`,` ${mary.longestStreak} years.`],color:C.rose});
+    if(katherine)callouts.push({n:'3',name:'KATHERINE',lines:[`First entered ${katherine.firstTop100}.`,`Most recent Top-100 year:`,` ${katherine.lastTop100}.`],color:C.rose});
+    if(eleanor)callouts.push({n:'4',name:'ELEANOR',lines:[`Returned after a gap of`,`${largestGap(eleanor)} years.`,`The comeback is visible in the bar.`],color:C.rose});
+    let ny=446;callouts.forEach(c=>{add('circle',{cx:noteX,cy:ny-4,r:14,fill:c.color});add('text',{x:noteX,y:ny+1,'text-anchor':'middle',fill:'#fff','font-size':13,'font-weight':800},c.n);add('text',{x:noteX+23,y:ny,fill:c.color,'font-size':13,'font-weight':800},c.name);multiline(noteX+23,ny+23,c.lines,{'font-size':12.5,fill:C.ink},17);ny+=143});
+    add('line',{x1:62,x2:1018,y1:1235,y2:1235,stroke:C.rule,'stroke-width':1});
+    add('rect',{x:62,y:1262,width:18,height:8,rx:4,fill:C.rose});add('text',{x:90,y:1270,fill:C.muted,'font-size':12},'Girls');
+    add('rect',{x:144,y:1262,width:18,height:8,rx:4,fill:C.blue});add('text',{x:172,y:1270,fill:C.muted,'font-size':12},'Boys');
+    add('line',{x1:226,x2:244,y1:1266,y2:1266,stroke:C.rule,'stroke-width':7,'stroke-linecap':'round'});add('text',{x:254,y:1270,fill:C.muted,'font-size':12},'Outside Top 100');
+    add('text',{x:62,y:1310,fill:C.muted,'font-size':12,'font-family':'ui-monospace, monospace'},'Data: U.S. Social Security Administration · National baby-name records');
+    add('text',{x:1018,y:1310,'text-anchor':'end',fill:C.rose,'font-size':13,'font-weight':700},'nobodynamed.com');
+  }
+  fetch('/api/top100-history').then(r=>r.json()).then(render).catch(()=>{svg.innerHTML='';add('rect',{width:1080,height:1350,fill:C.paper});add('text',{x:540,y:675,'text-anchor':'middle',fill:C.muted,'font-size':24},'Could not load Top 100 history.');});
+})();
+</script>
+</body>
+</html>
