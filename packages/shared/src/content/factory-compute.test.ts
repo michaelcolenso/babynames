@@ -1,55 +1,50 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import test from "node:test";
 
 import {
   computeFlashFloods,
+  csvToNameYearRows,
   evaluateClaims,
+  groupSeries,
   interpolateBody,
   parseSsaCsv,
   parseTotalsCsv,
   verifyAsserts,
   chartPanelHtml,
-  type SsaRow,
+  type FlashFloodOptions,
+  type NameYearRow,
 } from "./factory-compute";
 import type { ContentDefinition, FlashFloodMember } from "./factory-types";
 
-function totalsMap(entries: Array<[number, number]>): Map<number, number> {
-  return new Map(entries);
+const OPTS: Partial<FlashFloodOptions> = { dataMaxYear: 2010 };
+
+function seriesFrom(entries: Array<[string, string, Record<number, number>]>): {
+  series: Map<string, Record<number, number>>;
+  display: Map<string, string>;
+} {
+  const series = new Map<string, Record<number, number>>();
+  const display = new Map<string, string>();
+  for (const [name, sex, s] of entries) {
+    series.set(`${name.toLowerCase()}|${sex}`, s);
+    display.set(`${name.toLowerCase()}|${sex}`, name);
+  }
+  return { series, display };
 }
 
-// Fixture: totals of 1,000,000 births/year for 1990-2010 so percent*total is easy.
-const T = totalsMap(
-  Array.from({ length: 21 }, (_, i) => [1990 + i, 1_000_000] as [number, number]),
-);
-
-function rowsFrom(series: Record<string, number>, name: string, sex: string): SsaRow[] {
-  return Object.entries(series).map(([y, births]) => ({
-    year: Number(y),
-    name,
-    percent: births / 1_000_000,
-    sex,
-  }));
-}
-
-test("parseSsaCsv skips header and blank lines", () => {
-  const csv = "year,name,percent,sex\n2000,Bob,0.01,M\n\n";
-  const rows = parseSsaCsv(csv);
-  assert.equal(rows.length, 1);
-  assert.deepEqual(rows[0], { year: 2000, name: "Bob", percent: 0.01, sex: "M" });
-});
-
-test("parseTotalsCsv reads year,total", () => {
-  const t = parseTotalsCsv("year,male,female,total\n2000,100,100,200\n");
-  assert.equal(t.get(2000), 200);
+test("groupSeries groups by lowercase name+sex", () => {
+  const rows: NameYearRow[] = [
+    { year: 1995, name: "KUNTA", sex: "M", count: 500 },
+    { year: 1995, name: "Kunta", sex: "M", count: 500 },
+    { year: 1996, name: "Kunta", sex: "M", count: 5 },
+  ];
+  const s = groupSeries(rows);
+  assert.equal(s.size, 1);
+  assert.deepEqual(s.get("kunta|M"), { 1995: 500, 1996: 5 });
 });
 
 test("detects a flash flood: spike at debut then decay", () => {
-  const rows = rowsFrom(
-    { 1995: 500, 1996: 40, 1997: 12, 1998: 6 },
-    "Zula",
-    "F",
-  );
-  const result = computeFlashFloods(rows, T);
+  const { series, display } = seriesFrom([["Zula", "F", { 1995: 500, 1996: 40, 2000: 6 }]]);
+  const result = computeFlashFloods(series, display, OPTS);
   assert.equal(result.members.length, 1);
   const m = result.members[0]!;
   assert.equal(m.name, "Zula");
@@ -58,70 +53,68 @@ test("detects a flash flood: spike at debut then decay", () => {
   assert.equal(m.peakCount, 500);
 });
 
+test("detects a late surge on an old name (Arsenio pattern)", () => {
+  const s: Record<number, number> = {};
+  for (let y = 1913; y <= 1986; y++) s[y] = 10;
+  s[1987] = 83;
+  s[1988] = 124; // 31% of 397 — below runupRatio
+  s[1989] = 397;
+  s[1990] = 188;
+  s[1994] = 15;
+  const { series, display } = seriesFrom([["Arsenio", "M", s]]);
+  const result = computeFlashFloods(series, display, OPTS);
+  assert.equal(result.members.length, 1);
+  assert.equal(result.members[0]!.peakYear, 1989);
+});
+
 test("excludes a steady riser that peaks late", () => {
-  const rows = rowsFrom(
-    { 1990: 10, 1995: 50, 2000: 300, 2005: 400 },
-    "Riser",
-    "M",
-  );
-  const result = computeFlashFloods(rows, T);
-  assert.equal(result.members.length, 0);
+  const s: Record<number, number> = {};
+  for (let y = 1990; y <= 2005; y++) s[y] = 10 + (y - 1990) * 30;
+  s[2005] = 400;
+  s[2010] = 350; // still >20% of peak at decay horizon
+  const { series, display } = seriesFrom([["Riser", "M", s]]);
+  assert.equal(computeFlashFloods(series, display, OPTS).members.length, 0);
 });
 
 test("excludes a big peak that does not decay", () => {
-  const rows = rowsFrom(
-    { 1995: 500, 1996: 480, 1997: 470, 1998: 460, 1999: 450, 2000: 440 },
-    "Stayer",
-    "F",
+  const { series, display } = seriesFrom([
+    ["Stayer", "F", { 1995: 500, 1996: 480, 2000: 440 }],
+  ]);
+  assert.equal(computeFlashFloods(series, display, OPTS).members.length, 0);
+});
+
+test("excludes a survivor (Khloe pattern): decays but stays above ratio", () => {
+  const { series, display } = seriesFrom([
+    ["Survivor", "F", { 2007: 447, 2008: 1715, 2009: 3459, 2010: 5412, 2015: 3006 }],
+  ]);
+  // peak 2010=5412, decay at 2015=3006 > 20% → excluded even though run-up was sudden
+  assert.equal(computeFlashFloods(series, display, OPTS).members.length, 0);
+});
+
+test("excludes peaks whose decay window is unresolved (dataMaxYear)", () => {
+  const { series, display } = seriesFrom([["Recent", "F", { 2020: 10, 2021: 500, 2022: 20 }]]);
+  assert.equal(computeFlashFloods(series, display, OPTS).members.length, 0);
+  // but with a later dataMaxYear it resolves (absence = 0)
+  assert.equal(
+    computeFlashFloods(series, display, { ...OPTS, dataMaxYear: 2026 }).members.length,
+    1,
   );
-  const result = computeFlashFloods(rows, T);
-  assert.equal(result.members.length, 0);
 });
 
 test("boundary: peak exactly at minPeak counts; below does not", () => {
-  const spike = { 1995: 100, 1996: 5 };
-  const below = { 1995: 99, 1996: 5 };
-  const r1 = computeFlashFloods(rowsFrom(spike, "Edge", "M"), T);
-  const r2 = computeFlashFloods(rowsFrom(below, "Edge", "M"), T);
-  assert.equal(r1.members.length, 1);
-  assert.equal(r2.members.length, 0);
+  const flood = (peak: number) =>
+    seriesFrom([["Edge", "M", { 1995: peak, 1996: 5, 2000: 1 }]]);
+  assert.equal(computeFlashFloods(flood(100).series, flood(100).display, OPTS).members.length, 1);
+  assert.equal(computeFlashFloods(flood(99).series, flood(99).display, OPTS).members.length, 0);
 });
 
-test("boundary: peak within peakWindow (2 years) counts; 3 years does not", () => {
-  const near = { 1993: 10, 1994: 20, 1995: 500, 1996: 5 };
-  const far = { 1992: 10, 1993: 10, 1994: 10, 1995: 500, 1996: 5 };
-  assert.equal(computeFlashFloods(rowsFrom(near, "Near", "F"), T).members.length, 1);
-  assert.equal(computeFlashFloods(rowsFrom(far, "Far", "F"), T).members.length, 0);
-});
-
-test("decay checked at peakYear+decayYears using nearest known year", () => {
-  // Peak 1995, decay target 2000 — series jumps 1999 -> 2001.
-  const rows = rowsFrom({ 1995: 400, 1996: 60, 1999: 30, 2001: 10 }, "Gap", "F");
-  const result = computeFlashFloods(rows, T);
-  assert.equal(result.members.length, 1);
-});
-
-test("orders members by peakCount desc and respects limit", () => {
-  const rows = [
-    ...rowsFrom({ 1995: 900, 1996: 10 }, "Big", "F"),
-    ...rowsFrom({ 1996: 800, 1997: 10 }, "Small", "F"),
-  ];
-  const all = computeFlashFloods(rows, T);
+test("orders members by peakCount desc and respects nothing else", () => {
+  const { series, display } = seriesFrom([
+    ["Big", "F", { 1995: 900, 1996: 10, 2000: 2 }],
+    ["Small", "F", { 1996: 800, 1997: 10, 2001: 2 }],
+  ]);
+  const all = computeFlashFloods(series, display, OPTS);
   assert.deepEqual(all.members.map((m) => m.name), ["Big", "Small"]);
-  const limited = computeFlashFloods(rows, T, { family: "flash-floods", limit: 1 });
-  assert.equal(limited.members.length, 1);
-  assert.equal(limited.members[0]!.name, "Big");
-});
-
-test("groups by lowercase name but keeps first display form", () => {
-  const rows: SsaRow[] = [
-    { year: 1995, name: "KUNTA", percent: 0.0005, sex: "M" },
-    { year: 1995, name: "Kunta", percent: 0.0005, sex: "M" },
-    { year: 2000, name: "Kunta", percent: 0.00001, sex: "M" },
-  ];
-  const result = computeFlashFloods(rows, T);
-  assert.equal(result.members.length, 1);
-  assert.equal(result.members[0]!.name, "KUNTA"); // first occurrence wins
 });
 
 test("evaluateClaims resolves numeric and string claims", () => {
@@ -135,7 +128,8 @@ test("evaluateClaims resolves numeric and string claims", () => {
       totalNames: (_m, meta) => meta.totalNames,
     },
   };
-  const result = computeFlashFloods(rowsFrom({ 1995: 500, 1996: 5 }, "Zed", "F"), T);
+  const { series, display } = seriesFrom([["Zed", "F", { 1995: 500, 1996: 5, 2000: 1 }]]);
+  const result = computeFlashFloods(series, display, OPTS);
   const claims = evaluateClaims(def, result);
   assert.equal(claims.count, 1);
   assert.equal(claims.top, "Zed");
@@ -150,8 +144,7 @@ test("verifyAsserts flags drift and missing keys", () => {
     claims: { peak: (m) => m[0]?.peakCount ?? 0 },
     asserts: [{ key: "peak", equals: 999 }],
   };
-  const evaluated = { peak: 500 };
-  const v = verifyAsserts(def, evaluated);
+  const v = verifyAsserts(def, { peak: 500 });
   assert.equal(v.length, 1);
   assert.match(v[0]!, /expected 999/);
 
@@ -159,7 +152,7 @@ test("verifyAsserts flags drift and missing keys", () => {
     ...def,
     asserts: [{ key: "peak", approx: [500, 1] }, { key: "missing", equals: 1 }],
   };
-  const v2 = verifyAsserts(ok, evaluated);
+  const v2 = verifyAsserts(ok, { peak: 500 });
   assert.equal(v2.length, 1);
   assert.match(v2[0]!, /not found/);
 });
@@ -182,11 +175,22 @@ test("chartPanelHtml embeds an SVG sparkline with caption", () => {
   const member: FlashFloodMember = {
     name: "Zula", sex: "F",
     firstYear: 1995, peakYear: 1995, peakCount: 500,
-    lastYear: 1998, lastCount: 6,
-    series: { 1995: 500, 1996: 40, 1997: 12, 1998: 6 },
+    lastYear: 2000, lastCount: 6,
+    series: { 1995: 500, 1996: 40, 2000: 6 },
   };
   const html = chartPanelHtml({ member, dataMaxYear: 2025 });
   assert.match(html, /<svg/);
   assert.match(html, /Zula/);
   assert.match(html, /Peak 1995/);
+});
+
+test("SSA CSV pipeline: parse, totals, convert to birth counts", () => {
+  const csv = 'year,name,percent,sex\n1977,"Kunta",0.000126,"boy"\n';
+  const totalsCsv = "year,male,female,total\n1977,1679000,1675764,3354764\n";
+  const rows = parseSsaCsv(csv);
+  const totals = parseTotalsCsv(totalsCsv);
+  const ny = csvToNameYearRows(rows, totals);
+  assert.equal(ny.length, 1);
+  assert.equal(ny[0]!.sex, "M");
+  assert.equal(ny[0]!.count, 212); // 0.000126 × 1,679,000 = 211.55 → 212
 });
