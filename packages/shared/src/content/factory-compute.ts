@@ -273,8 +273,10 @@ export function interpolateBody(
 
   out = out.replace(/\{\{panel:([^}]+)\}\}/g, (_m, key: string) => {
     const k = key.trim();
-    if (!(k in panels)) throw new Error(`Unknown panel placeholder: {{panel:${k}}}`);
-    return panels[k]!;
+    // Accept both "Name.SEX" and "Name|SEX" spellings.
+    const lookup = k in panels ? k : k.replace(".", "|");
+    if (!(lookup in panels)) throw new Error(`Unknown panel placeholder: {{panel:${k}}}`);
+    return panels[lookup]!;
   });
 
   const leftover = out.match(/\{\{[^}]+\}\}/);

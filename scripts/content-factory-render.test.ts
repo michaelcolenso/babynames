@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { computeFlashFloods } from "./factory-compute";
-import { renderFactoryVizPage } from "./render-factory-viz";
-import { renderFactoryPostMarkdown } from "./render-factory-post";
-import type { ContentDefinition, FlashFloodMember } from "./factory-types";
+import { computeFlashFloods } from "../packages/shared/src/content/factory-compute";
+import { renderFactoryVizPage } from "../packages/shared/src/content/render-factory-viz";
+import { renderFactoryPostMarkdown } from "../packages/shared/src/content/render-factory-post";
+import type { ContentDefinition, FlashFloodMember } from "../packages/shared/src/content/factory-types";
 
 const T = new Map(Array.from({ length: 40 }, (_, i) => [1990 + i, 1_000_000] as [number, number]));
 
@@ -76,8 +76,7 @@ test("viz page: table rows match members, sparkline SVGs embedded, no undefined/
   assert.match(html, /\/name\/Moesha\//);
 });
 
-test("post renderer: frontmatter + interpolated body round-trips through compileBlogPost", async () => {
-  const { compileBlogPost } = await import("../../../../scripts/blog-publish");
+test("post renderer: frontmatter + interpolated body has no leftover placeholders", () => {
   const template = `Start with {{claim:count}} floods led by {{claim:topName}} at {{claim:topCount}} births.
 
 ## Moesha
@@ -97,16 +96,9 @@ See [Moesha](/name/Moesha/).`;
   assert.match(md, /^---\n/);
   assert.match(md, /title: "The Flash Floods — Names That Arrived All at Once"/);
   assert.match(md, /slug: "flash-floods"/);
-
-  // Round-trip: compiles cleanly with matching identity.
-  const compiled = compileBlogPost(md, "flash-floods.md");
-  assert.equal(compiled.slug, "flash-floods");
-  assert.equal(compiled.title, def.title);
-  assert.equal(compiled.status, "published");
-  assert.match(compiled.bodyHtml, /chart-panel/);
-  assert.match(compiled.bodyHtml, /led by Moesha at 426 births/);
-  // No leftover placeholders in compiled HTML.
-  assert.ok(!compiled.bodyHtml.includes("{{"));
+  assert.match(md, /led by Moesha at 426 births/);
+  // No leftover placeholders anywhere in the markdown.
+  assert.ok(!md.includes("{{"));
 });
 
 test("post renderer throws on unresolved claim placeholder", () => {

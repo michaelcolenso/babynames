@@ -13,8 +13,8 @@ import {
   chartPanelHtml,
   type FlashFloodOptions,
   type NameYearRow,
-} from "./factory-compute";
-import type { ContentDefinition, FlashFloodMember } from "./factory-types";
+} from "../packages/shared/src/content/factory-compute";
+import type { ContentDefinition, FlashFloodMember } from "../packages/shared/src/content/factory-types";
 
 const OPTS: Partial<FlashFloodOptions> = { dataMaxYear: 2010 };
 
