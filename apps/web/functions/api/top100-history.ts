@@ -14,7 +14,17 @@ interface NameSpan {
   sex: "M" | "F";
   spans: [number, number][]; // inclusive [startYear, endYear] pairs
   totalYears: number;
-  iron: boolean; // one unbroken span that ends at yM (never left since debut)
+  longestStreak: number;
+  firstTop100: number;
+  lastTop100: number;
+  spanCount: number;
+  gapYears: number;
+  active: boolean;
+  continuousSinceDebut: boolean;
+  continuousFullRecord: boolean;
+  returned: boolean;
+  /** @deprecated Compatibility alias for continuousSinceDebut. */
+  iron: boolean;
 }
 
 interface Top100HistoryResponse {
@@ -41,6 +51,10 @@ function buildSpans(sortedYears: number[]): [number, number][] {
   return out;
 }
 
+function streakLength([start, end]: [number, number]): number {
+  return end - start + 1;
+}
+
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const [yMStr, ymStr, dataVersion] = await Promise.all([
     getMeta(ctx.env.DB, META_KEYS.maxYear),
@@ -52,7 +66,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const ym = Number(ymStr ?? 1880);
 
   const cache = caches.default;
-  const cacheKey = new Request(`https://internal/top100-history/${dataVersion ?? "v0"}`);
+  const cacheKey = new Request(`https://internal/top100-history/v3/${dataVersion ?? "v0"}`);
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
 
@@ -76,13 +90,45 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     const name = k.slice(sep + 1);
     const spans = buildSpans(years);
     const firstSpan = spans[0];
-    const iron = spans.length === 1 && firstSpan !== undefined && firstSpan[1] >= yM - 1;
-    names.push({ name, sex, spans, totalYears: years.length, iron });
+    const lastSpan = spans[spans.length - 1];
+    if (!firstSpan || !lastSpan) continue;
+
+    const firstTop100 = firstSpan[0];
+    const lastTop100 = lastSpan[1];
+    const longestStreak = Math.max(...spans.map(streakLength));
+    // "Active" means present in the latest year in the dataset, not merely
+    // within one year of it. This keeps current-state filters semantically exact.
+    const active = lastTop100 === yM;
+    const continuousSinceDebut = spans.length === 1 && active;
+    const continuousFullRecord = continuousSinceDebut && firstTop100 === ym;
+    const returned = spans.length > 1 && active;
+    const gapYears = Math.max(0, lastTop100 - firstTop100 + 1 - years.length);
+
+    names.push({
+      name,
+      sex,
+      spans,
+      totalYears: years.length,
+      longestStreak,
+      firstTop100,
+      lastTop100,
+      spanCount: spans.length,
+      gapYears,
+      active,
+      continuousSinceDebut,
+      continuousFullRecord,
+      returned,
+      iron: continuousSinceDebut,
+    });
   }
 
   names.sort((a, b) => {
-    if (a.iron !== b.iron) return a.iron ? -1 : 1;
-    return b.totalYears - a.totalYears;
+    if (a.continuousFullRecord !== b.continuousFullRecord) {
+      return a.continuousFullRecord ? -1 : 1;
+    }
+    if (b.longestStreak !== a.longestStreak) return b.longestStreak - a.longestStreak;
+    if (b.totalYears !== a.totalYears) return b.totalYears - a.totalYears;
+    return a.name.localeCompare(b.name);
   });
 
   const body: Top100HistoryResponse = { ym, yM, names };

@@ -4,621 +4,293 @@
 <meta charset="utf-8">
 <script>(function(){try{var t=localStorage.getItem("nv-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tenure — Top 100 Entrances &amp; Exits, 1880–2025 · NobodyNamed</title>
-<meta name="description" content="Every name that has ever held a top-100 position in US births — when it entered, when it left, and the few that never did.">
+<title>Tenure — How Long Popular Baby Names Stay Popular · NobodyNamed</title>
+<meta name="description" content="Every year U.S. baby names spent in the Top 100 from 1880–2025 — uninterrupted streaks, exits, gaps, and comebacks.">
 <link rel="canonical" href="https://nobodynamed.com/viz/tenure">
-<meta property="og:title" content="Tenure — Top 100 Entrances &amp; Exits, 1880–2025">
-<meta property="og:description" content="A barcode of naming history: every name that ever cracked the top 100, showing when it arrived and when it left.">
+<meta property="og:title" content="How long do popular names stay popular?">
+<meta property="og:description" content="Every Top-100 year for U.S. baby names since 1880. Gaps show when names fell out — and came back.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://nobodynamed.com/api/og/default">
 <meta name="twitter:card" content="summary_large_image">
-  <meta name="theme-color" content="#f7f5f2" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#14161d" media="(prefers-color-scheme: dark)">
-    <link rel="stylesheet" href="/assets/style.css?v=25">
-<script src="/assets/theme.js" defer></script>
+<meta name="theme-color" content="#f4f0e7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14161d" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="/assets/style.css?v=25">
 <link rel="stylesheet" href="/assets/viz-theme.css">
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<script src="https://d3js.org/d3.v7.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script src="/assets/theme.js" defer></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #f4f0e7;
-    --bg2: #111118;
-    --surface: #16161f;
-    --text: #171511;
-    --muted: #787064;
-    --rule: rgba(23,21,17,0.09);
-    --amber: #c9922a;
-    --amber-glow: rgba(201,146,42,0.18);
-    --rose: #c4786e;
-    --blue: #6a8aaa;
-    --accent: #c9922a;
-  }
-  body {
-    font-family: 'Avenir Next', system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  nav {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 0.9rem 2rem;
-    border-bottom: 1px solid var(--rule);
-    font-size: 0.82rem;
-    position: sticky;
-    top: 0;
-    background: var(--bg);
-    z-index: 100;
-  }
-  nav .brand {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.72rem;
-    color: var(--amber);
-    letter-spacing: 0.1em;
-    text-decoration: none;
-    margin-right: auto;
-  }
-  nav a { color: var(--muted); text-decoration: none; transition: color 0.15s; }
-  nav a:hover { color: var(--text); }
-
-  .hero {
-    padding: 3rem 2rem 1.5rem;
-    max-width: 1120px;
-    margin: 0 auto;
-  }
-  .kicker {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--amber);
-    margin-bottom: 0.75rem;
-  }
-  h1 {
-    font-size: clamp(2.2rem, 5vw, 3.8rem);
-    font-weight: 700;
-    letter-spacing: -0.03em;
-    line-height: 1.08;
-    margin-bottom: 0.7rem;
-    color: var(--text);
-  }
-  .lede {
-    font-size: 1rem;
-    color: var(--muted);
-    max-width: 620px;
-    line-height: 1.6;
-    margin-bottom: 1.5rem;
-  }
-
-  .stats-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-    margin-bottom: 0.5rem;
-  }
-  .stat-chip {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.76rem;
-    display: flex;
-    align-items: baseline;
-    gap: 0.4rem;
-  }
-  .stat-chip .n {
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: var(--text);
-  }
-  .stat-chip .l { color: var(--muted); }
-  .stat-chip.gold .n { color: var(--amber); }
-
-  .controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    align-items: center;
-    padding: 0.75rem 2rem;
-    max-width: 1120px;
-    margin: 0 auto;
-    border-top: 1px solid var(--rule);
-    border-bottom: 1px solid var(--rule);
-  }
-  .controls-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.68rem;
-    color: var(--muted);
-    letter-spacing: 0.08em;
-    margin-right: 0.25rem;
-  }
-  .btn {
-    padding: 0.28rem 0.85rem;
-    border-radius: 20px;
-    border: 1px solid var(--rule);
-    background: transparent;
-    color: var(--muted);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .btn:hover { border-color: var(--text); color: var(--text); }
-  .btn.active { background: var(--amber); border-color: var(--amber); color: #1a0e00; font-weight: 700; }
-  .btn.blue.active { background: var(--blue); border-color: var(--blue); color: #fff; }
-  .divider { width: 1px; height: 20px; background: var(--rule); margin: 0 0.25rem; }
-
-  .legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.25rem;
-    padding: 0.6rem 2rem;
-    max-width: 1120px;
-    margin: 0 auto;
-    align-items: center;
-  }
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.68rem;
-    color: var(--muted);
-  }
-  .legend-swatch {
-    width: 28px;
-    height: 6px;
-    border-radius: 2px;
-    flex-shrink: 0;
-  }
-  .legend-swatch.iron { background: var(--amber); }
-  .legend-swatch.female { background: var(--rose); }
-  .legend-swatch.male { background: var(--blue); }
-  .legend-swatch.gap { background: rgba(23,21,17,0.10); border: 1px solid rgba(23,21,17,0.14); }
-
-  #chart-wrap {
-    max-width: 1120px;
-    margin: 0 auto;
-    padding: 0 2rem;
-    overflow-x: auto;
-    position: relative;
-  }
-  #chart-svg { display: block; }
-
-  .section-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.65rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    fill-opacity: 0.5;
-  }
-
-  .tooltip {
-    position: fixed;
-    pointer-events: none;
-    background: rgba(10,10,15,0.97);
-    border: 1px solid rgba(201,146,42,0.35);
-    border-radius: 8px;
-    padding: 10px 14px;
-    z-index: 200;
-    max-width: 240px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
-    opacity: 0;
-    transition: opacity 0.12s;
-    font-family: 'Avenir Next', system-ui;
-  }
-  .tooltip .t-name {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 3px;
-    letter-spacing: -0.01em;
-  }
-  .tooltip .t-iron {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.65rem;
-    color: var(--amber);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-  .tooltip .t-row {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.75rem;
-    color: var(--muted);
-    line-height: 1.7;
-  }
-  .tooltip .t-row strong { color: var(--text); font-weight: 600; }
-  .tooltip .t-link {
-    display: block;
-    margin-top: 8px;
-    font-size: 0.78rem;
-    color: var(--amber);
-    opacity: 0.8;
-  }
-
-  #loading {
-    text-align: center;
-    padding: 5rem 2rem;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.8rem;
-    color: var(--muted);
-    letter-spacing: 0.1em;
-  }
-
-  footer {
-    padding: 2rem;
-    max-width: 1120px;
-    margin: 0 auto;
-    border-top: 1px solid var(--rule);
-    font-size: 0.8rem;
-    color: var(--muted);
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  footer a { color: var(--muted); }
-  footer a:hover { color: var(--text); }
-
-  @media (max-width: 600px) {
-    .hero { padding: 2rem 1rem 1rem; }
-    .controls, .legend, #chart-wrap, footer { padding-left: 1rem; padding-right: 1rem; }
-    nav { padding: 0.75rem 1rem; }
-  }
+  *,*::before,*::after{box-sizing:border-box}
+  :root{--paper:#f4f0e7;--ink:#171511;--muted:#787064;--rule:rgba(23,21,17,.11);--soft:rgba(23,21,17,.055);--rose:#c65f78;--blue:#557fae;--amber:#b9821f;--sheet:#fbf8f1}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Avenir Next',Avenir,system-ui,sans-serif;overflow-x:hidden}
+  .tenure-main{width:min(1120px,100%);margin:0 auto}
+  .hero{padding:24px 16px 16px}
+  .kicker{margin:0 0 8px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10.5px;line-height:14px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--amber)}
+  h1{margin:0;max-width:780px;font-size:clamp(32px,7.5vw,54px);line-height:1.02;letter-spacing:-.035em;font-weight:720}
+  .lede{margin:12px 0 0;max-width:650px;font-size:15px;line-height:1.45;color:var(--muted)}
+  .hero-stats{display:flex;gap:26px;margin-top:18px;padding-top:14px;border-top:1px solid var(--rule)}
+  .hero-stat{display:flex;flex-direction:column;gap:3px}
+  .hero-stat strong{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:21px;line-height:1;font-weight:700}
+  .hero-stat span{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:9.5px;line-height:1.25;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  .toolbar{position:sticky;top:52px;z-index:80;display:flex;align-items:center;gap:8px;padding:9px 16px;background:color-mix(in srgb,var(--paper) 94%,transparent);backdrop-filter:blur(12px);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+  .segmented{display:grid;grid-template-columns:1fr 1fr;min-width:134px;padding:2px;background:var(--soft);border:1px solid var(--rule);border-radius:999px}
+  .segmented button,.toolbar button,.toolbar select{min-height:38px;border:0;background:transparent;color:var(--muted);font:600 11px/1 'IBM Plex Mono',ui-monospace,monospace;cursor:pointer}
+  .segmented button{min-height:34px;padding:0 12px;border-radius:999px}
+  .segmented button.active{background:var(--ink);color:var(--paper)}
+  .toolbar select{min-width:0;flex:1;padding:0 28px 0 10px;border:1px solid var(--rule);border-radius:8px;background:var(--paper)}
+  .toolbar .filter-btn{padding:0 12px;border:1px solid var(--rule);border-radius:8px;background:var(--paper);white-space:nowrap}
+  .chart-shell{padding:14px 16px 24px;overflow:hidden}
+  .chart-explainer{display:flex;justify-content:space-between;gap:12px;margin-bottom:7px;font:500 9.5px/1.35 'IBM Plex Mono',ui-monospace,monospace;color:var(--muted)}
+  #chart{display:block;width:100%;overflow:visible;touch-action:manipulation}
+  .load{padding:70px 0;text-align:center;font:500 11px/1 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.08em;color:var(--muted)}
+  .show-all{display:none;width:100%;min-height:46px;margin:16px 0 0;border:1px solid var(--rule);border-radius:10px;background:transparent;color:var(--ink);font:600 11px/1 'IBM Plex Mono',ui-monospace,monospace;cursor:pointer}
+  .show-all.visible{display:block}
+  .empty{padding:50px 0;text-align:center;color:var(--muted)}
+  .overlay{position:fixed;inset:0;z-index:200;background:rgba(9,8,7,.36);opacity:0;pointer-events:none;transition:opacity .16s ease}
+  .overlay.open{opacity:1;pointer-events:auto}
+  .sheet{position:absolute;left:0;right:0;bottom:0;max-height:80vh;overflow:auto;padding:10px 18px max(22px,env(safe-area-inset-bottom));background:var(--sheet);border-radius:18px 18px 0 0;box-shadow:0 -18px 60px rgba(0,0,0,.16);transform:translateY(102%);transition:transform .2s ease}
+  .overlay.open .sheet{transform:translateY(0)}
+  .sheet-handle{width:42px;height:4px;margin:0 auto 14px;border-radius:999px;background:rgba(23,21,17,.18)}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .sheet-head h2{margin:0;font-size:20px;letter-spacing:-.02em}
+  .sheet-close{width:38px;height:38px;border:1px solid var(--rule);border-radius:999px;background:transparent;color:var(--ink);font-size:20px;cursor:pointer}
+  .sheet-group{padding:14px 0;border-top:1px solid var(--rule)}
+  .sheet-label{display:block;margin-bottom:10px;font:600 10px/1 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .mode-grid button{min-height:42px;padding:0 10px;border:1px solid var(--rule);border-radius:9px;background:transparent;color:var(--ink);font:600 11px/1 'IBM Plex Mono',ui-monospace,monospace;cursor:pointer;text-align:left}
+  .mode-grid button.active{background:var(--ink);color:var(--paper)}
+  .search{width:100%;height:44px;padding:0 12px;border:1px solid var(--rule);border-radius:9px;background:transparent;color:var(--ink);font-size:16px;outline:none}
+  .detail-kicker{margin:2px 0 7px;font:600 10px/1 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--amber)}
+  .detail-name{margin:0;font-size:30px;line-height:1.05;letter-spacing:-.03em}
+  .detail-big{margin:18px 0 3px;font:700 30px/1 'IBM Plex Mono',ui-monospace,monospace}
+  .detail-caption{font-size:13px;color:var(--muted)}
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--rule)}
+  .detail-grid div{display:flex;flex-direction:column;gap:3px}
+  .detail-grid span{font:500 9.5px/1.3 'IBM Plex Mono',ui-monospace,monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .detail-grid strong{font:650 15px/1.3 'IBM Plex Mono',ui-monospace,monospace}
+  .spans{margin-top:16px;font:500 11px/1.7 'IBM Plex Mono',ui-monospace,monospace;color:var(--muted)}
+  .dossier{display:block;margin-top:18px;padding:13px 14px;border-radius:9px;background:var(--ink);color:var(--paper);font:600 11px/1 'IBM Plex Mono',ui-monospace,monospace;text-decoration:none;text-align:center}
+  .share-link{display:flex;justify-content:flex-end;padding:0 16px 8px;font:500 10px/1 'IBM Plex Mono',ui-monospace,monospace}
+  .share-link a{color:var(--muted)}
+  @media(min-width:480px){.hero{padding:28px 20px 18px}.toolbar,.chart-shell{padding-left:20px;padding-right:20px}.share-link{padding-left:20px;padding-right:20px}}
+  @media(min-width:768px){.hero{padding:48px 32px 24px}.lede{font-size:17px;line-height:1.5}.toolbar{top:64px;padding:10px 32px}.toolbar select{flex:0 0 190px}.toolbar .filter-btn{margin-left:auto}.chart-shell{padding:18px 32px 34px}.chart-explainer{font-size:10px}.share-link{padding:0 32px 10px}.sheet{left:50%;right:auto;bottom:24px;width:min(520px,calc(100vw - 48px));border-radius:16px;transform:translate(-50%,calc(102% + 24px))}.overlay.open .sheet{transform:translate(-50%,0)}}
+  @media(min-width:1024px){.hero{padding-top:56px}.chart-shell{padding-bottom:44px}}
+  @media(prefers-reduced-motion:reduce){.overlay,.sheet{transition:none}}
+  [data-theme="dark"] body{--paper:#14161d;--ink:#f4f0e7;--muted:#aaa49a;--rule:rgba(244,240,231,.13);--soft:rgba(244,240,231,.07);--sheet:#1c1e26}
 </style>
 <script src="/assets/analytics.js" defer></script>
 <script src="/assets/webmcp.js" defer></script>
 </head>
 <body class="viz-page" data-content-id="visualization:tenure" data-content-type="visualization" data-content-slug="tenure">
-
 <a href="#viz-content" class="skip-link">Skip to content</a>
 <header class="site">
   <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo brand-logo-light" src="/assets/brand/wordmark.svg" alt="NobodyNamed" loading="lazy"><img class="brand-logo brand-logo-dark" src="/assets/brand/wordmark-dark.svg" alt="NobodyNamed" loading="lazy"></a>
   <nav aria-label="Main navigation"><details class="nav-group"><summary>Discover</summary><div class="nav-group-panel"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/rising">Rising</a><a href="/emerging">Emerging</a><a href="/fading">Fading</a></div></details><a href="/year">Birth year</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a></nav>
-  <button type="button" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
-  <svg class="theme-toggle-icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
-  <svg class="theme-toggle-icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>
-</button>
-  <details class="mobile-nav">
-  <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
-  <nav aria-label="Mobile navigation"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/emerging">Emerging</a><a href="/fading">Fading</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a></nav>
-</details>
+  <button type="button" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme"><svg class="theme-toggle-icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><svg class="theme-toggle-icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg></button>
+  <details class="mobile-nav"><summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary><nav aria-label="Mobile navigation"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/emerging">Emerging</a><a href="/fading">Fading</a><a href="/viz" aria-current="page">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a></nav></details>
 </header>
 
-<div id="viz-content" class="hero">
-  <p class="kicker">Visualization · Top 100 · 1880–2025</p>
-  <h1>Tenure</h1>
-  <p class="lede">Every name that has ever held a top-100 position in US births. Each bar shows the years it held that rank — entrances, exits, gaps, and the few that never left.</p>
-  <div class="stats-row" id="stats-row">
-    <div class="stat-chip gold">
-      <span class="n" id="stat-iron">—</span>
-      <span class="l">names never left</span>
+<main id="viz-content" class="tenure-main">
+  <section class="hero">
+    <p class="kicker">The long game · Top 100 · 1880–2025</p>
+    <h1>How long do popular names stay popular?</h1>
+    <p class="lede">Every year each name spent in America’s Top 100. Gaps show years it fell out — and, sometimes, came back.</p>
+    <div class="hero-stats" aria-live="polite">
+      <div class="hero-stat"><strong id="stat-record">—</strong><span>full-record names</span></div>
+      <div class="hero-stat"><strong id="stat-longest">—</strong><span>longest streak</span></div>
+      <div class="hero-stat"><strong id="stat-total">—</strong><span>ever Top 100</span></div>
     </div>
-    <div class="stat-chip">
-      <span class="n" id="stat-total">—</span>
-      <span class="l">unique names</span>
+  </section>
+
+  <div class="toolbar" aria-label="Visualization controls">
+    <div class="segmented" role="group" aria-label="Sex">
+      <button id="girls" class="active" type="button">Girls</button>
+      <button id="boys" type="button">Boys</button>
     </div>
-    <div class="stat-chip">
-      <span class="n" id="stat-avg">—</span>
-      <span class="l">avg years held</span>
-    </div>
+    <select id="sort" aria-label="Sort names">
+      <option value="longestStreak">Longest streak</option>
+      <option value="totalYears">Total Top-100 years</option>
+      <option value="firstTop100">First entered</option>
+      <option value="lastTop100">Last exited</option>
+    </select>
+    <button id="filters" class="filter-btn" type="button">Filters</button>
   </div>
+
+  <section class="chart-shell" aria-label="Top 100 tenure chart">
+    <div class="chart-explainer"><span>BAR = YEAR IN TOP 100</span><span>RIGHT = LONGEST STREAK</span></div>
+    <div id="loading" class="load">LOADING RECORD…</div>
+    <svg id="chart" role="img" aria-label="Timeline of years baby names ranked in the U.S. Top 100"></svg>
+    <button id="show-all" class="show-all" type="button">Explore all names ↓</button>
+  </section>
+  <div class="share-link"><a href="/viz/tenure-share.html">Open Reddit/share composition →</a></div>
+
+  <nav class="viz-related" aria-label="More visualizations">More views: <a href="/viz/empire">Mary's Empire</a> · <a href="/viz/fossil">The Fossil Record</a> · <a href="/viz/">All visualizations →</a></nav>
+</main>
+
+<div id="filter-overlay" class="overlay" aria-hidden="true">
+  <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="filter-title">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><h2 id="filter-title">Filter names</h2><button class="sheet-close" type="button" data-close="filter-overlay" aria-label="Close">×</button></div>
+    <div class="sheet-group"><label class="sheet-label" for="search">Search</label><input id="search" class="search" type="search" autocomplete="off" placeholder="Type a name…"></div>
+    <div class="sheet-group"><span class="sheet-label">Show</span><div class="mode-grid" id="mode-grid"><button class="active" type="button" data-mode="highlights">Highlights</button><button type="button" data-mode="all">All names</button><button type="button" data-mode="active">Active now</button><button type="button" data-mode="returned">Comebacks</button><button type="button" data-mode="exited">Exited</button></div></div>
+  </section>
 </div>
 
-<div class="controls">
-  <span class="controls-label">SEX</span>
-  <button class="btn active" id="btn-f" onclick="setSex('F')">Girls</button>
-  <button class="btn blue" id="btn-m" onclick="setSex('M')">Boys</button>
-  <div class="divider"></div>
-  <span class="controls-label">SHOW</span>
-  <button class="btn active" id="btn-all" onclick="setFilter('all')">All names</button>
-  <button class="btn" id="btn-iron" onclick="setFilter('iron')">Continuous only</button>
-  <div class="divider"></div>
-  <span class="controls-label">SORT</span>
-  <button class="btn active" id="btn-duration" onclick="setSort('duration')">Duration</button>
-  <button class="btn" id="btn-era" onclick="setSort('era')">Era entered</button>
+<div id="detail-overlay" class="overlay" aria-hidden="true">
+  <section class="sheet" role="dialog" aria-modal="true" aria-labelledby="detail-name">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div><p id="detail-kicker" class="detail-kicker">Top 100 tenure</p><h2 id="detail-name" class="detail-name"></h2></div><button class="sheet-close" type="button" data-close="detail-overlay" aria-label="Close">×</button></div>
+    <div id="detail-body"></div>
+  </section>
 </div>
-
-<div class="legend">
-  <div class="legend-item"><div class="legend-swatch iron"></div>Continuous (never left since debut)</div>
-  <div class="legend-item"><div class="legend-swatch female"></div>Girls (in top 100)</div>
-  <div class="legend-item"><div class="legend-swatch male"></div>Boys (in top 100)</div>
-  <div class="legend-item"><div class="legend-swatch gap"></div>Outside top 100</div>
-</div>
-
-<div id="chart-wrap">
-  <div id="loading">LOADING RECORD…</div>
-  <svg id="chart-svg"></svg>
-</div>
-
-<div class="tooltip" id="tooltip"></div>
-
-<nav class="viz-related" aria-label="More visualizations">More views: <a href="/viz/empire">Mary's Empire</a> &middot; <a href="/viz/fossil">The Fossil Record</a> &middot; <a href="/viz/">All thirty &rarr;</a></nav>
-<footer class="site">
-  <span>NobodyNamed · SSA records 1880–2025 · Public domain</span>
-  <span><a href="/about">Methodology</a> · <a href="/viz/">More visualizations</a></span>
-</footer>
-
-<script>
-// ─── State ────────────────────────────────────────────────────────────────────
-let allData = null;
-let currentSex = 'F';
-let currentFilter = 'all';
-let currentSort = 'duration';
-
-// ─── Dimensions ───────────────────────────────────────────────────────────────
-const LABEL_W = 88;
-const CHART_W = 920;
-const SVG_W = LABEL_W + CHART_W + 8;
-const ROW_H = 5;
-const ROW_GAP = 2.5;
-const ROW_STEP = ROW_H + ROW_GAP;
-const AXIS_H = 32;
-const IRON_SECTION_PAD = 18; // extra padding after iron section header
-const SECTION_GAP = 14;
-
-// ─── Colors ───────────────────────────────────────────────────────────────────
-const COLOR = {
-  iron: '#c9922a',
-  ironGlow: 'rgba(201,146,42,0.12)',
-  F: '#c4786e',
-  M: '#6a8aaa',
-  gap: 'rgba(23,21,17,0.07)',
-  axis: 'rgba(23,21,17,0.20)',
-  axisText: '#787064',
-  sectionLabel: 'rgba(23,21,17,0.32)',
-};
-
-// ─── Data fetch ───────────────────────────────────────────────────────────────
-async function loadData() {
-  const res = await fetch('/api/top100-history');
-  allData = await res.json();
-  document.getElementById('loading').style.display = 'none';
-  updateStats();
-  render();
-}
-
-function updateStats() {
-  if (!allData) return;
-  const names = allData.names.filter(d => d.sex === currentSex);
-  const iron = names.filter(d => d.iron);
-  const totalYrs = names.reduce((s, d) => s + d.totalYears, 0);
-  document.getElementById('stat-iron').textContent = iron.length;
-  document.getElementById('stat-total').textContent = names.length;
-  document.getElementById('stat-avg').textContent =
-    names.length ? Math.round(totalYrs / names.length) + ' yrs' : '—';
-}
-
-// ─── Controls ─────────────────────────────────────────────────────────────────
-function setSex(sex) {
-  currentSex = sex;
-  document.getElementById('btn-f').className = sex === 'F' ? 'btn active' : 'btn';
-  document.getElementById('btn-m').className = sex === 'M' ? 'btn blue active' : 'btn blue';
-  updateStats();
-  render();
-}
-
-function setFilter(f) {
-  currentFilter = f;
-  document.getElementById('btn-all').className = f === 'all' ? 'btn active' : 'btn';
-  document.getElementById('btn-iron').className = f === 'iron' ? 'btn active' : 'btn';
-  render();
-}
-
-function setSort(s) {
-  currentSort = s;
-  document.getElementById('btn-duration').className = s === 'duration' ? 'btn active' : 'btn';
-  document.getElementById('btn-era').className = s === 'era' ? 'btn active' : 'btn';
-  render();
-}
-
-// ─── Render ───────────────────────────────────────────────────────────────────
-function render() {
-  if (!allData) return;
-  const { ym, yM } = allData;
-
-  let names = allData.names.filter(d => d.sex === currentSex);
-  if (currentFilter === 'iron') names = names.filter(d => d.iron);
-
-  if (currentSort === 'era') {
-    names = [...names].sort((a, b) => {
-      if (a.iron !== b.iron) return a.iron ? -1 : 1;
-      return a.spans[0][0] - b.spans[0][0];
-    });
-  }
-
-  const ironNames = names.filter(d => d.iron);
-  const restNames = names.filter(d => !d.iron);
-
-  // ── Layout math ────────────────────────────────────────────────────────────
-  let y = AXIS_H;
-
-  const ironHeaderY = y;
-  y += IRON_SECTION_PAD;
-  const ironStartY = y;
-  y += ironNames.length * ROW_STEP + (ironNames.length > 0 ? SECTION_GAP : 0);
-
-  let restHeaderY = -1;
-  if (restNames.length > 0 && ironNames.length > 0) {
-    restHeaderY = y;
-    y += IRON_SECTION_PAD;
-  }
-  const restStartY = y;
-  y += restNames.length * ROW_STEP;
-
-  const totalH = y + 20;
-
-  const svg = d3.select('#chart-svg')
-    .attr('width', SVG_W)
-    .attr('height', totalH);
-  svg.selectAll('*').remove();
-
-  const xScale = d3.scaleLinear()
-    .domain([ym, yM + 1])
-    .range([0, CHART_W]);
-
-  // ── X axis ─────────────────────────────────────────────────────────────────
-  const decades = d3.range(Math.ceil(ym / 10) * 10, yM + 2, 10);
-  const axisG = svg.append('g')
-    .attr('transform', `translate(${LABEL_W}, 0)`);
-
-  // faint vertical grid lines across full height
-  axisG.selectAll('.grid-line')
-    .data(decades)
-    .join('line')
-    .attr('class', 'grid-line')
-    .attr('x1', d => xScale(d))
-    .attr('x2', d => xScale(d))
-    .attr('y1', AXIS_H)
-    .attr('y2', totalH)
-    .attr('stroke', COLOR.axis)
-    .attr('stroke-width', 0.5)
-    .attr('opacity', 0.4);
-
-  axisG.selectAll('.decade-label')
-    .data(decades)
-    .join('text')
-    .attr('class', 'decade-label')
-    .attr('x', d => xScale(d))
-    .attr('y', AXIS_H - 10)
-    .attr('text-anchor', 'middle')
-    .attr('fill', COLOR.axisText)
-    .attr('font-family', "'IBM Plex Mono', monospace")
-    .attr('font-size', 10)
-    .text(d => d);
-
-  // ── Section labels ──────────────────────────────────────────────────────────
-  if (ironNames.length > 0) {
-    svg.append('text')
-      .attr('class', 'section-label')
-      .attr('x', LABEL_W)
-      .attr('y', ironHeaderY + 11)
-      .attr('fill', COLOR.iron)
-      .attr('font-family', "'IBM Plex Mono', monospace")
-      .attr('font-size', 9)
-      .attr('letter-spacing', 2)
-      .text('★ CONTINUOUS — NEVER LEFT');
-  }
-
-  if (restHeaderY >= 0) {
-    svg.append('text')
-      .attr('class', 'section-label')
-      .attr('x', LABEL_W)
-      .attr('y', restHeaderY + 11)
-      .attr('fill', COLOR.sectionLabel)
-      .attr('font-family', "'IBM Plex Mono', monospace")
-      .attr('font-size', 9)
-      .attr('letter-spacing', 2)
-      .text('ENTERED & EXITED');
-
-    svg.append('line')
-      .attr('x1', 0).attr('x2', SVG_W)
-      .attr('y1', restHeaderY - 2).attr('y2', restHeaderY - 2)
-      .attr('stroke', 'rgba(23,21,17,0.09)')
-      .attr('stroke-width', 1);
-  }
-
-  // ── Draw rows ───────────────────────────────────────────────────────────────
-  function drawRows(rowNames, baseY) {
-    const tooltip = document.getElementById('tooltip');
-
-    rowNames.forEach((d, i) => {
-      const y0 = baseY + i * ROW_STEP;
-      const g = svg.append('g').attr('transform', `translate(0, ${y0})`);
-
-      // subtle iron background glow
-      if (d.iron) {
-        g.append('rect')
-          .attr('x', 0).attr('y', -1)
-          .attr('width', SVG_W).attr('height', ROW_H + 2)
-          .attr('fill', COLOR.ironGlow);
-      }
-
-      // name label
-      g.append('text')
-        .attr('x', LABEL_W - 7)
-        .attr('y', ROW_H / 2)
-        .attr('dy', '0.35em')
-        .attr('text-anchor', 'end')
-        .attr('fill', d.iron ? COLOR.iron : (currentSex === 'F' ? COLOR.F : COLOR.M))
-        .attr('fill-opacity', d.iron ? 1 : 0.75)
-        .attr('font-family', "'Avenir Next', system-ui")
-        .attr('font-size', 9.5)
-        .attr('font-weight', d.iron ? 700 : 400)
-        .text(d.name);
-
-      // gap bar (full year range, barely visible)
-      g.append('rect')
-        .attr('x', LABEL_W)
-        .attr('y', 0)
-        .attr('width', CHART_W)
-        .attr('height', ROW_H)
-        .attr('fill', COLOR.gap);
-
-      // span bars
-      d.spans.forEach(([start, end]) => {
-        const barX = LABEL_W + xScale(start);
-        const barW = Math.max(1, xScale(end + 1) - xScale(start));
-        g.append('rect')
-          .attr('x', barX)
-          .attr('y', 0)
-          .attr('width', barW)
-          .attr('height', ROW_H)
-          .attr('fill', d.iron ? COLOR.iron : (currentSex === 'F' ? COLOR.F : COLOR.M))
-          .attr('fill-opacity', d.iron ? 0.9 : 0.72)
-          .attr('rx', 1);
-      });
-
-      // invisible hit area for interaction
-      g.append('rect')
-        .attr('x', 0).attr('y', -ROW_GAP / 2)
-        .attr('width', SVG_W).attr('height', ROW_STEP)
-        .attr('fill', 'transparent')
-        .style('cursor', 'pointer')
-        .on('mousemove', function(event) {
-          const spanSummary = d.spans.map(([s, e]) =>
-            s === e ? `${s}` : `${s}–${e}`
-          ).join(', ');
-          const gaps = d.spans.length - 1;
-          const firstYear = d.spans[0][0];
-          const lastYear = d.spans[d.spans.length - 1][1];
-
-          tooltip.innerHTML = `
-            <div class="t-name">${d.name}</div>
-            ${d.iron ? '<div class="t-iron">★ Continuous</div>' : ''}
-            <div class="t-row"><strong>${d.totalYears}</strong> years in top 100</div>
-            <div class="t-row">First: <strong>${firstYear}</strong> · Last: <strong>${lastYear}</strong></div>
-            ${gaps > 0 ? `<div class="t-row">Gaps: <strong>${gaps}</strong> (${d.spans.length} spans)</div>` : ''}
-            <div class="t-row" style="margin-top:3px">${spanSummary}</div>
-            <div class="t-link">Click to open dossier →</div>`;
-          tooltip.style.opacity = 1;
-          tooltip.style.left = (event.clientX + 14) + 'px';
-          tooltip.style.top = (event.clientY - 28) + 'px';
-        })
-        .on('mouseleave', function() {
-          tooltip.style.opacity = 0;
-        })
-        .on('click', function() {
-          window.location.href = `/name/${encodeURIComponent(d.name)}/`;
-        });
-    });
-  }
-
-  drawRows(ironNames, ironStartY);
-  drawRows(restNames, restStartY);
-}
-
-// ─── Boot ─────────────────────────────────────────────────────────────────────
-loadData();
-</script>
 
 <footer class="site">
   <p>NobodyNamed is a small data project about American first names. Data sourced from Social Security Administration birth records (1880–present).</p>
   <p><a href="/about">About</a> · <a href="/press">Press</a> · <a href="https://www.ssa.gov/oact/babynames/" target="_blank" rel="noopener">SSA source</a></p>
 </footer>
+
+<script>
+(() => {
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const editorial = new Set(['Elizabeth','Mary','Katherine','Emma','Evelyn','Eleanor','Hazel','Alice','Lillian','Olivia','Andrew','Charles','Daniel','David','James','John','Joseph','Michael','Robert','Samuel','Thomas','William','Richard','Jack','Theodore','Arthur','Liam']);
+  const state = { data:null, sex:'F', sort:'longestStreak', mode:'highlights', query:'' };
+  const $ = id => document.getElementById(id);
+
+  function enrich(d, ym, yM) {
+    const lengths = d.spans.map(([s,e]) => e - s + 1);
+    const firstTop100 = d.firstTop100 ?? d.spans[0][0];
+    const lastTop100 = d.lastTop100 ?? d.spans[d.spans.length - 1][1];
+    const longestStreak = d.longestStreak ?? Math.max(...lengths);
+    const active = d.active ?? lastTop100 >= yM - 1;
+    const continuousSinceDebut = d.continuousSinceDebut ?? (d.spans.length === 1 && active);
+    const continuousFullRecord = d.continuousFullRecord ?? (continuousSinceDebut && firstTop100 <= ym);
+    return {...d, firstTop100, lastTop100, longestStreak, active, continuousSinceDebut, continuousFullRecord, spanCount:d.spanCount ?? d.spans.length, gapYears:d.gapYears ?? Math.max(0,lastTop100-firstTop100+1-d.totalYears), returned:d.returned ?? (d.spans.length > 1 && active)};
+  }
+
+  function currentNames() {
+    const {ym,yM} = state.data;
+    let names = state.data.names.filter(d => d.sex === state.sex).map(d => enrich(d,ym,yM));
+    if (state.query) names = names.filter(d => d.name.toLowerCase().includes(state.query.toLowerCase()));
+    if (state.mode === 'active') names = names.filter(d => d.active);
+    if (state.mode === 'returned') names = names.filter(d => d.returned);
+    if (state.mode === 'exited') names = names.filter(d => !d.active);
+
+    const sorter = {
+      longestStreak:(a,b)=>b.longestStreak-a.longestStreak || b.totalYears-a.totalYears || a.name.localeCompare(b.name),
+      totalYears:(a,b)=>b.totalYears-a.totalYears || b.longestStreak-a.longestStreak || a.name.localeCompare(b.name),
+      firstTop100:(a,b)=>a.firstTop100-b.firstTop100 || b.longestStreak-a.longestStreak,
+      lastTop100:(a,b)=>b.lastTop100-a.lastTop100 || b.longestStreak-a.longestStreak
+    }[state.sort];
+    names.sort(sorter);
+
+    if (state.mode === 'highlights' && !state.query) {
+      const limit = window.innerWidth < 480 ? 18 : window.innerWidth < 768 ? 20 : 30;
+      const chosen = names.filter(d => editorial.has(d.name));
+      const seen = new Set(chosen.map(d => d.name));
+      for (const d of names) { if (chosen.length >= limit) break; if (!seen.has(d.name)) { chosen.push(d); seen.add(d.name); } }
+      chosen.sort(sorter);
+      return {names:chosen, hasMore:names.length > chosen.length};
+    }
+    return {names, hasMore:false};
+  }
+
+  function svgEl(tag, attrs={}) { const el=document.createElementNS(SVG_NS,tag); for(const [k,v] of Object.entries(attrs)) el.setAttribute(k,String(v)); return el; }
+  function css(name) { return getComputedStyle(document.body).getPropertyValue(name).trim(); }
+
+  function tickYears(ym,yM,w) {
+    if (w < 360) return [ym,1930,1980,yM];
+    if (w < 480) return [ym,1920,1960,2000,yM];
+    const step = w < 768 ? 20 : 10;
+    const out=[ym];
+    for(let y=Math.ceil(ym/step)*step;y<yM;y+=step) if(y!==ym) out.push(y);
+    if(out[out.length-1]!==yM) out.push(yM);
+    return out;
+  }
+
+  function render() {
+    if (!state.data) return;
+    const {ym,yM} = state.data;
+    const filteredAll = state.data.names.filter(d => d.sex===state.sex).map(d=>enrich(d,ym,yM));
+    $('stat-record').textContent = filteredAll.filter(d=>d.continuousFullRecord).length;
+    $('stat-longest').textContent = Math.max(...filteredAll.map(d=>d.longestStreak)) + ' yrs';
+    $('stat-total').textContent = filteredAll.length;
+
+    const {names,hasMore} = currentNames();
+    const svg=$('chart'); svg.innerHTML='';
+    $('show-all').classList.toggle('visible',hasMore);
+    if (!names.length) { svg.setAttribute('height','80'); const t=svgEl('text',{x:'50%',y:42,'text-anchor':'middle',fill:css('--muted'),'font-size':14}); t.textContent='No names match these filters.'; svg.append(t); return; }
+
+    const width=Math.max(300,Math.floor(svg.parentElement.clientWidth));
+    const mobile=width<768;
+    const labelW=width<480?76:width<768?92:118;
+    const valueW=width<480?42:52;
+    const chartW=Math.max(150,width-labelW-valueW);
+    const rowStep=mobile?40:28;
+    const barH=mobile?8:6;
+    const axisH=32, sectionH=mobile?28:30, bottom=12;
+    const full=names.filter(d=>d.continuousFullRecord);
+    const rest=names.filter(d=>!d.continuousFullRecord);
+    const hasSections=full.length>0&&rest.length>0;
+    let y=axisH;
+    const groups=[];
+    if(full.length){groups.push({label:'FULL-RECORD STREAK',items:full,y}); y+=sectionH+full.length*rowStep;}
+    if(rest.length){if(hasSections)y+=8; groups.push({label:hasSections?'OTHER LONG RUNS & COMEBACKS':'TOP-100 TENURE',items:rest,y}); y+=sectionH+rest.length*rowStep;}
+    svg.setAttribute('viewBox',`0 0 ${width} ${y+bottom}`); svg.setAttribute('height',y+bottom);
+
+    const x = year => labelW + ((year-ym)/(yM+1-ym))*chartW;
+    const ticks=tickYears(ym,yM,width);
+    ticks.forEach((year,i)=>{
+      const xx=x(year);
+      const line=svgEl('line',{x1:xx,x2:xx,y1:axisH-2,y2:y,stroke:css('--rule'),'stroke-width':1}); svg.append(line);
+      const t=svgEl('text',{x:xx,y:16,'text-anchor':i===0?'start':i===ticks.length-1?'end':'middle',fill:css('--muted'),'font-family':'IBM Plex Mono, monospace','font-size':width<480?9:10}); t.textContent=year; svg.append(t);
+    });
+
+    const color=state.sex==='F'?css('--rose'):css('--blue');
+    groups.forEach(group=>{
+      const head=svgEl('text',{x:0,y:group.y+13,fill:group.label==='FULL-RECORD STREAK'?css('--amber'):css('--muted'),'font-family':'IBM Plex Mono, monospace','font-size':10,'font-weight':700,'letter-spacing':1.1}); head.textContent=group.label; svg.append(head);
+      const base=group.y+sectionH;
+      group.items.forEach((d,i)=>{
+        const cy=base+i*rowStep+rowStep/2;
+        const g=svgEl('g',{tabindex:0,role:'button','aria-label':`${d.name}: ${d.longestStreak} year longest Top 100 streak`});
+        g.style.cursor='pointer';
+        const baseline=svgEl('line',{x1:labelW,x2:labelW+chartW,y1:cy,y2:cy,stroke:css('--rule'),'stroke-width':barH,'stroke-linecap':'round','stroke-opacity':.55}); g.append(baseline);
+        d.spans.forEach(([s,e])=>{const r=svgEl('rect',{x:x(s),y:cy-barH/2,width:Math.max(1,x(e+1)-x(s)),height:barH,rx:barH/2,fill:color});g.append(r);});
+        const name=svgEl('text',{x:labelW-8,y:cy+4,'text-anchor':'end',fill:css('--ink'),'font-family':'Avenir Next, system-ui','font-size':mobile?13:12,'font-weight':d.continuousFullRecord?700:520}); name.textContent=d.name; g.append(name);
+        if(d.continuousFullRecord){const mark=svgEl('text',{x:labelW-3,y:cy+3,'text-anchor':'start',fill:css('--amber'),'font-size':8});mark.textContent='◆';g.append(mark);}
+        const val=svgEl('text',{x:width,y:cy+4,'text-anchor':'end',fill:color,'font-family':'IBM Plex Mono, monospace','font-size':mobile?11:10,'font-weight':700}); val.textContent=`${d.longestStreak}y`; g.append(val);
+        const title=svgEl('title'); title.textContent=`${d.name}: ${d.totalYears} total Top-100 years; longest streak ${d.longestStreak} years`; g.append(title);
+        g.addEventListener('click',()=>openDetail(d)); g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openDetail(d);}});
+        svg.append(g);
+      });
+    });
+  }
+
+  function openDetail(d) {
+    $('detail-name').textContent=d.name;
+    $('detail-kicker').textContent=d.continuousFullRecord?'◆ Full-record Top 100 name':d.returned?'Comeback name':'Top 100 tenure';
+    const spans=d.spans.map(([s,e])=>s===e?String(s):`${s}–${e}`).join(' · ');
+    $('detail-body').innerHTML=`<div class="detail-big">${d.longestStreak} years</div><div class="detail-caption">longest uninterrupted Top-100 streak</div><div class="detail-grid"><div><span>Total Top-100 years</span><strong>${d.totalYears}</strong></div><div><span>First entered</span><strong>${d.firstTop100}</strong></div><div><span>Most recent</span><strong>${d.lastTop100}</strong></div><div><span>Years outside</span><strong>${d.gapYears}</strong></div></div><div class="spans"><strong>Top-100 spans</strong><br>${spans}</div><a class="dossier" href="/name/${encodeURIComponent(d.name)}/">View ${d.name} dossier →</a>`;
+    openOverlay('detail-overlay');
+  }
+
+  function openOverlay(id){const o=$(id);o.classList.add('open');o.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';}
+  function closeOverlay(id){const o=$(id);o.classList.remove('open');o.setAttribute('aria-hidden','true');document.body.style.overflow='';}
+
+  $('girls').addEventListener('click',()=>{state.sex='F';$('girls').classList.add('active');$('boys').classList.remove('active');render();});
+  $('boys').addEventListener('click',()=>{state.sex='M';$('boys').classList.add('active');$('girls').classList.remove('active');render();});
+  $('sort').addEventListener('change',e=>{state.sort=e.target.value;render();});
+  $('filters').addEventListener('click',()=>openOverlay('filter-overlay'));
+  $('show-all').addEventListener('click',()=>{state.mode='all';document.querySelectorAll('#mode-grid button').forEach(b=>b.classList.toggle('active',b.dataset.mode==='all'));render();});
+  $('search').addEventListener('input',e=>{state.query=e.target.value.trim();render();});
+  document.querySelectorAll('#mode-grid button').forEach(btn=>btn.addEventListener('click',()=>{state.mode=btn.dataset.mode;document.querySelectorAll('#mode-grid button').forEach(b=>b.classList.toggle('active',b===btn));render();}));
+  document.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener('click',()=>closeOverlay(btn.dataset.close)));
+  document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeOverlay(o.id)}));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>closeOverlay(o.id));});
+
+  let resizeTimer;
+  window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(render,90);});
+
+  fetch('/api/top100-history').then(r=>{if(!r.ok)throw new Error('Top 100 history unavailable');return r.json();}).then(data=>{state.data=data;$('loading').style.display='none';render();}).catch(()=>{$('loading').textContent='COULD NOT LOAD THE RECORD';});
+})();
+</script>
 </body>
 </html>
