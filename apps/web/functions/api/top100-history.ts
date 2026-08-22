@@ -66,7 +66,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const ym = Number(ymStr ?? 1880);
 
   const cache = caches.default;
-  const cacheKey = new Request(`https://internal/top100-history/v2/${dataVersion ?? "v0"}`);
+  const cacheKey = new Request(`https://internal/top100-history/v3/${dataVersion ?? "v0"}`);
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
 
@@ -96,9 +96,11 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     const firstTop100 = firstSpan[0];
     const lastTop100 = lastSpan[1];
     const longestStreak = Math.max(...spans.map(streakLength));
-    const active = lastTop100 >= yM - 1;
+    // "Active" means present in the latest year in the dataset, not merely
+    // within one year of it. This keeps current-state filters semantically exact.
+    const active = lastTop100 === yM;
     const continuousSinceDebut = spans.length === 1 && active;
-    const continuousFullRecord = continuousSinceDebut && firstTop100 <= ym;
+    const continuousFullRecord = continuousSinceDebut && firstTop100 === ym;
     const returned = spans.length > 1 && active;
     const gapYears = Math.max(0, lastTop100 - firstTop100 + 1 - years.length);
 
