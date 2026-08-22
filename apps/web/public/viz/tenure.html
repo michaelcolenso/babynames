@@ -45,8 +45,8 @@
   .show-all{display:none;width:100%;min-height:46px;margin:16px 0 0;border:1px solid var(--rule);border-radius:10px;background:transparent;color:var(--ink);font:600 11px/1 'IBM Plex Mono',ui-monospace,monospace;cursor:pointer}
   .show-all.visible{display:block}
   .empty{padding:50px 0;text-align:center;color:var(--muted)}
-  .overlay{position:fixed;inset:0;z-index:200;background:rgba(9,8,7,.36);opacity:0;pointer-events:none;transition:opacity .16s ease}
-  .overlay.open{opacity:1;pointer-events:auto}
+  .overlay{position:fixed;inset:0;z-index:200;background:rgba(9,8,7,.36);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .16s ease,visibility 0s linear .16s}
+  .overlay.open{opacity:1;visibility:visible;pointer-events:auto;transition-delay:0s}
   .sheet{position:absolute;left:0;right:0;bottom:0;max-height:80vh;overflow:auto;padding:10px 18px max(22px,env(safe-area-inset-bottom));background:var(--sheet);border-radius:18px 18px 0 0;box-shadow:0 -18px 60px rgba(0,0,0,.16);transform:translateY(102%);transition:transform .2s ease}
   .overlay.open .sheet{transform:translateY(0)}
   .sheet-handle{width:42px;height:4px;margin:0 auto 14px;border-radius:999px;background:rgba(23,21,17,.18)}
@@ -71,6 +71,7 @@
   .dossier{display:block;margin-top:18px;padding:13px 14px;border-radius:9px;background:var(--ink);color:var(--paper);font:600 11px/1 'IBM Plex Mono',ui-monospace,monospace;text-decoration:none;text-align:center}
   .share-link{display:flex;justify-content:flex-end;padding:0 16px 8px;font:500 10px/1 'IBM Plex Mono',ui-monospace,monospace}
   .share-link a{color:var(--muted)}
+  button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible,#chart [role="button"]:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
   @media(min-width:480px){.hero{padding:28px 20px 18px}.toolbar,.chart-shell{padding-left:20px;padding-right:20px}.share-link{padding-left:20px;padding-right:20px}}
   @media(min-width:768px){.hero{padding:48px 32px 24px}.lede{font-size:17px;line-height:1.5}.toolbar{top:64px;padding:10px 32px}.toolbar select{flex:0 0 190px}.toolbar .filter-btn{margin-left:auto}.chart-shell{padding:18px 32px 34px}.chart-explainer{font-size:10px}.share-link{padding:0 32px 10px}.sheet{left:50%;right:auto;bottom:24px;width:min(520px,calc(100vw - 48px));border-radius:16px;transform:translate(-50%,calc(102% + 24px))}.overlay.open .sheet{transform:translate(-50%,0)}}
   @media(min-width:1024px){.hero{padding-top:56px}.chart-shell{padding-bottom:44px}}
@@ -103,8 +104,8 @@
 
   <div class="toolbar" aria-label="Visualization controls">
     <div class="segmented" role="group" aria-label="Sex">
-      <button id="girls" class="active" type="button">Girls</button>
-      <button id="boys" type="button">Boys</button>
+      <button id="girls" class="active" type="button" aria-pressed="true">Girls</button>
+      <button id="boys" type="button" aria-pressed="false">Boys</button>
     </div>
     <select id="sort" aria-label="Sort names">
       <option value="longestStreak">Longest streak</option>
@@ -112,7 +113,7 @@
       <option value="firstTop100">First entered</option>
       <option value="lastTop100">Last exited</option>
     </select>
-    <button id="filters" class="filter-btn" type="button">Filters</button>
+    <button id="filters" class="filter-btn" type="button" aria-expanded="false" aria-controls="filter-overlay">Filters</button>
   </div>
 
   <section class="chart-shell" aria-label="Top 100 tenure chart">
@@ -131,7 +132,7 @@
     <div class="sheet-handle"></div>
     <div class="sheet-head"><h2 id="filter-title">Filter names</h2><button class="sheet-close" type="button" data-close="filter-overlay" aria-label="Close">×</button></div>
     <div class="sheet-group"><label class="sheet-label" for="search">Search</label><input id="search" class="search" type="search" autocomplete="off" placeholder="Type a name…"></div>
-    <div class="sheet-group"><span class="sheet-label">Show</span><div class="mode-grid" id="mode-grid"><button class="active" type="button" data-mode="highlights">Highlights</button><button type="button" data-mode="all">All names</button><button type="button" data-mode="active">Active now</button><button type="button" data-mode="returned">Comebacks</button><button type="button" data-mode="exited">Exited</button></div></div>
+    <div class="sheet-group"><span class="sheet-label">Show</span><div class="mode-grid" id="mode-grid"><button class="active" type="button" data-mode="highlights" aria-pressed="true">Highlights</button><button type="button" data-mode="all" aria-pressed="false">All names</button><button type="button" data-mode="active" aria-pressed="false">Active now</button><button type="button" data-mode="returned" aria-pressed="false">Comebacks</button><button type="button" data-mode="exited" aria-pressed="false">Exited</button></div></div>
   </section>
 </div>
 
@@ -154,15 +155,16 @@
   const editorial = new Set(['Elizabeth','Mary','Katherine','Emma','Evelyn','Eleanor','Hazel','Alice','Lillian','Olivia','Andrew','Charles','Daniel','David','James','John','Joseph','Michael','Robert','Samuel','Thomas','William','Richard','Jack','Theodore','Arthur','Liam']);
   const state = { data:null, sex:'F', sort:'longestStreak', mode:'highlights', query:'' };
   const $ = id => document.getElementById(id);
+  let overlayReturnFocus = null;
 
   function enrich(d, ym, yM) {
     const lengths = d.spans.map(([s,e]) => e - s + 1);
     const firstTop100 = d.firstTop100 ?? d.spans[0][0];
     const lastTop100 = d.lastTop100 ?? d.spans[d.spans.length - 1][1];
     const longestStreak = d.longestStreak ?? Math.max(...lengths);
-    const active = d.active ?? lastTop100 >= yM - 1;
+    const active = d.active ?? lastTop100 === yM;
     const continuousSinceDebut = d.continuousSinceDebut ?? (d.spans.length === 1 && active);
-    const continuousFullRecord = d.continuousFullRecord ?? (continuousSinceDebut && firstTop100 <= ym);
+    const continuousFullRecord = d.continuousFullRecord ?? (continuousSinceDebut && firstTop100 === ym);
     return {...d, firstTop100, lastTop100, longestStreak, active, continuousSinceDebut, continuousFullRecord, spanCount:d.spanCount ?? d.spans.length, gapYears:d.gapYears ?? Math.max(0,lastTop100-firstTop100+1-d.totalYears), returned:d.returned ?? (d.spans.length > 1 && active)};
   }
 
@@ -268,23 +270,56 @@
     $('detail-name').textContent=d.name;
     $('detail-kicker').textContent=d.continuousFullRecord?'◆ Full-record Top 100 name':d.returned?'Comeback name':'Top 100 tenure';
     const spans=d.spans.map(([s,e])=>s===e?String(s):`${s}–${e}`).join(' · ');
-    $('detail-body').innerHTML=`<div class="detail-big">${d.longestStreak} years</div><div class="detail-caption">longest uninterrupted Top-100 streak</div><div class="detail-grid"><div><span>Total Top-100 years</span><strong>${d.totalYears}</strong></div><div><span>First entered</span><strong>${d.firstTop100}</strong></div><div><span>Most recent</span><strong>${d.lastTop100}</strong></div><div><span>Years outside</span><strong>${d.gapYears}</strong></div></div><div class="spans"><strong>Top-100 spans</strong><br>${spans}</div><a class="dossier" href="/name/${encodeURIComponent(d.name)}/">View ${d.name} dossier →</a>`;
+    $('detail-body').innerHTML=`<div class="detail-big">${d.longestStreak} years</div><div class="detail-caption">longest uninterrupted Top-100 streak</div><div class="detail-grid"><div><span>Total Top-100 years</span><strong>${d.totalYears}</strong></div><div><span>First entered</span><strong>${d.firstTop100}</strong></div><div><span>Most recent</span><strong>${d.lastTop100}</strong></div><div><span>Gap years</span><strong>${d.gapYears}</strong></div></div><div class="spans"><strong>Top-100 spans</strong><br>${spans}</div><a class="dossier" href="/name/${encodeURIComponent(d.name)}/">View ${d.name} dossier →</a>`;
     openOverlay('detail-overlay');
   }
 
-  function openOverlay(id){const o=$(id);o.classList.add('open');o.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';}
-  function closeOverlay(id){const o=$(id);o.classList.remove('open');o.setAttribute('aria-hidden','true');document.body.style.overflow='';}
+  function focusables(overlay){return [...overlay.querySelectorAll('button:not([disabled]),input:not([disabled]),select:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])')].filter(el=>!el.closest('[hidden]')&&getComputedStyle(el).visibility!=='hidden');}
+  function openOverlay(id){
+    const o=$(id);
+    overlayReturnFocus=document.activeElement instanceof HTMLElement||document.activeElement instanceof SVGElement?document.activeElement:null;
+    o.classList.add('open');
+    o.setAttribute('aria-hidden','false');
+    if(id==='filter-overlay')$('filters').setAttribute('aria-expanded','true');
+    document.body.style.overflow='hidden';
+    requestAnimationFrame(()=>{const target=id==='filter-overlay'?$('search'):o.querySelector('[data-close]');if(target&&typeof target.focus==='function')target.focus();});
+  }
+  function closeOverlay(id){
+    const o=$(id);
+    o.classList.remove('open');
+    o.setAttribute('aria-hidden','true');
+    if(id==='filter-overlay')$('filters').setAttribute('aria-expanded','false');
+    document.body.style.overflow='';
+    const target=overlayReturnFocus;overlayReturnFocus=null;
+    requestAnimationFrame(()=>{if(target&&typeof target.focus==='function'&&document.contains(target))target.focus();});
+  }
+  function syncSexButtons(){
+    $('girls').classList.toggle('active',state.sex==='F');
+    $('boys').classList.toggle('active',state.sex==='M');
+    $('girls').setAttribute('aria-pressed',String(state.sex==='F'));
+    $('boys').setAttribute('aria-pressed',String(state.sex==='M'));
+  }
+  function syncModeButtons(){document.querySelectorAll('#mode-grid button').forEach(b=>{const active=b.dataset.mode===state.mode;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});}
 
-  $('girls').addEventListener('click',()=>{state.sex='F';$('girls').classList.add('active');$('boys').classList.remove('active');render();});
-  $('boys').addEventListener('click',()=>{state.sex='M';$('boys').classList.add('active');$('girls').classList.remove('active');render();});
+  $('girls').addEventListener('click',()=>{state.sex='F';syncSexButtons();render();});
+  $('boys').addEventListener('click',()=>{state.sex='M';syncSexButtons();render();});
   $('sort').addEventListener('change',e=>{state.sort=e.target.value;render();});
   $('filters').addEventListener('click',()=>openOverlay('filter-overlay'));
-  $('show-all').addEventListener('click',()=>{state.mode='all';document.querySelectorAll('#mode-grid button').forEach(b=>b.classList.toggle('active',b.dataset.mode==='all'));render();});
+  $('show-all').addEventListener('click',()=>{state.mode='all';syncModeButtons();render();});
   $('search').addEventListener('input',e=>{state.query=e.target.value.trim();render();});
-  document.querySelectorAll('#mode-grid button').forEach(btn=>btn.addEventListener('click',()=>{state.mode=btn.dataset.mode;document.querySelectorAll('#mode-grid button').forEach(b=>b.classList.toggle('active',b===btn));render();}));
+  document.querySelectorAll('#mode-grid button').forEach(btn=>btn.addEventListener('click',()=>{state.mode=btn.dataset.mode;syncModeButtons();render();}));
   document.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener('click',()=>closeOverlay(btn.dataset.close)));
   document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeOverlay(o.id)}));
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>closeOverlay(o.id));});
+  document.addEventListener('keydown',e=>{
+    const o=document.querySelector('.overlay.open');
+    if(!o)return;
+    if(e.key==='Escape'){e.preventDefault();closeOverlay(o.id);return;}
+    if(e.key!=='Tab')return;
+    const items=focusables(o);if(!items.length)return;
+    const first=items[0],last=items[items.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  });
 
   let resizeTimer;
   window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(render,90);});
