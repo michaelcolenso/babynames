@@ -109,7 +109,7 @@ export function buildSparkline(
   <text x="${peakX.toFixed(1)}" y="${peakLabelY.toFixed(1)}" class="point-label" text-anchor="middle">peak ${years[peakIdx]}</text>
   <text x="${latestX.toFixed(1)}" y="${latestLabelY.toFixed(1)}" class="point-label" text-anchor="end">${yM}</text>
   ${ticks}
-</svg>`;
+</svg>`.replace(/\n[ \t]*(?=\n)/g, "");
 }
 
 function renderMarkers(
