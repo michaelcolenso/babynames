@@ -871,6 +871,21 @@ function editorialLink(a: ClassifyResult): [string, string] | null {
   return null;
 }
 
+/** Names featured in content-factory stories, mapped to the story that features them. */
+const FACTORY_STORY_FEATURES: Array<{ names: string[]; label: string; path: string }> = [
+  { names: ["Kunta", "Kizzy", "Arsenio", "Moesha", "Jkwon", "Bethzy"], label: "The Flash Floods — one-hit-wonder names", path: "/blog/flash-floods/" },
+];
+
+function factoryStoryLinks(name: string): string[] {
+  const out: string[] = [];
+  for (const story of FACTORY_STORY_FEATURES) {
+    if (story.names.includes(name)) {
+      out.push(`<a href="${story.path}" data-track-target-id="article:${story.path}" data-track-target-type="article">${story.label}</a>`);
+    }
+  }
+  return out;
+}
+
 function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   const cohort: Partial<Record<Status, [string, string]>> = {
     extinct: ["More extinct names", "/extinct"],
@@ -893,6 +908,7 @@ function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   links.push(`<a href="/names/ending/${encodeURIComponent(record.name.charAt(record.name.length - 1).toLowerCase())}/" data-track-target-id="${contentId("article", `ending-${record.name.charAt(record.name.length - 1).toLowerCase()}`)}" data-track-target-type="article">Names ending in ${escape(record.name.charAt(record.name.length - 1).toUpperCase())}</a>`);
   links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/" data-track-target-id="${contentId("article", `twin-${record.name}`)}" data-track-target-type="article">Names like ${escape(record.name)}</a>`);
   links.push(`<a href="/shadow/${encodeURIComponent(record.name)}/${record.yM}/?sex=${record.sex}" data-track-target-id="${contentId("article", `shadow-${record.name}`)}" data-track-target-type="article">Meet your shadow</a>`);
+  links.push(...factoryStoryLinks(record.name));
 
   return `<nav class="report-links" aria-label="Explore more name data" data-source-placement="name-page-explore-links">${links.join("")}</nav>`;
 }
