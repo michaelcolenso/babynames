@@ -194,3 +194,71 @@ test("SSA CSV pipeline: parse, totals, convert to birth counts", () => {
   assert.equal(ny[0]!.sex, "M");
   assert.equal(ny[0]!.count, 212); // 0.000126 × 1,679,000 = 211.55 → 212
 });
+
+// ---- Glaciers (slow rise / slow fall) ----
+
+import { computeGlaciers } from "../packages/shared/src/content/factory-compute";
+
+const GLOPTS = { dataMaxYear: 2025 };
+
+function glacierSeries(
+  riseStart: number,
+  peakYear: number,
+  peak: number,
+  fallEnd: number,
+): Record<number, number> {
+  const s: Record<number, number> = {};
+  for (let y = riseStart; y <= fallEnd; y++) {
+    const t = y <= peakYear ? (y - riseStart) / (peakYear - riseStart) : (fallEnd - y) / (fallEnd - peakYear);
+    s[y] = Math.max(5, Math.round(peak * Math.max(t, 0.09)));
+  }
+  s[peakYear] = peak;
+  return s;
+}
+
+test("detects a glacier: slow rise and slow fall", () => {
+  const { series, display } = seriesFrom([["Glacia", "F", glacierSeries(1950, 1980, 8000, 2015)]]);
+  const result = computeGlaciers(series, display, GLOPTS);
+  assert.equal(result.members.length, 1);
+  const m = result.members[0]!;
+  assert.equal(m.name, "Glacia");
+  assert.equal(m.peakYear, 1980);
+  assert.equal(m.peakCount, 8000);
+  assert.equal(m.riseStartYear, 1953); // first year at >=10% of peak
+  assert.equal(m.fallEndYear, 2011); // last year at >=10% of peak
+});
+
+test("excludes a name whose rise is too fast", () => {
+  const { series, display } = seriesFrom([["Quick", "M", glacierSeries(1970, 1980, 9000, 2015)]]);
+  assert.equal(computeGlaciers(series, display, GLOPTS).members.length, 0);
+});
+
+test("excludes a name whose fall is too fast or unresolved", () => {
+  const fastFall = { ...glacierSeries(1950, 1980, 8000, 2000), 2024: 5 };
+  const { series, display } = seriesFrom([["FastFall", "F", fastFall]]);
+  assert.equal(computeGlaciers(series, display, GLOPTS).members.length, 0);
+
+  // Fall still in progress at dataMaxYear → excluded.
+  const { series: s2, display: d2 } = seriesFrom([
+    [
+      "Unresolved",
+      "F",
+      { ...glacierSeries(1950, 1980, 8000, 2015), 2023: 1500, 2024: 1400, 2025: 1300 },
+    ],
+  ]);
+  assert.equal(computeGlaciers(s2, d2, GLOPTS).members.length, 0);
+});
+
+test("excludes a peak below minPeak", () => {
+  const { series, display } = seriesFrom([["Hill", "F", glacierSeries(1950, 1980, 4000, 2015)]]);
+  assert.equal(computeGlaciers(series, display, GLOPTS).members.length, 0);
+});
+
+test("orders glaciers by peakCount desc", () => {
+  const a = seriesFrom([["Big", "F", glacierSeries(1950, 1980, 9000, 2015)]]);
+  const b = seriesFrom([["Small", "F", glacierSeries(1900, 1930, 6000, 1965)]]);
+  const merged = new Map([...a.series, ...b.series]);
+  const disp = new Map([...a.display, ...b.display]);
+  const all = computeGlaciers(merged, disp, GLOPTS);
+  assert.deepEqual(all.members.map((m) => m.name), ["Big", "Small"]);
+});

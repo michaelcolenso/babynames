@@ -8,6 +8,8 @@ import type {
   ContentDefinition,
   FlashFloodMember,
   FlashFloodsResult,
+  GlacierMember,
+  GlaciersResult,
 } from "./factory-types";
 import { buildSparkline } from "../sparkline";
 import type { Status } from "../schema";
@@ -107,6 +109,78 @@ export function computeFlashFloods(
   return { members, totalNames: series.size };
 }
 
+export interface GlacierOptions {
+  minPeak: number;        // default 5000
+  thresholdShare: number; // default 0.10 — "active" years sit at >= 10% of peak
+  minRiseYears: number;   // default 25
+  minFallYears: number;   // default 25
+  dataMaxYear: number;    // fall must complete inside the record
+}
+
+export const DEFAULT_GLACIER_OPTIONS: GlacierOptions = {
+  minPeak: 5000,
+  thresholdShare: 0.1,
+  minRiseYears: 25,
+  minFallYears: 25,
+  dataMaxYear: DATA_MAX_YEAR,
+};
+
+/**
+ * Glacier: the name climbs to a big peak (>= minPeak) over at least
+ * minRiseYears (measured from the first year it crossed thresholdShare × peak),
+ * then declines over at least minFallYears, with the whole decline resolved
+ * inside the record. The slow-motion counterpart of a flash flood.
+ */
+export function computeGlaciers(
+  series: Map<string, Record<number, number>>,
+  displayNames: Map<string, string>,
+  options: Partial<GlacierOptions> = {},
+): GlaciersResult {
+  const opts = { ...DEFAULT_GLACIER_OPTIONS, ...options };
+  const members: GlacierMember[] = [];
+
+  for (const [key, s] of series) {
+    const years = [...Object.keys(s).map(Number)].sort((a, b) => a - b);
+    if (years.length === 0) continue;
+
+    // Earliest year holding the maximum count is the peak.
+    let peakYear = years[0]!;
+    let peakCount = 0;
+    for (const y of years) {
+      if (s[y]! > peakCount) {
+        peakCount = s[y]!;
+        peakYear = y;
+      }
+    }
+    if (peakCount < opts.minPeak) continue;
+    if (peakYear + opts.minFallYears > opts.dataMaxYear) continue;
+
+    const threshold = peakCount * opts.thresholdShare;
+    const riseStartYear = years.find((y) => y <= peakYear && s[y]! >= threshold);
+    if (riseStartYear === undefined) continue;
+    if (peakYear - riseStartYear < opts.minRiseYears) continue;
+
+    const fallEndYear = [...years].reverse().find((y) => y >= peakYear && s[y]! >= threshold);
+    if (fallEndYear === undefined || fallEndYear >= opts.dataMaxYear) continue;
+    if (fallEndYear - peakYear < opts.minFallYears) continue;
+
+    members.push({
+      name: displayNames.get(key) ?? key.split("|")[0]!,
+      sex: key.split("|")[1] ?? "",
+      riseStartYear,
+      peakYear,
+      peakCount,
+      fallEndYear,
+      fallEndCount: s[fallEndYear] ?? 0,
+      finalCount: s[opts.dataMaxYear] ?? 0,
+      series: s,
+    });
+  }
+
+  members.sort((a, b) => b.peakCount - a.peakCount || a.name.localeCompare(b.name));
+  return { members, totalNames: series.size };
+}
+
 export interface SsaCsvRow {
   year: number;
   name: string;
@@ -188,11 +262,11 @@ export function csvToNameYearRows(rows: SsaCsvRow[], totals: Map<number, { male:
 
 export function evaluateClaims(
   def: ContentDefinition,
-  result: FlashFloodsResult,
+  result: FlashFloodsResult | GlaciersResult,
 ): Record<string, ClaimValue> {
   const evaluated: Record<string, ClaimValue> = {};
   for (const [key, fn] of Object.entries(def.claims)) {
-    const v = fn(result.members, { totalNames: result.totalNames });
+    const v = fn(result.members as Array<FlashFloodMember | GlacierMember>, { totalNames: result.totalNames });
     if (typeof v !== "number" && typeof v !== "string") {
       throw new Error(`Claim "${key}" in ${def.slug} did not resolve to a number or string`);
     }
@@ -230,8 +304,18 @@ export function verifyAsserts(
   return violations;
 }
 
+export interface PanelMember {
+  name: string;
+  firstYear: number;
+  peakYear: number;
+  peakCount: number;
+  series: Record<number, number>;
+  /** Present on flash-flood members; drives status classification when set. */
+  lastCount?: number;
+}
+
 export interface PanelSpec {
-  member: FlashFloodMember;
+  member: PanelMember;
   dataMaxYear: number;
   dataMinYear?: number;
 }
@@ -248,7 +332,8 @@ export function chartPanelHtml(spec: PanelSpec): string {
 </div>`;
 }
 
-function classifyStatus(m: FlashFloodMember): Status {
+function classifyStatus(m: PanelMember): Status {
+  if (m.lastCount === undefined) return "declining";
   if (m.lastCount === 0) return "extinct";
   if (m.lastCount <= m.peakCount * 0.05) return "endangered";
   if (m.lastCount <= m.peakCount * 0.5) return "declining";

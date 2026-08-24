@@ -4,8 +4,7 @@
 
 import { contentId, contentIdentityMeta } from "../content-identity";
 import { pageShell } from "../render-shell";
-import type { ContentDefinition } from "./factory-types";
-import type { FlashFloodsResult } from "./factory-types";
+import type { ContentDefinition, FactoryResult } from "./factory-types";
 import { chartPanelHtml, escapeHtml } from "./factory-compute";
 
 export interface RenderVizOpts {
@@ -16,7 +15,7 @@ export interface RenderVizOpts {
 
 export function renderFactoryVizPage(
   def: ContentDefinition,
-  result: FlashFloodsResult,
+  result: FactoryResult,
   opts: RenderVizOpts,
 ): string {
   const canonical = `${opts.canonicalBase}/viz/${def.slug}`;
@@ -27,8 +26,21 @@ export function renderFactoryVizPage(
     publishedAt: new Date().toISOString(),
   };
 
-  const panels = result.members
-    .map((m) => chartPanelHtml({ member: m, dataMaxYear: opts.dataMaxYear, dataMinYear: opts.dataMinYear }))
+  type PanelCapable = { name: string; firstYear?: number; riseStartYear?: number; peakYear: number; peakCount: number; series: Record<number, number> };
+  const panels = (result.members as PanelCapable[])
+    .map((m) =>
+      chartPanelHtml({
+        member: {
+          name: m.name,
+          firstYear: m.firstYear ?? m.riseStartYear ?? m.peakYear,
+          peakYear: m.peakYear,
+          peakCount: m.peakCount,
+          series: m.series,
+        },
+        dataMaxYear: opts.dataMaxYear,
+        dataMinYear: opts.dataMinYear,
+      }),
+    )
     .join("\n");
 
   const tableRows = result.members
@@ -48,7 +60,7 @@ ${panels}
 ${tableRows}
 </tbody>
 </table>
-<p class="factory-source">Source: SSA birth records (${opts.dataMinYear ?? 1880}–${opts.dataMaxYear}), ${escapeHtml(def.sourceVersion)}. Names shown peaked within two years of debut and fell below 20% of peak within five years.</p>
+<p class="factory-source">Source: SSA birth records (${opts.dataMinYear ?? 1880}–${opts.dataMaxYear}), ${escapeHtml(def.sourceVersion)}. ${escapeHtml(def.sourceNote ?? "Names shown peaked within two years of debut and fell below 20% of peak within five years.")}</p>
 </div>`;
 
   return pageShell({

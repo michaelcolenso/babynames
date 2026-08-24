@@ -15,6 +15,7 @@ import path from "node:path";
 import {
   DATA_MAX_YEAR,
   computeFlashFloods,
+  computeGlaciers,
   csvToNameYearRows,
   chartPanelHtml,
   evaluateClaims,
@@ -28,7 +29,11 @@ import {
 import { CONTENT_DEFINITIONS } from "../packages/shared/src/content/content-definitions";
 import { renderFactoryVizPage } from "../packages/shared/src/content/render-factory-viz";
 import { renderFactoryPostMarkdown } from "../packages/shared/src/content/render-factory-post";
-import type { FlashFloodsResult } from "../packages/shared/src/content/factory-types";
+import type {
+  FactoryResult,
+  FlashFloodsResult,
+  GlaciersResult,
+} from "../packages/shared/src/content/factory-types";
 import { compileBlogPost } from "./blog-publish";
 
 const REPO = path.resolve(import.meta.dirname ?? __dirname, "..");
@@ -102,15 +107,42 @@ function loadData(): LoadResult {
   process.exit(1);
 }
 
-function buildPanels(defSlug: string, result: FlashFloodsResult): Record<string, string> {
-  // Only the panels the post template actually references (drafted six).
-  const wanted = new Set(["Kunta|M", "Arsenio|M", "Moesha|F", "Jkwon|M", "Bethzy|F"]);
+function runCompute(def: ContentDefinitionT, data: LoadResult): FactoryResult {
+  if (def.compute.family === "flash-floods") {
+    return computeFlashFloods(data.series, data.display, {
+      minPeak: def.compute.minPeak ?? undefined,
+    });
+  }
+  return computeGlaciers(data.series, data.display, {
+    minPeak: def.compute.minPeak ?? undefined,
+    minRiseYears: def.compute.minRiseYears ?? undefined,
+    minFallYears: def.compute.minFallYears ?? undefined,
+    thresholdShare: def.compute.thresholdShare ?? undefined,
+  });
+}
+
+// Local alias so the import list above stays readable.
+type ContentDefinitionT = (typeof CONTENT_DEFINITIONS)[number];
+
+function buildPanels(def: ContentDefinitionT, result: FactoryResult): Record<string, string> {
+  const wanted = new Set(def.panels ?? []);
   const panels: Record<string, string> = {};
   for (const m of result.members) {
     const key = `${m.name}|${m.sex}`;
-    if (wanted.has(key)) {
-      panels[key] = chartPanelHtml({ member: m, dataMaxYear: DATA_MAX_YEAR });
-    }
+    if (!wanted.has(key)) continue;
+    panels[key] = chartPanelHtml({
+      member:
+        "riseStartYear" in m
+          ? {
+              name: m.name,
+              firstYear: m.riseStartYear,
+              peakYear: m.peakYear,
+              peakCount: m.peakCount,
+              series: m.series,
+            }
+          : m,
+      dataMaxYear: DATA_MAX_YEAR,
+    });
   }
   return panels;
 }
@@ -120,16 +152,10 @@ function generate(defIndex: number, outDir?: string): void {
   const data = loadData();
   console.log(`Data source: ${data.source}`);
 
-  if (def.compute.family !== "flash-floods") {
-    console.error(`Unsupported compute family: ${def.compute.family}`);
-    process.exit(1);
-  }
-
-  const result = computeFlashFloods(data.series, data.display, {
-    minPeak: def.compute.minPeak ?? undefined,
-  });
+  const result = runCompute(def, data);
+  const familyLabel = def.compute.family;
   console.log(
-    `flash-floods: ${result.members.length} floods detected across ${result.totalNames.toLocaleString("en-US")} names`,
+    `${familyLabel}: ${result.members.length} members detected across ${result.totalNames.toLocaleString("en-US")} names`,
   );
 
   const claims = evaluateClaims(def, result);
@@ -165,7 +191,7 @@ function generate(defIndex: number, outDir?: string): void {
       def,
       claims,
       template,
-      buildPanels(def.slug, result),
+      buildPanels(def, result),
       { date: new Date().toISOString().slice(0, 10), status: "published" },
     );
     // Round-trip guard: generated post must compile cleanly through the publisher.
@@ -188,12 +214,9 @@ function main(): void {
   const args = process.argv.slice(2);
   if (args.includes("--check")) {
     let failures = 0;
-    CONTENT_DEFINITIONS.forEach((def, i) => {
+    CONTENT_DEFINITIONS.forEach((def) => {
       const data = loadData();
-      if (def.compute.family !== "flash-floods") return;
-      const result = computeFlashFloods(data.series, data.display, {
-        minPeak: def.compute.minPeak ?? undefined,
-      });
+      const result = runCompute(def, data);
       const claims = evaluateClaims(def, result);
       const violations = verifyAsserts(def, claims);
       if (violations.length > 0) {
