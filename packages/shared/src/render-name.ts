@@ -172,6 +172,10 @@ interface RenderReportOptions {
   classifyResult?: ClassifyResult;
   // Pre-computed narrative to avoid a second generateNameNarrative() call.
   narrative?: NameNarrative;
+  // When false, omit the /shadow/ link from the explore nav — the
+  // name_shadow_matches table may be unseeded for the current max year,
+  // in which case the destination 404s.
+  hasShadow?: boolean;
 }
 
 export function renderReport(record: NameRecord): string {
@@ -204,7 +208,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       ? ""
       : `<p>Down <strong>${a.declinePct ?? 0}%</strong> from its peak.</p>`;
   const totalSentence = `<p>In all, the Social Security Administration has recorded about <strong>${fmt(a.totalCount)}</strong> Americans named ${escape(record.name)} since ${a.firstYear}.</p>`;
-  const exploreLinks = renderExploreLinks(record, a);
+  const exploreLinks = renderExploreLinks(record, a, opts.hasShadow !== false);
   const geographySection = renderGeography(record, a, opts);
   const relatedNames = renderRelatedNames(opts.relatedNames ?? []);
   const discoveryModule = renderDiscoveryModule(opts.discovery);
@@ -335,6 +339,10 @@ export function renderFullPage(
     diaspora?: DiasporaResponse;
     strongholds?: NameRegionalAnomaly[];
     affiliateTag?: string;
+    // When false, omit the /shadow/ link from the explore nav — the
+    // name_shadow_matches table may be unseeded for the current max year,
+    // in which case the destination 404s.
+    hasShadow?: boolean;
   } = { canonical: "" },
 ): string {
   const topAnomalyRaw = opts.enrichment?.regionalAnomalies?.[0];
@@ -391,6 +399,7 @@ export function renderFullPage(
       affiliateTag: opts.affiliateTag,
       classifyResult,
       narrative,
+      hasShadow: opts.hasShadow,
     })}</div>`,
     structuredData,
     scripts: ["/assets/app.js"],
@@ -886,7 +895,7 @@ function factoryStoryLinks(name: string): string[] {
   return out;
 }
 
-function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
+function renderExploreLinks(record: NameRecord, a: ClassifyResult, hasShadow = true): string {
   const cohort: Partial<Record<Status, [string, string]>> = {
     extinct: ["More extinct names", "/extinct"],
     endangered: ["More endangered names", "/endangered"],
@@ -907,7 +916,9 @@ function renderExploreLinks(record: NameRecord, a: ClassifyResult): string {
   links.push(`<a href="/names/${encodeURIComponent(record.name.charAt(0).toLowerCase())}/" data-track-target-id="${contentId("article", `letter-${record.name.charAt(0).toLowerCase()}`)}" data-track-target-type="article">Names starting with ${escape(record.name.charAt(0).toUpperCase())}</a>`);
   links.push(`<a href="/names/ending/${encodeURIComponent(record.name.charAt(record.name.length - 1).toLowerCase())}/" data-track-target-id="${contentId("article", `ending-${record.name.charAt(record.name.length - 1).toLowerCase()}`)}" data-track-target-type="article">Names ending in ${escape(record.name.charAt(record.name.length - 1).toUpperCase())}</a>`);
   links.push(`<a href="/name/${encodeURIComponent(record.name)}/twin/" data-track-target-id="${contentId("article", `twin-${record.name}`)}" data-track-target-type="article">Names like ${escape(record.name)}</a>`);
-  links.push(`<a href="/shadow/${encodeURIComponent(record.name)}/${record.yM}/?sex=${record.sex}" data-track-target-id="${contentId("article", `shadow-${record.name}`)}" data-track-target-type="article">Meet your shadow</a>`);
+  if (hasShadow) {
+    links.push(`<a href="/shadow/${encodeURIComponent(record.name)}/${record.yM}/?sex=${record.sex}" data-track-target-id="${contentId("article", `shadow-${record.name}`)}" data-track-target-type="article">Meet your shadow</a>`);
+  }
   links.push(...factoryStoryLinks(record.name));
 
   return `<nav class="report-links" aria-label="Explore more name data" data-source-placement="name-page-explore-links">${links.join("")}</nav>`;

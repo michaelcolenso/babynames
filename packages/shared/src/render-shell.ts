@@ -204,8 +204,10 @@ export function pageShell(opts: PageShellOpts): string {
   const favicon = opts.favicon ?? "/favicon.svg";
   const mainId = opts.mainId ?? "main-content";
 
+  // All og:images render at 1200×630 (see functions/api/og/*). Declaring the
+  // dimensions lets platforms size the card correctly on first scrape.
   const ogImageMeta = opts.ogImage
-    ? `<meta property="og:image" content="${escape(opts.ogImage)}">\n<meta property="og:image:type" content="${ogImageType(opts.ogImage)}">`
+    ? `<meta property="og:image" content="${escape(opts.ogImage)}">\n<meta property="og:image:type" content="${ogImageType(opts.ogImage)}">\n<meta property="og:image:width" content="1200">\n<meta property="og:image:height" content="630">`
     : "";
   const ogImageAltMeta = opts.ogImageAlt
     ? `<meta property="og:image:alt" content="${escape(opts.ogImageAlt)}">`

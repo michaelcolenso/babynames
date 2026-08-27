@@ -324,8 +324,9 @@ export function generateNameNarrative(
 
   let metaDescription: string;
   if (hasReliableLiving) {
-    const geoPhrase = geography ? `, strongest in ${topAnomaly!.state.toLowerCase()}` : ``;
-    metaDescription = `See how ${name} fits into American naming culture — rarity, median age, history, ${record.yM} births${geoPhrase} and vital status since 1880.`;
+    // State names come from D1 as proper-cased strings — never lowercase them.
+    const geoPhrase = geography ? ` Strongest in ${topAnomaly!.state}.` : ``;
+    metaDescription = `${name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} births; ${fmt(a.latestCount)} in ${record.yM}. Rarity, median age, and vital status since 1880.${geoPhrase}`;
   } else if (a.latestCount > 0) {
     metaDescription = `${name} is a ${wave} baby name with ${fmt(a.latestCount)} births in ${record.yM}. See its full popularity history, rarity, and peak year data.`;
   } else {

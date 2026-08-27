@@ -42,15 +42,19 @@ export const onRequestGet: PagesFunction<Env, "name" | "year"> = async (ctx) => 
     return notFound(`No data for ${year}. Available: ${ym}–${yM}.`);
   }
 
-  // Redirect to canonical casing if URL doesn't match.
+  // Redirect to the canonical URL (correct casing + trailing slash) in a
+  // single hop — the middleware skips trailing-slash redirects for shadow
+  // routes so lowercase requests don't bounce twice.
   const [inputRowsCheck] = await Promise.all([
     getNameWithSeries(ctx.env.DB, name.toLowerCase()),
   ]);
   const canonicalName = inputRowsCheck[0]?.row.name;
-  if (canonicalName && canonicalName !== name) {
+  const requestPath = new URL(ctx.request.url).pathname;
+  if ((canonicalName && canonicalName !== name) || !requestPath.endsWith("/")) {
+    const finalName = canonicalName ?? name;
     return new Response(null, {
       status: 301,
-      headers: { Location: `/shadow/${encodeURIComponent(canonicalName)}/${year}/${sexQuery}`, "Cache-Control": "public, s-maxage=86400" },
+      headers: { Location: `/shadow/${encodeURIComponent(finalName)}/${year}/${sexQuery}`, "Cache-Control": "public, s-maxage=86400" },
     });
   }
 

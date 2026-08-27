@@ -84,14 +84,21 @@
   <div class="page" data-content-id="article:developers" data-content-type="article" data-content-slug="developers">
     <header class="site">
       <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo brand-logo-light" src="/assets/brand/wordmark.svg" alt="NobodyNamed" loading="lazy"><img class="brand-logo brand-logo-dark" src="/assets/brand/wordmark-dark.svg" alt="NobodyNamed" loading="lazy"></a>
-      <nav aria-label="Main navigation"><details class="nav-group"><summary>Discover</summary><div class="nav-group-panel"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/rising">Rising</a><a href="/emerging">Emerging</a><a href="/fading">Fading</a></div></details><a href="/year">Birth year</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a></nav>
+      <nav aria-label="Main navigation"><details class="nav-group"><summary>Discover</summary><div class="nav-group-panel"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/rising">Rising</a><a href="/emerging">Emerging</a><a href="/fading">Fading</a></div></details><a href="/year">Birth year</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/newsletter">Newsletter</a><a href="/about">About</a></nav>
+      <div class="header-search">
+  <input id="header-q" type="text" placeholder="Search a name…" autocomplete="off" spellcheck="false" aria-label="Search a name" aria-autocomplete="list" aria-controls="header-suggestions" aria-expanded="false">
+  <button type="button" id="header-go" aria-label="Search">
+    <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><line x1="16.3" y1="16.3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div id="header-suggestions" class="suggestions hidden" role="listbox" aria-label="Name suggestions"></div>
+</div>
       <button type="button" class="theme-toggle" aria-pressed="false" aria-label="Switch to dark theme">
   <svg class="theme-toggle-icon icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
   <svg class="theme-toggle-icon icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>
 </button>
       <details class="mobile-nav">
   <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
-  <nav aria-label="Mobile navigation"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/emerging">Emerging</a><a href="/fading">Fading</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/about">About</a></nav>
+  <nav aria-label="Mobile navigation"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/emerging">Emerging</a><a href="/fading">Fading</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/newsletter">Newsletter</a><a href="/about">About</a></nav>
 </details>
     </header>
     <main id="main-content">
@@ -156,5 +163,6 @@
     </footer>
   </div>
   <script src="/assets/webmcp.js" defer></script>
+<script src="/assets/header-search.js" defer></script>
 </body>
 </html>

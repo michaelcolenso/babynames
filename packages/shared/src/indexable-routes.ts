@@ -45,6 +45,7 @@ const STATIC_ROUTES: IndexableRoute[] = [
   { path: "/", family: "static", priority: 1 },
   ...["extinct", "endangered", "comeback", "rising", "emerging", "fading"].map((slug): IndexableRoute => ({ path: `/${slug}`, family: "status", priority: 0.7 })),
   { path: "/year", family: "static", priority: 0.7 },
+  { path: "/names/", family: "static", priority: 0.7 },
   { path: "/about", family: "static", priority: 0.6 },
   { path: "/press", family: "static", priority: 0.6 },
   { path: "/developers", family: "static", priority: 0.6 },

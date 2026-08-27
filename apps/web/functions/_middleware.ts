@@ -278,14 +278,17 @@ function canonicalizePath(pathname: string): string | null {
   }
 
   if (pathname === "/blog") return "/blog/";
+  if (pathname === "/names") return "/names/";
   if (/^\/blog\/[^/]+$/.test(pathname)) return `${pathname}/`;
 
   if (/^\/year\/\d{4}$/.test(pathname)) return `${pathname}/`;
 
-  if (/^\/name\/[^/]+$/.test(pathname)) return `${pathname}/`;
+  // /name/<x> and /shadow/<x>/<year> deliberately skip the trailing-slash
+  // redirect here: Pages routes them to the [name] function either way, and
+  // the function knows the canonical *casing* from D1. Adding the slash here
+  // would force lowercase visitors through two 301s (add slash → fix case)
+  // instead of one.
   if (/^\/name\/[^/]+\/twin$/.test(pathname)) return `${pathname}/`;
-
-  if (/^\/shadow\/[^/]+\/\d{4}$/.test(pathname)) return `${pathname}/`;
 
   if (/^\/names\/[A-Z]\/?$/.test(pathname)) {
     return ensureTrailingSlash(pathname.toLowerCase());

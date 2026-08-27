@@ -14,6 +14,7 @@ import {
   getNameEnrichmentBundle,
   getNameStrongholds,
   getNameWithSeries,
+  getShadowName,
   getTopNamesForYear,
   getYearTotalsForYears,
   listRelatedNames,
@@ -60,13 +61,18 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     });
   }
 
-  // Redirect to the canonical casing if the URL doesn't match.
+  // Redirect to the canonical URL (correct casing + trailing slash) in a
+  // single hop. The middleware deliberately skips trailing-slash redirects
+  // for /name/<x> so lowercase requests don't bounce twice.
   const canonicalName = rows[0]!.row.name;
-  if (canonicalName !== decoded) {
-    const target = `/name/${encodeURIComponent(canonicalName)}/`;
+  const requestPath = new URL(ctx.request.url).pathname;
+  if (canonicalName !== decoded || !requestPath.endsWith("/")) {
     return new Response(null, {
       status: 301,
-      headers: { Location: target, "Cache-Control": "public, s-maxage=86400" },
+      headers: {
+        Location: `/name/${encodeURIComponent(canonicalName)}/`,
+        "Cache-Control": "public, s-maxage=86400",
+      },
     });
   }
 
@@ -97,7 +103,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   };
   const cls = classify({ series: record.series, yM: record.yM })!;
   const primaryRow = rows.find((r) => r.row.sex === primary.sex) ?? rows[0]!;
-  const [relatedNames, discovery, peerNames, yearTotals, enrichment, enrichmentBundle, diaspora, strongholds] = await Promise.all([
+  const [relatedNames, discovery, peerNames, yearTotals, enrichment, enrichmentBundle, diaspora, strongholds, hasShadow] = await Promise.all([
     listRelatedNames(ctx.env.DB, lower, primaryRow.row.sex, primaryRow.row.status, primaryRow.row.peak_year, 6),
     getNameDiscoveryClusters(ctx.env.DB, {
       currentNameLower: lower,
@@ -112,6 +118,12 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     getNameEnrichmentBundle(ctx.env.DB, lower, primaryRow.row.sex).catch(() => null),
     getNameDiaspora(ctx.env.DB, lower, primaryRow.row.sex).catch(() => null),
     getNameStrongholds(ctx.env.DB, lower, primaryRow.row.sex).catch(() => []),
+    // The explore nav links to /shadow/<name>/<yM>/ — only render that link
+    // when a shadow match actually exists, so a stale/empty
+    // name_shadow_matches table never surfaces a sitewide 404 link.
+    getShadowName(ctx.env.DB, lower, record.yM, record.yM - 50, primaryRow.row.sex)
+      .then((m) => m !== null)
+      .catch(() => false),
   ]);
   const url = new URL(ctx.request.url);
   const canonical = `${url.origin}/name/${encodeURIComponent(record.name)}/`;
@@ -127,6 +139,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     diaspora: diaspora ?? undefined,
     strongholds,
     affiliateTag: ctx.env.AMAZON_ASSOCIATES_TAG,
+    hasShadow,
   });
   return new Response(html, {
     headers: {

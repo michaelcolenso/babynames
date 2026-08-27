@@ -3,6 +3,12 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 
+# Static assets: scripts/styles are versioned with ?v= (bump on change), but a
+# few files (wordmark.svg, favicon.svg) are referenced unversioned — so cache
+# browsers for a day while letting the edge hold and revalidate for a week.
+/assets/*
+  Cache-Control: public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400
+
 /index.html
   Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400
   Link: </.well-known/api-catalog>; rel="api-catalog", </about>; rel="service-doc", </.well-known/agent-skills/index.json>; rel="https://agentskills.io/rel/skills-index"

@@ -5,6 +5,7 @@
     "/mcp",
     "/a2a",
     "/name/*",
+    "/names",
     "/names/*",
     "/compare/*",
     "/api/*",
@@ -31,6 +32,8 @@
     "/stories/*",
     "/shadow",
     "/shadow/*",
+    "/metrics",
+    "/metrics/*",
     "/.well-known/oauth-protected-resource"
   ],
   "exclude": [
