@@ -32,7 +32,6 @@ export function renderFactoryVizPage(
     riseStartYear?: number;
     peakYear: number;
     peakCount: number;
-    lastCount?: number;
     series: Record<number, number>;
   };
   const panels = (result.members as PanelCapable[])
@@ -43,7 +42,6 @@ export function renderFactoryVizPage(
           firstYear: m.firstYear ?? m.riseStartYear ?? m.peakYear,
           peakYear: m.peakYear,
           peakCount: m.peakCount,
-          lastCount: m.lastCount,
           series: m.series,
         },
         dataMaxYear: opts.dataMaxYear,

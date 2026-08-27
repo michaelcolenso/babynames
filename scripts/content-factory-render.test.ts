@@ -79,14 +79,16 @@ test("viz page: table rows match members, sparkline SVGs embedded, no undefined/
   assert.match(html, /\/name\/Moesha\//);
 });
 
-test("viz page: preserves lastCount so flash-flood members classify beyond 'declining'", () => {
-  // Moesha's lastCount (5) is ~1% of her peak (426) -> "endangered", not the
-  // "declining" fallback classifyStatus() returns when lastCount is dropped.
+test("viz page: classifies flash-flood sparklines via the canonical classify(), not a fixed fallback", () => {
+  // Both fixture members' series stop in 2000, 25 years before dataMaxYear
+  // (2025) -> classify() calls that extinct. A reconstruction that drops
+  // the series/dataMaxYear inputs classify() needs would fall back to
+  // "declining" for every member regardless of actual status.
   const html = renderFactoryVizPage(def, result, {
     canonicalBase: "https://nobodynamed.com",
     dataMaxYear: 2025,
   });
-  assert.match(html, /sparkline sparkline-endangered/);
+  assert.equal((html.match(/sparkline sparkline-extinct/g) ?? []).length, 2);
   assert.equal((html.match(/sparkline sparkline-declining/g) ?? []).length, 0);
 });
 
