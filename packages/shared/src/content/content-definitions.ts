@@ -29,6 +29,7 @@ export const CONTENT_DEFINITIONS: ContentDefinition[] = [
     sourceVersion: "ssa-national-2025",
     rolloutState: "draft",
     compute: { family: "flash-floods", minPeak: 100 },
+    panels: ["Kunta|M", "Arsenio|M", "Moesha|F", "Jkwon|M", "Bethzy|F"],
     claims: {
       count: (m) => m.length,
       femalePct: (m) =>

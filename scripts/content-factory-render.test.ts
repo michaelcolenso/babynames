@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 import { computeFlashFloods } from "../packages/shared/src/content/factory-compute";
 import { renderFactoryVizPage } from "../packages/shared/src/content/render-factory-viz";
 import { renderFactoryPostMarkdown } from "../packages/shared/src/content/render-factory-post";
+import { CONTENT_DEFINITIONS } from "../packages/shared/src/content/content-definitions";
 import type { ContentDefinition, FlashFloodMember } from "../packages/shared/src/content/factory-types";
 
 const T = new Map(Array.from({ length: 40 }, (_, i) => [1990 + i, 1_000_000] as [number, number]));
@@ -76,6 +79,17 @@ test("viz page: table rows match members, sparkline SVGs embedded, no undefined/
   assert.match(html, /\/name\/Moesha\//);
 });
 
+test("viz page: preserves lastCount so flash-flood members classify beyond 'declining'", () => {
+  // Moesha's lastCount (5) is ~1% of her peak (426) -> "endangered", not the
+  // "declining" fallback classifyStatus() returns when lastCount is dropped.
+  const html = renderFactoryVizPage(def, result, {
+    canonicalBase: "https://nobodynamed.com",
+    dataMaxYear: 2025,
+  });
+  assert.match(html, /sparkline sparkline-endangered/);
+  assert.equal((html.match(/sparkline sparkline-declining/g) ?? []).length, 0);
+});
+
 test("post renderer: frontmatter + interpolated body has no leftover placeholders", () => {
   const template = `Start with {{claim:count}} floods led by {{claim:topName}} at {{claim:topCount}} births.
 
@@ -99,6 +113,24 @@ See [Moesha](/name/Moesha/).`;
   assert.match(md, /led by Moesha at 426 births/);
   // No leftover placeholders anywhere in the markdown.
   assert.ok(!md.includes("{{"));
+});
+
+test("every definition's panels allowlist covers its template's {{panel:*}} placeholders", () => {
+  const repoRoot = path.resolve(import.meta.dirname ?? __dirname, "..");
+  for (const def of CONTENT_DEFINITIONS) {
+    if (def.kind !== "post" && def.kind !== "both") continue;
+    const templatePath = path.join(repoRoot, "content/blog/templates", `${def.slug}.body.md`);
+    const template = readFileSync(templatePath, "utf8");
+    const placeholders = [...template.matchAll(/\{\{panel:([^}]+)\}\}/g)].map((m) => m[1]!.trim());
+    const wanted = new Set(def.panels ?? []);
+    for (const p of placeholders) {
+      const lookup = wanted.has(p) ? p : p.replace(".", "|");
+      assert.ok(
+        wanted.has(lookup),
+        `${def.slug}: template references {{panel:${p}}} but def.panels does not include it`,
+      );
+    }
+  }
 });
 
 test("post renderer throws on unresolved claim placeholder", () => {

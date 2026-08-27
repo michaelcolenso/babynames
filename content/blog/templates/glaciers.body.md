@@ -10,7 +10,7 @@ We ran every American name since 1880 through the same detector, looking for the
 
 Robert peaked in {{claim:topYear}} at {{claim:topCount}} boys born in a single year — and it took {{claim:robertRiseYears}} years of steady climbing to get there. The fall took even longer. Robert was still a top-tier name six decades after its peak.
 
-Mary tells the same story on the girls' side: {{claim:maryRiseYears}} years up to a {{claim:maryPeak}}-birth peak in 1921, then more than seventy years of slow retreat. John's decline stretched {{claim:johnFallYears}} years past his own peak — the longest sunset in the record.
+Mary tells the same story on the girls' side: {{claim:maryRiseYears}} years up to a {{claim:maryPeak}}-birth peak in 1921, then more than seventy years of slow retreat. John's decline stretched {{claim:johnFallYears}} years past his own peak.
 
 The average glacier here rose for {{claim:avgRiseYears}} years and fell for {{claim:avgFallYears}} more. A child named at the average glacier's peak would be a grandparent before the name finished falling.
 
@@ -18,7 +18,7 @@ The average glacier here rose for {{claim:avgRiseYears}} years and fell for {{cl
 
 ## Glaciers are not old news
 
-Only {{claim:femalePct}} percent of the glaciers are girls' names — the slow-build mega-name is mostly a boys' phenomenon. And the list is not just a museum of 1940s favorites.
+{{claim:femalePct}} percent of the glaciers are girls' names — the slow-build mega-name is, if anything, more a girls' phenomenon than a boys' one. And the list is not just a museum of 1940s favorites.
 
 Christopher is the modern outlier: a glacier that formed after television. It climbed from {{claim:christopherPeak}}-peak territory over roughly three decades starting in the early 1950s, crested in 1984, and only finished its decline around 2020. Barbara shows the classic mid-century shape: a {{claim:barbaraPeak}}-birth peak in 1947 and a completed fall by the 1970s.
 
