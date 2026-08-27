@@ -30,7 +30,7 @@ fallen to 16. The name never recovered.
 <div class="chart-panel">
   <div class="chart-panel-name">Kunta</div>
   <div class="chart-caption"><span>1977</span><span>Peak 1977</span><span>2025</span></div>
-  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <svg class="sparkline sparkline-extinct" style="--line-color:var(--extinct);--fill-color:rgba(38, 38, 38, 0.12)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
   <style>
     .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
     .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
@@ -100,7 +100,7 @@ The reruns didn't get another wave.
 <div class="chart-panel">
   <div class="chart-panel-name">Moesha</div>
   <div class="chart-caption"><span>1996</span><span>Peak 1996</span><span>2025</span></div>
-  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <svg class="sparkline sparkline-extinct" style="--line-color:var(--extinct);--fill-color:rgba(38, 38, 38, 0.12)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
   <style>
     .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
     .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
@@ -130,7 +130,7 @@ career didn't sustain itself, and neither did the name.
 <div class="chart-panel">
   <div class="chart-panel-name">Jkwon</div>
   <div class="chart-caption"><span>2004</span><span>Peak 2004</span><span>2025</span></div>
-  <svg class="sparkline sparkline-declining" style="--line-color:var(--declining);--fill-color:rgba(162, 104, 34, 0.15)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <svg class="sparkline sparkline-extinct" style="--line-color:var(--extinct);--fill-color:rgba(38, 38, 38, 0.12)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
   <style>
     .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
     .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
@@ -162,7 +162,7 @@ capture, but that's speculation. The data is unambiguous. The cause is not.
 <div class="chart-panel">
   <div class="chart-panel-name">Bethzy</div>
   <div class="chart-caption"><span>2005</span><span>Peak 2006</span><span>2025</span></div>
-  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <svg class="sparkline sparkline-extinct" style="--line-color:var(--extinct);--fill-color:rgba(38, 38, 38, 0.12)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
   <style>
     .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
     .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}

@@ -26,7 +26,14 @@ export function renderFactoryVizPage(
     publishedAt: new Date().toISOString(),
   };
 
-  type PanelCapable = { name: string; firstYear?: number; riseStartYear?: number; peakYear: number; peakCount: number; series: Record<number, number> };
+  type PanelCapable = {
+    name: string;
+    firstYear?: number;
+    riseStartYear?: number;
+    peakYear: number;
+    peakCount: number;
+    series: Record<number, number>;
+  };
   const panels = (result.members as PanelCapable[])
     .map((m) =>
       chartPanelHtml({

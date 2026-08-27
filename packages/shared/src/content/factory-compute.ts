@@ -12,6 +12,7 @@ import type {
   GlaciersResult,
 } from "./factory-types";
 import { buildSparkline } from "../sparkline";
+import { classify } from "../classify";
 import type { Status } from "../schema";
 
 export const DATA_MIN_YEAR = 1880;
@@ -310,8 +311,6 @@ export interface PanelMember {
   peakYear: number;
   peakCount: number;
   series: Record<number, number>;
-  /** Present on flash-flood members; drives status classification when set. */
-  lastCount?: number;
 }
 
 export interface PanelSpec {
@@ -323,21 +322,13 @@ export interface PanelSpec {
 export function chartPanelHtml(spec: PanelSpec): string {
   const { member, dataMaxYear } = spec;
   const ym = spec.dataMinYear ?? DATA_MIN_YEAR;
-  const status: Status = classifyStatus(member);
+  const status: Status = classify({ series: member.series, yM: dataMaxYear })?.status ?? "declining";
   const svg = buildSparkline(member.series, ym, dataMaxYear, { status });
   return `<div class="chart-panel">
   <div class="chart-panel-name">${escapeHtml(member.name)}</div>
   <div class="chart-caption"><span>${member.firstYear}</span><span>Peak ${member.peakYear}</span><span>${dataMaxYear}</span></div>
   ${svg}
 </div>`;
-}
-
-function classifyStatus(m: PanelMember): Status {
-  if (m.lastCount === undefined) return "declining";
-  if (m.lastCount === 0) return "extinct";
-  if (m.lastCount <= m.peakCount * 0.05) return "endangered";
-  if (m.lastCount <= m.peakCount * 0.5) return "declining";
-  return "stable";
 }
 
 /**
