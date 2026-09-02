@@ -32,6 +32,8 @@
     "/stories/*",
     "/shadow",
     "/shadow/*",
+    "/state",
+    "/state/*",
     "/metrics",
     "/metrics/*",
     "/.well-known/oauth-protected-resource"

@@ -1,7 +1,7 @@
 // GET /sitemap.xml
 // Curated XML sitemap for static hubs plus the strongest per-name SEO pages.
 
-import { absoluteIndexableUrl, buildIndexableRoutes, getMeta, listBlogPosts, listIndexableNames, META_KEYS } from "@nv/shared";
+import { absoluteIndexableUrl, buildIndexableRoutes, getMeta, listBlogPosts, listIndexableNames, listStateDataYears, META_KEYS } from "@nv/shared";
 import type { IndexableRoute } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
@@ -16,17 +16,19 @@ function toXmlEntry(origin: string, route: IndexableRoute): string {
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
-  const [names, blogPosts, dataVersion, ymStr, yMStr] = await Promise.all([
+  const [names, blogPosts, dataVersion, ymStr, yMStr, stateYears] = await Promise.all([
     listIndexableNames(ctx.env.DB, MAX_SITEMAP_URLS),
     listBlogPosts(ctx.env.DB, "published", 100, 0),
     getMeta(ctx.env.DB, META_KEYS.dataVersion),
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
+    listStateDataYears(ctx.env.DB).catch(() => [] as number[]),
   ]);
 
   const ym = Number(ymStr ?? 1880);
   const yM = Number(yMStr ?? 2024);
-  const routes = buildIndexableRoutes({ minYear: ym, maxYear: yM, names, blogPosts, maxRoutes: MAX_SITEMAP_URLS });
+  const stateMaxYear = stateYears.length ? stateYears[stateYears.length - 1] : undefined;
+  const routes = buildIndexableRoutes({ minYear: ym, maxYear: yM, stateMaxYear, names, blogPosts, maxRoutes: MAX_SITEMAP_URLS });
 
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',

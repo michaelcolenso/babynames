@@ -8,6 +8,8 @@ export * from "./render-name";
 export * from "./render-compare";
 export * from "./render-twin";
 export * from "./render-year";
+export * from "./render-state";
+export * from "./state-rankings";
 export * from "./render-blog";
 export * from "./render-landing";
 export * from "./render-momentum";

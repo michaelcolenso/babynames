@@ -16,6 +16,39 @@ export const ALL_STATES: readonly string[] = [
 export const TILE_ROWS = 8;
 export const TILE_COLS = 11;
 
+// Full display names for the 51-state set. Used by state hub pages, their
+// titles/meta, and anywhere an abbreviation needs to read as a place name.
+export const STATE_NAMES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", DC: "District of Columbia",
+  FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho", IL: "Illinois",
+  IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana",
+  ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota",
+  MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada",
+  NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York",
+  NC: "North Carolina", ND: "North Dakota", OH: "Ohio", OK: "Oklahoma",
+  OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina",
+  SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont",
+  VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin",
+  WY: "Wyoming",
+};
+
+/** URL slug for a state hub: "CA" → "california". */
+export function stateToSlug(state: string): string {
+  const name = STATE_NAMES[state];
+  if (!name) return "";
+  return name.toLowerCase().replace(/\s+/g, "-");
+}
+
+const SLUG_TO_STATE: Record<string, string> = Object.fromEntries(
+  ALL_STATES.map((s) => [stateToSlug(s), s]),
+);
+
+/** Reverse lookup: "california" → "CA". Returns "" for unknown slugs. */
+export function slugToState(slug: string): string {
+  return SLUG_TO_STATE[slug.toLowerCase()] ?? "";
+}
+
 // [row, col], 0-indexed. row 0 = north, col 0 = west.
 export const US_TILE_GRID: Record<string, readonly [number, number]> = {
   AK: [0, 0], ME: [0, 10],

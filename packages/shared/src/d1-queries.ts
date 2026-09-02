@@ -4,6 +4,7 @@
 
 import type { D1Database } from "@cloudflare/workers-types";
 import { RANKINGS_PER_SEX_LIMIT, rankingsReady } from "./rankings";
+import { STATE_RANKINGS_PER_SEX_LIMIT, stateRankingsReady } from "./state-rankings";
 import type {
   BlogPost,
   BlogPostSummary,
@@ -1596,4 +1597,145 @@ function parseJsonArray<T>(raw: string): T[] {
   } catch {
     return [];
   }
+}
+
+// ── State rankings (migration 0024) ─────────────────────────────────────────
+//
+// Readers for the state hub pages (/state/:state/). Same readiness contract
+// as the national rankings cache: trust state_year_rankings only while
+// stateRankingsReady() reports the table fully built for the live dataset,
+// and fall back to the live window-function query over name_states otherwise.
+
+export interface StateTopRow {
+  name: string;
+  sex: Sex;
+  count: number;
+  rank: number;
+  /** National rank for the same (name, sex, year); null when outside the
+   * stored national top RANKINGS_PER_SEX_LIMIT. */
+  nationalRank: number | null;
+}
+
+async function stateRankingsUsable(db: D1Database, perBucket: number): Promise<boolean> {
+  if (perBucket > STATE_RANKINGS_PER_SEX_LIMIT) return false;
+  try {
+    return await stateRankingsReady(db);
+  } catch {
+    // meta or the state rankings tables do not exist on this database yet.
+    return false;
+  }
+}
+
+// Top-N names per sex within a state for a given year, joined against the
+// national rank for the same (name, sex, year). Used by /state/:state/.
+export async function topByStateYear(
+  db: D1Database,
+  state: string,
+  year: number,
+  perSex = STATE_RANKINGS_PER_SEX_LIMIT,
+): Promise<StateTopRow[]> {
+  if (await stateRankingsUsable(db, perSex)) {
+    const pre = await db
+      .prepare(
+        `SELECT s.name, s.sex, s.count, s.rank, nr.rank AS nationalRank
+           FROM state_year_rankings s
+           LEFT JOIN name_rankings_by_year nr
+                  ON nr.year = s.year AND nr.sex = s.sex AND nr.name = s.name
+          WHERE s.state = ?1 AND s.year = ?2 AND s.rank <= ?3
+          ORDER BY s.sex, s.rank`,
+      )
+      .bind(state, year, perSex)
+      .all<{ name: string; sex: Sex; count: number; rank: number; nationalRank: number | null }>();
+    if (pre.results?.length) return pre.results;
+  }
+
+  // Live fallback: rank name_states directly (~57k rows for one state-year),
+  // national rank left null rather than computing a second heavy window.
+  const r = await db
+    .prepare(
+      `WITH ranked AS (
+         SELECT name, sex, count,
+                ROW_NUMBER() OVER (PARTITION BY sex ORDER BY count DESC, name ASC) AS rank
+           FROM name_states
+          WHERE state = ?1 AND year = ?2
+       )
+       SELECT name, sex, count, rank, NULL AS nationalRank
+         FROM ranked
+        WHERE rank <= ?3
+        ORDER BY sex, rank`,
+    )
+    .bind(state, year, perSex)
+    .all<StateTopRow>();
+  return r.results ?? [];
+}
+
+export interface StateYearTotals {
+  state: string;
+  year: number;
+  births: number;
+  names: number;
+}
+
+// Context numbers for one state hub: total SSA-recorded births and distinct
+// names above the 5-birth floor for the year.
+export async function getStateYearTotals(
+  db: D1Database,
+  state: string,
+  year: number,
+): Promise<StateYearTotals | null> {
+  if (await stateRankingsUsable(db, 1)) {
+    const pre = await db
+      .prepare(`SELECT state, year, births, names FROM state_year_totals WHERE state = ?1 AND year = ?2`)
+      .bind(state, year)
+      .all<StateYearTotals>();
+    if (pre.results?.length) return pre.results[0]!;
+  }
+  const r = await db
+    .prepare(
+      `SELECT state, year, SUM(count) AS births, COUNT(DISTINCT name) AS names
+         FROM name_states
+        WHERE state = ?1 AND year = ?2
+        GROUP BY state, year`,
+    )
+    .bind(state, year)
+    .all<StateYearTotals>();
+  return r.results?.[0] ?? null;
+}
+
+// The set of years that have state-level data. State files run 1910 onward
+// and typically lag the national file by one SSA release cycle, so the hub
+// must read its own year range rather than reuse min_year/max_year.
+export async function listStateDataYears(db: D1Database): Promise<number[]> {
+  if (await stateRankingsUsable(db, 1)) {
+    const r = await db
+      .prepare(`SELECT DISTINCT year FROM state_year_totals ORDER BY year`)
+      .all<{ year: number }>();
+    if (r.results?.length) return r.results.map((row) => row.year);
+  }
+  const r = await db
+    .prepare(`SELECT DISTINCT year FROM name_states ORDER BY year`)
+    .all<{ year: number }>();
+  return (r.results ?? []).map((row) => row.year);
+}
+
+// Totals for every state in one year — drives the /state/ index grid.
+export async function listStateTotalsForYear(db: D1Database, year: number): Promise<StateYearTotals[]> {
+  if (await stateRankingsUsable(db, 1)) {
+    const r = await db
+      .prepare(`SELECT state, year, births, names FROM state_year_totals WHERE year = ?1 ORDER BY state`)
+      .bind(year)
+      .all<StateYearTotals>();
+    if (r.results?.length) return r.results;
+  }
+  const r = await db
+    .prepare(
+      `SELECT state, year, SUM(count) AS births, COUNT(DISTINCT name) AS names
+         FROM name_states
+        WHERE year = ?1
+        GROUP BY state
+        ORDER BY state`,
+    )
+    .bind(year)
+    .all<StateYearTotals>();
+  return r.results ?? [];
 }

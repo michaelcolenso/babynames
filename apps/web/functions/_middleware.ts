@@ -279,6 +279,7 @@ function canonicalizePath(pathname: string): string | null {
 
   if (pathname === "/blog") return "/blog/";
   if (pathname === "/names") return "/names/";
+  if (pathname === "/state") return "/state/";
   if (/^\/blog\/[^/]+$/.test(pathname)) return `${pathname}/`;
 
   if (/^\/year\/\d{4}$/.test(pathname)) return `${pathname}/`;

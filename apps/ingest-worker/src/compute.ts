@@ -13,6 +13,7 @@ import {
   encodeSpark,
   publishRankings,
   publishVizPayloads,
+  revalidateStateRankings,
   type ClassifyResult,
   type Sex,
 } from "@nv/shared";
@@ -66,6 +67,12 @@ export async function finalize(
   // new. The marker is restored at the end, and only takes effect once the
   // caller writes the matching data_version.
   await publishRankings(db, yearRange(ym, yM), dataVersion);
+  // National ingests do not touch name_states, so the state-rankings cache
+  // (migration 0024) survives this data_version bump — carry its marker onto
+  // the new version instead of stranding readers on the live query until the
+  // next state backfill. (State ingests are the opposite case: see the
+  // diaspora-finalize handler in index.ts.)
+  await revalidateStateRankings(db, dataVersion);
   // Same contract for the whole-dataset viz aggregates: each payload is stamped
   // with this run's data_version and only served once meta.data_version matches,
   // so nothing half-built becomes visible.

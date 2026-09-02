@@ -11,6 +11,9 @@ import {
   pageShell,
   META_KEYS,
   GENERATION_DEFINITIONS,
+  ALL_STATES,
+  STATE_NAMES,
+  stateToSlug,
 } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
@@ -69,6 +72,14 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     <h2 id="by-decade">Names by decade</h2>
     <nav class="decade-nav" aria-label="Names by decade">
       ${decades.map((d) => `<a href="/names/${d}/">${d}</a>`).join("\n      ")}
+    </nav>
+  </section>
+
+  <section class="section" aria-labelledby="by-state">
+    <p class="eyebrow">Geography</p>
+    <h2 id="by-state">Names by state</h2>
+    <nav class="decade-nav" aria-label="Names by state">
+      ${ALL_STATES.map((s) => `<a href="/state/${stateToSlug(s)}/">${STATE_NAMES[s] ?? s}</a>`).join("\n      ")}
     </nav>
   </section>
 

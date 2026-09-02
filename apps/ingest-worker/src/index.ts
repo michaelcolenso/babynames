@@ -354,6 +354,11 @@ async function handleMessage(env: Env, msg: IngestMessage): Promise<void> {
         const priorVersion = (await getMeta(env.DB, META_KEYS.dataVersion)) ?? "";
         await revalidateRankings(env.DB, diasporaVersion);
         await revalidateVizPayloads(env.DB, priorVersion, diasporaVersion);
+        // NOTE: this bump deliberately does NOT revalidate state_year_rankings
+        // — the state ingest just rewrote name_states, so the state rankings
+        // cache must go stale. Readers fall back to the live query until
+        // someone reruns `npm run backfill-state-rankings` (same manual-rerun
+        // requirement as build-shadow-matches after a national refresh).
         await setMeta(env.DB, META_KEYS.dataVersion, diasporaVersion);
         console.log(JSON.stringify({ message: "diaspora compute complete", runId: msg.runId }));
       }

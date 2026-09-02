@@ -278,6 +278,10 @@ export const META_KEYS = {
   // Readers only trust the table when this matches data_version — see
   // rankings.ts.
   rankingsVersion: "rankings_version",
+  // The data_version that state_year_rankings was last fully built for.
+  // Readers only trust the table when this matches data_version — see
+  // state-rankings.ts.
+  stateRankingsVersion: "state_rankings_version",
 } as const;
 
 // Diaspora — per-name geographic diffusion (see name_diaspora table).
