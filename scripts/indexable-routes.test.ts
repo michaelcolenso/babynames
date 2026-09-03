@@ -6,6 +6,16 @@ import { DECADE_HUB_DEFINITIONS } from "../packages/shared/src/content/decade-hu
 import { GENERATION_DEFINITIONS } from "../packages/shared/src/content/generation-definitions";
 import { renderYearPage } from "../packages/shared/src/render-year";
 
+test("pre-1970 lastmod dates are omitted (Google rejects them)", () => {
+  const routes = buildIndexableRoutes({ minYear: 1880, maxYear: 2025 });
+  const withLastmod = routes.filter((route) => route.lastmod !== undefined);
+  assert.ok(withLastmod.every((route) => route.lastmod! >= "1970"));
+  // The pre-1970 year and decade routes still exist — just without lastmod.
+  assert.ok(routes.some((route) => route.path === "/year/1880/" && route.lastmod === undefined));
+  assert.ok(routes.some((route) => route.path === "/names/1920s/" && route.lastmod === undefined));
+  assert.ok(routes.some((route) => route.path === "/year/1970/" && route.lastmod === "1970-05-15"));
+});
+
 test("registry normalizes and deduplicates canonical routes", () => {
   const routes = buildIndexableRoutes({
     minYear: 2023,

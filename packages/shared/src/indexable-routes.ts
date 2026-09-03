@@ -83,13 +83,18 @@ export function buildIndexableRoutes(options: IndexableRouteOptions): IndexableR
   const dataDate = `${maxYear}-05-15`;
   const routes: IndexableRoute[] = [...STATIC_ROUTES];
 
-  for (let year = minYear; year <= maxYear; year++) routes.push({ path: `/year/${year}/`, family: "year", lastmod: `${year}-05-15`, priority: 0.6 });
+  // Google rejects sitemap lastmod dates before 1970 ("Invalid date" — it
+  // treats pre-epoch dates as implausible). Historical year/decade pages are
+  // archival content whose lastmod is a synthetic `${year}-05-15` anyway, so
+  // for anything before 1970 we omit the tag rather than lie about it.
+  const dataDateFor = (year: number): string | undefined => (year < 1970 ? undefined : `${year}-05-15`);
+  for (let year = minYear; year <= maxYear; year++) routes.push({ path: `/year/${year}/`, family: "year", lastmod: dataDateFor(year), priority: 0.6 });
   const stateDataDate = `${options.stateMaxYear ?? maxYear - 1}-05-15`;
   for (const state of ALL_STATES) {
     routes.push({ path: `/state/${stateToSlug(state)}/`, family: "state", lastmod: stateDataDate, priority: 0.6 });
   }
   for (let decade = Math.floor(minYear / 10) * 10; decade <= Math.floor(maxYear / 10) * 10; decade += 10) {
-    routes.push({ path: `/names/${decade}s/`, family: "decade", lastmod: `${Math.min(decade + 9, maxYear)}-05-15`, priority: 0.5 });
+    routes.push({ path: `/names/${decade}s/`, family: "decade", lastmod: dataDateFor(Math.min(decade + 9, maxYear)), priority: 0.5 });
   }
   const minDecade = Math.floor(minYear / 10) * 10;
   const maxDecade = Math.floor(maxYear / 10) * 10;
