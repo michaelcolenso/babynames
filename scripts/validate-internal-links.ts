@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { canonicalRoutePath } from "../packages/shared/src/indexable-routes";
+import { buildIndexableRoutes, canonicalRoutePath } from "../packages/shared/src/indexable-routes";
 
 interface PageResult {
   url: string;
@@ -75,8 +75,15 @@ async function main(): Promise<void> {
   const sitemapResponse = await fetch(new URL("/sitemap.xml", base));
   if (!sitemapResponse.ok) throw new Error(`Sitemap returned ${sitemapResponse.status}`);
   const sitemap = await sitemapResponse.text();
-  const urls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => normalize(match[1])).filter((url): url is string => Boolean(url));
-  const pages = await pooled([...new Set(urls)], load);
+  const sitemapUrls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => normalize(match[1])).filter((url): url is string => Boolean(url));
+  // Seed from the same registry that builds the sitemap, not the sitemap alone.
+  // A page that exists but was forgotten in the sitemap is invisible to a
+  // sitemap-only crawl, so its orphan status would never be reported.
+  const structuralUrls = buildIndexableRoutes({ minYear: 1880, maxYear: 2025 })
+    .map((route) => normalize(route.path))
+    .filter((url): url is string => Boolean(url));
+  const urls = [...new Set([...sitemapUrls, ...structuralUrls])];
+  const pages = await pooled(urls, load);
   const inbound = new Map<string, Set<string>>(pages.map((page) => [page.url, new Set()]));
   for (const page of pages) for (const target of page.links) inbound.get(target)?.add(page.url);
   const failures = pages.flatMap((page) => {

@@ -15,6 +15,9 @@
 /viz/vintage-revival.html  /blog/the-great-vintage-revival  301
 /viz/new-america  /blog/two-americas  301
 /viz/new-america.html  /blog/two-americas  301
+# The flash-floods content-factory viz page was superseded by its published post.
+/viz/flash-floods  /blog/flash-floods  301
+/viz/flash-floods.html  /blog/flash-floods  301
 
 # Enforce trailing slash canonical name URLs.
 /name/:name  /name/:name/  301

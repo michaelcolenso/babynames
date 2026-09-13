@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { absoluteIndexableUrl, buildIndexableRoutes, canonicalRoutePath } from "../packages/shared/src/indexable-routes";
+import { CONTENT_DEFINITIONS } from "../packages/shared/src/content/content-definitions";
 import { DECADE_HUB_DEFINITIONS } from "../packages/shared/src/content/decade-hub-definitions";
 import { GENERATION_DEFINITIONS } from "../packages/shared/src/content/generation-definitions";
 import { renderYearPage } from "../packages/shared/src/render-year";
@@ -32,6 +33,24 @@ test("canonical URLs enforce HTTPS outside local development", () => {
   assert.equal(canonicalRoutePath("/name/Ada"), "/name/Ada/");
   assert.equal(absoluteIndexableUrl("http://nobodynamed.com", "/name/Ada"), "https://nobodynamed.com/name/Ada/");
   assert.equal(absoluteIndexableUrl("http://localhost:8788", "/name/Ada"), "http://localhost:8788/name/Ada/");
+});
+
+test("live hub pages are indexable and draft content-factory vizzes are withheld", () => {
+  const routes = buildIndexableRoutes({ minYear: 1880, maxYear: 2025 });
+  const paths = new Set(routes.map((route) => route.path));
+
+  // These pages previously existed with zero inbound links and were absent from
+  // the sitemap — reachable by URL but invisible to users and crawlers.
+  assert.ok(paths.has("/stories/american-name-atlas"), "American Name Atlas hub must be indexable");
+  assert.ok(paths.has("/viz/nameprint"), "Nameprint visualization must be indexable");
+
+  // Draft content-factory pages have no inbound links yet, so advertising them
+  // in the sitemap would publish an orphan URL.
+  const draftVizzes = CONTENT_DEFINITIONS.filter((d) => d.kind !== "post" && d.rolloutState === "draft");
+  assert.ok(draftVizzes.length > 0, "expected at least one draft content-factory definition to guard");
+  for (const definition of draftVizzes) {
+    assert.ok(!paths.has(`/viz/${definition.slug}`), `${definition.slug} is draft and must stay out of the sitemap`);
+  }
 });
 
 test("route limit reserves space for structural routes before names", () => {

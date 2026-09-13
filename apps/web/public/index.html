@@ -51,7 +51,7 @@
   <div class="page" data-content-id="article:home" data-content-type="article" data-content-slug="home">
     <header class="site">
       <a class="brand" href="/" aria-label="NobodyNamed home"><img class="brand-logo brand-logo-light" src="/assets/brand/wordmark.svg" alt="NobodyNamed" loading="lazy"><img class="brand-logo brand-logo-dark" src="/assets/brand/wordmark-dark.svg" alt="NobodyNamed" loading="lazy"></a>
-      <nav aria-label="Main navigation"><details class="nav-group"><summary>Discover</summary><div class="nav-group-panel"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/rising">Rising</a><a href="/emerging">Emerging</a><a href="/fading">Fading</a></div></details><a href="/year">Birth year</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/newsletter">Newsletter</a><a href="/about">About</a></nav>
+      <nav aria-label="Main navigation"><details class="nav-group"><summary>Discover</summary><div class="nav-group-panel"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/rising">Rising</a><a href="/emerging">Emerging</a><a href="/fading">Fading</a><a href="/names/">All names</a><a href="/state/">By state</a></div></details><a href="/year">Birth year</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/newsletter">Newsletter</a><a href="/about">About</a></nav>
       <div class="header-search">
   <input id="header-q" type="text" placeholder="Search a name…" autocomplete="off" spellcheck="false" aria-label="Search a name" aria-autocomplete="list" aria-controls="header-suggestions" aria-expanded="false">
   <button type="button" id="header-go" aria-label="Search">
@@ -65,7 +65,7 @@
 </button>
       <details class="mobile-nav">
   <summary aria-label="Toggle navigation"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></summary>
-  <nav aria-label="Mobile navigation"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/emerging">Emerging</a><a href="/fading">Fading</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/newsletter">Newsletter</a><a href="/about">About</a></nav>
+  <nav aria-label="Mobile navigation"><a href="/extinct">Extinct</a><a href="/endangered">Endangered</a><a href="/comeback">Comebacks</a><a href="/year">Birth year</a><a href="/rising">Rising</a><a href="/emerging">Emerging</a><a href="/fading">Fading</a><a href="/names/">All names</a><a href="/state/">By state</a><a href="/viz">Visualizations</a><a href="/blog/">Namecalling</a><a href="/newsletter">Newsletter</a><a href="/about">About</a></nav>
 </details>
     </header>
 
@@ -206,7 +206,7 @@
             <p class="eyebrow">How it works</p>
             <h2 id="explainer-title">Every name leaves a trail.</h2>
           </div>
-          <p class="lede">NobodyNamed classifies every American name by its trajectory — not just its current ranking, but where it's been and where it's heading. Using SSA birth records since 1880, we track each name's peak year, growth rate, generational shift, and vital status: <a href="/rising" class="inline-tag tag-rising">Rising</a>, <span class="inline-tag tag-stable">Stable</span>, <a href="/endangered" class="inline-tag tag-endangered">Declining</a>, <a href="/endangered" class="inline-tag tag-endangered">Endangered</a>, or <a href="/extinct" class="inline-tag tag-extinct">Extinct</a>. Search any name above to see where it lands — or browse by <a href="/year">birth year</a>, <a href="/names/1980s/">decade</a>, or <a href="/names/a/">first letter</a>.</p>
+          <p class="lede">NobodyNamed classifies every American name by its trajectory — not just its current ranking, but where it's been and where it's heading. Using SSA birth records since 1880, we track each name's peak year, growth rate, generational shift, and vital status: <a href="/rising" class="inline-tag tag-rising">Rising</a>, <span class="inline-tag tag-stable">Stable</span>, <a href="/endangered" class="inline-tag tag-endangered">Declining</a>, <a href="/endangered" class="inline-tag tag-endangered">Endangered</a>, or <a href="/extinct" class="inline-tag tag-extinct">Extinct</a>. Search any name above to see where it lands — or browse by <a href="/year">birth year</a>, <a href="/names/1980s/">decade</a>, <a href="/names/a/">first letter</a>, or <a href="/state/">state</a>.</p>
         </div>
       </section>
 
@@ -234,19 +234,20 @@
     </main>
 
     <div id="view-name"></div>
-    <nav class="editorial-nav" aria-label="Browse by generation" data-source-placement="homepage-editorial-nav">
+    <nav class="editorial-nav" aria-label="More names to explore" data-source-placement="homepage-editorial-nav">
       <a href="/comeback" data-track-target-id="article:comeback" data-track-target-type="article">Comeback names</a>
       <a href="/millennial-names" data-track-target-id="article:millennial-names" data-track-target-type="article">Millennial names</a>
       <a href="/gen-z-names" data-track-target-id="article:gen-z-names" data-track-target-type="article">Gen Z names</a>
       <a href="/classic-names" data-track-target-id="article:classic-names" data-track-target-type="article">Classic names</a>
       <a href="/future-grandparent-names" data-track-target-id="article:future-grandparent-names" data-track-target-type="article">Future grandparent names</a>
+      <a href="/stories/american-name-atlas" data-track-target-id="article:american-name-atlas" data-track-target-type="article">American Name Atlas</a>
     </nav>
     <footer class="site">
       <div>
         <div>NobodyNamed is a small data project about American first names.</div>
         <div class="footer-note">Data sourced from Social Security Administration birth records (1880–present).</div>
       </div>
-      <div><a href="/about">About</a> &middot; <a href="/press">Press</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
+      <div><a href="/about">About</a> &middot; <a href="/press">Press</a> &middot; <a href="/developers">Developers</a> &middot; <a target="_blank" rel="noopener" href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
     </footer>
   </div>
         <script src="/assets/app.js" defer></script>
