@@ -16,10 +16,25 @@ function toXmlEntry(origin: string, route: IndexableRoute): string {
 
 export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
-  const [names, blogPosts, dataVersion, ymStr, yMStr, stateYears] = await Promise.all([
+
+  // The middleware leaves this route alone (see `cachesOwnResponse` in
+  // _middleware.ts) because the variant cache key it would use is a synthetic
+  // `__nv_variant` URL that purge-by-URL cannot address. So the handler caches
+  // itself, under a key carrying `data_version`, which means an SSA refresh
+  // invalidates the document immediately instead of after the TTL expires.
+  //
+  // Without a cache this route rebuilt ~1.9 MB of XML and re-ran five D1
+  // queries on every crawler hit — about a second of CPU each time.
+  const dataVersion = await getMeta(ctx.env.DB, META_KEYS.dataVersion);
+  const cache = caches.default;
+  const cacheKey = new Request(`https://internal/sitemap/${dataVersion ?? "v0"}`);
+
+  const hit = await cache.match(cacheKey);
+  if (hit) return hit;
+
+  const [names, blogPosts, ymStr, yMStr, stateYears] = await Promise.all([
     listIndexableNames(ctx.env.DB, MAX_SITEMAP_URLS),
     listBlogPosts(ctx.env.DB, "published", 100, 0),
-    getMeta(ctx.env.DB, META_KEYS.dataVersion),
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
     listStateDataYears(ctx.env.DB).catch(() => [] as number[]),
@@ -38,13 +53,20 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     "",
   ].join("\n");
 
-  return new Response(xml, {
+  const response = new Response(xml, {
     headers: {
-      "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
+      // Dataset changes are handled by the data_version cache key above, so this
+      // TTL only governs how long a newly published post or content-factory page
+      // waits to appear here. An hour keeps that prompt without regenerating the
+      // document on every crawler hit.
+      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
       "Content-Type": "application/xml; charset=utf-8",
       ...(dataVersion ? { ETag: `"sitemap-${headerSafe(dataVersion)}"` } : {}),
     },
   });
+
+  ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  return response;
 };
 
 export const onRequestHead: PagesFunction<Env> = async (ctx) => withoutBody(await onRequestGet(ctx));

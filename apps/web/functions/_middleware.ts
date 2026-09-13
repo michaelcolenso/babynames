@@ -71,6 +71,20 @@ export function usesVariantCache(pathname: string): boolean {
   return !pathname.startsWith("/.well-known/");
 }
 
+/**
+ * Routes that populate `caches.default` themselves.
+ *
+ * These handlers key their entry on `data_version`, so it is invalidated the
+ * moment an SSA refresh mints a new one. They must be skipped below: the
+ * variant cache would store a second copy under a synthetic `__nv_variant` URL
+ * that purge-by-URL cannot address, and that copy would shadow the handler's
+ * own entry for the whole s-maxage window. Keep this in sync with the handlers
+ * named here.
+ */
+export function cachesOwnResponse(pathname: string): boolean {
+  return pathname === "/sitemap.xml";
+}
+
 async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promise<Response> {
   const legacyName = url.pathname === "/" ? url.searchParams.get("name")?.trim() : "";
   if (legacyName) {
@@ -89,7 +103,7 @@ async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promi
     }
   }
 
-  if (url.pathname === "/sitemap.xml") {
+  if (cachesOwnResponse(url.pathname)) {
     return ctx.next();
   }
 

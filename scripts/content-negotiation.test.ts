@@ -56,3 +56,18 @@ test("keeps agent-discovery documents out of the unpurgeable variant cache", asy
   assert.equal(usesVariantCache("/"), true);
   assert.equal(usesVariantCache("/name/Hazel/"), true);
 });
+
+test("leaves self-caching routes out of the variant cache", async () => {
+  const { cachesOwnResponse, usesVariantCache } = await import("../apps/web/functions/_middleware");
+
+  // The sitemap caches itself in sitemap.xml.ts under a data_version key. If the
+  // middleware also cached it, the synthetic `__nv_variant` copy (which
+  // purge-by-URL cannot address) would shadow the handler's entry for the whole
+  // s-maxage window and hold a stale 1.9 MB document there.
+  assert.equal(cachesOwnResponse("/sitemap.xml"), true);
+  assert.equal(usesVariantCache("/sitemap.xml"), true);
+
+  assert.equal(cachesOwnResponse("/"), false);
+  assert.equal(cachesOwnResponse("/name/Hazel/"), false);
+  assert.equal(cachesOwnResponse("/api/name/emma"), false);
+});

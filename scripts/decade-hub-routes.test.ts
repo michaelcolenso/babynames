@@ -637,10 +637,21 @@ test("renderer programmer errors propagate instead of becoming data absence", as
 
 // ── Sitemap ────────────────────────────────────────────────────────────────
 
+// Pages Functions run with the Cache API present, and the sitemap handler caches
+// its own document there. These tests drive the handlers directly, so supply the
+// global the runtime would. `match` always misses, which keeps this test
+// asserting on a freshly computed document.
+(globalThis as unknown as { caches?: unknown }).caches ??= {
+  default: { match: async () => undefined, put: async () => {} },
+};
+
 test("sitemap includes only production-seeded decade children", async () => {
   const response = await sitemapGet({
     request: new Request("https://example.com/sitemap.xml"),
     env: { DB: fakeDb({ maxYear: "2025" }) },
+    // The handler defers its cache write through waitUntil; the runtime always
+    // provides this, so emulate it here.
+    waitUntil: () => {},
   } as never);
   assert.equal(response.status, 200);
   const xml = await response.text();

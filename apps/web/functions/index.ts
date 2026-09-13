@@ -123,5 +123,14 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const headers = new Headers(res.headers);
   headers.set("Link", LINK_HEADER);
   headers.set("Vary", "Accept");
+  // `/` is served through this Function, so the `_headers` rule written for
+  // `/index.html` never reaches it. Without an explicit value the homepage
+  // ships `max-age=0, must-revalidate`, and the middleware's variant cache
+  // (which requires `s-maxage`) declines to store it — so every visit pays a
+  // Function invocation plus an ASSETS fetch for a document that only changes
+  // on deploy. Mirrors the `/index.html` rule in public/_headers.
+  if (res.ok) {
+    headers.set("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400");
+  }
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 };
