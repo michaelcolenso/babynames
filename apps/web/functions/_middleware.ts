@@ -286,6 +286,9 @@ function getReferrerOrigin(referrer: string | null): string | null {
 export function canonicalizePath(pathname: string): string | null {
   if (pathname === "/" || pathname === "/sitemap.xml") return null;
   if (pathname === "/comebacks" || pathname === "/comebacks/") return "/comeback";
+  // `two-americas` was deleted as a duplicate of this rewrite (migration 0006),
+  // so the old post URL would otherwise 301 to its slash form and then 404.
+  if (pathname === "/blog/two-americas" || pathname === "/blog/two-americas/") return "/blog/mateo-and-maverick/";
 
   const eraMatch = /^\/era\/(\d{4})\/?$/.exec(pathname);
   if (eraMatch) return `/year/${eraMatch[1]}/`;

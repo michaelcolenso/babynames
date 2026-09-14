@@ -103,3 +103,12 @@ test("leaves /viz to Pages, which normalizes it before Functions run", async () 
   // `/viz` is not in _routes.json's include list, so no rule here can ever fire.
   assert.equal(canonicalizePath("/viz"), null);
 });
+
+test("sends the deleted two-americas post to its replacement", async () => {
+  const { canonicalizePath } = await import("../apps/web/functions/_middleware");
+  // Without this the middleware appended a slash and the handler 404'd.
+  assert.equal(canonicalizePath("/blog/two-americas"), "/blog/mateo-and-maverick/");
+  assert.equal(canonicalizePath("/blog/two-americas/"), "/blog/mateo-and-maverick/");
+  // A live post is untouched.
+  assert.equal(canonicalizePath("/blog/mateo-and-maverick/"), null);
+});
