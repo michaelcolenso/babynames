@@ -30,31 +30,45 @@ export function renderFactoryVizPage(
     name: string;
     firstYear?: number;
     riseStartYear?: number;
-    peakYear: number;
-    peakCount: number;
+    firstLifePeakYear?: number;
+    peakYear?: number;
+    peakCount?: number;
+    secondPeakYear?: number;
+    secondPeak?: number;
     series: Record<number, number>;
   };
   const panels = (result.members as PanelCapable[])
-    .map((m) =>
-      chartPanelHtml({
+    .map((m) => {
+      const isComeback = m.secondPeakYear !== undefined && m.secondPeak !== undefined;
+      return chartPanelHtml({
         member: {
           name: m.name,
-          firstYear: m.firstYear ?? m.riseStartYear ?? m.peakYear,
-          peakYear: m.peakYear,
-          peakCount: m.peakCount,
+          firstYear:
+            m.firstYear ?? m.riseStartYear ?? m.firstLifePeakYear ?? m.peakYear ?? 0,
+          peakYear: isComeback ? (m.secondPeakYear as number) : (m.peakYear as number),
+          peakCount: isComeback ? (m.secondPeak as number) : (m.peakCount as number),
           series: m.series,
         },
         dataMaxYear: opts.dataMaxYear,
         dataMinYear: opts.dataMinYear,
-      }),
-    )
+      });
+    })
     .join("\n");
 
-  const tableRows = result.members
-    .map(
-      (m) =>
-        `<tr><td><a href="/name/${encodeURIComponent(m.name)}/">${escapeHtml(m.name)}</a></td><td>${escapeHtml(m.sex)}</td><td>${m.peakYear}</td><td>${m.peakCount.toLocaleString("en-US")}</td></tr>`,
-    )
+  type TableRowCapable = {
+    name: string;
+    sex: string;
+    peakYear?: number;
+    peakCount?: number;
+    secondPeakYear?: number;
+    secondPeak?: number;
+  };
+  const tableRows = (result.members as TableRowCapable[])
+    .map((m) => {
+      const peakYear = m.secondPeakYear ?? m.peakYear ?? 0;
+      const peakCount = m.secondPeak ?? m.peakCount ?? 0;
+      return `<tr><td><a href="/name/${encodeURIComponent(m.name)}/">${escapeHtml(m.name)}</a></td><td>${escapeHtml(m.sex)}</td><td>${peakYear}</td><td>${peakCount.toLocaleString("en-US")}</td></tr>`;
+    })
     .join("\n");
 
   const body = `<div ${contentIdentityMeta(identity)}>
