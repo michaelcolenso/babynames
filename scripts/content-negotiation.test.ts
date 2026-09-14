@@ -71,3 +71,35 @@ test("leaves self-caching routes out of the variant cache", async () => {
   assert.equal(cachesOwnResponse("/name/Hazel/"), false);
   assert.equal(cachesOwnResponse("/api/name/emma"), false);
 });
+
+test("canonicalizes function-served hubs to a single trailing-slash form", async () => {
+  const { canonicalizePath } = await import("../apps/web/functions/_middleware");
+
+  // Hubs whose canonical URL has no trailing slash must 301 away from it, the
+  // same way /rising/ already does.
+  assert.equal(canonicalizePath("/emerging/"), "/emerging");
+  assert.equal(canonicalizePath("/fading/"), "/fading");
+  assert.equal(canonicalizePath("/newsletter/"), "/newsletter");
+  assert.equal(canonicalizePath("/stories/american-name-atlas/"), "/stories/american-name-atlas");
+
+  // ...and the canonical (no-slash) form is left alone.
+  assert.equal(canonicalizePath("/emerging"), null);
+  assert.equal(canonicalizePath("/newsletter"), null);
+});
+
+test("never appends a slash to a path that names a file", async () => {
+  const { canonicalizePath } = await import("../apps/web/functions/_middleware");
+
+  // Regression: `/blog/<slug>.html` was rewritten to `/blog/<slug>.html/`, a 404.
+  assert.equal(canonicalizePath("/blog/two-americas.html"), null);
+  assert.equal(canonicalizePath("/blog/the-kehlani-effect.html"), null);
+
+  // Real slugs still get the trailing slash.
+  assert.equal(canonicalizePath("/blog/the-kehlani-effect"), "/blog/the-kehlani-effect/");
+});
+
+test("leaves /viz to Pages, which normalizes it before Functions run", async () => {
+  const { canonicalizePath } = await import("../apps/web/functions/_middleware");
+  // `/viz` is not in _routes.json's include list, so no rule here can ever fire.
+  assert.equal(canonicalizePath("/viz"), null);
+});

@@ -6,24 +6,28 @@
 
 import type { PagesFunction } from "@cloudflare/workers-types";
 import { shouldServeMarkdown } from "./_accept";
-import { getGenerationDefinition } from "@nv/shared";
+import { getGenerationDefinition, hasPathExtension } from "@nv/shared";
 
 const CANONICAL_PAGES = new Set([
   "/about",
   "/classic-names",
   "/comeback",
+  "/emerging",
   "/endangered",
   "/extinct",
+  "/fading",
   "/future-grandparent-names",
   "/gen-z-names",
   "/millennial-names",
+  "/newsletter",
   "/rising",
-  "/viz/explore",
-  "/viz/gallery",
-  "/viz/kehlani-effect",
-  "/viz/nobody-named-2025",
+  "/stories/american-name-atlas",
   "/year",
 ]);
+
+// `/viz/*` is deliberately absent above: `_routes.json` keeps `/viz` out of
+// Functions entirely, so Pages normalizes those paths ( `/viz` → 308 `/viz/`,
+// `/viz/nameprint/` → 308 `/viz/nameprint`) and any rule here is dead code.
 
 export const onRequest: PagesFunction = async (ctx) => {
   const startedAt = Date.now();
@@ -279,9 +283,8 @@ function getReferrerOrigin(referrer: string | null): string | null {
   }
 }
 
-function canonicalizePath(pathname: string): string | null {
+export function canonicalizePath(pathname: string): string | null {
   if (pathname === "/" || pathname === "/sitemap.xml") return null;
-  if (pathname === "/viz") return "/viz/";
   if (pathname === "/comebacks" || pathname === "/comebacks/") return "/comeback";
 
   const eraMatch = /^\/era\/(\d{4})\/?$/.exec(pathname);
@@ -294,7 +297,10 @@ function canonicalizePath(pathname: string): string | null {
   if (pathname === "/blog") return "/blog/";
   if (pathname === "/names") return "/names/";
   if (pathname === "/state") return "/state/";
-  if (/^\/blog\/[^/]+$/.test(pathname)) return `${pathname}/`;
+  // Guard the file-extension case: without it `/blog/<slug>.html` was rewritten
+  // to `/blog/<slug>.html/`, which 404s. `hasPathExtension` is shared with
+  // `canonicalRoutePath` so the two canonicalizers cannot drift.
+  if (/^\/blog\/[^/]+$/.test(pathname) && !hasPathExtension(pathname)) return `${pathname}/`;
 
   if (/^\/year\/\d{4}$/.test(pathname)) return `${pathname}/`;
 

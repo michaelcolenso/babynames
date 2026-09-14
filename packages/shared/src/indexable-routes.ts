@@ -78,8 +78,20 @@ const STATIC_ROUTES: IndexableRoute[] = [
 export function canonicalRoutePath(path: string): string {
   const url = new URL(path, "https://nobodynamed.com");
   let pathname = url.pathname.replace(/\/{2,}/g, "/");
-  if (pathname !== "/" && !pathname.endsWith("/") && !pathname.includes(".") && shouldHaveTrailingSlash(pathname)) pathname += "/";
+  if (pathname !== "/" && !pathname.endsWith("/") && !hasPathExtension(pathname) && shouldHaveTrailingSlash(pathname)) pathname += "/";
   return pathname;
+}
+
+/**
+ * True when the final path segment carries a file extension (`.html`, `.xml`).
+ * Canonicalization must leave such paths alone: appending a slash to a file URL
+ * produces a 404 — a live bug for `/blog/<slug>.html`, which the runtime
+ * canonicalizer was rewriting to `/blog/<slug>.html/`. Both the sitemap-side
+ * (`canonicalRoutePath`) and runtime-side (`canonicalizePath`) canonicalizers
+ * consume this so their policies cannot drift again.
+ */
+export function hasPathExtension(pathname: string): boolean {
+  return /\.[A-Za-z0-9]+$/.test(pathname);
 }
 
 function shouldHaveTrailingSlash(path: string): boolean {

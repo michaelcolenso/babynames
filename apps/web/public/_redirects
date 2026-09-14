@@ -6,18 +6,20 @@
 # Consolidate duplicate content.
 /comebacks  /comeback  301
 
-# Blog posts moved from /viz/ to /blog/
-/viz/pop-culture-names  /blog/the-kehlani-effect  301
-/viz/pop-culture-names.html  /blog/the-kehlani-effect  301
-/viz/boomer-names  /blog/your-moms-name-is-endangered  301
-/viz/boomer-names.html  /blog/your-moms-name-is-endangered  301
-/viz/vintage-revival  /blog/the-great-vintage-revival  301
-/viz/vintage-revival.html  /blog/the-great-vintage-revival  301
-/viz/new-america  /blog/two-americas  301
-/viz/new-america.html  /blog/two-americas  301
+# Blog posts moved from /viz/ to /blog/. Targets carry the trailing slash so
+# each legacy URL resolves in one hop instead of chaining into /blog/<slug>/.
+/viz/pop-culture-names  /blog/the-kehlani-effect/  301
+/viz/pop-culture-names.html  /blog/the-kehlani-effect/  301
+/viz/boomer-names  /blog/your-moms-name-is-endangered/  301
+/viz/boomer-names.html  /blog/your-moms-name-is-endangered/  301
+/viz/vintage-revival  /blog/the-great-vintage-revival/  301
+/viz/vintage-revival.html  /blog/the-great-vintage-revival/  301
+# Two Americas was deleted as a duplicate; the Mateo/Maverick rewrite replaced it.
+/viz/new-america  /blog/mateo-and-maverick/  301
+/viz/new-america.html  /blog/mateo-and-maverick/  301
 # The flash-floods content-factory viz page was superseded by its published post.
-/viz/flash-floods  /blog/flash-floods  301
-/viz/flash-floods.html  /blog/flash-floods  301
+/viz/flash-floods  /blog/flash-floods/  301
+/viz/flash-floods.html  /blog/flash-floods/  301
 
-# Enforce trailing slash canonical name URLs.
-/name/:name  /name/:name/  301
+# Legacy ?name= URLs and /name/<name> trailing-slash canonicalization are both
+# handled in functions/_middleware.ts, which sees /name/* before this file does.

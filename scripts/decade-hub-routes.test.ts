@@ -647,7 +647,7 @@ test("renderer programmer errors propagate instead of becoming data absence", as
 
 test("sitemap includes only production-seeded decade children", async () => {
   const response = await sitemapGet({
-    request: new Request("https://example.com/sitemap.xml"),
+    request: new Request("https://nobodynamed.com/sitemap.xml"),
     env: { DB: fakeDb({ maxYear: "2025" }) },
     // The handler defers its cache write through waitUntil; the runtime always
     // provides this, so emulate it here.
@@ -656,10 +656,37 @@ test("sitemap includes only production-seeded decade children", async () => {
   assert.equal(response.status, 200);
   const xml = await response.text();
   for (const definition of DECADE_HUB_DEFINITIONS) {
-    assert.equal((xml.match(new RegExp(`<loc>https://example\\.com/names/${definition.slug}/</loc>`, "g")) ?? []).length, 1);
+    assert.equal((xml.match(new RegExp(`<loc>https://nobodynamed\\.com/names/${definition.slug}/</loc>`, "g")) ?? []).length, 1);
     for (const child of ["methodology", "classroom", "spelling-families"]) {
-      const count = (xml.match(new RegExp(`<loc>https://example\\.com/names/${definition.slug}/${child}/</loc>`, "g")) ?? []).length;
+      const count = (xml.match(new RegExp(`<loc>https://nobodynamed\\.com/names/${definition.slug}/${child}/</loc>`, "g")) ?? []).length;
       assert.equal(count, definition.rolloutState === "seeded" ? 1 : 0, `${definition.slug}/${child}`);
     }
   }
+});
+
+test("sitemap advertises the canonical origin no matter which host serves it", async () => {
+  // Regression: the document used to inherit the request origin, so a crawler
+  // or preview hitting the deployment hostname (which is served noindex) got a
+  // sitemap whose every <loc> pointed at that host.
+  for (const host of ["43a2855e.name-vitals.pages.dev", "name-vitals.pages.dev"]) {
+    const response = await sitemapGet({
+      request: new Request(`https://${host}/sitemap.xml`),
+      env: { DB: fakeDb({ maxYear: "2025" }) },
+      waitUntil: () => {},
+    } as never);
+    assert.equal(response.status, 200);
+    const xml = await response.text();
+    assert.ok(xml.includes("<loc>https://nobodynamed.com/</loc>"), `${host}: canonical locs`);
+    assert.ok(!xml.includes(`https://${host}`), `${host}: must not appear in <loc>`);
+  }
+});
+
+test("sitemap keeps the request origin for local development", async () => {
+  const response = await sitemapGet({
+    request: new Request("http://localhost:8788/sitemap.xml"),
+    env: { DB: fakeDb({ maxYear: "2025" }) },
+    waitUntil: () => {},
+  } as never);
+  const xml = await response.text();
+  assert.ok(xml.includes("<loc>http://localhost:8788/</loc>"));
 });

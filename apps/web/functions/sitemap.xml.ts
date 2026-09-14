@@ -6,6 +6,20 @@ import type { IndexableRoute } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 const MAX_SITEMAP_URLS = 50_000;
+
+// A sitemap must advertise exactly one canonical origin. The deployment hosts
+// (`<hash>.name-vitals.pages.dev`, `name-vitals.pages.dev`) are served with
+// `X-Robots-Tag: noindex`, so a request that arrives on one of them must not
+// stamp every <loc> with a host we never want indexed — which is exactly what
+// happened before: the whole document came out on the preview hostname.
+const CANONICAL_ORIGIN = "https://nobodynamed.com";
+
+function sitemapOrigin(url: URL): string {
+  // Local development keeps its own origin so previewed links resolve.
+  if (url.hostname === "localhost" || url.hostname === "127.0.0.1") return url.origin;
+  return CANONICAL_ORIGIN;
+}
+
 function toXmlEntry(origin: string, route: IndexableRoute): string {
   let s = `  <url><loc>${xmlEscape(absoluteIndexableUrl(origin, route.path))}</loc>`;
   if (route.lastmod) s += `<lastmod>${xmlEscape(route.lastmod)}</lastmod>`;
@@ -26,8 +40,12 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   // Without a cache this route rebuilt ~1.9 MB of XML and re-ran five D1
   // queries on every crawler hit — about a second of CPU each time.
   const dataVersion = await getMeta(ctx.env.DB, META_KEYS.dataVersion);
+  const origin = sitemapOrigin(url);
   const cache = caches.default;
-  const cacheKey = new Request(`https://internal/sitemap/${dataVersion ?? "v0"}`);
+  // Key on the resolved origin *and* the data version: the cache API keys on
+  // URL only, so an origin-agnostic key lets whichever host populates the entry
+  // first decide the hostname every other host serves for a full s-maxage.
+  const cacheKey = new Request(`https://internal/sitemap/${encodeURIComponent(origin)}/${dataVersion ?? "v0"}`);
 
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
@@ -48,7 +66,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...routes.map((route) => toXmlEntry(url.origin, route)),
+    ...routes.map((route) => toXmlEntry(origin, route)),
     "</urlset>",
     "",
   ].join("\n");
