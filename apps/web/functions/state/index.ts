@@ -60,7 +60,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
     <p class="kicker">Geography</p>
     <h1 id="state-index-title">Names by state.</h1>
     <p class="lede">America doesn't share a single name chart — every state ranks its own. SSA state records${years.length ? ` cover ${years[0]}–${latestYear}` : ""}; pick a state to see what actually leads there.</p>
-    <ul class="year-name-list">
+    <ul class="year-name-list year-name-list--plain">
       ${links}
     </ul>
   </section>
