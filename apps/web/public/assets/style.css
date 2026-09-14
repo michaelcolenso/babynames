@@ -1173,6 +1173,12 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   font-size: 0.74rem;
 }
 .year-name-list a { color: var(--ink); font-weight: 700; text-decoration: none; }
+/* Two-column variant (name + detail, no rank) — e.g. the /state/ index,
+   where each row is just a link and a births figure. Without this override
+   rows inherit the 3-column `2.2rem 1fr auto` template built for ranked
+   lists, which crushes the name into the 2.2rem rank column and makes it
+   overlap the detail text. */
+.year-name-list--plain li { grid-template-columns: 1fr auto; }
 .year-story {
   margin: 1rem 0 0;
   padding-top: 1rem;
@@ -2925,6 +2931,27 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   font-weight: 600;
 }
 .editorial-nav a:hover { color: var(--accent); }
+
+/* Secondary link nav — adjacent years/decades, "every state"/"every decade"
+   indexes, A-Z letter grids, generation cohorts. Used across many renderers
+   (render-state, render-year, render-decade-hub-core, render-generation-hub,
+   names/index) but previously had no rule at all, so every instance fell
+   back to bare inline <a> flow with no wrap spacing or hover/current state. */
+.decade-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  margin: 1rem 0;
+  font-family: var(--sans);
+  font-size: 0.88rem;
+}
+.decade-nav a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-weight: 600;
+}
+.decade-nav a:hover { color: var(--accent); }
+.decade-nav a[aria-current="page"] { color: var(--ink); text-decoration: underline; }
 
 @media (prefers-reduced-motion: reduce) {
   *,
