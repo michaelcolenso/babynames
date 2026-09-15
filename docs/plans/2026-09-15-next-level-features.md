@@ -92,7 +92,9 @@ decision, not an engineering one.
 ### Revised sequence
 
 1. **Diagnose the ranking gap** (cannibalization audit, rich-result validation). Days, not weeks.
-2. **Answer-first name pages** — resized, carrying the structured-data fix the review's §5 calls for.
+2. **Answer-first name pages** — resized: title rewrite, `/living/` hub, OG cards. **No
+   structured-data work.** (The FAQPage block is already shipped and cannot earn a rich result;
+   validating the still-eligible types is a diagnostic task in step 1, not part of this build.)
 3. **Re-measure.** If impressions/day on intent queries have not moved, stop and confront
    distribution before building Feature 2 or 3.
 4. Newsletter, then name finder — **only once there is traffic to retain and demand to serve.**
@@ -304,9 +306,18 @@ because none of the sending half exists.
 ### What to build
 
 1. **Issue composer.** A script that assembles an issue from data the project already generates:
-   content-factory posts published since the last issue (`content/`, `blog_posts`), the current
-   week's movers (`functions/api/movers/[year].ts`), and one name drawn from the enrichment
-   layer. Writes a row to `newsletter_issues` with status `draft`.
+   content-factory posts published since the last issue (`content/`, `blog_posts`) and one name
+   drawn from the enrichment layer. Writes a row to `newsletter_issues` with status `draft`.
+
+   **Not `/api/movers/:year`, on a weekly cadence.** The original draft listed "the current
+   week's movers" as a segment. That endpoint computes a fixed year-over-year ranking
+   (`functions/api/movers/[year].ts:51-74`) against data the SSA publishes once a year
+   (`CLAUDE.md`, `AGENTS.md`) — between releases it returns the same gainers and losers every
+   time, so automated weekly issues would feature identical names indefinitely. Either treat
+   movers as a once-a-year segment tied to the SSA release, or add explicit issue-level
+   rotation state so a name isn't repeated. This is one more argument for the monthly cadence
+   in §7: the underlying data simply does not change weekly. *(Caught by Codex review on this
+   PR.)*
 2. **Render once, use twice.** One renderer producing both the email HTML and the archive page,
    following the existing `render-blog.ts` pattern. Do not maintain two templates.
 3. **Send job.** Batched Resend send over confirmed subscribers, with per-subscriber
@@ -320,8 +331,15 @@ because none of the sending half exists.
    progress, plus a deterministic provider idempotency key derived from that pair, so a replay
    is rejected at the provider even if the local write was lost. *(Caught by Codex review on
    this PR.)*
-4. **Public archive** at `/newsletter/archive/` and `/newsletter/:issue/` — indexable, in the
-   sitemap, and an SEO surface in its own right.
+4. **Public archive — extend `/newsletter`, don't add a second one.** The original draft
+   proposed `/newsletter/archive/`. That route already exists in all but content:
+   `functions/newsletter/index.ts` renders content ID `newsletter:archive`, slug `archive`,
+   title "NobodyNamed Newsletter Archive", canonical `/newsletter` — and the header nav
+   (`render-shell.ts:40`) plus both footers (`:159,:167`) already point there. Adding
+   `/newsletter/archive/` would create a second crawlable archive index while every sitewide
+   link kept pointing at the first. Fill in the existing route and add `/newsletter/:issue/`
+   beneath it; the earlier growth plan specifies the same shape. *(Caught by Codex review on
+   this PR.)*
 5. **Suppression handling.** Consume Resend bounce/complaint webhooks into a suppression column.
    Skipping this is how a young domain's sending reputation dies.
 
@@ -343,10 +361,21 @@ assembled without meaningful manual work, the cadence is wrong, not the tooling.
 
 ### How we'll know it worked
 
-Open rate, click-through to site, and — the number that matters — **returning-visitor share**
-in the analytics pipeline that already exists. **Kill criterion:** if issues 3–6 need more than
-an hour of manual assembly each, or open rate sits below ~20%, stop sending and reclaim the
-time; the list isn't an audience.
+Open rate and click-through to the site, both of which Resend and a tagged link give directly.
+
+**Returning-visitor share is *not* usable as written, and the original draft was wrong to name
+it the number that matters.** The existing `return_visit` event fires on every pageview after
+the browser's first-ever one — `analytics.js:103-107` checks a `localStorage` flag, so a second
+page in the same visit or a refresh both count — and nothing attributes a visit to a campaign.
+It measures "not your first-ever pageview," not "came back." (`second_content_view` immediately
+above it uses `sessionStorage` and *is* visit-scoped, so the distinction is already understood
+in that file.) Using it as the deciding metric requires two things this plan does not currently
+scope: a real visit/session boundary, and campaign attribution on inbound newsletter links.
+Either scope both, or judge the newsletter on open rate and click-through alone and say so.
+*(Caught by Codex review on this PR.)*
+
+**Kill criterion:** if issues 3–6 need more than an hour of manual assembly each, or open rate
+sits below ~20%, stop sending and reclaim the time; the list isn't an audience.
 
 **Estimated size:** Medium. One migration (suppression + send cursor), one composer script, one
 renderer, one send job, two routes, one webhook handler.
