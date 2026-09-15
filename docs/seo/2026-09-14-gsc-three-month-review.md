@@ -135,13 +135,31 @@ doing, but it cannot be the growth plan.
 ## 5. Zero rich results
 
 `Search appearance.csv` contains **a header row and no data**. Over 92 days the site earned no
-enhanced search appearance of any kind — no FAQ, no rich result, no special appearance category.
+enhanced search appearance of any kind.
 
 Every template in `packages/shared/` emits JSON-LD (`render-name.ts`, `render-year.ts`,
-`render-decade-hub-core.ts`, and others). None of it is producing an enhanced appearance. Either
-the markup is ineligible for a rich-result type, invalid, or the pages are not trusted enough to
-earn one. This is cheap to test with Google's Rich Results Test and is the most concrete
-actionable item in this export.
+`render-decade-hub-core.ts`, and others), including a full `FAQPage` on every name page —
+`buildFaqStructuredData()` at `render-name.ts:1078`, wired in at `:377-380`.
+
+**This is mostly explained, and it is not the actionable item it first appears to be.** Google
+restricted FAQ rich results to authoritative government and health sites in August 2023, and
+**fully deprecated them on May 7, 2026** — five weeks before this reporting window opens. The
+site's FAQPage markup therefore cannot produce a rich result for anyone, and its absence from
+`Search appearance.csv` is expected behavior, not a defect. HowTo rich results were deprecated
+on the same trajectory (mobile 2023, desktop September 2023).
+
+Sources: [Search Engine Journal](https://www.searchenginejournal.com/google-drops-faq-rich-results-from-search/574429/) ·
+[Search Engine Land](https://searchengineland.com/faq-schema-rise-fall-seo-today-463993)
+
+What remains worth checking is narrower: whether `BreadcrumbList` is valid and rendering (it is
+one of the few enhancements Google still shows), and whether any other emitted type is eligible
+at all. Run the pages through Google's Rich Results Test rather than assuming the JSON-LD is
+doing work. Leave the FAQPage markup in place — it is harmless and still machine-readable to
+non-Google consumers — but do not attribute SEO value to it.
+
+*(The FAQ deprecation was surfaced by a Codex review finding on PR #163, which correctly noted
+the markup was already shipped; the deprecation dates were verified separately against the
+sources above.)*
 
 ---
 
@@ -169,7 +187,8 @@ testing, in rough order of cheapness:
 
 1. **Cannibalization** — `/names/1920s/`, `/millennial-names` (pos 43.8), `/names/`, and the
    1920s content-factory posts may be competing for the same intent, splitting signals.
-2. **Rich-result ineligibility / markup validity** — per §5.
+2. **Markup validity for the types still eligible** — per §5. Note that the FAQPage markup
+   already shipped cannot help: Google deprecated FAQ rich results before this window.
 3. **Content differentiation** — whether a programmatic hub reads as distinct enough per decade.
 4. **Off-site authority** — 17,000 URLs at ~17 impressions/day is the profile of a site with no
    inbound link equity. This is the most likely root cause and the least tractable by code.

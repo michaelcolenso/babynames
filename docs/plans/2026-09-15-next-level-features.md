@@ -133,10 +133,13 @@ The three axes, in order of expected return:
 
 **Axis:** Capture. **Expected return:** ~1–2 clicks/day at current impression volume — see §0. **Risk:** Low.
 
-> **Revised.** The June framing below ("we rank, we don't get clicked") no longer describes
-> the site; see §0. This feature survives on a different justification: it is cheap, and the
-> site earns zero rich results despite emitting JSON-LD everywhere. Build it, but do not
-> expect it to move the trajectory on its own.
+> **Revised twice.** The June framing below ("we rank, we don't get clicked") no longer
+> describes the site; see §0. The fallback justification — "zero rich results earned" — then
+> also turned out not to support this feature: the relevant markup (FAQPage) is already
+> shipped, and Google fully deprecated FAQ rich results on May 7, 2026. What survives is the
+> **title rewrite, the `/living/` hub, and the OG cards** — genuinely cheap, worth doing, and
+> worth roughly 1–2 clicks/day at current impression volume. Nothing here moves the
+> trajectory on its own.
 
 ### The finding
 
@@ -191,14 +194,31 @@ nowhere in structured data, and on no dedicated URL.
    - Reliable living estimate → `About ${fmt(living)} Americans Are Named ${name} | NobodyNamed`
    - Strong peak, weak living estimate → `${name}: Peaked in ${peakYear}, ${fmt(latest)} Born in ${yM} | NobodyNamed`
    - Extinct / near-extinct → `${name}: A Name America Stopped Using | NobodyNamed`
-   Gate on the existing `hasReliableLiving` check (`generate-narrative.ts:326`) so no title
-   asserts a number the enrichment layer won't stand behind.
+   **Gate on the persisted enrichment profile, not on `hasReliableLiving`.** The original
+   draft said to reuse that check; it does not do what the sentence claimed. `hasReliableLiving`
+   is `age.estimatedLiving >= 10` (`generate-narrative.ts:185`), computed in-process from
+   `computeAgeStats(record.series)` — it never consults `name_enrichment_profiles`, and
+   `build-enrichment.ts` only writes a profile at `MIN_TOTAL_COUNT = 100` total births
+   (`build-enrichment.ts:40,234`), using a separate sex-specific life table. So a name with,
+   say, 40 total births passes `hasReliableLiving`, has no persisted profile, and would get a
+   title asserting a living count the on-page enrichment panel does not show — two different
+   numbers from two different models on one page. Either pass the persisted profile into the
+   title decision, or reconcile the two reliability rules into one. *(Caught by Codex review on
+   this PR; verified against the source.)*
 
-2. **`FAQPage` structured data** built from the four answers `generateNarrative()` already
-   returns (`answers.population / rarity / age / trend / geography`,
-   `generate-narrative.ts:338-344`). These are already-written prose answers to the exact
-   questions being searched; they are currently invisible to the SERP. Add alongside the existing
-   JSON-LD block in `render-name.ts:1024-1051`.
+2. ~~**`FAQPage` structured data**~~ — **cut. This was already built, and it cannot pay off.**
+
+   The original draft proposed adding FAQPage schema from `narrative.answers`. That is already
+   shipped: `buildFaqStructuredData()` at `render-name.ts:1078` constructs exactly those
+   questions and `render-name.ts:377-380` appends it to the page's schema array. Proposing it
+   as new work was an error in this document.
+
+   It is also moot. Google restricted FAQ rich results to authoritative government and health
+   sites in August 2023, then **fully deprecated them on May 7, 2026** — before the GSC window
+   analyzed in the review doc even opened. The shipped markup cannot produce a rich result for
+   any site. Leave it in place (it is harmless and machine-readable for non-Google consumers),
+   but claim no SEO return from it and do not duplicate it. *(Caught by Codex review on this
+   PR; the deprecation was verified separately — see the review doc §5.)*
 
 3. **A `/living/` hub** ranking names by `total_living_est`, split by sex and by median-age band —
    the index page for the 25-query cluster, and an internal-link target for all 17k name pages.
@@ -273,8 +293,16 @@ because none of the sending half exists.
 2. **Render once, use twice.** One renderer producing both the email HTML and the archive page,
    following the existing `render-blog.ts` pattern. Do not maintain two templates.
 3. **Send job.** Batched Resend send over confirmed subscribers, with per-subscriber
-   unsubscribe tokens (`newsletter-tokens.ts` already signs these), resumable from a
-   `last_sent_subscriber_id` cursor so a mid-batch failure doesn't double-send.
+   unsubscribe tokens (`newsletter-tokens.ts` already signs these).
+
+   **A resume cursor is not sufficient for the no-duplicate guarantee**, which the original
+   draft got wrong. A `last_sent_subscriber_id` advanced after the send is not atomic with the
+   send: if Resend accepts a recipient and the worker dies before the cursor persists, the
+   retry mails that subscriber again. Cursor advancement is evidence of progress, not proof of
+   delivery. Use a per-`(issue_id, subscriber_id)` delivery record written as the unit of
+   progress, plus a deterministic provider idempotency key derived from that pair, so a replay
+   is rejected at the provider even if the local write was lost. *(Caught by Codex review on
+   this PR.)*
 4. **Public archive** at `/newsletter/archive/` and `/newsletter/:issue/` — indexable, in the
    sitemap, and an SEO surface in its own right.
 5. **Suppression handling.** Consume Resend bounce/complaint webhooks into a suppression column.
@@ -355,8 +383,15 @@ A faceted finder at `/find/`, server-rendered with shareable URLs:
 - **Every result explains itself** — "1,240 living · declining since 1991 · peaks in Vermont."
   The explanation *is* the differentiator; every competitor returns a bare list.
 - **Every result links to its name page**, which after Feature 1 is a strong landing page.
-- **Shareable, indexable facet URLs** — `/find/?like=imogen&rarity=rare` — so the long tail of
-  "names like X" queries has a real destination instead of a generic search box.
+- **Shareable, indexable facet URLs — as paths, not query strings.** The original draft wrote
+  these as `/find/?like=imogen&rarity=rare`. That form cannot be sitemapped by the current
+  registry: `canonicalRoutePath()` returns only `url.pathname`
+  (`indexable-routes.ts:78-83`), `buildIndexableRoutes()` deduplicates on that value
+  (`:143-145`) so every `/find/?…` collapses to a single `/find/`, `absoluteIndexableUrl()`
+  rebuilds from the canonical path, and the link auditor clears `url.search` outright
+  (`validate-internal-links.ts:25`). Use path-based facets — `/find/like/imogen/rare/` or a
+  similar segment scheme — or scope a registry, canonicalization, and auditor redesign into
+  this feature explicitly. *(Caught by Codex review on this PR; verified against the source.)*
 
 ### Cost discipline
 
@@ -383,8 +418,9 @@ replaced — the new finder queries need the same treatment, with `EXPLAIN QUERY
 - Facet combinations return in comparable time to existing name-page reads, with no temp
   b-tree sort in `EXPLAIN QUERY PLAN` for any supported combination, verified both directions.
 - Every result carries a plain-language reason.
-- Facet URLs are shareable, server-rendered, and crawlable; a representative set is in the
-  sitemap.
+- Facet URLs are shareable, server-rendered, and crawlable, and a representative set actually
+  appears in the sitemap — which requires the path-based scheme above, since the registry
+  discards query strings.
 - Works without JavaScript for the core query path.
 - Rows-read per query is measured and recorded in the PR, not assumed.
 
