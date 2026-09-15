@@ -74,7 +74,7 @@ presented it as one.
 
 | | Original position | Revised |
 |---|---|---|
-| **Answer-first name pages** | #1, "highest and fastest return" | **Still do it — resized.** Cheap, and §5 of the review gives it a harder justification than CTR: the site earns *zero* rich results despite JSON-LD on every template. But the prize is ~1–2 clicks/day, not growth. |
+| **Answer-first name pages** | #1, "highest and fastest return" | **Still do it — resized.** It is cheap, and that is now the whole case for it. Both of the stronger justifications this document originally gave have been withdrawn: the CTR-conversion framing (the rankings aren't there) and the "zero rich results earned" framing (expected after FAQ deprecation — see §5 of the review; no title, hub or OG change can produce a rich result). The measured prize is **~0.98 clicks/day** at a tenfold CTR gain. |
 | **Newsletter pipeline** | #2 | **Defer.** A retention loop needs an audience to retain. The right figure here is **0.51 non-brand clicks/day** (47 clicks not from the brand query), not the 0.15 non-*homepage* rate an earlier draft used — 3.4× larger, still far too small for a list to grow faster than it decays. The build stays correct; the timing is wrong. |
 | **Name finder** | #3 | **Defer.** Large build targeting "names like X", where the site currently draws ~25 impressions/quarter at positions 31–64. No evidence of reachable demand yet. |
 
@@ -108,10 +108,26 @@ concrete thing to diagnose, and the answer generalizes to the other 16,000 URLs.
 then: **cannibalization** (`/millennial-names` at 43.8 vs `/names/2000s/` vs `/names/`) →
 **markup validity for types still eligible** → **off-site authority**.
 
-That last one deserves saying plainly: 17,000 URLs drawing 17 impressions/day is the profile of
-a site with no inbound link equity. If that is the binding constraint, then no feature in this
-document — or in the backlog — addresses it, and the honest next step is a distribution
-decision, not an engineering one.
+That last one deserves saying plainly, with its evidence stated honestly: a large programmatic
+footprint drawing ~17 impressions/day looks like a site with no inbound link equity. If that is
+the binding constraint, then no feature in this document — or in the backlog — addresses it, and
+the next step is a distribution decision, not an engineering one.
+
+**The 17,000 figure is the *sitemap*, not the index, and the attribution needs qualifying.**
+`docs/site-audit-2026-08-15.md:87` says "the sitemap carries ~17,000 URLs." The most recent
+actual coverage measurement in the repo is four months older:
+`docs/seo/2026-05-29-seo-audit-followup.md` records **9,826 indexed against 8,416 not indexed**
+as of 2026-05-24 — 7,498 "Discovered – currently not indexed" and 867 "Crawled – currently not
+indexed." Current coverage is unknown; this performance export contains no indexing report and
+no backlink data, so **it cannot on its own attribute low impressions to absent inbound
+equity.**
+
+The hypothesis is not unsupported — it is the same conclusion that followup audit reached
+independently ("a value/authority/crawl-budget story, not a technical blocker"), and it named
+thin or duplicate content as a co-factor behind the 867 "Crawled – not indexed." But it is a
+hypothesis carried over from that audit, not a finding of this export, and the honest next step
+is to pull a current Coverage report and a backlink profile before spending a cycle on it.
+*(Caught by Codex review on PR #163.)*
 
 ### Revised sequence
 
@@ -134,7 +150,7 @@ What already exists, verified by reading the tree:
 
 | Asset | Evidence |
 |---|---|
-| ~17,000 indexed URLs | `docs/site-audit-2026-08-15.md` |
+| ~17,000 URLs in the **sitemap** (9,826 *indexed* at the last measurement, 2026-05-24) | `docs/site-audit-2026-08-15.md:87`, `docs/seo/2026-05-29-seo-audit-followup.md` |
 | 28 visualization pages (excluding index, gallery, and share variants) | `apps/web/public/viz/` |
 | Programmatic hub families: name, year, decade, generation, state, initial, ending, status | `packages/shared/src/indexable-routes.ts` |
 | Server-rendered name pages with enrichment, diaspora, catalysts, strongholds | `packages/shared/src/render-name.ts` |
@@ -208,8 +224,21 @@ title throws it away.
 Schema: `migrations/0008_enrichment_profiles.sql`. Rendered today as a panel partway down the
 name page: `render-name.ts:669-672`.
 
-This answers two query clusters that the GSC analysis flagged as the **only intents with a high
-moat — "no competitor answers well"**:
+The June analysis flagged these as the only intents with a high moat, *"no competitor answers
+well."* **That is not accurate, and this document repeated it without checking.** The repo's own
+competitor audit says otherwise: `docs/seo/2026-05-29-seo-audit-followup.md` §3.1 identifies
+**namecensus.com** as "the closest direct competitor — same SSA files plus Census surnames + CDC
+life tables, with per-name history, geographic spread, decade sparklines, and a
+**mortality-adjusted living-bearer estimate**," and concludes "the site to out-execute is
+namecensus.com."
+
+So the living-population estimate is **not** data no competitor computes. What can honestly be
+claimed is narrower: a different methodology (SSA period life table vs. CDC), and whatever
+advantage comes from presentation, page speed, and the pre-classified status vocabulary the same
+audit does call "a genuine differentiator." Feature 1's value rests on execution against a known
+peer, not on exclusive data. *(Caught by Codex review on this PR.)*
+
+The two clusters, with that correction in mind:
 
 | Intent | Distinct queries | Backing column |
 |---|---:|---|
@@ -232,7 +261,7 @@ nowhere in structured data, and on no dedicated URL.
    | # | Predicate | Title |
    |---|---|---|
    | 1 | A persisted `name_enrichment_profiles` row exists for **both** sexes' totals as needed (see the all-sex criterion below) | `About ${fmt(living)} Americans Are Named ${name} \| NobodyNamed` |
-   | 2 | No persisted profile **and** `classify()` status is `extinct` | `${name}: A Name America Stopped Using \| NobodyNamed` |
+   | 2 | No persisted profile **and** `primaryRow.row.status === "extinct"` | `${name}: A Name America Stopped Using \| NobodyNamed` |
    | 3 | No persisted profile **and** `peak_count >= PEAK_FLOOR` | `${name}: Peaked in ${peakYear}, ${fmt(latest)} Born in ${yM} \| NobodyNamed` |
    | 4 | Otherwise | today's generic title, unchanged |
 
@@ -244,9 +273,15 @@ nowhere in structured data, and on no dedicated URL.
    asking. (A combined form — living count *and* the extinction note — is the strongest title
    of all and worth considering, but it is extra scope, not the baseline.)
 
+   **Read the stored status, not a request-time `classify()` call.** Rule 2 uses
+   `primaryRow.row.status`, already loaded by the route. `CLAUDE.md` is explicit that
+   `classify()` runs at ingest and results are stored, and that API reads never recompute it —
+   recomputing here would duplicate the source of truth and let titles drift from the status
+   that discovery and related-name queries already use.
+
    `PEAK_FLOOR` is the one free parameter; pick it and pin it in a test rather than leaving
-   "strong peak" to judgment. *(Precedence and predicates added after Codex review on this PR
-   flagged the branches as non-exclusive and untestable.)*
+   "strong peak" to judgment. *(Precedence, predicates, and the stored-status rule added after
+   Codex review on this PR.)*
    **Gate on the persisted enrichment profile, not on `hasReliableLiving`.** The original
    draft said to reuse that check; it does not do what the sentence claimed. `hasReliableLiving`
    is `age.estimatedLiving >= 10` (`generate-narrative.ts:185`), computed in-process from
@@ -274,7 +309,7 @@ nowhere in structured data, and on no dedicated URL.
    PR; the deprecation was verified separately — see the review doc §5.)*
 
 3. **A `/living/` hub** ranking names by `total_living_est`, split by sex and by median-age band —
-   the index page for the 25-query cluster, and an internal-link target for all 17k name pages.
+   the index page for the 25-query cluster, and an internal-link target for the name pages.
    The aggregate is a single ordered read over `name_enrichment_profiles`; follow the
    `viz_payloads` precedent in `CLAUDE.md` if it needs pre-computing.
 
@@ -283,8 +318,13 @@ nowhere in structured data, and on no dedicated URL.
 
 ### Acceptance criteria
 
-- Each name page selects the correct data-backed title branch for that name, and every
-  non-extinct title carries a real metric. *(Originally worded "no two titles differ only by
+- Each name page selects the correct data-backed title branch for that name, and **every title
+  produced by branches 1 and 3 carries a real metric**. Branch 2 (extinct) carries none by
+  design, and branch 4 deliberately preserves today's generic title, which has no metric either
+  — so "every non-extinct title carries a metric," as an earlier draft worded it, was
+  unsatisfiable for any non-extinct name below `PEAK_FLOOR` with no profile. If branch 4 should
+  carry a metric, give it a universally available stored one (lifetime births from
+  `names.total_count`) rather than widening the criterion. *(Originally worded "no two titles differ only by
   name" — unsatisfiable against these templates, since the extinct branch is
   `${name}: A Name America Stopped Using` for every extinct name, and living titles legitimately
   collide when estimates round to the same displayed value. Test branch selection, not global
@@ -300,9 +340,12 @@ nowhere in structured data, and on no dedicated URL.
 
 ### How we'll know it worked
 
-GSC CTR for the `/name/*` path group, 28 days pre vs. post. The year-page fix is the control:
-if that one moved CTR, this one should move it further, because name pages carry more of the
-17k-URL footprint. **Kill criterion:** no measurable CTR change after 6 weeks at stable
+GSC CTR for **`/name/:name/` only, excluding `/name/:name/twin/`**, 28 days pre vs. post. The
+twin pages are not changed by this feature and contributed 128 impressions and zero clicks in
+the reference window; including them dilutes the observed effect and would make the kill
+criterion inconsistent with the ceiling above, which excluded them. The year-page fix is the
+control: if that one moved CTR, this one should move it further, since `/name/:name/` carries
+more impressions than `/year/:year/` did. **Kill criterion:** no measurable CTR change after 6 weeks at stable
 impressions means the snippet isn't the constraint and the rest of this plan's capture thesis
 needs rethinking.
 

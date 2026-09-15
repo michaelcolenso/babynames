@@ -263,8 +263,14 @@ Remaining candidates, unchanged in substance:
    content-factory posts may be splitting signals for one intent.
 2. **Markup validity for the types still eligible** — per §5. The FAQPage markup already
    shipped cannot help: Google deprecated FAQ rich results before this window.
-3. **Off-site authority** — 17,000 URLs at ~17 impressions/day is the profile of a site with no
-   inbound link equity. Most likely root cause, least tractable by code.
+3. **Off-site authority** — the most likely root cause and the least tractable by code, but the
+   weakest-evidenced of the three from *this* export, which carries no coverage or backlink
+   report. The `2026-05-29` followup audit reached the same conclusion from data that did:
+   **9,826 indexed against 8,416 not indexed** as of 2026-05-24, 89% of the backlog
+   "Discovered – currently not indexed," which it read as "a value/authority/crawl-budget
+   story, not a technical blocker." Note also that the ~17,000 figure quoted elsewhere is the
+   *sitemap* count (`docs/site-audit-2026-08-15.md:87`), not indexed pages. Pull current
+   coverage and backlink data before acting on this.
 
 ## 7. What this means for planning
 
