@@ -44,10 +44,33 @@ the nav set, all at position ~2 with zero clicks) plus ultra-long-tail single-na
 
 ### What that does to the three features
 
-**The ceiling arithmetic that demotes Feature 1:** at ~17 impressions/day, a 10× CTR
-improvement across every page-1 impression yields on the order of 1–2 clicks/day. Snippet work
+**The ceiling arithmetic that demotes Feature 1**, computed on the route family Feature 1
+actually touches — `/name/:name/`, excluding `/twin/` — with no assumption about where
+impressions landed on the results page:
+
+| | |
+|---|---:|
+| Impressions (92 days) | 1,037 |
+| Impressions/day | 11.3 |
+| Clicks | 9 |
+| Measured CTR | 0.87% |
+
+| CTR improvement | Resulting CTR | Clicks/day |
+|---|---:|---:|
+| 5× | 4.3% | 0.49 |
+| **10×** | **8.7%** | **0.98** |
+| 20× | 17.4% | 1.96 |
+
+**A tenfold CTR improvement on every name page is worth about one click per day.** Snippet work
 is cheap, correct, and worth doing — it is not a growth plan, and this document originally
 presented it as one.
+
+> **Twice corrected.** An earlier draft wrote this as "at ~17 impressions/day, a 10× CTR
+> improvement across every page-1 impression yields 1–2 clicks/day." Both halves were wrong:
+> ~17/day is the *sitewide* `Chart.csv` total, not this route family's 11.3, and "page-1
+> impressions" is a quantity the review doc's §4 withdrew as uncountable from this export.
+> The corrected figure is smaller than the one it replaces. *(Caught by Codex review on this
+> PR.)*
 
 | | Original position | Revised |
 |---|---|---|
@@ -201,9 +224,29 @@ nowhere in structured data, and on no dedicated URL.
 1. **Data-driven name-page titles.** Replace the single generic `metaTitle` with a variant
    selected by what the data supports for that name — mirroring the `hasLeaders` branch pattern
    already proven in `render-year.ts`. Lead with the number that is unique to this site:
-   - Reliable living estimate → `About ${fmt(living)} Americans Are Named ${name} | NobodyNamed`
-   - Strong peak, weak living estimate → `${name}: Peaked in ${peakYear}, ${fmt(latest)} Born in ${yM} | NobodyNamed`
-   - Extinct / near-extinct → `${name}: A Name America Stopped Using | NobodyNamed`
+   **These branches must be an ordered decision with explicit predicates, not a list.** The
+   original draft gave three overlapping descriptions ("reliable living estimate", "strong
+   peak", "extinct / near-extinct") with no predicates and no precedence, which makes the
+   acceptance criterion below untestable. Evaluate in this order, first match wins:
+
+   | # | Predicate | Title |
+   |---|---|---|
+   | 1 | A persisted `name_enrichment_profiles` row exists for **both** sexes' totals as needed (see the all-sex criterion below) | `About ${fmt(living)} Americans Are Named ${name} \| NobodyNamed` |
+   | 2 | No persisted profile **and** `classify()` status is `extinct` | `${name}: A Name America Stopped Using \| NobodyNamed` |
+   | 3 | No persisted profile **and** `peak_count >= PEAK_FLOOR` | `${name}: Peaked in ${peakYear}, ${fmt(latest)} Born in ${yM} \| NobodyNamed` |
+   | 4 | Otherwise | today's generic title, unchanged |
+
+   Rule 1 deliberately wins over rule 2, and the case that forces the question is real: a name
+   can be **extinct as a baby name and still have a large living population** — Bertha appears
+   in this export with 15 impressions, and names like it have tens of thousands of living
+   bearers born decades ago. "About 8,300 Americans Are Named Bertha" is both true and the
+   better SERP hook, and it is what the "how many people are named X" cluster is actually
+   asking. (A combined form — living count *and* the extinction note — is the strongest title
+   of all and worth considering, but it is extra scope, not the baseline.)
+
+   `PEAK_FLOOR` is the one free parameter; pick it and pin it in a test rather than leaving
+   "strong peak" to judgment. *(Precedence and predicates added after Codex review on this PR
+   flagged the branches as non-exclusive and untestable.)*
    **Gate on the persisted enrichment profile, not on `hasReliableLiving`.** The original
    draft said to reuse that check; it does not do what the sentence claimed. `hasReliableLiving`
    is `age.estimatedLiving >= 10` (`generate-narrative.ts:185`), computed in-process from
