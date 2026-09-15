@@ -245,14 +245,16 @@ The two clusters, with that correction in mind:
 | "how many people are named X" | 25 | `total_living_est` |
 | "how old is X" / age | 12 | `median_age`, `age_range_*` |
 
-37 of 581 distinct queries, against data no competitor computes, surfaced nowhere in the title,
+37 of 581 distinct queries, against data namecensus.com also computes (see above) but which is
+surfaced nowhere in this site's title,
 nowhere in structured data, and on no dedicated URL.
 
 ### What to build
 
 1. **Data-driven name-page titles.** Replace the single generic `metaTitle` with a variant
    selected by what the data supports for that name — mirroring the `hasLeaders` branch pattern
-   already proven in `render-year.ts`. Lead with the number that is unique to this site:
+   already proven in `render-year.ts`. Lead with the number, which is absent from this site's
+   titles today even though the page computes it:
    **These branches must be an ordered decision with explicit predicates, not a list.** The
    original draft gave three overlapping descriptions ("reliable living estimate", "strong
    peak", "extinct / near-extinct") with no predicates and no precedence, which makes the
@@ -260,8 +262,8 @@ nowhere in structured data, and on no dedicated URL.
 
    | # | Predicate | Title |
    |---|---|---|
-   | 1 | A persisted `name_enrichment_profiles` row exists for **both** sexes' totals as needed (see the all-sex criterion below) **and its `source_version` matches `meta.data_version`** | `About ${fmt(living)} Americans Are Named ${name} \| NobodyNamed` |
-   | 2 | No persisted profile **and** `primaryRow.row.status === "extinct"` | `${name}: A Name America Stopped Using \| NobodyNamed` |
+   | 1 | A persisted `name_enrichment_profiles` row exists for **both** sexes' totals as needed (see the all-sex criterion below) **and `meta.enrichment_version === meta.data_version`** (see below) | `About ${fmt(living)} Americans Are Named ${name} \| NobodyNamed` |
+   | 2 | No persisted profile **and** *every* sex row for the name is `extinct` | `${name}: A Name America Stopped Using \| NobodyNamed` |
    | 3 | No persisted profile **and** `peak_count >= PEAK_FLOOR` | `${name}: Peaked in ${peakYear}, ${fmt(latest)} Born in ${yM} \| NobodyNamed` |
    | 4 | Otherwise | today's generic title, unchanged |
 
@@ -287,10 +289,49 @@ nowhere in structured data, and on no dedicated URL.
    The repo already has the idiom: `name_rankings_by_year` and `viz_payloads` are trusted only
    while their stored version matches `meta.data_version` (`CLAUDE.md`), and
    `name_enrichment_profiles` carries a `source_version` column for exactly this
-   (`migrations/0008_enrichment_profiles.sql`). **Branch 1 requires `source_version ===
-   meta.data_version`**; on mismatch it falls through to branches 2–4, so a stale table degrades
-   to a duller-but-correct title instead of publishing a wrong number. Add the enrichment
-   rebuild to the post-ingest runbook either way. *(Caught by Codex review on this PR.)*
+   (`migrations/0008_enrichment_profiles.sql`). **The obvious form of that check does not work, and an
+   earlier revision of this document specified it anyway.** `name_enrichment_profiles.source_version`
+   is an SSA corpus tag — `build-enrichment.ts:410` defaults it to `` `ssa-${national.yM}` ``,
+   e.g. `ssa-2025` — while `meta.data_version` is a UUID (`seed-from-shards.ts:147` and ingest
+   finalize both use `crypto.randomUUID()`). `"ssa-2025" === "<uuid>"` is never true, so that
+   check would have failed for **every** profile and silently disabled branch 1 altogether:
+   worse than the staleness it was meant to prevent.
+
+   **The trap is that `source_version` means two different things in this schema.** On
+   `viz_payloads` it holds the `data_version` it was built from and readers require it to match
+   (`CLAUDE.md`). On `name_enrichment_profiles` it holds an SSA corpus tag. Same column name,
+   different namespace.
+
+   Use the readiness-marker pattern the repo already documents for
+   `name_rankings_by_year` instead: **`seed-enrichment` stamps `meta.enrichment_version` with
+   the `data_version` it was seeded against, and branch 1 requires
+   `meta.enrichment_version === meta.data_version`** — exactly how `meta.rankings_version`
+   gates the rankings table. One `meta` key, no migration, no per-row comparison.
+
+   Two honest caveats. `data_version` rotates for reasons unrelated to the SSA corpus (a
+   diaspora recomputation, for instance), so the marker will sometimes read stale when the
+   enrichment data is fine. That failure is **fail-safe** — a duller-but-correct title, never a
+   wrong number — and clears by re-stamping the key. And the zero-migration alternative,
+   comparing `source_version` against `` `ssa-${meta.max_year}` ``, works only while nobody
+   passes `--source-version` to the build.
+
+   Add the enrichment rebuild to the post-ingest runbook either way. *(Both the staleness
+   problem and this correction to the fix came from Codex review on this PR.)*
+
+   **Branch 2 must hold across both sexes, not just the dominant one.** `names` is one row per
+   (name, sex) with its own status (`CLAUDE.md`), and the SSR route resolves a single dominant
+   sex — so testing that row alone declares a name dead on the strength of half its data. Two
+   verified counterexamples from the live API:
+
+   | Name | Dominant row | Other row | Branch 2 on dominant row alone |
+   |---|---|---|---|
+   | **Amazen** | F, `extinct`, last birth 2013 | M, **6 births in 2025** | "A Name America Stopped Using" |
+   | **Eres** | F, `extinct`, last birth 2009 | M, **7 births in 2025** | "A Name America Stopped Using" |
+
+   Both titles would be false, and false *on a page whose own chart plots the current-year
+   births that contradict them*. The route already loads the other sex as `record.other`
+   (`functions/name/[name]/index.ts:98-103`), so the check costs nothing: require every sex row
+   to be `extinct`, or qualify the title by sex. *(Caught by Codex review on this PR.)*
 
    **Read the stored status, not a request-time `classify()` call.** Rule 2 uses
    `primaryRow.row.status`, already loaded by the route. `CLAUDE.md` is explicit that
@@ -327,7 +368,12 @@ nowhere in structured data, and on no dedicated URL.
    but claim no SEO return from it and do not duplicate it. *(Caught by Codex review on this
    PR; the deprecation was verified separately — see the review doc §5.)*
 
-3. **A `/living/` hub** ranking names by `total_living_est`, split by sex and by median-age band —
+3. **A `/living/` hub** ranking names by `total_living_est`, split by sex and by median-age band,
+   **gated on the same `meta.enrichment_version === meta.data_version` marker as branch 1** —
+   the title fix alone doesn't cover it. A name page degrades to a duller title when enrichment
+   is stale, but an unfiltered hub would keep publishing a whole crawlable ranking from the
+   previous corpus. Withhold or 404 the hub while the marker is stale rather than serving a
+   stale leaderboard. *(Caught by Codex review on this PR.)* —
    the index page for the 25-query cluster, and an internal-link target for the name pages.
    The aggregate is a single ordered read over `name_enrichment_profiles`; follow the
    `viz_payloads` precedent in `CLAUDE.md` if it needs pre-computing.
@@ -353,7 +399,8 @@ nowhere in structured data, and on no dedicated URL.
   `(name_lower, sex)` and the SSR route resolves a single dominant sex and fetches only that
   profile (`functions/name/[name]/index.ts:94-118`). Presenting one sex's estimate as the total
   would undercount every name recorded for both — sum both profiles, or qualify the number.
-- `/living/` renders, is in the sitemap (`indexable-routes.ts`), and satisfies the repo's
+- `/living/` renders **only while `meta.enrichment_version === meta.data_version`**, is in
+  the sitemap (`indexable-routes.ts`), and satisfies the repo's
   three-inbound-link rule.
 - Title/description length bounds are unit-tested, mirroring `scripts/editorial-pages.test.ts`.
 
