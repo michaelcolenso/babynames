@@ -260,7 +260,7 @@ nowhere in structured data, and on no dedicated URL.
 
    | # | Predicate | Title |
    |---|---|---|
-   | 1 | A persisted `name_enrichment_profiles` row exists for **both** sexes' totals as needed (see the all-sex criterion below) | `About ${fmt(living)} Americans Are Named ${name} \| NobodyNamed` |
+   | 1 | A persisted `name_enrichment_profiles` row exists for **both** sexes' totals as needed (see the all-sex criterion below) **and its `source_version` matches `meta.data_version`** | `About ${fmt(living)} Americans Are Named ${name} \| NobodyNamed` |
    | 2 | No persisted profile **and** `primaryRow.row.status === "extinct"` | `${name}: A Name America Stopped Using \| NobodyNamed` |
    | 3 | No persisted profile **and** `peak_count >= PEAK_FLOOR` | `${name}: Peaked in ${peakYear}, ${fmt(latest)} Born in ${yM} \| NobodyNamed` |
    | 4 | Otherwise | today's generic title, unchanged |
@@ -272,6 +272,25 @@ nowhere in structured data, and on no dedicated URL.
    better SERP hook, and it is what the "how many people are named X" cluster is actually
    asking. (A combined form — living count *and* the extinction note — is the strongest title
    of all and worth considering, but it is extra scope, not the baseline.)
+
+   **Gate branch 1 on enrichment freshness, or the title goes stale every May.** Ingest finalize
+   replaces `names` and advances `max_year`, but the enrichment tables are an offline rebuild —
+   the worker says so in its own comment (`apps/ingest-worker/src/index.ts:380-386`): the
+   enrichment tables "are precomputed offline and won't cover the new year until someone reruns
+   … build-enrichment/seed-enrichment … do rerun it after every SSA refresh." Nothing automates
+   it.
+
+   So after each annual release, a name page would carry peak and latest counts from the new
+   corpus under a **title asserting a living total from the old one**, until two scripts are run
+   by hand — a recurring, self-inflicted contradiction on the highest-volume template.
+
+   The repo already has the idiom: `name_rankings_by_year` and `viz_payloads` are trusted only
+   while their stored version matches `meta.data_version` (`CLAUDE.md`), and
+   `name_enrichment_profiles` carries a `source_version` column for exactly this
+   (`migrations/0008_enrichment_profiles.sql`). **Branch 1 requires `source_version ===
+   meta.data_version`**; on mismatch it falls through to branches 2–4, so a stale table degrades
+   to a duller-but-correct title instead of publishing a wrong number. Add the enrichment
+   rebuild to the post-ingest runbook either way. *(Caught by Codex review on this PR.)*
 
    **Read the stored status, not a request-time `classify()` call.** Rule 2 uses
    `primaryRow.row.status`, already loaded by the route. `CLAUDE.md` is explicit that
@@ -421,9 +440,23 @@ because none of the sending half exists.
    send: if Resend accepts a recipient and the worker dies before the cursor persists, the
    retry mails that subscriber again. Cursor advancement is evidence of progress, not proof of
    delivery. Use a per-`(issue_id, subscriber_id)` delivery record written as the unit of
-   progress, plus a deterministic provider idempotency key derived from that pair, so a replay
-   is rejected at the provider even if the local write was lost. *(Caught by Codex review on
-   this PR.)*
+   progress, plus a deterministic provider idempotency key derived from that pair.
+
+   **That key is good for 24 hours, so the guarantee must be stated to match.** Resend retains
+   idempotency keys for 24 hours
+   ([docs](https://resend.com/docs/dashboard/emails/idempotency-keys)). If Resend accepts a
+   send, the worker dies before the ledger write, and recovery happens *after* that window, a
+   blind replay is accepted as a fresh email — the same failure the ledger was added to close,
+   just moved. Two consequences:
+
+   - **Write the ledger row as `attempted` before calling Resend, not after**, so a crash
+     leaves a row of known-uncertain outcome rather than no row at all.
+   - **Resolve uncertain rows; never blind-replay them.** Inside 24 hours the idempotency key
+     makes a replay safe. Outside it, query Resend for that message before deciding, or leave
+     the row unsent and flagged.
+
+   *(Design and bound both from Codex review on this PR; the 24-hour figure verified against
+   Resend's documentation.)*
 4. **Public archive — extend `/newsletter`, don't add a second one.** The original draft
    proposed `/newsletter/archive/`. That route already exists in all but content:
    `functions/newsletter/index.ts` renders content ID `newsletter:archive`, slug `archive`,
@@ -449,7 +482,9 @@ assembled without meaningful manual work, the cadence is wrong, not the tooling.
 - Two real issues sent to the live list.
 - Archive pages render and are indexable.
 - Unsubscribe works from a sent email, end to end, and is honored on the next send.
-- A failed send is resumable without duplicate delivery.
+- A failed send is resumable with **no duplicate delivery for any send reconciled inside the
+  24-hour idempotency window, and no blind replay outside it** — uncertain rows are resolved
+  against the provider, not re-sent.
 - Bounce and complaint events are recorded and suppressed on subsequent sends.
 
 ### How we'll know it worked
