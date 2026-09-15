@@ -28,7 +28,8 @@ What the fresh export establishes (full working in `docs/seo/2026-09-14-gsc-thre
 | Clicks in 92 days | 175 |
 | From the brand query `nobodynamed` alone | 128 (73%) |
 | Landing on the homepage | 162 (93%) |
-| **Earned by all 833 other URLs combined** | **14 — 0.15/day** |
+| **Earned by all 833 other URLs combined** | **14 — 0.15/day** (non-*homepage*) |
+| Clicks not from the query `nobodynamed` | 47 — 0.51/day (non-*brand*) |
 | Genuine name-research queries named in the export | 184 |
 | Their weighted average position | **78.6 — page 9** |
 | How many of those 184 rank on page 1 | **1, with 1 impression** |
@@ -51,7 +52,7 @@ presented it as one.
 | | Original position | Revised |
 |---|---|---|
 | **Answer-first name pages** | #1, "highest and fastest return" | **Still do it — resized.** Cheap, and §5 of the review gives it a harder justification than CTR: the site earns *zero* rich results despite JSON-LD on every template. But the prize is ~1–2 clicks/day, not growth. |
-| **Newsletter pipeline** | #2 | **Defer.** A retention loop needs an audience to retain. At 0.15 non-brand clicks/day the list cannot grow faster than it decays. The build stays correct; the timing is wrong. |
+| **Newsletter pipeline** | #2 | **Defer.** A retention loop needs an audience to retain. The right figure here is **0.51 non-brand clicks/day** (47 clicks not from the brand query), not the 0.15 non-*homepage* rate an earlier draft used — 3.4× larger, still far too small for a list to grow faster than it decays. The build stays correct; the timing is wrong. |
 | **Name finder** | #3 | **Defer.** Large build targeting "names like X", where the site currently draws ~25 impressions/quarter at positions 31–64. No evidence of reachable demand yet. |
 
 ### The work that actually comes first
@@ -274,8 +275,11 @@ no new data.
 **Axis:** Retain. **Expected return:** Compounding — *once there is an audience.* **Risk:** Low technical, medium editorial.
 
 > **Deferred per §0.** The diagnosis of the gap below is unchanged and still correct: the send
-> half was never built. But at 0.15 non-brand clicks/day there is no audience to retain yet.
-> Hold until intent-query impressions move.
+> half was never built. But at **0.51 non-brand clicks/day** — 47 clicks in 92 days not from
+> the brand query — there is no audience to retain yet. *(An earlier draft used 0.15/day here,
+> which is the non-**homepage** rate; the export cannot join queries to pages, so the two are
+> different measures and the query-based one is the right one for this decision. Caught by
+> Codex review on this PR.)* Hold until intent-query impressions move.
 
 ### The finding
 
@@ -291,7 +295,10 @@ Verified absent:
 - `newsletter_issues` is declared at `migrations/0017_editorial_growth.sql:41` and referenced by
   **zero TypeScript or JavaScript files** in the repo. Grepped: the only hit in the tree is the
   `CREATE TABLE` itself.
-- No issue composer, no send job, no public archive route.
+- No issue composer and no send job. **The archive route is *not* absent** — `/newsletter`
+  already renders content ID `newsletter:archive` with the archive title and canonical; what it
+  lacks is issue content and per-issue detail pages. (An earlier draft listed it as missing,
+  contradicting build item 4 below.)
 
 So the Resend integration exists solely to send the confirmation email. **Every subscriber
 acquired to date has opted in and received nothing since.** That is the worst possible state for
@@ -377,8 +384,10 @@ Either scope both, or judge the newsletter on open rate and click-through alone 
 **Kill criterion:** if issues 3–6 need more than an hour of manual assembly each, or open rate
 sits below ~20%, stop sending and reclaim the time; the list isn't an audience.
 
-**Estimated size:** Medium. One migration (suppression + send cursor), one composer script, one
-renderer, one send job, two routes, one webhook handler.
+**Estimated size:** Medium. One migration (suppression + a per-`(issue_id, subscriber_id)`
+delivery ledger — *not* a send cursor, which build item 3 rejects as unable to meet the
+no-duplicate criterion), one composer script, one renderer, one send job, one extended route
+plus `/newsletter/:issue/`, one webhook handler.
 
 ---
 

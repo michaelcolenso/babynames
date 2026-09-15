@@ -53,6 +53,19 @@ That last row is the number to sit with: **833 URLs earned 14 clicks in 92 days 
 clicks/day.** The site's measurable search performance is almost entirely people typing its
 name into Google.
 
+**Two different rates, which must not be conflated:**
+
+| Rate | Clicks | Per day | Basis |
+|---|---:|---:|---|
+| Non-**homepage** clicks | 14 | 0.15 | page-based |
+| Clicks **not** from the query `nobodynamed` | 47 | 0.51 | query-based |
+
+The export cannot join queries to pages, so these measure different things and neither is a
+clean "non-brand" figure: non-brand searches can land on the homepage, and brand searches can
+arrive via sitelinks. **0.51/day is the more appropriate figure for "is there an audience
+here"** — 3.4× the non-homepage rate. Both are small; the distinction matters wherever the
+number is used to justify a decision.
+
 *Reconciliation note:* `Queries.csv` exposes 441 of the 2,832 impressions in `Pages.csv`. GSC
 withholds rare and anonymized queries, so per-query totals systematically understate the long
 tail. The two files are not expected to sum alike; both are reported as given.
@@ -104,37 +117,61 @@ there.**
 
 ---
 
-## 4. CTR is still bad — but it is a smaller prize than it looks
+## 4. CTR is bad — and the prize is small either way
 
-Non-homepage impressions by SERP position bucket:
+> **Corrected.** The first version of this section binned each URL by its aggregate average
+> position, assigned that URL's *entire* impression count to the bucket, and reported the
+> result as "1,709 page-1 impressions → 14 clicks → 0.82% CTR." **That is not a measurement.**
+> GSC's per-URL position is an average across all of that URL's impressions, so a URL averaging
+> 8 may have had half its impressions on page 2. The buckets below are retained as a rough
+> distribution, relabelled honestly; the page-one CTR figure and everything derived from it are
+> withdrawn. *(Caught by Codex review on PR #163.)*
 
-| Bucket | URLs | Impressions | Clicks | CTR |
-|---|---:|---:|---:|---:|
-| Top 3 | 163 | 884 | 9 | 1.02% |
-| Rest of page 1 | 364 | 825 | 5 | 0.61% |
-| Page 2 | 157 | 276 | 0 | 0% |
-| Pages 3–5 | 78 | 233 | 0 | 0% |
-| Page 6+ | 71 | 174 | 0 | 0% |
+Non-homepage URLs grouped by **each URL's average position** (not by where individual
+impressions landed):
 
-Page 1 overall: **1,709 impressions → 14 clicks → 0.82% CTR**, roughly 15–25× below a normal
-position-1-to-10 curve. Real, and severe.
+| URL-average position | URLs | Their impressions | Clicks |
+|---|---:|---:|---:|
+| < 3 | 163 | 884 | 9 |
+| 3–10 | 364 | 825 | 5 |
+| 10–20 | 157 | 276 | 0 |
+| 20–50 | 78 | 233 | 0 |
+| 50+ | 71 | 174 | 0 |
 
-But the composition matters, and this export cannot join query to page, so attribution below is
-**inference, not measurement**:
+Read as a distribution it still says something real: the URLs that average a strong position
+hold most of the impressions and produced 14 clicks between them, and nothing averaging worse
+than page 2 converted at all.
 
-- The page-1, zero-click set is `/about` (169 impr, pos 1.9), `/comeback` (136, 2.7), `/viz/`
-  (128, 2.8), `/blog/` (20, 1.9) — i.e. almost exactly the site's nav link set. That is the
-  signature of **brand-query sitelinks**, which accrue impressions and are rarely clicked
-  because the searcher clicks the main result. Their 0% CTR is probably benign and not fixable
-  by copywriting.
-- **581 of 766 name URLs have exactly 1 impression.** The name-page top-3 impressions are
-  ultra-long-tail individual name lookups, not a reachable content market.
+### The measured numbers, with no bucketing
 
-The ceiling arithmetic: at ~17 impressions/day, **even a 10× CTR improvement across every
-page-1 impression yields on the order of 1–2 clicks/day.** Snippet work is cheap and worth
-doing, but it cannot be the growth plan.
+| Metric | Value |
+|---|---:|
+| Non-homepage impressions | 2,392 |
+| Non-homepage clicks | 14 |
+| **Non-homepage CTR** | **0.59%** |
+| Non-homepage impressions/day | 26.0 |
+| Non-homepage clicks/day | 0.15 |
 
----
+### The ceiling, re-derived
+
+Multiplying the *measured* non-homepage CTR, which needs no assumption about where impressions
+sat:
+
+| Improvement | Resulting CTR | Clicks/day |
+|---|---:|---:|
+| 5× | 2.9% | 0.76 |
+| **10×** | **5.9%** | **1.52** |
+| 20× | 11.7% | 3.04 |
+
+So the original conclusion survives its broken derivation: **even a tenfold CTR improvement is
+worth about 1–2 clicks per day.** Snippet work is cheap and worth doing; it is not a growth
+plan. That holds regardless of how the impressions were distributed across result pages.
+
+*Composition caveat, unchanged and still inference:* the zero-click URLs that average position
+~2 are `/about` (169 impressions), `/comeback` (136), `/viz/` (128) and `/blog/` (20) — almost
+exactly the site's nav set, which is the signature of brand-query sitelinks rather than a
+copywriting failure. And 581 of 766 name URLs have exactly one impression. This export cannot
+join query to page, so neither point can be confirmed from it.
 
 ## 5. Zero rich results
 
