@@ -71,13 +71,13 @@ function chartPanel(nd: NameData): string {
 </div>`;
 }
 
-const bodyHtml = `<p>The Social Security Administration has recorded baby names since 1880. In those 145 years, certain names arrived with a bang and left just as fast — perfect cultural timestamps, crystallized in a single year’s birth records.</p>
+const bodyHtml = `<p>The Social Security Administration has recorded baby names since 1880. In those 145 years, certain names arrived with a bang and left just as fast. Each one pins a cultural moment to a single year of birth records.</p>
 
-<p>These are the one-hit wonders: names that peaked in their debut year or within a season of some cultural event, then vanished almost as quickly. They’re not just statistics. Each one is a receipt from American pop culture.</p>
+<p>These are the one-hit wonders: names that peaked in their debut year or within a season of some cultural event, then vanished almost as quickly. Each one is a receipt from American pop culture.</p>
 
 <h2>Kunta (1977): The <em>Roots</em> Effect</h2>
 
-<p>In January 1977, ABC aired <em>Roots</em> — an eight-night miniseries about Kunta Kinte, an African man sold into slavery in America. It became one of the most-watched television events in history. That year, 215 baby boys were named Kunta. By 1979, the count had fallen to 16. By 1981, the name had effectively vanished from the record.</p>
+<p>In January 1977, ABC aired <em>Roots</em>, an eight-night miniseries about Kunta Kinte, an African man sold into slavery in America. It became one of the most-watched television events in history. That year, 215 baby boys were named Kunta. By 1979, the count had fallen to 16. By 1981, the name had effectively vanished from the record.</p>
 
 ${chartPanel(names[0]!)}
 
@@ -85,35 +85,35 @@ ${chartPanel(names[0]!)}
 
 <h2>Arsenio (1989): Late Night Makes a Name</h2>
 
-<p>Arsenio Hall had been a recognizable name in comedy circles for years — which is why a small but steady trickle of Arsenios existed through the late 1980s. Then <em>The Arsenio Hall Show</em> launched in January 1989 and changed late-night television. That year, 397 boys received the name. Within two years it had fallen to 46 — 11.6% of its peak. By the mid-1990s, the show was cancelled and the name had faded to near-zero.</p>
+<p>Arsenio Hall had been a recognizable name in comedy circles for years, so a small but steady trickle of Arsenios existed through the late 1980s. Then <em>The Arsenio Hall Show</em> launched in January 1989 and changed late-night television. That year, 397 boys received the name. Within two years it had fallen to 46, 11.6% of its peak. By the mid-1990s, the show was cancelled and the name had faded to near-zero.</p>
 
 ${chartPanel(names[1]!)}
 
 <h2>Moesha (1996): One Season, One Name</h2>
 
-<p>The UPN sitcom <em>Moesha</em> starring Brandy premiered in January 1996. In that single year, 426 girls were named Moesha — a name that had essentially never existed before in SSA records. By 1999 the count had fallen to 61, about 14% of its debut-year peak. The show ran six seasons, but the naming impulse exhausted itself almost immediately. Parents named their daughters after the premiere. The reruns didn’t get another wave.</p>
+<p>The UPN sitcom <em>Moesha</em> starring Brandy premiered in January 1996. In that single year, 426 girls were named Moesha, a name that had essentially never existed before in SSA records. By 1999 the count had fallen to 61, about 14% of its debut-year peak. The show ran six seasons, but the naming impulse exhausted itself almost immediately. Parents named their daughters after the premiere. The reruns didn’t get another wave.</p>
 
 ${chartPanel(names[2]!)}
 
 <h2>Jkwon (2004): One Song, One Name</h2>
 
-<p>J-Kwon’s “Tipsy” was the breakout track of early 2004 — an 18-year-old rapper from St. Louis who hit #2 on the Billboard Hot 100 before most people knew his name. That year, 100 baby boys were named Jkwon. By 2008, the count had fallen to 7. The career didn’t sustain itself, and neither did the name.</p>
+<p>J-Kwon’s “Tipsy” was the breakout track of early 2004. An 18-year-old rapper from St. Louis, he hit #2 on the Billboard Hot 100 before most people knew his name. That year, 100 baby boys were named Jkwon. By 2008, the count had fallen to 7. The career didn’t sustain itself, and neither did the name.</p>
 
 ${chartPanel(names[3]!)}
 
 <h2>Bethzy (2006): The Unsolved One</h2>
 
-<p>In 2005, 11 girls were named Bethzy. In 2006, 301 were. In 2007, 28. The spike is as sharp as any in this post — sharper than Jkwon, nearly as steep as Kunta — but there is no obvious cause. No film, no television show, no athlete or musician named Bethzy left a trace in any record that would explain 301 babies in a single year. The name has a phonetic structure common in Latin American communities, which may point to a regional or community-level spread that national media didn’t capture. But that’s speculation. The SSA data is unambiguous. The cause is not. If you know something, <a href=”/about”>reach out</a>.</p>
+<p>In 2005, 11 girls were named Bethzy. In 2006, 301 were. In 2007, 28. The spike is as sharp as any in this post, sharper than Jkwon and nearly as steep as Kunta, but there is no obvious cause. No film, no television show, no athlete or musician named Bethzy left a trace in any record that would explain 301 babies in a single year. The name has a phonetic structure common in Latin American communities, which may point to a regional or community-level spread that national media didn’t capture. But that’s speculation. The SSA data is unambiguous. The cause is not. If you know something, <a href="/about">reach out</a>.</p>
 
 ${chartPanel(names[4]!)}
 
 <h2>Neymar: The Survivor</h2>
 
-<p>Not every pop-culture name fades completely. Neymar, named for the Brazilian footballer, had been building since 2010 before peaking at 499 in 2014 — the year Brazil hosted the World Cup. Unlike the names above, the decline has been gradual rather than sudden: 53 boys were named Neymar in 2025, more than a decade after the peak. A lasting career produces a lasting name.</p>
+<p>Not every pop-culture name fades completely. Neymar, named for the Brazilian footballer, had been building since 2010 before peaking at 499 in 2014, the year Brazil hosted the World Cup. Unlike the names above, the decline has been gradual rather than sudden: 53 boys were named Neymar in 2025, more than a decade after the peak. A lasting career produces a lasting name.</p>
 
 ${chartPanel(names[5]!)}
 
-<p>The names that vanish fastest tend to be attached to a single event rather than a lasting career or fictional universe. A miniseries finale, a talk show cancellation, a rapper’s one hit — the cultural oxygen disappears, and the name goes with it. Khaleesi — from <em>Game of Thrones</em> — peaked in 2018 at 560 girls and still registered over 100 per year through 2022. Renesmee from <em>Twilight</em> has shown similar staying power. These names found enough genuine affection to outlast the moment that made them famous.</p>
+<p>The names that vanish fastest tend to be attached to a single event rather than a lasting career or fictional universe. A miniseries finale, a talk show cancellation, a rapper’s one hit: when the moment passes, the name goes with it. Khaleesi, from <em>Game of Thrones</em>, peaked in 2018 at 560 girls and still registered over 100 per year through 2022. Renesmee from <em>Twilight</em> has shown similar staying power. These names found enough genuine affection to outlast the moment that made them famous.</p>
 
 <p>Browse the names: <a href="/name/Kunta">Kunta</a> · <a href="/name/Arsenio">Arsenio</a> · <a href="/name/Moesha">Moesha</a> · <a href="/name/Neymar">Neymar</a> · <a href="/name/Khaleesi">Khaleesi</a></p>`;
 
