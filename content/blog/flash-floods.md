@@ -1,13 +1,13 @@
 ---
-title: "The Flash Floods — American Names That Arrived All at Once"
+title: "The Flash Floods of American Naming"
 date: "2026-08-23"
-description: "175 names surged from nowhere to a peak and collapsed within five years. These are the flash floods of American naming — cultural timestamps crystallized in birth records."
+description: "175 names surged from nowhere to a peak and collapsed within five years. These are the flash floods of American naming."
 author: "NobodyNamed"
 status: "published"
 og_image: "/api/og/default"
 slug: "flash-floods"
 ---
-# The Flash Floods — American Names That Arrived All at Once
+# The Flash Floods of American Naming
 
 The Social Security Administration has recorded baby names since 1880. In those
 145 years, most names behave like rivers: they rise slowly, crest, and recede
@@ -18,11 +18,11 @@ gone within five years.
 Roughly 74% of them are girls' names. The biggest single
 flood on record belongs to Jase, a name that had barely existed
 before 2013 and peaked at 4555 newborns that year.
-Each of these names is a receipt from American pop culture.
+Nearly all of them trace to a specific moment in American pop culture.
 
 ## Kunta (1977): The *Roots* Effect
 
-In January 1977, ABC aired *Roots* — an eight-night miniseries about Kunta
+In January 1977, ABC aired *Roots*, an eight-night miniseries about Kunta
 Kinte. It became one of the most-watched television events in history. That
 year, 215 baby boys were named Kunta. By 1979, the count had
 fallen to 16. The name never recovered.
@@ -30,7 +30,7 @@ fallen to 16. The name never recovered.
 <div class="chart-panel">
   <div class="chart-panel-name">Kunta</div>
   <div class="chart-caption"><span>1977</span><span>Peak 1977</span><span>2025</span></div>
-  <svg class="sparkline sparkline-extinct" style="--line-color:var(--extinct);--fill-color:rgba(38, 38, 38, 0.12)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
   <style>
     .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
     .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
@@ -55,7 +55,7 @@ What makes Kunta remarkable is the speed of the drop. Within two years of
 peak, the name was at 7% of its maximum. Television created a name, and
 television's news cycle consumed it just as fast. (The same broadcast left a
 second fingerprint: 1117 girls were named Kizzy in 1977,
-after Kunta Kinte's daughter — the flood's only other survivor of note.)
+after Kunta Kinte's daughter, the flood's only other survivor of note.)
 
 ## Arsenio (1989): Late Night Makes a Name
 
@@ -92,7 +92,7 @@ its peak.
 ## Moesha (1996): One Season, One Name
 
 The UPN sitcom *Moesha* premiered in January 1996. In that single year,
-426 girls were named Moesha — a name that had essentially
+426 girls were named Moesha, a name that had essentially
 never existed in SSA records before. By 1999 the count had fallen to 61, about
 14% of its debut-year peak. Parents named their daughters after the premiere.
 The reruns didn't get another wave.
@@ -100,7 +100,7 @@ The reruns didn't get another wave.
 <div class="chart-panel">
   <div class="chart-panel-name">Moesha</div>
   <div class="chart-caption"><span>1996</span><span>Peak 1996</span><span>2025</span></div>
-  <svg class="sparkline sparkline-extinct" style="--line-color:var(--extinct);--fill-color:rgba(38, 38, 38, 0.12)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
   <style>
     .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
     .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
@@ -130,7 +130,7 @@ career didn't sustain itself, and neither did the name.
 <div class="chart-panel">
   <div class="chart-panel-name">Jkwon</div>
   <div class="chart-caption"><span>2004</span><span>Peak 2004</span><span>2025</span></div>
-  <svg class="sparkline sparkline-extinct" style="--line-color:var(--extinct);--fill-color:rgba(38, 38, 38, 0.12)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <svg class="sparkline sparkline-declining" style="--line-color:var(--declining);--fill-color:rgba(162, 104, 34, 0.15)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
   <style>
     .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
     .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
@@ -155,14 +155,14 @@ career didn't sustain itself, and neither did the name.
 
 In 2005, 11 girls were named Bethzy. In 2006, 301 were. In
 2007, back to 28. The spike is as sharp as any in this post, but there is no
-obvious cause — no film, no show, no famous Bethzy in any record we can find.
+obvious cause: no film, no show, no famous Bethzy in any record we can find.
 The phonetics suggest a community-level spread that national media didn't
 capture, but that's speculation. The data is unambiguous. The cause is not.
 
 <div class="chart-panel">
   <div class="chart-panel-name">Bethzy</div>
   <div class="chart-caption"><span>2005</span><span>Peak 2006</span><span>2025</span></div>
-  <svg class="sparkline sparkline-extinct" style="--line-color:var(--extinct);--fill-color:rgba(38, 38, 38, 0.12)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
   <style>
     .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
     .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
@@ -185,15 +185,15 @@ capture, but that's speculation. The data is unambiguous. The cause is not.
 
 ## The Ones That Didn't Vanish
 
-Not every sudden name drowns. Neymar peaked at 499 boys in 2014 — the World
-Cup year — but a lasting career produces a lasting name: 53 were still named
+Not every sudden name drowns. Neymar peaked at 499 boys in 2014, the World
+Cup year, but a lasting career produces a lasting name: 53 were still named
 Neymar in 2025. Khaleesi peaked at 565 in 2018 and still registers over 400 a
-year. The flash floods are the names whose cultural oxygen disappeared; these
+year. The flash floods are the names that lost their moment; the
 survivors found genuine affection instead.
 
 Even Kanye tells the story: 509 boys at the 2004 peak near
 the *College Dropout* release, effectively gone from the record a decade
-later. And Aaden — one of the sextuplets from *Jon & Kate Plus 8* — spiked to
+later. And Aaden, one of the sextuplets from *Jon & Kate Plus 8*, spiked to
 1269 in 2009 as the tabloid era peaked, then evaporated with
 it.
 
