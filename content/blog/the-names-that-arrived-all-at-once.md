@@ -2,7 +2,7 @@
 title: "The Names That Arrived All at Once"
 date: "2026-06-13"
 slug: "the-names-that-arrived-all-at-once"
-description: "Every year has a baby name that appears from nowhere with the largest first-year count. Together they form a century of American media, migration, invention, and mystery."
+description: "Every year has a baby name that appears from nowhere with the largest first-year count. Together they form a century of American media and migration."
 author: "NobodyNamed"
 status: "published"
 og_image: "/api/og/default"

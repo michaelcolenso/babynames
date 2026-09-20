@@ -1,7 +1,7 @@
 ---
 title: "How America Stopped Sharing Names"
 date: "2026-06-12"
-description: "We abandoned our most popular names, quietly converged on a few sounds, then manufactured uniqueness by respelling them. A century of American individualism in three charts."
+description: "We abandoned our most popular names, quietly converged on a few sounds, then manufactured uniqueness by respelling them."
 author: "NobodyNamed"
 status: "draft"
 og_image: "/api/og/default"

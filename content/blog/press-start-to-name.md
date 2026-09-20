@@ -1,7 +1,7 @@
 ---
 title: "Press Start to Name"
 date: "2026-06-13"
-description: "Forty years of video games leaked onto real American birth certificates — often the exact year a game shipped. A character-select roster of every name that made it in."
+description: "Forty years of video games leaked onto real American birth certificates, often the exact year a game shipped."
 author: "NobodyNamed"
 status: "published"
 og_image: "/assets/press-start-hero.webp"
