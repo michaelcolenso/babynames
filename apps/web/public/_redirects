@@ -6,6 +6,9 @@
 # Consolidate duplicate content.
 /comebacks  /comeback  301
 
+# The blog is branded "Namecalling"; send the guessed URL to the index.
+/namecalling  /blog/  301
+
 # Blog posts moved from /viz/ to /blog/. Targets carry the trailing slash so
 # each legacy URL resolves in one hop instead of chaining into /blog/<slug>/.
 /viz/pop-culture-names  /blog/the-kehlani-effect/  301
