@@ -3,7 +3,7 @@ title: "Eithan and Ailany Aren't New Names"
 date: "2026-09-21"
 description: "Eithan and Ailany are 2025's fastest-rising names. Both are respellings of sounds America already had, arriving by the spelling instead of the name."
 author: "NobodyNamed"
-status: "draft"
+status: "published"
 og_image: "/api/og/default"
 ---
 
