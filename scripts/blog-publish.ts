@@ -376,10 +376,25 @@ function stripInlineMarkdown(text: string): string {
     .trim();
 }
 
+// Descriptions render verbatim on the /blog/ index cards, so a hard
+// slice(0, 152) leaves teasers ending mid-word ("...inven..."). Prefer the
+// last sentence boundary under the limit, then a word boundary, and never
+// cut inside a word.
 function truncateDescription(description: string): string {
   const normalized = description.replace(/\s+/g, " ").trim();
   if (normalized.length <= 155) return normalized;
-  return `${normalized.slice(0, 152).trimEnd()}...`;
+
+  const sentenceEnd = Math.max(
+    normalized.lastIndexOf(". ", 152),
+    normalized.lastIndexOf("! ", 152),
+    normalized.lastIndexOf("? ", 152),
+  );
+  if (sentenceEnd >= 60) return normalized.slice(0, sentenceEnd + 1);
+
+  const wordEnd = normalized.lastIndexOf(" ", 151);
+  if (wordEnd >= 60) return `${normalized.slice(0, wordEnd)}…`;
+
+  return `${normalized.slice(0, 151)}…`;
 }
 
 function sqlString(value: string | null): string {

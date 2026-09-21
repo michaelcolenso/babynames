@@ -89,3 +89,40 @@ test("builds timestamped migration names that avoid existing numeric collisions"
     "20260524T184230_publish_why_mavis_came_back.sql",
   );
 });
+
+test("truncates long descriptions at a sentence boundary, never mid-word", () => {
+  const post = compileBlogPost(
+    `---
+title: "Flash Floods"
+date: "2026-08-23"
+description: "175 names surged from nowhere to a peak and collapsed within five years. These are the flash floods of American naming — cultural timestamps crystallized in birth records."
+---
+
+Body.`,
+    "content/blog/flash-floods.md",
+  );
+
+  assert.equal(
+    post.description,
+    "175 names surged from nowhere to a peak and collapsed within five years.",
+  );
+});
+
+test("falls back to a word boundary when no sentence fits the limit", () => {
+  const longClause = `A single long clause without any sentence break ${"rolling onward ".repeat(12)}until it finally ends here.`;
+  const post = compileBlogPost(
+    `---
+title: "Long Clause"
+date: "2026-08-23"
+description: "${longClause}"
+---
+
+Body.`,
+    "content/blog/long-clause.md",
+  );
+
+  assert.ok(post.description.length <= 155);
+  assert.ok(post.description.endsWith("…"));
+  // The ellipsis attaches to a complete word.
+  assert.match(post.description, /[A-Za-z]…$/);
+});
