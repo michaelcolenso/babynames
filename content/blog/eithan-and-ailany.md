@@ -9,11 +9,11 @@ og_image: "/api/og/default"
 
 # Eithan and Ailany Aren't New Names
 
-In 2023, 311 girls were named [Ailany](/name/Ailany/). In 2025, 7,136 were.
+In 2023, 311 girls were named Ailany. In 2025, 7,136 were.
 
-[Eithan](/name/Eithan/) went from 876 births in 2023 to 3,636 in 2025.
+Eithan went from 876 births in 2023 to 3,636 in 2025.
 
-Both are among the fastest-rising names in the country. The Social Security Administration's own 2025 report named them, almost: its top-5 fastest-risers listed [Ailanny](/name/Ailanny/), not Ailany, and [Neithan](/name/Neithan/), not Eithan. Same names, different spelling. SSA's own list undercounted both.
+Both are among the fastest-rising names in the country. The Social Security Administration's own 2025 report named them, almost: its top-5 fastest-risers listed Ailanny, not Ailany, and Neithan, not Eithan. Same names, different spelling. SSA's own list undercounted both.
 
 ## The name on the form isn't the sound in the room
 
@@ -37,7 +37,7 @@ Search the full name list for anything starting Ailan-, Aylan-, or Eylan-, and t
   </div>
 </div>
 
-Add every spelling together and 11,022 American girls got some version of this name in 2025 alone. [Ailani](/name/Ailani/) is the root: a real, moderately used name since the early 2000s, with its own two earlier pockets of popularity in California. The other twenty-four spellings are copies of its sound. [Ailany](/name/Ailany/) is the outlier among them: 311 births in 2023, 7,136 in 2025, now about 65% of the entire family's volume and the 14th most common girls' name in the country. Ailani itself does not crack the top 100.
+Add every spelling together and 11,022 American girls got some version of this name in 2025 alone. Ailani is the root: a real, moderately used name since the early 2000s, with its own two earlier pockets of popularity in California. The other twenty-four spellings are copies of its sound. Ailany is the outlier among them: 311 births in 2023, 7,136 in 2025, now about 65% of the entire family's volume and the 14th most common girls' name in the country. Ailani itself does not crack the top 100.
 
 | Spelling | 2025 births |
 | --- | ---: |
