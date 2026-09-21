@@ -21,9 +21,9 @@ Baby-name consultant Colleen Slagen, quoted in [TODAY's coverage](https://www.to
 
 That is the exact mechanism from [How America Stopped Sharing Names](/blog/how-america-stopped-sharing-names/): parents fragmenting one shared sound across many spellings. This is that mechanism caught in the newest year of data available, moving faster than it did for Caitlin or -aden.
 
-## SSA counted one spelling each. There are at least nineteen.
+## SSA counted one spelling each. There are at least twenty-five.
 
-Search the full name list for anything starting Ailan-, Aylan-, or Eylan-, and nineteen distinct girls' spellings turn up, all peaking in 2025, all clearly the same name said out loud and written down nineteen different ways.
+Search the full name list for anything starting Ailan-, Aylan-, or Eylan-, and twenty-five distinct girls' spellings turn up, from 7,136 births down to 5, all clearly the same name said out loud and written down twenty-five different ways.
 
 <div class="blog-visual">
   <h3>The six biggest spellings, 2025 births</h3>
@@ -37,7 +37,7 @@ Search the full name list for anything starting Ailan-, Aylan-, or Eylan-, and n
   </div>
 </div>
 
-Add every spelling together and 10,988 American girls got some version of this name in 2025 alone. [Ailani](/name/Ailani/) is the root: a real, moderately used name since the early 2000s, with its own two earlier pockets of popularity in California. The other eighteen spellings are copies of its sound, most of them born in the last three years. One of them, Ailany, now ranks 14th nationally among all girls' names. Ailani itself does not crack the top 100.
+Add every spelling together and 11,022 American girls got some version of this name in 2025 alone. [Ailani](/name/Ailani/) is the root: a real, moderately used name since the early 2000s, with its own two earlier pockets of popularity in California. The other twenty-four spellings are copies of its sound, most of them born in the last three years. One of them, Ailany, now ranks 14th nationally among all girls' names. Ailani itself does not crack the top 100.
 
 | Spelling | 2025 births |
 | --- | ---: |
@@ -58,8 +58,14 @@ Add every spelling together and 10,988 American girls got some version of this n
 | [Aylanis](/name/Aylanis/) | 20 |
 | [Ailanis](/name/Ailanis/) | 17 |
 | [Aylanna](/name/Aylanna/) | 12 |
+| [Ailannys](/name/Ailannys/) | 7 |
 | [Aylannie](/name/Aylannie/) | 6 |
+| [Ailanee](/name/Ailanee/) | 6 |
+| [Ailanii](/name/Ailanii/) | 6 |
 | [Aylanee](/name/Aylanee/) | 6 |
+| [Ailannie](/name/Ailannie/) | 5 |
+| [Aylanii](/name/Aylanii/) | 5 |
+| [Aylanny](/name/Aylanny/) | 5 |
 
 The boys' side is smaller but shaped the same way. [Eithan](/name/Eithan/), [Neithan](/name/Neithan/), and [Eitham](/name/Eitham/) added up to 4,033 births in 2025. All three are respellings of Ethan. All three climb the SSA charts as if they were three different names.
 
