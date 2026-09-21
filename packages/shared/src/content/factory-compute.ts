@@ -10,6 +10,8 @@ import type {
   FlashFloodsResult,
   GlacierMember,
   GlaciersResult,
+  OneWayStreetMember,
+  OneWayStreetResult,
 } from "./factory-types";
 import { buildSparkline } from "../sparkline";
 import { classify } from "../classify";
@@ -182,6 +184,66 @@ export function computeGlaciers(
   return { members, totalNames: series.size };
 }
 
+export interface OneWayStreetOptions {
+  minMalePeak: number;
+  minFemalePeak: number;
+  maxPeakGapYears: number;
+  maxMaleShareAtFemalePeak: number;
+  minFemaleToMalePeakRatio: number;
+}
+
+export const DEFAULT_ONE_WAY_STREET_OPTIONS: OneWayStreetOptions = {
+  minMalePeak: 500,
+  minFemalePeak: 500,
+  maxPeakGapYears: 20,
+  maxMaleShareAtFemalePeak: 0.2,
+  minFemaleToMalePeakRatio: 1.5,
+};
+
+/**
+ * One-way street: both sex series are substantial, but the male peak comes
+ * first, nearly disappears by the female peak, and the female peak is larger.
+ * This makes the detector about a directional handoff, not merely a unisex name.
+ */
+export function computeOneWayStreet(
+  series: Map<string, Record<number, number>>,
+  displayNames: Map<string, string>,
+  options: Partial<OneWayStreetOptions> = {},
+): OneWayStreetResult {
+  const opts = { ...DEFAULT_ONE_WAY_STREET_OPTIONS, ...options };
+  const byName = new Map<string, { M?: Record<number, number>; F?: Record<number, number> }>();
+  for (const [key, s] of series) {
+    const [lower, sex] = key.split("|");
+    if (sex !== "M" && sex !== "F") continue;
+    const item = byName.get(lower!) ?? {};
+    item[sex] = s;
+    byName.set(lower!, item);
+  }
+  const members: OneWayStreetMember[] = [];
+  for (const [lower, pair] of byName) {
+    if (!pair.M || !pair.F) continue;
+    const maleYears = Object.keys(pair.M).map(Number);
+    const femaleYears = Object.keys(pair.F).map(Number);
+    const malePeak = Math.max(...maleYears.map((y) => pair.M![y]!));
+    const femalePeak = Math.max(...femaleYears.map((y) => pair.F![y]!));
+    const malePeakYear = maleYears.find((y) => pair.M![y] === malePeak)!;
+    const femalePeakYear = femaleYears.find((y) => pair.F![y] === femalePeak)!;
+    if (malePeak < opts.minMalePeak || femalePeak < opts.minFemalePeak) continue;
+    if (femalePeakYear <= malePeakYear || femalePeakYear - malePeakYear > opts.maxPeakGapYears) continue;
+    const maleAtFemalePeak = pair.M[DATA_MAX_YEAR] ?? 0;
+    if (maleAtFemalePeak > malePeak * opts.maxMaleShareAtFemalePeak) continue;
+    if (femalePeak < malePeak * opts.minFemaleToMalePeakRatio) continue;
+    members.push({
+      name: displayNames.get(`${lower}|F`) ?? lower!,
+      sex: "F",
+      malePeakYear, malePeak, femalePeakYear, femalePeak, maleAtFemalePeak,
+      peakYear: femalePeakYear, peakCount: femalePeak, series: pair.F,
+    });
+  }
+  members.sort((a, b) => b.femalePeak - a.femalePeak || a.name.localeCompare(b.name));
+  return { members, totalNames: byName.size };
+}
+
 export interface SsaCsvRow {
   year: number;
   name: string;
@@ -263,11 +325,11 @@ export function csvToNameYearRows(rows: SsaCsvRow[], totals: Map<number, { male:
 
 export function evaluateClaims(
   def: ContentDefinition,
-  result: FlashFloodsResult | GlaciersResult,
+  result: FlashFloodsResult | GlaciersResult | OneWayStreetResult,
 ): Record<string, ClaimValue> {
   const evaluated: Record<string, ClaimValue> = {};
   for (const [key, fn] of Object.entries(def.claims)) {
-    const v = fn(result.members as Array<FlashFloodMember | GlacierMember>, { totalNames: result.totalNames });
+    const v = fn(result.members as Array<FlashFloodMember | GlacierMember | OneWayStreetMember>, { totalNames: result.totalNames });
     if (typeof v !== "number" && typeof v !== "string") {
       throw new Error(`Claim "${key}" in ${def.slug} did not resolve to a number or string`);
     }
