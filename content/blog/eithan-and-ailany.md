@@ -37,7 +37,7 @@ Search the full name list for anything starting Ailan-, Aylan-, or Eylan-, and t
   </div>
 </div>
 
-Add every spelling together and 11,022 American girls got some version of this name in 2025 alone. [Ailani](/name/Ailani/) is the root: a real, moderately used name since the early 2000s, with its own two earlier pockets of popularity in California. The other twenty-four spellings are copies of its sound, most of them born in the last three years. One of them, Ailany, now ranks 14th nationally among all girls' names. Ailani itself does not crack the top 100.
+Add every spelling together and 11,022 American girls got some version of this name in 2025 alone. [Ailani](/name/Ailani/) is the root: a real, moderately used name since the early 2000s, with its own two earlier pockets of popularity in California. The other twenty-four spellings are copies of its sound. [Ailany](/name/Ailany/) is the outlier among them: 311 births in 2023, 7,136 in 2025, now about 65% of the entire family's volume and the 14th most common girls' name in the country. Ailani itself does not crack the top 100.
 
 | Spelling | 2025 births |
 | --- | ---: |
@@ -89,4 +89,4 @@ Eithan and Neithan are two different spellings, filed as two different names, en
 | 2024 | 1,599 | 137 |
 | 2025 | 3,636 | 371 |
 
-Both roughly doubled every year for four straight years, in lockstep, without coordinating. That is not two names having good years. That is one sound moving through the country, arriving on birth certificates spelled a dozen different ways, exactly the way [How America Stopped Sharing Names](/blog/how-america-stopped-sharing-names/) said it would.
+Neither grew at a steady pace. Eithan's worst year was +45%, Neithan's best was +171%. But over the full four years, Eithan multiplied by about 13x and Neithan by about 12x, landing within 5% of each other despite never moving in the same increments in the same year. That is not two names having good years on their own schedules. That is one sound moving through the country, arriving on birth certificates spelled a dozen different ways, exactly the way [How America Stopped Sharing Names](/blog/how-america-stopped-sharing-names/) said it would.
