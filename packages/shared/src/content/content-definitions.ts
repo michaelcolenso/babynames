@@ -2,7 +2,7 @@
 // Each definition drives both a viz page and a blog post from the same
 // computed numbers. Claims are the ONLY way numbers enter prose.
 
-import type { ContentDefinition, GlacierMember } from "./factory-types";
+import type { ContentDefinition, GlacierMember, OneWayStreetMember } from "./factory-types";
 
 function findPeak(
   members: Array<{ name: string; sex: string; peakCount: number }>,
@@ -16,6 +16,12 @@ function findPeak(
 function findMember<T extends { name: string }>(members: T[], name: string): T {
   const hit = members.find((m) => m.name === name);
   if (!hit) throw new Error(`expected member "${name}" not detected in data`);
+  return hit;
+}
+
+function findOneWay(members: Array<OneWayStreetMember>, name: string): OneWayStreetMember {
+  const hit = members.find((m) => m.name === name);
+  if (!hit) throw new Error(`one-way-street: expected member "${name}" not detected in data`);
   return hit;
 }
 
@@ -122,6 +128,62 @@ export const CONTENT_DEFINITIONS: ContentDefinition[] = [
       { key: "christopherPeak", equals: 60021 },
       { key: "barbaraPeak", equals: 48800 },
       { key: "sarahPeak", equals: 28483 },
+    ],
+  },
+  {
+    slug: "one-way-street",
+    kind: "both",
+    title: "The One-Way Street — When Names Crossed From Boys to Girls",
+    description:
+      "25 names made a one-way crossing: a substantial male peak came first, nearly vanished, and was followed by a much larger female wave.",
+    sourceVersion: "ssa-national-2025",
+    rolloutState: "draft",
+    compute: {
+      family: "one-way-street",
+      minMalePeak: 500,
+      minFemalePeak: 500,
+      maxPeakGapYears: 20,
+      maxMaleShareAtFemalePeak: 0.2,
+      minFemaleToMalePeakRatio: 1.5,
+    },
+    panels: ["Ashley|F", "Taylor|F", "Tracy|F", "Kelly|F", "Leslie|F"],
+    sourceNote:
+      "Names shown had male and female peaks of at least 500 births, with the female peak arriving within 20 years, after male usage fell below 20% of its peak, and at least 1.5× larger.",
+    claims: {
+      count: (m) => m.length,
+      topName: (m) => m[0]?.name ?? "none",
+      topFemalePeak: (m) => (m[0] as OneWayStreetMember)?.femalePeak ?? 0,
+      topMalePeak: (m) => (m[0] as OneWayStreetMember)?.malePeak ?? 0,
+      ashleyMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Ashley").malePeak,
+      ashleyFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Ashley").femalePeak,
+      ashleyMaleYear: (m) => findOneWay(m as OneWayStreetMember[], "Ashley").malePeakYear,
+      ashleyFemaleYear: (m) => findOneWay(m as OneWayStreetMember[], "Ashley").femalePeakYear,
+      taylorMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Taylor").malePeak,
+      taylorFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Taylor").femalePeak,
+      tracyMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Tracy").malePeak,
+      tracyFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Tracy").femalePeak,
+      kellyMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Kelly").malePeak,
+      kellyFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Kelly").femalePeak,
+      leslieMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Leslie").malePeak,
+      leslieFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Leslie").femalePeak,
+    },
+    asserts: [
+      { key: "count", equals: 25 },
+      { key: "topName", equals: "Ashley" },
+      { key: "topFemalePeak", equals: 54856 },
+      { key: "topMalePeak", equals: 746 },
+      { key: "ashleyMalePeak", equals: 746 },
+      { key: "ashleyFemalePeak", equals: 54856 },
+      { key: "ashleyMaleYear", equals: 1980 },
+      { key: "ashleyFemaleYear", equals: 1987 },
+      { key: "taylorMalePeak", equals: 8239 },
+      { key: "taylorFemalePeak", equals: 21270 },
+      { key: "tracyMalePeak", equals: 3380 },
+      { key: "tracyFemalePeak", equals: 18464 },
+      { key: "kellyMalePeak", equals: 3093 },
+      { key: "kellyFemalePeak", equals: 18234 },
+      { key: "leslieMalePeak", equals: 2358 },
+      { key: "leslieFemalePeak", equals: 6103 },
     ],
   },
 ];
