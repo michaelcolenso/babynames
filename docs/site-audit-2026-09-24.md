@@ -140,7 +140,7 @@ Separately, the blog's markdown tables render unstyled and cramped on mobile (se
 ### 10. Blog pipeline drift
 - **Karen is still in draft:** `content/blog/how-many-karens-are-left.md` is `status: "draft"`. The June demand analysis named it the flagship of the "How Many ___ Are Left?" franchise. The post exists and is still unpublished three months later.
 - **Glaciers doesn't exist live:** `content/blog/glaciers.md` says `status: "published"`, but `/blog/glaciers/` returns **404** and the post isn't in the sitemap. Either no migration was generated or none was applied.
-- **Fix:** run `npm run blog:publish` for both and apply the migrations. This needs your go-ahead, since it writes to production D1. Add a CI check that fails when a `published` source file has no matching migration.
+- **Fix:** for Karen, first change the frontmatter to `status: "published"` and review it; `blog:publish` keeps the source status as-is, and the site serves only `published` rows. Then run `npm run blog:publish -- <file>` for each post and apply the generated migrations. This needs your go-ahead, since it writes to production D1. Add a CI check that fails when a `published` source file has no matching migration.
 
 All blog posts except one use `/api/og/default` as their social image. Per-post OG images, even the existing `/api/og/*` renderer parameterized by title, would lift social CTR on the only content type built to be shared.
 
@@ -207,7 +207,7 @@ Lab results (mobile, throttled, through the proxy):
 Warm TTFB is about 200 ms for SSR routes, measured through the proxy; cold name-page renders run about 500 ms. The August CLS fix held: CLS is 0 everywhere. The SEO score of 92 on every page comes entirely from `robots.txt` line 7 (`Content-Signal:`), which Lighthouse calls an unknown directive and Google ignores. Keep the line if you want the signal; the score is not a ranking factor.
 
 Remaining items, all small:
-- **`app.js`:** `render-name.ts:405` loads `/assets/app.js` without `?v=` and without `defer`, and `/assets/*` has a 1-day browser TTL. After a deploy, returning visitors can run stale JS against new HTML for up to a day. Version it like `style.css?v=26` and add `defer`. The inline JSON blocks already come after it.
+- **`app.js`:** `render-name.ts:405` loads `/assets/app.js` without `?v=` and without `defer`, and `/assets/*` has a 1-day browser TTL. After a deploy, returning visitors can run stale JS against new HTML for up to a day. Version it like `style.css?v=26`. Don't add `defer` on its own: the inline initializer that `pageShell()` emits after it (`render-name.ts:407-415`) reads `window.NameVitals` synchronously and returns early if `app.js` hasn't run, which would leave share, tooltip, compare and enrichment controls uninitialized. Deferring is only safe if that initializer moves into `app.js` behind `DOMContentLoaded`.
 - **Landing pages:** `/extinct`, `/endangered` and `/rising` weigh 100–115 KB of HTML and run 25,700px tall on mobile, with about 2,000 DOM nodes. The per-row sparkline `<path>`s cause most of that. Paginate at 50 rows with "show more", or use the 60-byte spark blob + client draw the homepage already uses.
 - **`/viz/` thumbnails:** the first thumbnail is the LCP element and is `loading="lazy"`. Make the first two eager, and serve WebP. Lighthouse estimates about 23 KB saved.
 - **Static HTML caching:** `/viz/*`, `/press` and `/developers` return `max-age=0, must-revalidate`. They have no `_headers` rule, unlike `/index.html`. Add the same `s-maxage` rule.
