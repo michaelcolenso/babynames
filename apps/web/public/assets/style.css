@@ -1569,8 +1569,14 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   word-break: break-word;
   margin-bottom: 0.5rem;
 }
-.compare-report .lede {
+.compare-report .lede,
+.compare-report .compare-summary {
   max-width: 640px;
+}
+.compare-report .compare-summary {
+  margin: 0.4rem 0 0;
+  font-family: var(--serif);
+  color: var(--ink-soft);
 }
 .compare-editor {
   margin: 0.2rem 0 1.6rem;

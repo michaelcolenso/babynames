@@ -8,6 +8,8 @@ import { renderYearPage, type YearNameRow } from "../packages/shared/src/render-
 import { classify } from "../packages/shared/src/classify";
 import { renderFullPage } from "../packages/shared/src/render-name";
 import type { NameRegionalAnomaly } from "../packages/shared/src/schema";
+import { onRequestGet as compareRoute } from "../apps/web/functions/compare/[[names]]/index";
+import { compareSummary } from "../packages/shared/src/render-compare";
 
 function stateRequest(path: string, db: unknown = {}) {
   const url = new URL(`https://example.com${path}`);
@@ -169,4 +171,77 @@ test("a name peaking in the latest year says so once", () => {
   const html = renderName({ peakLast: true });
   assert.match(html, /Testa hit a new high in 2025 \(550 births\)\./);
   assert.doesNotMatch(html, /peaked in 2025 with 550 births; 550 in 2025/);
+});
+
+// ── Compare pages (#12) ──────────────────────────────────────────────────────
+
+const COMPARE_DATA: Record<string, { name: string; sex: "F" | "M"; series: Record<number, number> }> = {
+  emma: { name: "Emma", sex: "F", series: { 2018: 18_000, 2019: 17_000, 2020: 15_000, 2025: 12_000 } },
+  olivia: { name: "Olivia", sex: "F", series: { 2018: 17_500, 2019: 18_000, 2020: 17_600, 2025: 13_500 } },
+};
+
+function compareDb() {
+  return {
+    prepare(sql: string) {
+      return {
+        bind(...values: unknown[]) {
+          return {
+            async first<T>() {
+              const key = String(values[0]);
+              return { value: key === "min_year" ? "2018" : "2025" } as T;
+            },
+            async all<T>() {
+              if (!/FROM names n/.test(sql)) return { results: [] as T[] };
+              const d = COMPARE_DATA[String(values[0])];
+              if (!d) return { results: [] as T[] };
+              const rows = Object.entries(d.series).map(([year, count]) => ({
+                id: d.name.length, name: d.name, name_lower: d.name.toLowerCase(), sex: d.sex,
+                first_year: 2018, last_year: 2025, peak_year: 2018, peak_count: 1, total_count: 1,
+                status: "stable", decline_pct: 0, latest_count: 1, prev_decade: 0, curr_decade: 0, growth_x: 1,
+                year: Number(year), count,
+              }));
+              return { results: rows as T[] };
+            },
+          };
+        },
+      };
+    },
+  };
+}
+
+function compareRequest(path: string) {
+  const url = new URL(`https://example.com${path}`);
+  const segs = url.pathname.split("/").filter(Boolean).slice(1);
+  return compareRoute({ params: { names: segs }, request: new Request(url), env: { DB: compareDb() } } as never);
+}
+
+test("every compare URL form 301s to the lowercase -vs- canonical", async () => {
+  for (const path of ["/compare/Emma,Olivia/", "/compare/Emma/Olivia/", "/compare/emma-vs-olivia", "/compare/Emma-vs-Olivia/", "/compare/Emma+Olivia/"]) {
+    const res = await compareRequest(path);
+    assert.equal(res.status, 301, path);
+    assert.equal(res.headers.get("Location"), "/compare/emma-vs-olivia/", path);
+  }
+});
+
+test("the canonical compare page renders a summary and JSON-LD", async () => {
+  const res = await compareRequest("/compare/emma-vs-olivia/");
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /<link rel="canonical" href="https:\/\/example\.com\/compare\/emma-vs-olivia\/">/);
+  assert.match(html, /"@type":"WebPage"/);
+  assert.match(html, /<p class="compare-summary">/);
+});
+
+test("compare summary states peaks, the last crossover and today's ratio", () => {
+  const rec = (k: string) => ({ ...COMPARE_DATA[k]!, ym: 2018, yM: 2025 });
+  const text = compareSummary([rec("emma"), rec("olivia")]);
+  assert.match(text, /Emma peaked in 2018 with 18,000 girls and had 12,000 in 2025\./);
+  assert.match(text, /Olivia last overtook Emma in 2019\./);
+  assert.match(text, /In 2025, Olivia was given 1\.1× as often as Emma\./);
+});
+
+test("unknown compare names 404 with site chrome", async () => {
+  const res = await compareRequest("/compare/zzq-vs-qqz/");
+  assert.equal(res.status, 404);
+  assert.match(await res.text(), /<header class="site">/);
 });

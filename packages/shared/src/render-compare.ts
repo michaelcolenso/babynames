@@ -118,23 +118,108 @@ function renderLegend(records: NameRecord[]): string {
   return `<div class="compare-legend">${items}</div>`;
 }
 
+function peakOf(r: NameRecord): { year: number; count: number } {
+  let year = r.ym;
+  let count = 0;
+  for (let y = r.ym; y <= r.yM; y++) {
+    const v = r.series[y] ?? 0;
+    if (v > count) {
+      count = v;
+      year = y;
+    }
+  }
+  return { year, count };
+}
+
+function sexNoun(r: NameRecord): string {
+  return r.sex === "M" ? "boys" : "girls";
+}
+
+// A few data-derived sentences so the page says something a chart alone
+// doesn't: when each name peaked, where they stand now, and (for a pair) the
+// most recent year the lead changed hands and today's ratio.
+export function compareSummary(records: NameRecord[]): string {
+  if (records.length < 2) return "";
+  const yM = records[0]!.yM;
+  const parts: string[] = [];
+  for (const r of records) {
+    const peak = peakOf(r);
+    const latest = r.series[yM] ?? 0;
+    parts.push(
+      peak.year === yM
+        ? `${escape(r.name)} is at its peak, with ${fmt(latest)} ${sexNoun(r)} in ${yM}.`
+        : `${escape(r.name)} peaked in ${peak.year} with ${fmt(peak.count)} ${sexNoun(r)} and had ${fmt(latest)} in ${yM}.`,
+    );
+  }
+  if (records.length === 2) {
+    const [a, b] = records as [NameRecord, NameRecord];
+    const diff = (y: number) => (a.series[y] ?? 0) - (b.series[y] ?? 0);
+    let crossover: number | null = null;
+    for (let y = yM; y > a.ym; y--) {
+      const now = diff(y);
+      const before = diff(y - 1);
+      if (now !== 0 && before !== 0 && Math.sign(now) !== Math.sign(before)) {
+        crossover = y;
+        break;
+      }
+    }
+    const la = a.series[yM] ?? 0;
+    const lb = b.series[yM] ?? 0;
+    const [lead, trail, lLead, lTrail] = la >= lb ? [a, b, la, lb] : [b, a, lb, la];
+    if (crossover !== null && lLead !== lTrail) {
+      parts.push(`${escape(lead.name)} last overtook ${escape(trail.name)} in ${crossover}.`);
+    }
+    if (lTrail > 0 && lLead !== lTrail) {
+      const ratio = lLead / lTrail;
+      parts.push(
+        `In ${yM}, ${escape(lead.name)} was given ${ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1)}× as often as ${escape(trail.name)}.`,
+      );
+    } else if (lTrail === 0 && lLead > 0) {
+      parts.push(`In ${yM}, ${escape(trail.name)} fell below the SSA's five-birth reporting floor.`);
+    }
+  }
+  return parts.join(" ");
+}
+
 export function renderComparePage(
   records: NameRecord[],
   opts: { canonical: string; siteName?: string },
 ): string {
   const names = records.map((r) => r.name);
   const title = `${names.join(" vs. ")} — Name comparison | NobodyNamed`;
-  const description = `Compare the popularity history of ${names.join(", ")} using SSA baby name data.`;
+  const description = `${names.join(" vs. ")}: compare the popularity history of each name year by year, 1880 to today, from SSA baby-name records.`;
   const origin = opts.canonical ? new URL(opts.canonical).origin : "";
   const ogImageUrl = `${origin}/api/og/${encodeURIComponent(names[0]!)}`;
   const dataJson = JSON.stringify({ names, records });
   const maxNames = 3;
+  const summary = compareSummary(records);
+  const pageName = `${names.join(" vs. ")} — name comparison`;
+  const structuredData = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: `${origin}/` },
+        { "@type": "ListItem", position: 2, name: pageName, item: opts.canonical },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      name: pageName,
+      url: opts.canonical,
+      description,
+      isPartOf: { "@type": "WebSite", name: "NobodyNamed", url: `${origin}/` },
+      about: records.map((r) => ({ "@type": "Thing", name: r.name, url: `${origin}/name/${encodeURIComponent(r.name)}/` })),
+    },
+  ];
 
   const body = `<article class="report compare-report" id="view-compare">
     <header class="dossier-head">
       <div class="sex">Comparison</div>
       <h1>${names.map((n) => escape(n)).join(' <span class="compare-vs">vs.</span> ')}</h1>
       <p class="lede">Overlaying ${records.length} names from ${records[0]!.ym} to ${records[0]!.yM}.</p>
+      ${summary ? `<p class="compare-summary">${summary}</p>` : ""}
     </header>
     <section class="compare-editor" aria-label="Edit comparison names">
       <div class="section-label">Compare names</div>
@@ -166,6 +251,7 @@ export function renderComparePage(
     ogImageAlt: title,
     ogType: "article",
     body,
+    structuredData,
     scripts: [APP_JS_SRC],
     jsonDataBlocks: [{ id: "nv-compare-data", data: JSON.parse(dataJson) }],
     inlineScripts: [

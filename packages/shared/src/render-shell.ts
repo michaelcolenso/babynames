@@ -50,11 +50,11 @@ const DEFAULT_NAV: NavEntry[] = [
   { label: "About", href: "/about" },
 ];
 
-const STYLESHEET_HREF = "/assets/style.css?v=27";
+const STYLESHEET_HREF = "/assets/style.css?v=28";
 
 // /assets/* carries a 1-day browser TTL, so unversioned script URLs let a
 // returning visitor run yesterday's JS against today's HTML. Bump on change.
-export const APP_JS_SRC = "/assets/app.js?v=2";
+export const APP_JS_SRC = "/assets/app.js?v=3";
 export const LANDING_JS_SRC = "/assets/landing.js?v=2";
 
 // Runs synchronously before the stylesheet is applied, so an explicit
