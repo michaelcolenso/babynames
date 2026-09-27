@@ -4,6 +4,7 @@
 // hooking caches.default here means every endpoint gets edge-caching for
 // free (with the `data_version` cache-bust trick built into each handler).
 
+import { BUILD_ID } from "./_build";
 import type { PagesFunction } from "@cloudflare/workers-types";
 import { shouldServeMarkdown } from "./_accept";
 import { getGenerationDefinition, hasPathExtension } from "@nv/shared";
@@ -163,6 +164,9 @@ async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promi
   const wantsMarkdown = shouldServeMarkdown(ctx.request);
   const keyUrl = new URL(ctx.request.url);
   keyUrl.searchParams.set("__nv_variant", wantsMarkdown ? "md" : "html");
+  // Entries under this synthetic key can't be purged by URL, so key them on
+  // the deploy too: a new build must never keep serving the old build's HTML.
+  keyUrl.searchParams.set("__nv_build", BUILD_ID);
   const cacheKey = new Request(keyUrl.toString(), { method: "GET" });
 
   const cached = await cache.match(cacheKey);

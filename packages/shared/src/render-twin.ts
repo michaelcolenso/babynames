@@ -67,6 +67,9 @@ export function renderTwinPage(
     ogImage: ogImageUrl,
     ogType: "article",
     currentPath: undefined,
+    // Thin (~50 words), sitemap-excluded, and linked from every name page:
+    // keep it crawlable for its links but out of the index (site audit #11).
+    headExtras: '<meta name="robots" content="noindex,follow">',
     body: `
     <p class="eyebrow">Trajectory match</p>
     <h1>Names like ${escapeHtml(targetName)}</h1>

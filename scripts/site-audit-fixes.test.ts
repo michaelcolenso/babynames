@@ -12,6 +12,8 @@ import { renderFullPage } from "../packages/shared/src/render-name";
 import type { NameRegionalAnomaly } from "../packages/shared/src/schema";
 import { onRequestGet as compareRoute } from "../apps/web/functions/compare/[[names]]/index";
 import { compareSummary } from "../packages/shared/src/render-compare";
+import { onRequestGet as privacyRoute } from "../apps/web/functions/privacy";
+import { renderTwinPage } from "../packages/shared/src/render-twin";
 
 function stateRequest(path: string, db: unknown = {}) {
   const url = new URL(`https://example.com${path}`);
@@ -269,4 +271,28 @@ test("every published blog source has a migration that inserts it", () => {
     if (!migrations.includes(`('${slug}',`)) missing.push(`${file} (slug ${slug})`);
   }
   assert.deepEqual(missing, [], "run `npm run blog:publish -- <file>` for each and commit the migration");
+});
+
+// ── Follow-up decisions (#7, #11) ────────────────────────────────────────────
+
+test("analytics keeps no persistent identifier", () => {
+  const js = fs.readFileSync(path.join(__dirname, "../apps/web/public/assets/analytics.js"), "utf8");
+  assert.doesNotMatch(js, /localStorage\.setItem/, "no persistent storage writes");
+  assert.match(js, /sessionStorage\.setItem\("nv_sid"/);
+  const home = fs.readFileSync(path.join(__dirname, "../apps/web/public/index.html"), "utf8");
+  assert.doesNotMatch(home, /No tracking\./);
+  assert.match(home, /href="\/privacy"/);
+});
+
+test("privacy page renders", async () => {
+  const res = await privacyRoute({ request: new Request("https://example.com/privacy"), env: {} } as never);
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /<h1>What we collect<\/h1>/);
+  assert.match(html, /session storage/);
+});
+
+test("twin pages are noindex,follow", () => {
+  const html = renderTwinPage("Olivia", "F", [], { canonical: "https://example.com/name/Olivia/twin/" });
+  assert.match(html, /<meta name="robots" content="noindex,follow">/);
 });

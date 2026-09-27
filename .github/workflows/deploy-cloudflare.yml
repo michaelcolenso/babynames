@@ -37,6 +37,11 @@ jobs:
       - name: Build shared package
         run: npm run build
 
+      # Keys the Functions variant cache on this deploy (see functions/_build.ts),
+      # so cached HTML from the previous build is never served after a deploy.
+      - name: Stamp build ID
+        run: echo "export const BUILD_ID = \"${GITHUB_SHA::12}\";" > apps/web/functions/_build.ts
+
       - name: Deploy web (Pages)
         run: npm run deploy:web
 
