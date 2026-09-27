@@ -142,7 +142,7 @@ export interface SiteHeaderOpts {
 // backtracking home first. Wired up by assets/header-search.js, which
 // pageShell() loads unconditionally (see below).
 const HEADER_SEARCH_HTML = `<div class="header-search">
-  <input id="header-q" type="text" placeholder="Search a name…" autocomplete="off" spellcheck="false" aria-label="Search a name" aria-autocomplete="list" aria-controls="header-suggestions" aria-expanded="false">
+  <input id="header-q" type="text" role="combobox" placeholder="Search a name…" autocomplete="off" spellcheck="false" aria-label="Search a name" aria-autocomplete="list" aria-controls="header-suggestions" aria-expanded="false">
   <button type="button" id="header-go" aria-label="Search">
     <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><line x1="16.3" y1="16.3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
   </button>

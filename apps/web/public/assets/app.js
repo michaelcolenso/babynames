@@ -185,6 +185,7 @@ function attachSparklineTooltip(container, record) {
   const tooltip = document.createElement('div');
   tooltip.className = 'sparkline-tooltip';
   tooltip.setAttribute('role', 'tooltip');
+  tooltip.setAttribute('aria-label', 'Births in the hovered year');
   document.body.appendChild(tooltip);
 
   const ns = 'http://www.w3.org/2000/svg';

@@ -22,10 +22,10 @@ async function renderLandingTable(kind, target) {
   const fmt = NameVitals.fmt;
 
   const headers = {
-    extinct: `<tr><th>Name</th><th class="num">Peak year</th><th class="num">Peak</th><th class="num">Last year on record</th><th>Trajectory</th><th></th></tr>`,
-    endangered: `<tr><th>Name</th><th class="num">Peak year</th><th class="num">Peak</th><th class="num">${yM}</th><th class="num">Decline</th><th>Trajectory</th><th></th></tr>`,
-    rising: `<tr><th>Name</th><th class="num">${yM}</th><th class="num">Prev decade</th><th class="num">This decade</th><th class="num">Growth</th><th>Trajectory</th><th></th></tr>`,
-    comeback: `<tr><th>Name</th><th class="num">Peaked</th><th class="num">Peak</th><th class="num">${yM}</th><th class="num">Growth</th><th>Trajectory</th><th></th></tr>`,
+    extinct: `<tr><th>Name</th><th class="num">Peak year</th><th class="num">Peak</th><th class="num">Last year on record</th><th>Trajectory</th><th><span class="sr-only">Details</span></th></tr>`,
+    endangered: `<tr><th>Name</th><th class="num">Peak year</th><th class="num">Peak</th><th class="num">${yM}</th><th class="num">Decline</th><th>Trajectory</th><th><span class="sr-only">Details</span></th></tr>`,
+    rising: `<tr><th>Name</th><th class="num">${yM}</th><th class="num">Prev decade</th><th class="num">This decade</th><th class="num">Growth</th><th>Trajectory</th><th><span class="sr-only">Details</span></th></tr>`,
+    comeback: `<tr><th>Name</th><th class="num">Peaked</th><th class="num">Peak</th><th class="num">${yM}</th><th class="num">Growth</th><th>Trajectory</th><th><span class="sr-only">Details</span></th></tr>`,
   }[kind];
 
   const row = (r) => {

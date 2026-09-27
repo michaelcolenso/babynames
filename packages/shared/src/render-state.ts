@@ -45,9 +45,9 @@ export function renderStatePage(state: string, year: number, rows: StateTopRow[]
   const hasLeaders = Boolean(topGirl && topBoy);
 
   const title = hasLeaders
-    ? `Most Popular Baby Names in ${stateName} (${year}): ${topGirl} & ${topBoy} Lead | NobodyNamed`
-    : `Most Popular Baby Names in ${stateName} (${year}) | NobodyNamed`;
-  const desc = `The most popular baby names in ${stateName} in ${year}, ranked by SSA state birth records.${hasLeaders ? ` ${topGirl} and ${topBoy} led the state —` : ""} see the top 100, the names most distinctively ${demonymSafe(stateName)}, and how state ranks compare to national ones.`;
+    ? `Baby Names in ${stateName} (${year}): ${topGirl} & ${topBoy} Lead`
+    : `Most Popular Baby Names in ${stateName} (${year})`;
+  const desc = `The most popular baby names in ${stateName} in ${year}, ranked by SSA state birth records.${hasLeaders ? ` ${topGirl} and ${topBoy} led the state —` : ""} see the top 100 and the names most distinctively ${demonymSafe(stateName)}.`;
 
   const structuredData = [
     {
