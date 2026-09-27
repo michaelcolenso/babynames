@@ -21,6 +21,7 @@ const CANONICAL_PAGES = new Set([
   "/gen-z-names",
   "/millennial-names",
   "/newsletter",
+  "/privacy",
   "/rising",
   "/stories/american-name-atlas",
   "/year",

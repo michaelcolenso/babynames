@@ -14,6 +14,7 @@ import { onRequestGet as compareRoute } from "../apps/web/functions/compare/[[na
 import { compareSummary } from "../packages/shared/src/render-compare";
 import { onRequestGet as privacyRoute } from "../apps/web/functions/privacy";
 import { renderTwinPage } from "../packages/shared/src/render-twin";
+import { canonicalizePath } from "../apps/web/functions/_middleware";
 
 function stateRequest(path: string, db: unknown = {}) {
   const url = new URL(`https://example.com${path}`);
@@ -295,4 +296,25 @@ test("privacy page renders", async () => {
 test("twin pages are noindex,follow", () => {
   const html = renderTwinPage("Olivia", "F", [], { canonical: "https://example.com/name/Olivia/twin/" });
   assert.match(html, /<meta name="robots" content="noindex,follow">/);
+});
+
+test("/privacy/ canonicalizes to /privacy", () => {
+  assert.equal(canonicalizePath("/privacy/"), "/privacy");
+  assert.equal(canonicalizePath("/privacy"), null);
+});
+
+test("every static privacy link sits inside a footer", () => {
+  const dir = path.join(__dirname, "../apps/web/public");
+  const files = fs.readdirSync(dir).map((f) => path.join(dir, f))
+    .concat(fs.readdirSync(path.join(dir, "viz")).map((f) => path.join(dir, "viz", f)))
+    .filter((f) => f.endsWith(".html"));
+  const outside: string[] = [];
+  for (const f of files) {
+    const html = fs.readFileSync(f, "utf8");
+    for (const m of html.matchAll(/href="\/privacy"/g)) {
+      const before = html.slice(0, m.index);
+      if (before.lastIndexOf("<footer") < before.lastIndexOf("</footer>") || before.lastIndexOf("<footer") === -1) outside.push(path.basename(f));
+    }
+  }
+  assert.deepEqual(outside, []);
 });
