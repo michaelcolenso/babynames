@@ -3,10 +3,12 @@
 //   - /blog/ — post index
 //   - /blog/:slug/ — single post
 
+import { COMMON_WORD_NAMES } from "./common-word-names";
 import { contentId, contentIdentityMeta } from "./content-identity";
 import { chunkedIn } from "./d1-chunk";
 import { pageShell } from "./render-shell";
 import type { BlogPost, BlogPostSummary } from "./schema";
+import { STATE_NAMES, stateToSlug } from "./us-states-map";
 
 function escape(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -241,8 +243,54 @@ const UNLINK_NAME_LINKS = new Set([
   "yours",
 ]);
 
+// Names with fewer recorded births than this are never auto-linked: at that
+// size a capitalized match ("Add", "God", "Texas") is far more likely an
+// ordinary word than a reference to the name.
+const AUTOLINK_MIN_TOTAL = 1000;
+
+// State names that are also common given names. Linking them either way is a
+// guess, so they are left unlinked (multi-word "West Virginia" still links).
+const AMBIGUOUS_STATE_WORDS = new Set(["georgia", "virginia", "montana"]);
+
+// Longest first so "West Virginia" / "New Mexico" win over shorter matches.
+const STATE_LINKS = Object.values(STATE_NAMES)
+  .map((name) => ({ name, lower: name.toLowerCase() }))
+  .filter((s) => !AMBIGUOUS_STATE_WORDS.has(s.lower))
+  .sort((a, b) => b.name.length - a.name.length);
+const STATE_LINK_RE = new RegExp(`\\b(${STATE_LINKS.map((s) => s.name.replace(/ /g, "\\s+")).join("|")})\\b`, "g");
+// Single-word state names never auto-link as first names ("Texas" is a state
+// hub, not /name/Texas/). Words inside multi-word states ("Dakota",
+// "Carolina") stay eligible: the state pass has already wrapped "North
+// Dakota" in a link, and a standalone "Dakota" is usually the name.
+const STATE_WORDS = new Set(
+  Object.values(STATE_NAMES).map((name) => name.toLowerCase()).filter((name) => !name.includes(" ")),
+);
+
+// True when the match at `index` starts a sentence: start of a text run, or
+// after terminal punctuation / an opening quote. Capitalization there carries
+// no signal that the word is a name.
+function atSentenceStart(text: string, index: number): boolean {
+  const before = text.slice(0, index).replace(/["'\u201c\u2018(\s]+$/, "");
+  return before === "" || /[.!?:\u2014]$/.test(before);
+}
+
+function linkStates(html: string): string {
+  const linked = new Set<string>();
+  for (const m of html.matchAll(/\bhref=["'](?:https?:\/\/[^/"']+)?\/state\/([^/"'?#]+)/gi)) linked.add(m[1]!.toLowerCase());
+  return transformTextOutsideAnchors(html, (text) =>
+    text.replace(STATE_LINK_RE, (match: string) => {
+      const name = match.replace(/\s+/g, " ");
+      const code = Object.keys(STATE_NAMES).find((k) => STATE_NAMES[k] === name);
+      const slug = code ? stateToSlug(code) : "";
+      if (!slug || linked.has(slug)) return match;
+      linked.add(slug);
+      return `<a href="/state/${slug}/">${match}</a>`;
+    }),
+  );
+}
+
 export async function linkifyBlogBody(html: string, db: D1Database): Promise<string> {
-  html = sanitizeNameLinks(html);
+  html = linkStates(sanitizeNameLinks(html));
 
   const candidates = new Set<string>();
   transformTextOutsideAnchors(html, (text) => {
@@ -250,7 +298,7 @@ export async function linkifyBlogBody(html: string, db: D1Database): Promise<str
     if (words) {
       for (const w of words) {
         const lower = w.toLowerCase();
-        if (w.length >= 2 && !AUTOLINK_BLOCKLIST.has(lower)) candidates.add(lower);
+        if (w.length >= 2 && !AUTOLINK_BLOCKLIST.has(lower) && !STATE_WORDS.has(lower)) candidates.add(lower);
       }
     }
     return text;
@@ -258,29 +306,33 @@ export async function linkifyBlogBody(html: string, db: D1Database): Promise<str
 
   if (candidates.size === 0) return html;
 
-  // Look up which candidates exist as names. The variable-length IN list is
-  // batched via chunkedIn so it stays under D1's deployed bound-variable ceiling
-  // (the 50-state "signature name" post yields hundreds of candidates).
+  // Look up which candidates exist as names with enough births to be worth a
+  // link. The variable-length IN list is batched via chunkedIn so it stays
+  // under D1's deployed bound-variable ceiling (the 50-state "signature name"
+  // post yields hundreds of candidates).
   const list = Array.from(candidates).filter((s) => s.length > 0);
-  const rows = await chunkedIn<{ name: string }>(
+  const rows = await chunkedIn<{ name: string; total: number }>(
     db,
     list,
-    (ph) => `SELECT DISTINCT name FROM names WHERE name_lower IN (${ph})`,
+    (ph) =>
+      `SELECT name_lower AS name, SUM(total_count) AS total FROM names WHERE name_lower IN (${ph})
+        GROUP BY name_lower HAVING SUM(total_count) >= ${AUTOLINK_MIN_TOTAL}`,
   );
   const names = new Set<string>();
-  for (const r of rows) names.add(r.name.toLowerCase());
+  for (const r of rows) if ((r.total ?? 0) >= AUTOLINK_MIN_TOTAL) names.add(r.name.toLowerCase());
 
   if (names.size === 0) return html;
 
   const linkedNames = existingNameLinks(html);
   return transformTextOutsideAnchors(html, (text) =>
-    text.replace(/\b([A-Z][a-zA-Z]+)\b/g, (wordMatch: string, word: string) => {
+    text.replace(/\b([A-Z][a-zA-Z]+)\b/g, (wordMatch: string, word: string, offset: number) => {
       const lower = word.toLowerCase();
-      if (names.has(lower) && !linkedNames.has(lower)) {
-        linkedNames.add(lower);
-        return `<a href="/name/${encodeURIComponent(word)}/">${word}</a>`;
-      }
-      return wordMatch;
+      if (!names.has(lower) || linkedNames.has(lower)) return wordMatch;
+      // "Add every spelling", "Baby-name consultant": a common word that only
+      // looks like a name because it opens a sentence.
+      if (COMMON_WORD_NAMES.has(lower) && atSentenceStart(text, offset)) return wordMatch;
+      linkedNames.add(lower);
+      return `<a href="/name/${encodeURIComponent(word)}/">${word}</a>`;
     }),
   );
 }

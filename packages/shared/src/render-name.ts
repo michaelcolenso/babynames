@@ -298,7 +298,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       </div>
     </header>
 
-    <section class="chart-panel" aria-label="${escape(record.name)} annual popularity chart">
+    <section class="chart-panel name-chart" aria-label="${escape(record.name)} annual popularity chart">
       <div class="chart-caption"><span>${a.firstYear}</span><span>Peak ${a.peakYear}</span><span>${record.yM}</span></div>
       ${buildSparkline(record.series, record.ym, record.yM, {
         status: a.status,

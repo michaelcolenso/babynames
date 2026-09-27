@@ -1,6 +1,8 @@
 // Regression tests for fixes from docs/site-audit-2026-09-24.md.
 
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import test from "node:test";
 
 import { onRequestGet as stateRoute } from "../apps/web/functions/state/[state]/index";
@@ -244,4 +246,27 @@ test("unknown compare names 404 with site chrome", async () => {
   const res = await compareRequest("/compare/zzq-vs-qqz/");
   assert.equal(res.status, 404);
   assert.match(await res.text(), /<header class="site">/);
+});
+
+// ── Blog pipeline drift (#10) ────────────────────────────────────────────────
+
+
+test("every published blog source has a migration that inserts it", () => {
+  const root = path.join(__dirname, "..");
+  const blogDir = path.join(root, "content/blog");
+  const migrations = fs
+    .readdirSync(path.join(root, "migrations"))
+    .filter((f) => f.endsWith(".sql"))
+    .map((f) => fs.readFileSync(path.join(root, "migrations", f), "utf8"))
+    .join("\n");
+  const missing: string[] = [];
+  for (const file of fs.readdirSync(blogDir)) {
+    if (!file.endsWith(".md") || file.startsWith("_") || file === "README.md" || file === "IDEAS.md") continue;
+    const src = fs.readFileSync(path.join(blogDir, file), "utf8");
+    const front = src.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
+    if (!/^status:\s*"?published"?\s*$/m.test(front)) continue;
+    const slug = front.match(/^slug:\s*"?([^"\n]+)"?\s*$/m)?.[1] ?? file.replace(/\.md$/, "");
+    if (!migrations.includes(`('${slug}',`)) missing.push(`${file} (slug ${slug})`);
+  }
+  assert.deepEqual(missing, [], "run `npm run blog:publish -- <file>` for each and commit the migration");
 });

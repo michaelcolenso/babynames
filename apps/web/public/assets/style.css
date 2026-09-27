@@ -1530,7 +1530,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 /* The name chart stretches (preserveAspectRatio="none"), so on a phone its
    in-SVG labels squash to ~6px. Desktop keeps the SVG labels and hides the
    HTML caption that repeated them; phones swap: SVG text off, caption on. */
-.chart-panel .chart-caption { display: none; }
+.name-chart .chart-caption { display: none; }
 .sparkline .point-label {
   fill: rgba(247, 239, 225, 0.82);
   font-family: var(--mono);
@@ -2351,9 +2351,9 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   .year-result-grid { grid-template-columns: 1fr; }
   /* Four short tiles read fine 2×2; single-column pushed the chart ~1,000px down. */
   .dossier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .chart-panel .chart-caption { display: flex; }
-  .chart-panel .sparkline .axis-text,
-  .chart-panel .sparkline .point-label { display: none; }
+  .name-chart .chart-caption { display: flex; }
+  .name-chart .sparkline .axis-text,
+  .name-chart .sparkline .point-label { display: none; }
   /* Generation hubs put ranking tables inside the two-column year grid. Let
      the grid track shrink to the viewport so the tables scroll horizontally
      (see .table below) instead of forcing the column wider than the screen. */
@@ -2479,6 +2479,34 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 .blog-post-body h3 { font-size: 1.15rem; font-weight: 600; }
 .blog-post-body p { margin: 0 0 1.2rem; }
 .blog-post-body a { color: var(--accent); text-decoration: underline; }
+/* Markdown tables (spelling families, year-by-year counts) rendered with
+   browser defaults: no padding, no header rule, proportional digits. */
+.blog-post-body table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0 0 1.4rem;
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.blog-post-body th,
+.blog-post-body td {
+  padding: 0.45rem 0.9rem 0.45rem 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: baseline;
+}
+.blog-post-body th {
+  border-bottom: 2px solid var(--ink);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 .blog-post-body a:hover { color: var(--accent-dark); }
 .blog-post-body ul,
 .blog-post-body ol {
