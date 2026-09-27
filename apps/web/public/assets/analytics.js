@@ -11,9 +11,20 @@
     return location.hostname === "localhost" || location.hostname === "127.0.0.1";
   }
 
+  // Session-scoped on purpose: the id lives in sessionStorage, so it ends
+  // with the tab and never links one visit to the next. No persistent
+  // identifier is stored (see /privacy). Older builds kept "nv_sid" and
+  // "nv_seen" in localStorage; remove them for returning browsers.
+  try {
+    localStorage.removeItem("nv_sid");
+    localStorage.removeItem("nv_seen");
+  } catch (e) {
+    // storage unavailable — nothing to clean up.
+  }
+
   function getSessionId() {
     try {
-      var existing = localStorage.getItem("nv_sid");
+      var existing = sessionStorage.getItem("nv_sid");
       if (existing) return existing;
       var id;
       try {
@@ -21,10 +32,10 @@
       } catch (e) {
         id = "sid-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
       }
-      localStorage.setItem("nv_sid", id);
+      sessionStorage.setItem("nv_sid", id);
       return id;
     } catch (e) {
-      // localStorage unavailable (private browsing, etc.) — fall back to an
+      // sessionStorage unavailable (private browsing, etc.) — fall back to an
       // ephemeral per-call id rather than throwing.
       return "sid-" + Math.random().toString(36).slice(2);
     }
@@ -98,15 +109,6 @@
         }
       } catch (e) {
         // sessionStorage unavailable — skip the view-count milestone.
-      }
-
-      try {
-        if (localStorage.getItem("nv_seen")) {
-          nvTrack("return_visit", pageIdentity);
-        }
-        localStorage.setItem("nv_seen", "1");
-      } catch (e) {
-        // localStorage unavailable — skip return-visit tracking.
       }
 
       // A signup is "complete" only once the address is actually on the list:

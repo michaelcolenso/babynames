@@ -1,9 +1,9 @@
 ---
 title: "How Many Karens Are Left?"
-date: "2026-06-09"
+date: "2026-09-27"
 description: "The internet pictures Karen as a 45-year-old at a returns counter. The data says she is closer to 65 — and there are almost no new ones."
 author: "NobodyNamed"
-status: "draft"
+status: "published"
 og_image: "/api/og/default"
 ---
 
@@ -63,9 +63,9 @@ Compare it with [Elizabeth](/name/Elizabeth/), a name that belongs to every deca
 
 ## The joke and the obituary
 
-There is something quietly strange about the most mocked name of the 2020s being, demographically, one of the gentlest. The living Karens are overwhelmingly women in their late 50s, 60s, and early 70s. They named *their* daughters Jessica and Ashley. They did not name anyone Karen, because by the time they were having children the name already sounded like their mother's.
+There is something quietly strange about the most mocked name of the 2020s being, demographically, one of the gentlest. The living Karens are overwhelmingly women in their late 50s, 60s, and early 70s. When they were having children, the names at the top of the charts were Jessica and Ashley. By then Karen already sounded like their mother's generation.
 
-The meme will fade. It already is. But it sped up something that was going to happen anyway. A handful of parents who might once have used the name — for a grandmother, for a tribute, for the sound of it — quietly crossed it off. You can see it in the counts: 440 Karens born in 2019, 332 in 2020, then 229 in 2021 — nearly halved in two years, a small acceleration at the end of a long decline.
+The meme will fade. It may also have sped up something that was going to happen anyway. A handful of parents who might once have used the name — for a grandmother, for a tribute, for the sound of it — quietly crossed it off. The counts fit that story: 440 Karens born in 2019, 332 in 2020, then 229 in 2021 — nearly halved in two years, a small acceleration at the end of a long decline.
 
 So: how many Karens are left? About 775,000, and the number falls a little every year — not because the name is being replaced, but because it isn't.
 

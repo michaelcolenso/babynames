@@ -45,7 +45,7 @@ const DEFAULT_NAV: NavEntry[] = [
   // Trailing slash: /viz 308s to /viz/, so linking the bare form costs every
   // click (and every crawl) a redirect.
   { label: "Visualizations", href: "/viz/" },
-  { label: "Namecalling", href: "/blog/" },
+  { label: "Blog", href: "/blog/" },
   { label: "Newsletter", href: "/newsletter" },
   { label: "About", href: "/about" },
 ];
@@ -170,7 +170,7 @@ export function siteFooter(variant: "full" | "minimal" = "full", opts: SiteFoote
     const range = opts.yearRange ? ` ${opts.yearRange}` : "";
     return `<footer class="site">
   <div>Based on SSA records${range}.</div>
-  <div><a href="/about">Methodology</a> &middot; <a href="/newsletter">Newsletter</a> &middot; <a href="/press">Press</a> &middot; <a href="/developers">Developers</a></div>
+  <div><a href="/about">Methodology</a> &middot; <a href="/newsletter">Newsletter</a> &middot; <a href="/press">Press</a> &middot; <a href="/developers">Developers</a> &middot; <a href="/privacy">Privacy</a></div>
 </footer>`;
   }
   return `<footer class="site">
@@ -178,7 +178,7 @@ export function siteFooter(variant: "full" | "minimal" = "full", opts: SiteFoote
     <div>NobodyNamed is a small data project about American first names.</div>
     <div class="footer-note">Data sourced from Social Security Administration birth records (1880–present).</div>
   </div>
-  <div><a href="/about">About</a> &middot; <a href="/newsletter">Newsletter</a> &middot; <a href="/press">Press</a> &middot; <a href="/developers">Developers</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
+  <div><a href="/about">About</a> &middot; <a href="/newsletter">Newsletter</a> &middot; <a href="/press">Press</a> &middot; <a href="/developers">Developers</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="https://www.ssa.gov/oact/babynames/">SSA source</a></div>
 </footer>`;
 }
 
@@ -283,7 +283,7 @@ ${skipLink}
   ${siteFooter(opts.footerVariant, { yearRange: opts.footerYearRange })}
 </div>
 <script src="/assets/theme.js" defer></script>
-<script src="/assets/analytics.js" defer></script>
+<script src="/assets/analytics.js?v=2" defer></script>
 <script src="/assets/header-search.js" defer></script>
 <script src="/assets/webmcp.js" defer></script>
 ${scriptTags}

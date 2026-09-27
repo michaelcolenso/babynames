@@ -256,3 +256,20 @@ Notes on these numbers:
 5. **Decisions for you:** #7 (copy vs. behaviour), #11 (noindex scope), fonts.
 
 Re-run against: `npm run audit:site`, Lighthouse on the same 10 URLs, and the GSC Pages report 4 weeks after #11.
+
+---
+
+## Resolution (2026-09-27)
+
+Code fixes shipped in #171. Decisions on the open items:
+
+| # | Decision | Why |
+|---|---|---|
+| 7 | Made the claim true: `nv_sid` moved to `sessionStorage`, return-visit tracking removed, old `nv_sid`/`nv_seen` keys deleted from returning browsers. Copy now reads "No account. No ads. No cross-site tracking." New `/privacy` page, linked from footers. | Rewording alone would leave a persistent device ID, which is the EU exposure. `return_visit` fed no report. |
+| 11 | `noindex,follow` on `/name/:name/twin/`. Low-score name pages stay indexable. | Twins are ~50 words. Rare-name lookups are the moat; de-indexing ~83k pages without GSC data risks real traffic. Revisit with GSC's Pages report. |
+| 15 | Nav label "Namecalling" → "Blog" (page keeps the brand). "Rising" kept; `/rising` now explains that the badge (≥1.2× over 5 years) is looser than the page (≥5× over a decade). | "Rising baby names" is the query the page ranks for; renaming it to "Surging" would cost that. |
+| 16 | No change. | The gallery links 35 distinct views (22 pages + 13 `/viz/explore` sections); the 24 counted sitemap URLs. |
+| 10 | Karen verified against production data (every count and rank) and set to `published` with two causal lines softened. Migrations generated for Karen and glaciers; applying them to remote D1 is pending. | |
+| — | Fonts: no change. Compare pairs: not added to the sitemap until GSC shows demand. | |
+
+Also found while verifying the deploy: the middleware's variant cache was keyed by URL only, so deploys never invalidated cached HTML (name pages up to 1 day, year pages up to 7). It now keys on a build ID that `npm run deploy:web` stamps with the commit SHA.
