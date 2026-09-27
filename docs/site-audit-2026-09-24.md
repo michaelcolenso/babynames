@@ -272,4 +272,4 @@ Code fixes shipped in #171. Decisions on the open items:
 | 10 | Karen verified against production data (every count and rank) and set to `published` with two causal lines softened. Migrations generated for Karen and glaciers; applying them to remote D1 is pending. | |
 | — | Fonts: no change. Compare pairs: not added to the sitemap until GSC shows demand. | |
 
-Also found while verifying the deploy: the middleware's variant cache was keyed by URL only, so deploys never invalidated cached HTML (name pages up to 1 day, year pages up to 7). It now keys on a build ID stamped by the deploy workflow.
+Also found while verifying the deploy: the middleware's variant cache was keyed by URL only, so deploys never invalidated cached HTML (name pages up to 1 day, year pages up to 7). It now keys on a build ID that `npm run deploy:web` stamps with the commit SHA.
