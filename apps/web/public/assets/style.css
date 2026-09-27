@@ -1460,6 +1460,12 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   font-family: var(--sans);
   font-weight: 700;
 }
+.rank-label {
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
 .dossier-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1521,6 +1527,17 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 }
 .sparkline .axis { stroke: rgba(247, 239, 225, 0.18); stroke-width: 1; }
 .sparkline .axis-text { fill: rgba(247, 239, 225, 0.48); font-size: 11px; font-family: var(--mono); }
+/* The name chart stretches (preserveAspectRatio="none"), so on a phone its
+   in-SVG labels squash to ~6px. Desktop keeps the SVG labels and hides the
+   HTML caption that repeated them; phones swap: SVG text off, caption on. */
+.chart-panel .chart-caption { display: none; }
+.sparkline .point-label {
+  fill: rgba(247, 239, 225, 0.82);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 @keyframes lineReveal { to { stroke-dashoffset: 0; } }
 .chart-caption {
   display: flex;
@@ -2325,8 +2342,12 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
     flex-direction: column;
   }
   .year-form input[type="number"] { max-width: none; }
-  .year-result-grid,
-  .dossier-grid { grid-template-columns: 1fr; }
+  .year-result-grid { grid-template-columns: 1fr; }
+  /* Four short tiles read fine 2×2; single-column pushed the chart ~1,000px down. */
+  .dossier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chart-panel .chart-caption { display: flex; }
+  .chart-panel .sparkline .axis-text,
+  .chart-panel .sparkline .point-label { display: none; }
   /* Generation hubs put ranking tables inside the two-column year grid. Let
      the grid track shrink to the viewport so the tables scroll horizontally
      (see .table below) instead of forcing the column wider than the screen. */
@@ -2339,7 +2360,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
     min-height: 1000px;
   }
   .insight-row { grid-template-columns: 1fr; gap: 0.2rem; }
-  .chart-caption { flex-direction: column; }
+  .chart-caption { font-size: 0.72rem; }
   .table {
     display: block;
     overflow-x: auto;

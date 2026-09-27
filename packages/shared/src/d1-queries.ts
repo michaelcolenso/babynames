@@ -845,6 +845,24 @@ export async function topBySpecificYear(db: D1Database, year: number, perSex = 2
   return r.results ?? [];
 }
 
+// A name's rank in one year, from the precomputed top-200 table. null when the
+// name is outside the top 200 or the table isn't trustworthy — the live
+// equivalent ranks every name_years row for the year, too costly for a label.
+// Reads at most the ~200 rows of one (year, sex) PK range.
+export async function getNameRankForYear(
+  db: D1Database,
+  name: string,
+  sex: Sex,
+  year: number,
+): Promise<number | null> {
+  if (!(await rankingsUsable(db, 1))) return null;
+  const r = await db
+    .prepare(`SELECT rank FROM name_rankings_by_year WHERE year = ?1 AND sex = ?2 AND name = ?3`)
+    .bind(year, sex, name)
+    .first<{ rank: number }>();
+  return r?.rank ?? null;
+}
+
 // Every (year, sex) #1 name, read off the rank-leading name_rankings_rank
 // index (~2 rows per year). Year pages use it to say how long each leader held
 // the top spot. Returns [] when the precomputed table isn't trustworthy — the

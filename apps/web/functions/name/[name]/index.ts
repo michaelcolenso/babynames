@@ -12,6 +12,7 @@ import {
   getNameDiaspora,
   getNameDiscoveryClusters,
   getNameEnrichmentBundle,
+  getNameRankForYear,
   getNameStrongholds,
   getNameWithSeries,
   getShadowName,
@@ -103,7 +104,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   };
   const cls = classify({ series: record.series, yM: record.yM })!;
   const primaryRow = rows.find((r) => r.row.sex === primary.sex) ?? rows[0]!;
-  const [relatedNames, discovery, peerNames, yearTotals, enrichment, enrichmentBundle, diaspora, strongholds, hasShadow] = await Promise.all([
+  const [relatedNames, discovery, peerNames, yearTotals, enrichment, enrichmentBundle, diaspora, strongholds, hasShadow, latestRank] = await Promise.all([
     listRelatedNames(ctx.env.DB, lower, primaryRow.row.sex, primaryRow.row.status, primaryRow.row.peak_year, 6),
     getNameDiscoveryClusters(ctx.env.DB, {
       currentNameLower: lower,
@@ -124,6 +125,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     getShadowName(ctx.env.DB, lower, record.yM, record.yM - 50, primaryRow.row.sex)
       .then((m) => m !== null)
       .catch(() => false),
+    getNameRankForYear(ctx.env.DB, record.name, primaryRow.row.sex, record.yM).catch(() => null),
   ]);
   const url = new URL(ctx.request.url);
   const canonical = `${url.origin}/name/${encodeURIComponent(record.name)}/`;
@@ -140,6 +142,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     strongholds,
     affiliateTag: ctx.env.AMAZON_ASSOCIATES_TAG,
     hasShadow,
+    latestRank,
   });
   return new Response(html, {
     headers: {

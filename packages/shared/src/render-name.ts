@@ -176,6 +176,43 @@ interface RenderReportOptions {
   // name_shadow_matches table may be unseeded for the current max year,
   // in which case the destination 404s.
   hasShadow?: boolean;
+  // Rank among same-sex names in record.yM (top 200 only; null otherwise).
+  latestRank?: number | null;
+}
+
+// Minimum births in a state-era cell before its location quotient can
+// headline a page. Below this, a handful of births in a small state produces
+// a large, meaningless quotient (Olivia → Arizona 7.2× in the 1940s).
+const STRONGHOLD_MIN_BIRTHS = 50;
+
+// One ranking of geographic strongholds for every place the page talks about
+// geography — meta description, Quick answers, heartland card, strongholds map
+// — so they cannot contradict each other. Latest era only (callers pass
+// getNameStrongholds() rows), strongest per state, cells meeting the births
+// floor first.
+function rankStrongholds(anomalies: NameRegionalAnomaly[] | undefined): NameRegionalAnomaly[] {
+  if (!anomalies?.length) return [];
+  const latestEra = Math.max(...anomalies.map((x) => x.era_start_year));
+  const byState = new Map<string, NameRegionalAnomaly>();
+  for (const x of anomalies) {
+    if (x.era_start_year !== latestEra || x.location_quotient < 1.2) continue;
+    const cur = byState.get(x.state);
+    if (!cur || x.location_quotient > cur.location_quotient) byState.set(x.state, x);
+  }
+  const solid = (x: NameRegionalAnomaly) => x.name_births >= STRONGHOLD_MIN_BIRTHS;
+  return [...byState.values()].sort(
+    (p, q) => Number(solid(q)) - Number(solid(p)) || q.location_quotient - p.location_quotient,
+  );
+}
+
+// The stronghold allowed to headline text, or undefined when none clears the
+// births floor.
+function pickStronghold(
+  anomalies: NameRegionalAnomaly[] | undefined,
+): { state: string; lq: number; era: number } | undefined {
+  const top = rankStrongholds(anomalies)[0];
+  if (!top || top.name_births < STRONGHOLD_MIN_BIRTHS) return undefined;
+  return { state: stateName(top.state), lq: top.location_quotient, era: top.era_start_year };
 }
 
 export function renderReport(record: NameRecord): string {
@@ -190,16 +227,28 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
   const sexLabel = record.sex === "M" ? "boys" : "girls";
   const dossier = describeStatus(record, a);
   const openingParagraph = opts.enrichmentSnippet?.trim() || dossier.summary;
-  const topAnomalyRaw = opts.enrichment?.regionalAnomalies?.[0];
-  const resolvedAnomaly = topAnomalyRaw
-    ? { state: stateName(topAnomalyRaw.state), lq: topAnomalyRaw.location_quotient }
-    : undefined;
-  const narrative = opts.narrative ?? generateNameNarrative(record, a, resolvedAnomaly);
+  const narrative =
+    opts.narrative ??
+    generateNameNarrative(record, a, pickStronghold(opts.strongholds), {
+      profile: opts.enrichment?.profile,
+      latestRank: opts.latestRank,
+    });
 
-  const peakSentence = `${escape(record.name)} peaked in ${a.peakYear}, when <strong>${fmt(a.peakCount)}</strong> ${sexLabel} were given the name.`;
-  const latestSentence = a.latestCount
-    ? `In ${record.yM}, only <strong>${fmt(a.latestCount)}</strong> ${sexLabel} were given the name.`
-    : `No ${sexLabel} were recorded with this name in ${record.yM} — at least not five of them (the SSA's reporting floor).`;
+  const atPeakNow = a.peakYear === record.yM && a.latestCount > 0;
+  const peakSentence = atPeakNow
+    ? `${escape(record.name)} hit a new high in ${record.yM}, when <strong>${fmt(a.peakCount)}</strong> ${sexLabel} were given the name.`
+    : `${escape(record.name)} peaked in ${a.peakYear}, when <strong>${fmt(a.peakCount)}</strong> ${sexLabel} were given the name.`;
+  // "only" is for names well off their peak — not for the #1 name in the country.
+  const onlyWord = (a.declinePct ?? 0) >= 50 ? "only " : "";
+  const latestSentence = atPeakNow
+    ? ""
+    : a.latestCount
+      ? `In ${record.yM}, ${onlyWord}<strong>${fmt(a.latestCount)}</strong> ${sexLabel} were given the name.`
+      : `No ${sexLabel} were recorded with this name in ${record.yM} — at least not five of them (the SSA's reporting floor).`;
+  const rankLabel =
+    opts.latestRank && opts.latestRank > 0
+      ? `#${opts.latestRank} ${record.sex === "M" ? "boys\u2019" : "girls\u2019"} name in ${record.yM}`
+      : "";
 
   const narrativeExtras = renderNarrativeInsights(record, a, opts, sexLabel);
   const nameAnswers = renderNameAnswers(record.name, narrative);
@@ -238,6 +287,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
         <div class="status-line">
           <span class="status-pill status-${a.status}">${dossier.status}</span>
           <span class="trajectory-label">${dossier.trajectory}</span>
+          ${rankLabel ? `<span class="rank-label">${rankLabel}</span>` : ""}
         </div>
       </div>
       <div class="dossier-grid">
@@ -247,8 +297,6 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
         <div class="dossier-metric"><div class="label">Peak generation</div><div class="value">${generationForYear(a.peakYear)}</div></div>
       </div>
     </header>
-
-    ${nameAnswers}
 
     <section class="chart-panel" aria-label="${escape(record.name)} annual popularity chart">
       <div class="chart-caption"><span>${a.firstYear}</span><span>Peak ${a.peakYear}</span><span>${record.yM}</span></div>
@@ -261,6 +309,8 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
         })),
       })}
     </section>
+
+    ${nameAnswers}
 
     <div class="stats">
       <div class="stat"><div class="label">Peak year</div><div class="value">${a.peakYear}</div></div>
@@ -276,7 +326,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
     <div class="narrative">
       <p>${escape(openingParagraph)}</p>
       <p>${peakSentence}</p>
-      <p>${latestSentence}</p>
+      ${latestSentence ? `<p>${latestSentence}</p>` : ""}
       ${declineSentence}
       ${totalSentence}
     </div>
@@ -287,7 +337,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <div class="insight-row"><span>Trajectory</span><strong>${dossier.trajectory}</strong></div>
     </div>
     ${collisionBox}
-    ${renderEnrichmentPanel(record, opts.enrichment)}
+    ${renderEnrichmentPanel(record, opts.enrichment, opts.strongholds)}
     ${relatedNames}
     ${discoveryModule}
     <div class="share-row">
@@ -343,13 +393,13 @@ export function renderFullPage(
     // name_shadow_matches table may be unseeded for the current max year,
     // in which case the destination 404s.
     hasShadow?: boolean;
+    latestRank?: number | null;
   } = { canonical: "" },
 ): string {
-  const topAnomalyRaw = opts.enrichment?.regionalAnomalies?.[0];
-  const resolvedAnomaly = topAnomalyRaw
-    ? { state: stateName(topAnomalyRaw.state), lq: topAnomalyRaw.location_quotient }
-    : undefined;
-  const narrative = generateNameNarrative(record, classifyResult, resolvedAnomaly);
+  const narrative = generateNameNarrative(record, classifyResult, pickStronghold(opts.strongholds), {
+    profile: opts.enrichment?.profile,
+    latestRank: opts.latestRank,
+  });
   const desc = narrative.metaDescription;
   const title = narrative.metaTitle;
   const statusLabel = displayStatus(classifyResult, record.yM);
@@ -400,6 +450,7 @@ export function renderFullPage(
       classifyResult,
       narrative,
       hasShadow: opts.hasShadow,
+      latestRank: opts.latestRank,
     })}</div>`,
     structuredData,
     scripts: [APP_JS_SRC],
@@ -589,19 +640,11 @@ function strongholdTier(lq: number): "origin" | "early" | "mid" | "late" | "neve
 // over-represented the name is there in the most recent era we have data for.
 // Static (no time-lapse) — reuses the diaspora grid markup/styling.
 function renderStrongholdsMap(record: NameRecord, anomalies: NameRegionalAnomaly[]): string {
-  if (!anomalies.length) return "";
-  // "Where it lives now": prefer the most recent era's over-representation.
-  const latestEra = Math.max(...anomalies.map((x) => x.era_start_year));
-  const current = anomalies.filter((x) => x.era_start_year === latestEra && x.location_quotient >= 1.2);
-  const pool = current.length ? current : anomalies;
-  // Keep the strongest signal per state.
-  const byState = new Map<string, NameRegionalAnomaly>();
-  for (const x of pool) {
-    const cur = byState.get(x.state);
-    if (!cur || x.location_quotient > cur.location_quotient) byState.set(x.state, x);
-  }
-  if (!byState.size) return "";
-  const ranked = [...byState.values()].sort((p, q) => q.location_quotient - p.location_quotient);
+  // "Where it lives now": the most recent era's over-representation, ranked
+  // the same way as every other geography claim on the page.
+  const ranked = rankStrongholds(anomalies);
+  if (!ranked.length) return "";
+  const byState = new Map(ranked.map((x) => [x.state, x] as const));
   const top = ranked[0]!;
   const era = top.era_start_year;
 
@@ -649,7 +692,11 @@ function renderStrongholdsMap(record: NameRecord, anomalies: NameRegionalAnomaly
   </section>`;
 }
 
-function renderEnrichmentPanel(record: NameRecord, enrichment?: NameEnrichmentBundle): string {
+function renderEnrichmentPanel(
+  record: NameRecord,
+  enrichment: NameEnrichmentBundle | undefined,
+  strongholds: NameRegionalAnomaly[] | undefined,
+): string {
   if (!enrichment?.profile) return "";
   const profile = enrichment.profile;
   const legacyClass = profile.median_age > LEGACY_MEDIAN_AGE ? " enrichment-panel--legacy" : "";
@@ -658,7 +705,7 @@ function renderEnrichmentPanel(record: NameRecord, enrichment?: NameEnrichmentBu
     ${renderPlaygroundDensity(profile)}
     ${renderWaveTopology(profile)}
     ${renderCatalysts(enrichment.catalysts)}
-    ${renderRegionalAnomalies(enrichment.regionalAnomalies)}
+    ${renderRegionalAnomalies(strongholds)}
     ${renderHistoricalLegacy(profile, enrichment.historicalProfiles)}
   </section>`;
 }
@@ -708,10 +755,14 @@ function renderCatalysts(catalysts: NameCatalyst[]): string {
   </div>`;
 }
 
-function renderRegionalAnomalies(anomalies: NameRegionalAnomaly[]): string {
-  if (!anomalies.length) return "";
-  const top = anomalies[0]!;
-  const rows = anomalies
+// Same latest-era ranking as the strongholds map and the Quick answers, so
+// the card can't headline a decades-old small-numbers artifact.
+function renderRegionalAnomalies(strongholds: NameRegionalAnomaly[] | undefined): string {
+  const ranked = rankStrongholds(strongholds);
+  const top = ranked[0];
+  if (!top || top.name_births < STRONGHOLD_MIN_BIRTHS) return "";
+  const rows = ranked
+    .slice(0, 3)
     .map(
       (a) => `<div>
       <span>${escape(stateName(a.state))} · ${a.era_start_year}s</span>
@@ -722,7 +773,7 @@ function renderRegionalAnomalies(anomalies: NameRegionalAnomaly[]): string {
   return `<div class="enrichment-card regional-card">
     <div class="label">Geographic heartland</div>
     <div class="value">${escape(stateName(top.state))}</div>
-    <p><strong>${top.location_quotient.toFixed(1)}× higher affinity</strong> than the national baseline.</p>
+    <p><strong>${top.location_quotient.toFixed(1)}× higher affinity</strong> than the national baseline in the ${top.era_start_year}s.</p>
     <div class="regional-list">${rows}</div>
   </div>`;
 }
