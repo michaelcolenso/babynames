@@ -845,6 +845,42 @@ export async function topBySpecificYear(db: D1Database, year: number, perSex = 2
   return r.results ?? [];
 }
 
+// Every (year, sex) #1 name, read off the rank-leading name_rankings_rank
+// index (~2 rows per year). Year pages use it to say how long each leader held
+// the top spot. Returns [] when the precomputed table isn't trustworthy — the
+// live equivalent would rank every name_years row, which isn't worth it for
+// one sentence of copy.
+export async function listNumberOneNames(
+  db: D1Database,
+): Promise<{ year: number; sex: Sex; name: string }[]> {
+  if (!(await rankingsUsable(db, 1))) return [];
+  const r = await db
+    .prepare(`SELECT year, sex, name FROM name_rankings_by_year WHERE rank = 1 ORDER BY year`)
+    .all<{ year: number; sex: Sex; name: string }>();
+  return r.results ?? [];
+}
+
+// Classified status for a set of (name, sex) pairs — one UNIQUE(name, sex)
+// index probe per name. Keyed "name|sex".
+export async function statusesForNames(
+  db: D1Database,
+  pairs: { name: string; sex: Sex }[],
+): Promise<Map<string, { status: Status; latest_count: number }>> {
+  const out = new Map<string, { status: Status; latest_count: number }>();
+  for (const sex of ["F", "M"] as const) {
+    const names = pairs.filter((p) => p.sex === sex).map((p) => p.name);
+    if (!names.length) continue;
+    const rows = await chunkedIn<{ name: string; status: Status; latest_count: number }>(
+      db,
+      names,
+      (ph) => `SELECT name, status, latest_count FROM names WHERE sex = ? AND name IN (${ph})`,
+      { prefixBinds: [sex] },
+    );
+    for (const r of rows) out.set(`${r.name}|${sex}`, { status: r.status, latest_count: r.latest_count });
+  }
+  return out;
+}
+
 export async function getTopNamesForYear(db: D1Database, year: number, perSex = 5): Promise<YearTopRow[]> {
   return topBySpecificYear(db, year, perSex);
 }

@@ -34,14 +34,28 @@ const DEFAULT_NAV: NavEntry[] = [
       { label: "Fading", href: "/fading" },
     ],
   },
-  { label: "Birth year", href: "/year" },
-  { label: "Visualizations", href: "/viz" },
+  {
+    label: "Browse",
+    items: [
+      { label: "By birth year", href: "/year" },
+      { label: "By decade & letter", href: "/names/" },
+      { label: "By state", href: "/state/" },
+    ],
+  },
+  // Trailing slash: /viz 308s to /viz/, so linking the bare form costs every
+  // click (and every crawl) a redirect.
+  { label: "Visualizations", href: "/viz/" },
   { label: "Namecalling", href: "/blog/" },
   { label: "Newsletter", href: "/newsletter" },
   { label: "About", href: "/about" },
 ];
 
-const STYLESHEET_HREF = "/assets/style.css?v=26";
+const STYLESHEET_HREF = "/assets/style.css?v=27";
+
+// /assets/* carries a 1-day browser TTL, so unversioned script URLs let a
+// returning visitor run yesterday's JS against today's HTML. Bump on change.
+export const APP_JS_SRC = "/assets/app.js?v=2";
+export const LANDING_JS_SRC = "/assets/landing.js?v=2";
 
 // Runs synchronously before the stylesheet is applied, so an explicit
 // dark/light choice from a prior visit takes effect on first paint instead
@@ -254,6 +268,7 @@ ${twitterImageAltMeta}
 <meta name="theme-color" content="${themeLight}" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="${themeDark}" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="${favicon}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="${STYLESHEET_HREF}">
 ${structuredDataMeta}
 ${headExtras}

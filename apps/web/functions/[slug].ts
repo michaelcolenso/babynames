@@ -22,6 +22,8 @@ import {
   type MomentumDirection,
   type MomentumRouteName,
   type NameRow,
+  APP_JS_SRC,
+  LANDING_JS_SRC,
 } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
@@ -68,13 +70,14 @@ function shapeLandingRows(
   });
 }
 
-// `title` stays short — it drives the on-page <h1> and breadcrumb. `seoTitle`
+// `title` stays short and carries no brand suffix — it drives the on-page <h1>
+// and breadcrumb verbatim. `seoTitle`
 // and `seoDescription` (optional) drive the <title>/meta tags: they lead with
 // the page's signature names plus a hook, which earns clicks far better than a
 // bare "<X> Baby Names" on competitive SERPs.
 const PAGES: Record<string, EditorialPageConfig> = {
   comebacks: {
-    title: "Comeback Baby Names | NobodyNamed",
+    title: "Comeback Baby Names",
     seoTitle: "Comeback Baby Names: Why Theodore, Hazel & Eleanor Returned | NobodyNamed",
     seoDescription: "Names that fell out of use and came roaring back — Theodore, Hazel, Eleanor, Violet, Oliver. See which vintage baby names are surging again, with the data behind each revival.",
     eyebrow: "Recovered names",
@@ -84,22 +87,50 @@ const PAGES: Record<string, EditorialPageConfig> = {
     table: "comeback",
   },
   "millennial-names": {
-    title: "Millennial Baby Names | NobodyNamed",
+    title: "Millennial Baby Names",
     seoTitle: "Millennial Baby Names: Michael, Jessica & the '80s–'90s Class | NobodyNamed",
     seoDescription: "The names that filled '80s and '90s classrooms — Michael, Jessica, Ashley, Christopher, Amanda. See the defining millennial baby names and how each one is aging now.",
     eyebrow: "Generation dossier",
     lede: "The classroom names of the 1980s and 1990s: high-volume, unmistakable, and now aging into cultural memory.",
     names: ["Michael", "Jessica", "Ashley", "Christopher", "Amanda", "Matthew"],
     body: `Millennial names are defined by saturation. Many were not merely popular; they were ambient facts of school rosters and suburban life. The <a href="/names/1980s/">1980s decade hub</a> measures exactly which of those names truly belonged to the decade, and even reconstructs an average 1984 classroom from the same records.`,
+    sections: [
+      {
+        heading: "How crowded were millennial classrooms?",
+        body: `Millennial names peaked at volumes no later generation has matched. <a href="/name/Jessica/">Jessica</a> reached 55,992 births in 1987, <a href="/name/Ashley/">Ashley</a> 54,856 the same year, and <a href="/name/Christopher/">Christopher</a> 60,021 in 1984. <a href="/name/Amanda/">Amanda</a> topped out at 41,786 in 1987 and <a href="/name/Matthew/">Matthew</a> at 50,209 in 1983. A top name at that scale could put more than one child with the same name in a single grade. The <a href="/year/1987/">1987 year roster</a> shows how deep that crowd ran below the top spot.`,
+      },
+      {
+        heading: "Why millennial names aged so quickly",
+        body: `Saturation made these names easy to date. A name that was everywhere in one decade becomes a marker of that decade, and parents choosing a name for a new baby tend to avoid the names of their own classmates. The SSA record shows the result: in 2025, Jessica was given to 424 girls and Amanda to 601, each about 1% of its peak. Ashley fell to 1,829 and Christopher to 4,748. Most of those names are now classified as endangered on NobodyNamed, meaning they have fallen at least 90% from their peak, even though millions of adults still carry them.`,
+      },
+      {
+        heading: "Which millennial names are holding on",
+        body: `Not every name from the era collapsed. Matthew still had 7,003 births in 2025, about 14% of its 1983 peak, and <a href="/name/Michael/">Michael</a>, which peaked in 1957 before the millennial years began, still had 8,094. Names with long histories before the 1980s tended to fall more slowly than names that arrived with the generation. Open each dossier above for the full curve, current median age and living-population estimate, or compare the <a href="/names/1980s/">1980s</a> and <a href="/names/1990s/">1990s</a> decade hubs to see which names truly belonged to each decade.`,
+      },
+    ],
   },
   "gen-z-names": {
-    title: "Gen Z Baby Names | NobodyNamed",
+    title: "Gen Z Baby Names",
     seoTitle: "Gen Z Baby Names: Madison, Ethan & the 2000s Roster | NobodyNamed",
     seoDescription: "The names that defined Gen Z — Madison, Ethan, Ava, Aiden, Isabella. See how late-'90s and 2000s naming got faster, sharper, and more fashion-driven.",
     eyebrow: "Generation dossier",
     lede: "The names that rose through the late 1990s and 2000s as naming culture became faster, more fragmented, and more image-conscious.",
     names: ["Madison", "Ethan", "Ava", "Aiden", "Isabella", "Jayden"],
     body: "Gen Z naming patterns show sharper fashion cycles, more spelling variation, and a faster path from novelty to overexposure.",
+    sections: [
+      {
+        heading: "Smaller peaks, more names",
+        body: `Gen Z's leading names never reached millennial volumes. <a href="/name/Madison/">Madison</a> peaked at 22,166 births in 2001 and <a href="/name/Ethan/">Ethan</a> at 22,210 in 2004, well under half of <a href="/name/Jessica/">Jessica</a>'s 55,992 in 1987. Parents were spreading their choices across many more names, so even a top name was shared by fewer classmates. That fragmentation is the defining statistical trait of the generation, and it continued into the <a href="/names/2010s/">2010s</a>.`,
+      },
+      {
+        heading: "Sound families replaced single names",
+        body: `Instead of one dominant name, Gen Z produced clusters of names that share a sound. <a href="/name/Aiden/">Aiden</a> and <a href="/name/Jayden/">Jayden</a> both peaked in 2009, at 16,030 and 17,316 births, sharing the same "-den" ending. Each name's rank understates how popular the sound was, because the births were split across rhymes and spellings. Check the dossiers above to see how closely their curves track each other.`,
+      },
+      {
+        heading: "How Gen Z names are aging so far",
+        body: `Gen Z names are fading more slowly than millennial names did, but they have had less time. In 2025, Madison had 4,945 births (22% of its peak), Ethan 7,852 (35%), <a href="/name/Ava/">Ava</a> 7,732 (43%) and <a href="/name/Isabella/">Isabella</a> 10,666 (47%). All four are now classified as declining. Whether they follow Jessica and Ashley toward endangered status is the open question the next few years of SSA data will answer. The <a href="/names/2000s/">2000s decade hub</a> tracks the full roster.`,
+      },
+    ],
   },
   "classic-names": {
     title: "Classic Baby Names",
@@ -125,13 +156,27 @@ const PAGES: Record<string, EditorialPageConfig> = {
     ],
   },
   "future-grandparent-names": {
-    title: "Future Grandparent Names | NobodyNamed",
+    title: "Future Grandparent Names",
     seoTitle: "Future Grandparent Names: Why Harper & Luna Will Sound Old | NobodyNamed",
     seoDescription: "Today's cutest baby names are tomorrow's grandparent names. See why Harper, Luna, Mason, and Ava are on track to age into the next generation of \"old\" names.",
     eyebrow: "Forecast by memory",
     lede: "The names that may sound young now, then ordinary, then old, then charmingly available again.",
     names: ["Harper", "Luna", "Mason", "Ava", "Liam", "Olivia"],
     body: "Every cute contemporary name is also a future old-person name. That is not an insult; it is the entire lifecycle of cultural identity.",
+    sections: [
+      {
+        heading: "Where today's names sit in the cycle",
+        body: `Some of today's favorites are at or near their peak. <a href="/name/Liam/">Liam</a> peaked at 22,252 births in 2024 and still had 20,818 in 2025. <a href="/name/Olivia/">Olivia</a> peaked at 19,840 in 2014 and had 13,544 in 2025. <a href="/name/Luna/">Luna</a> reached 8,977 in 2022 and had 6,076 in 2025. Others are already past their high point: <a href="/name/Harper/">Harper</a> peaked at 10,803 in 2016 and fell to 6,792, and <a href="/name/Mason/">Mason</a> peaked at 19,530 in 2011 and fell to 6,291.`,
+      },
+      {
+        heading: "What the last generation's names predict",
+        body: `The <a href="/millennial-names">millennial names</a> show where this path usually leads. Jessica and Amanda each peaked in 1987, and by 2025 both were given to about 1% as many babies as at their peak. Their bearers are now in their late thirties, and the names read as belonging to adults rather than children. Nothing guarantees today's names will follow the same curve, but the SSA record shows the same arc again and again: the names that fill one generation's classrooms come to sound like that generation.`,
+      },
+      {
+        heading: "A forecast, not a verdict",
+        body: `Sounding old is not the end of a name's story. <a href="/comeback">Comeback names</a> such as Hazel and Theodore spent decades as grandparent names before parents rediscovered them, and <a href="/classic-names">classic names</a> like James and Elizabeth avoided being tied to one generation at all. Open the dossiers above to follow each name's curve, current births and median age. The names with the steepest rises are the ones most likely to date quickly.`,
+      },
+    ],
   },
 };
 
@@ -217,7 +262,8 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
   let cardSparks: ReadonlyMap<string, number[]> = new Map();
   let cardMinYear = 1880;
   let cardMaxYear = new Date().getFullYear() - 1;
-  if (slug === "classic-names") {
+  // Every editorial hub gets sparkline cards (previously classic-names only).
+  {
     try {
       const [rows, minYearValue, maxYearValue] = await Promise.all([
         listDominantNamesWithSparks(ctx.env.DB, page.names),
@@ -263,7 +309,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
 
   const reqUrl = new URL(ctx.request.url);
   const pageCanonical = `${reqUrl.origin}/${slug}`;
-  const pageTitle = page.title.replace(" — NobodyNamed", "").replace(" | NobodyNamed", "");
+  const pageTitle = page.title;
   const ogImageUrl = `${reqUrl.origin}/api/og/default`;
   const structuredData = JSON.stringify([
     {
@@ -293,7 +339,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
     currentPath: `/${slug}`,
     body: `
     <p class="eyebrow">${page.eyebrow}</p>
-    <h1>${page.title.replace(" — NobodyNamed", "")}</h1>
+    <h1>${pageTitle}</h1>
     <p class="lede">${page.lede}</p>
     <p class="archive-note">${page.body}</p>
     <div class="diagnosis-grid" ${contentIdentityMeta({ contentId: contentId("article", slug), contentType: "article", slug })}>${cards}</div>
@@ -301,7 +347,7 @@ export const onRequestGet: PagesFunction<Env, "slug"> = async (ctx) => {
     ${table}
   `,
     structuredData: JSON.parse(structuredData),
-    scripts: ["/assets/app.js", "/assets/landing.js"],
+    scripts: [APP_JS_SRC, LANDING_JS_SRC],
     footerVariant: "minimal",
   }), {
     headers: {

@@ -355,7 +355,7 @@ const PUBLISHER_ORG = {
 
 export function renderBlogIndex(posts: BlogPostSummary[], opts: { canonical: string; origin?: string }): string {
   const origin = opts.origin || new URL(opts.canonical).origin;
-  const title = "Namecalling — NobodyNamed";
+  const title = "Namecalling — Baby Name Data Stories";
   const desc = "Charts and notes on American naming culture, data, and the names that shape generations.";
 
   const cards = posts.length

@@ -8,7 +8,7 @@ import { contentId, contentIdentityMeta } from "./content-identity";
 import type { YearTopRow, YearTotal } from "./d1-queries";
 import { generateNameNarrative, type NameNarrative } from "./generate-narrative";
 import { playgroundDensity } from "./enrichment-compute";
-import { pageShell } from "./render-shell";
+import { pageShell, APP_JS_SRC } from "./render-shell";
 import { buildSparkline } from "./sparkline";
 import { ALL_STATES, TILE_COLS, TILE_ROWS, US_TILE_GRID } from "./us-states-map";
 import type {
@@ -402,7 +402,7 @@ export function renderFullPage(
       hasShadow: opts.hasShadow,
     })}</div>`,
     structuredData,
-    scripts: ["/assets/app.js"],
+    scripts: [APP_JS_SRC],
     jsonDataBlocks: [{ id: "nv-data", data: JSON.parse(dataJson) }],
     inlineScripts: [
       `(function () {

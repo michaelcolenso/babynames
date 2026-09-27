@@ -9,6 +9,8 @@ import {
   stateToSlug,
   STATE_NAMES,
   ALL_STATES,
+  APP_JS_SRC,
+  LANDING_JS_SRC,
 } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
@@ -66,7 +68,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   </section>
   `,
     structuredData,
-    scripts: ["/assets/app.js", "/assets/landing.js"],
+    scripts: [APP_JS_SRC, LANDING_JS_SRC],
     footerVariant: "minimal",
     footerYearRange: years.length ? `${years[0]}–${latestYear}` : undefined,
   });

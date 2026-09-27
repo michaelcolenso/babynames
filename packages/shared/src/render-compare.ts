@@ -1,6 +1,6 @@
 // SSR renderer for /compare/:names pages.
 
-import { pageShell } from "./render-shell";
+import { pageShell, APP_JS_SRC } from "./render-shell";
 import type { NameRecord } from "./schema";
 
 const COLORS = ["#d9a56f", "#6b9fb3", "#8f9e6a", "#b07aa1"];
@@ -166,7 +166,7 @@ export function renderComparePage(
     ogImageAlt: title,
     ogType: "article",
     body,
-    scripts: ["/assets/app.js"],
+    scripts: [APP_JS_SRC],
     jsonDataBlocks: [{ id: "nv-compare-data", data: JSON.parse(dataJson) }],
     inlineScripts: [
       `(function () {

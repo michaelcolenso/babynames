@@ -2,7 +2,7 @@
 // the latest year of SSA state-level data (1910–2024; the state file lags the
 // national file by one release cycle).
 
-import { pageShell } from "./render-shell";
+import { pageShell, APP_JS_SRC, LANDING_JS_SRC } from "./render-shell";
 import { STATE_NAMES, stateToSlug, ALL_STATES } from "./us-states-map";
 import type { StateTopRow, StateYearTotals } from "./d1-queries";
 
@@ -185,7 +185,7 @@ export function renderStatePage(state: string, year: number, rows: StateTopRow[]
   `,
     structuredData,
     headExtras: opts.noindex ? '<meta name="robots" content="noindex">' : undefined,
-    scripts: ["/assets/app.js", "/assets/landing.js"],
+    scripts: [APP_JS_SRC, LANDING_JS_SRC],
     footerVariant: "minimal",
     footerYearRange: `${opts.stateYearMin}–${opts.stateYearMax}`,
   });

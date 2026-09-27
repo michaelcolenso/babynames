@@ -1,5 +1,5 @@
 // Shared registry-driven SSR renderer for decade hubs.
-import { pageShell } from "./render-shell";
+import { pageShell, APP_JS_SRC } from "./render-shell";
 import { DECADE_THESES, type DecadeThesis } from "./content/decade-theses";
 import { DECADE_HUB_DEFINITIONS, type DecadeHubDefinition } from "./content/decade-hub-definitions";
 import type { ClassroomResult, ClassroomStudent, DecadeProfile, NameSummary, OwnershipResult, SpellingFamilyResult } from "./decade-hub-types";
@@ -674,7 +674,7 @@ ${DataCoverageBadge(profile)}`,
       itemList,
       ...(c.searchSurface ? [popularItemList] : []),
     ],
-    scripts: ["/assets/app.js"],
+    scripts: [APP_JS_SRC],
     headExtras: DECADE_HUB_SCRIPT,
     footerVariant: "minimal",
     footerYearRange: `1880–${profile.dataThroughYear}`,
@@ -736,7 +736,7 @@ ${DataCoverageBadge(profile)}`,
       ]),
       webPage(origin, title, desc, canonical),
     ],
-    scripts: ["/assets/app.js"],
+    scripts: [APP_JS_SRC],
     headExtras: DECADE_HUB_SCRIPT,
     footerVariant: "minimal",
     footerYearRange: `1880–${profile.dataThroughYear}`,
@@ -783,7 +783,7 @@ ${DataCoverageBadge(profile)}`,
       ]),
       webPage(origin, title, desc, canonical),
     ],
-    scripts: ["/assets/app.js"],
+    scripts: [APP_JS_SRC],
     headExtras: DECADE_HUB_SCRIPT,
     footerVariant: "minimal",
     footerYearRange: `1880–${profile.dataThroughYear}`,
@@ -978,7 +978,7 @@ ${diversityMetrics}
       webPage(origin, title, desc, canonical),
       dataset,
     ],
-    scripts: ["/assets/app.js"],
+    scripts: [APP_JS_SRC],
     headExtras: DECADE_HUB_SCRIPT,
     footerVariant: "minimal",
     footerYearRange: `1880–${profile.dataThroughYear}`,
