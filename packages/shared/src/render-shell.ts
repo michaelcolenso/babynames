@@ -34,14 +34,28 @@ const DEFAULT_NAV: NavEntry[] = [
       { label: "Fading", href: "/fading" },
     ],
   },
-  { label: "Birth year", href: "/year" },
-  { label: "Visualizations", href: "/viz" },
+  {
+    label: "Browse",
+    items: [
+      { label: "By birth year", href: "/year" },
+      { label: "By decade & letter", href: "/names/" },
+      { label: "By state", href: "/state/" },
+    ],
+  },
+  // Trailing slash: /viz 308s to /viz/, so linking the bare form costs every
+  // click (and every crawl) a redirect.
+  { label: "Visualizations", href: "/viz/" },
   { label: "Namecalling", href: "/blog/" },
   { label: "Newsletter", href: "/newsletter" },
   { label: "About", href: "/about" },
 ];
 
-const STYLESHEET_HREF = "/assets/style.css?v=26";
+const STYLESHEET_HREF = "/assets/style.css?v=28";
+
+// /assets/* carries a 1-day browser TTL, so unversioned script URLs let a
+// returning visitor run yesterday's JS against today's HTML. Bump on change.
+export const APP_JS_SRC = "/assets/app.js?v=3";
+export const LANDING_JS_SRC = "/assets/landing.js?v=2";
 
 // Runs synchronously before the stylesheet is applied, so an explicit
 // dark/light choice from a prior visit takes effect on first paint instead
@@ -128,7 +142,7 @@ export interface SiteHeaderOpts {
 // backtracking home first. Wired up by assets/header-search.js, which
 // pageShell() loads unconditionally (see below).
 const HEADER_SEARCH_HTML = `<div class="header-search">
-  <input id="header-q" type="text" placeholder="Search a name…" autocomplete="off" spellcheck="false" aria-label="Search a name" aria-autocomplete="list" aria-controls="header-suggestions" aria-expanded="false">
+  <input id="header-q" type="text" role="combobox" placeholder="Search a name…" autocomplete="off" spellcheck="false" aria-label="Search a name" aria-autocomplete="list" aria-controls="header-suggestions" aria-expanded="false">
   <button type="button" id="header-go" aria-label="Search">
     <svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><line x1="16.3" y1="16.3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
   </button>
@@ -254,6 +268,7 @@ ${twitterImageAltMeta}
 <meta name="theme-color" content="${themeLight}" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="${themeDark}" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="${favicon}" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="${STYLESHEET_HREF}">
 ${structuredDataMeta}
 ${headExtras}

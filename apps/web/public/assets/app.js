@@ -185,6 +185,7 @@ function attachSparklineTooltip(container, record) {
   const tooltip = document.createElement('div');
   tooltip.className = 'sparkline-tooltip';
   tooltip.setAttribute('role', 'tooltip');
+  tooltip.setAttribute('aria-label', 'Births in the hovered year');
   document.body.appendChild(tooltip);
 
   const ns = 'http://www.w3.org/2000/svg';
@@ -291,7 +292,7 @@ function renderReport(record) {
   }[a.status];
   const peakSentence = `${record.name} peaked in ${a.peakYear}, when <strong>${fmt(a.peakCount)}</strong> ${sexLabel} were given the name.`;
   const latestSentence = a.latest
-    ? `In ${record.yM}, only <strong>${fmt(a.latest)}</strong> ${sexLabel} were given the name.`
+    ? `In ${record.yM}, ${a.declineFromPeakPct >= 50 ? "only " : ""}<strong>${fmt(a.latest)}</strong> ${sexLabel} were given the name.`
     : `No ${sexLabel} were recorded with this name in ${record.yM} — at least not five of them (the SSA's reporting floor).`;
   const declineSentence = a.status === "rising" || a.declineFromPeakPct <= 5
     ? "" : `<p>Down <strong>${a.declineFromPeakPct}%</strong> from its peak.</p>`;
@@ -565,7 +566,7 @@ function initCompareControls(container, record) {
 
   goBtn.addEventListener("click", () => {
     if (!selected.length) return;
-    const names = [record.name, ...selected].map((n) => encodeURIComponent(titleCase(n))).join(",");
+    const names = [record.name, ...selected].map((n) => encodeURIComponent(n.toLowerCase())).join("-vs-");
     location.href = `/compare/${names}/`;
   });
 
@@ -680,10 +681,13 @@ function initComparePage(container, initialNames) {
     if (h1) {
       h1.innerHTML = safeNames.map((n) => escapeHtml(n)).join(' <span class="compare-vs">vs.</span> ');
     }
+    // The server-written summary describes the original names only.
+    const summary = container.querySelector(".compare-summary");
+    if (summary) summary.remove();
     const lede = container.querySelector(".lede");
     if (lede) lede.textContent = `Overlaying ${selected.length} names from 1880 to 2025.`;
     if (selected.length >= 2) {
-      const path = safeNames.map((n) => encodeURIComponent(n)).join(",");
+      const path = safeNames.map((n) => encodeURIComponent(n.toLowerCase())).join("-vs-");
       const newUrl = `/compare/${path}/`;
       history.replaceState(null, "", newUrl);
       document.title = `${safeNames.join(" vs. ")} — Name comparison | NobodyNamed`;

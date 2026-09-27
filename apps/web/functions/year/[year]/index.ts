@@ -1,7 +1,15 @@
 // GET /year/:year/ — HTML page showing top baby names for a specific year.
 
-import { getMeta, topBySpecificYear, META_KEYS } from "@nv/shared";
-import { renderYearPage } from "@nv/shared";
+import {
+  getMeta,
+  listNumberOneNames,
+  META_KEYS,
+  pageShell,
+  renderYearPage,
+  statusesForNames,
+  topBySpecificYear,
+  YEAR_PAGE_PER_SEX,
+} from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 export const onRequestGet: PagesFunction<Env, "year"> = async (ctx) => {
@@ -16,7 +24,7 @@ export const onRequestGet: PagesFunction<Env, "year"> = async (ctx) => {
   }
 
   const [rows, yMStr, ymStr] = await Promise.all([
-    topBySpecificYear(ctx.env.DB, year, 25),
+    topBySpecificYear(ctx.env.DB, year, YEAR_PAGE_PER_SEX),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
     getMeta(ctx.env.DB, META_KEYS.minYear),
   ]);
@@ -25,23 +33,26 @@ export const onRequestGet: PagesFunction<Env, "year"> = async (ctx) => {
   const ym = Number(ymStr ?? 1880);
 
   if (year > yM || year < ym) {
-    return new Response(
-      `<!doctype html><html><body><h1>No data</h1><p>No data for ${year}. Available: ${ym}–${yM}.</p></body></html>`,
-      { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } },
-    );
+    return notFound(`No data for ${year}. Available: ${ym}–${yM}.`);
   }
 
   if (!rows.length) {
-    return new Response(
-      `<!doctype html><html><body><h1>No data</h1><p>No data found for ${year}.</p></body></html>`,
-      { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } },
-    );
+    return notFound(`No data found for ${year}.`);
   }
 
   const url = new URL(ctx.request.url);
   const canonical = `${url.origin}/year/${year}/`;
 
+  // Status chips and the years-at-#1 clause are enrichment: a failure in
+  // either should cost the chips, not the page.
+  const [statuses, numberOnes] = await Promise.all([
+    statusesForNames(ctx.env.DB, rows).catch(() => undefined),
+    listNumberOneNames(ctx.env.DB).catch(() => []),
+  ]);
+
   const html = renderYearPage(year, rows, {
+    statuses,
+    numberOnes,
     canonical,
     origin: url.origin,
     prevYear: year > ym ? year - 1 : null,
@@ -56,6 +67,25 @@ export const onRequestGet: PagesFunction<Env, "year"> = async (ctx) => {
     },
   });
 };
+
+function notFound(message: string): Response {
+  const html = pageShell({
+    title: "No data — NobodyNamed",
+    description: message,
+    canonical: "https://nobodynamed.com/year",
+    currentPath: "/year",
+    headExtras: '<meta name="robots" content="noindex">',
+    body: `
+  <h1>No data</h1>
+  <p class="lede">${message}</p>
+  <p><a href="/year">← Pick a birth year</a></p>
+`,
+  });
+  return new Response(html, {
+    status: 404,
+    headers: { "Content-Type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex" },
+  });
+}
 
 export const onRequestHead: PagesFunction<Env, "year"> = async (ctx) => withoutBody(await onRequestGet(ctx));
 

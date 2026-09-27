@@ -1,7 +1,9 @@
-// GET /compare/Michael,James/ or /compare/Michael/James/
-// Server-rendered side-by-side name comparison.
+// GET /compare/michael-vs-james/ — server-rendered side-by-side comparison.
+// Also accepts /compare/Michael,James/, /compare/Michael+James/ and
+// /compare/Michael/James/ (the [[names]] catch-all), and 301s every form to
+// the one canonical lowercase "-vs-" URL.
 
-import { renderComparePage } from "@nv/shared";
+import { pageShell, renderComparePage } from "@nv/shared";
 import { getMeta, META_KEYS } from "@nv/shared";
 import type { NameRecord, Sex } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
@@ -10,13 +12,14 @@ import { getNameWithSeries } from "@nv/shared";
 const MAX_COMPARE = 3;
 
 export const onRequestGet: PagesFunction<Env, "names"> = async (ctx) => {
-  const raw = ctx.params.names;
+  const param = ctx.params.names;
+  const raw = Array.isArray(param) ? param.join("/") : param;
   if (typeof raw !== "string" || !raw) {
     return new Response("missing names", { status: 400 });
   }
 
   const requested = raw
-    .split(/[,+/]/)
+    .split(/[,+/]|-vs-/i)
     .map((n) => decodeURIComponent(n).trim())
     .filter(Boolean)
     .slice(0, MAX_COMPARE);
@@ -63,20 +66,49 @@ export const onRequestGet: PagesFunction<Env, "names"> = async (ctx) => {
   }
 
   if (records.length < 2) {
-    return new Response("Need at least two names with data to compare", {
-      status: 404,
-      headers: { "Content-Type": "text/plain" },
-    });
+    return notFound(requested);
   }
 
   const url = new URL(ctx.request.url);
-  const canonical = `${url.origin}/compare/${records.map((r) => encodeURIComponent(r.name)).join(",")}/`;
+  const canonicalPath = compareCanonicalPath(records.map((r) => r.name));
+  if (url.pathname !== canonicalPath) {
+    return new Response(null, {
+      status: 301,
+      headers: { Location: canonicalPath, "Cache-Control": "public, s-maxage=86400" },
+    });
+  }
+  const canonical = `${url.origin}${canonicalPath}`;
   const html = renderComparePage(records, { canonical });
 
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
+      Link: `<${canonical}>; rel="canonical"`,
     },
   });
 };
+
+// SSA names are ASCII letters only, so lowercase + "-vs-" is unambiguous.
+export function compareCanonicalPath(names: string[]): string {
+  return `/compare/${names.map((n) => encodeURIComponent(n.toLowerCase())).join("-vs-")}/`;
+}
+
+function notFound(requested: string[]): Response {
+  const list = requested.map((n) => n.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]!)).join(", ");
+  const html = pageShell({
+    title: "Comparison not found — NobodyNamed",
+    description: "Need at least two names with SSA data to compare.",
+    canonical: "https://nobodynamed.com/",
+    headExtras: '<meta name="robots" content="noindex">',
+    body: `
+  <h1>Nothing to compare</h1>
+  <p class="lede">Need at least two names with SSA data to compare. Requested: ${list || "none"}.</p>
+  <p><a href="/">← Search a name</a></p>
+`,
+  });
+  return new Response(html, {
+    status: 404,
+    headers: { "Content-Type": "text/html; charset=utf-8", "X-Robots-Tag": "noindex" },
+  });
+}

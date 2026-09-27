@@ -14,6 +14,17 @@
   Link: </.well-known/api-catalog>; rel="api-catalog", </about>; rel="service-doc", </.well-known/agent-skills/index.json>; rel="https://agentskills.io/rel/skills-index"
   Vary: Accept
 
+# Other static HTML pages previously fell through to Pages' default
+# max-age=0, must-revalidate. Same edge policy as /index.html.
+/viz/*
+  Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400
+
+/press
+  Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400
+
+/developers
+  Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400
+
 /.well-known/api-catalog
   Content-Type: application/linkset+json; charset=utf-8
   Access-Control-Allow-Origin: *

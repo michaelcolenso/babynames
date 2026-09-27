@@ -3,7 +3,7 @@
   --paper: #f4f0e7;
   --brand-ink: #0e0e0c;
   --brand-faded: #b5b0a0;
-  --brand-faded-contrast: #9a968a;
+  --brand-faded-contrast: #6f6a5f; /* ≥4.5:1 on --paper and --surface */
   --paper-deep: #e8dfd0;
   --ink: #171511;
   --ink-soft: #4d4941;
@@ -106,6 +106,18 @@
 }
 
 * { box-sizing: border-box; }
+/* Visually hidden, still announced (e.g. the landing tables' link column header). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 html, body { margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {
@@ -571,6 +583,14 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 .search button#go:hover,
 .year-form button:hover,
 .share-row button.primary:hover { transform: translateY(-1px); background: var(--accent-dark); }
+/* --ink-fixed stays near-black in dark mode, which left the share buttons
+   dark-on-dark. Invert them there so the primary action stays visible. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .share-row button.primary,
+  :root:not([data-theme="light"]) .share-row a.btn.primary { color: var(--paper); background: var(--ink); }
+}
+:root[data-theme="dark"] .share-row button.primary,
+:root[data-theme="dark"] .share-row a.btn.primary { color: var(--paper); background: var(--ink); }
 .search-hint {
   color: var(--muted);
   font-family: var(--sans);
@@ -1143,7 +1163,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   gap: clamp(1rem, 4vw, 2rem);
   margin-top: 1.25rem;
 }
-.year-col h3 {
+.year-col h2 {
   font-family: var(--mono);
   color: var(--muted);
   font-size: 0.78rem;
@@ -1173,6 +1193,23 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   font-size: 0.74rem;
 }
 .year-name-list a { color: var(--ink); font-weight: 700; text-decoration: none; }
+.year-name-list .year-name { min-width: 0; }
+/* Where each ranked name stands today. Same ink-mixed hues as .inline-tag
+   so the labels hold AA contrast in both themes. */
+.year-status {
+  margin-left: 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.year-status-rising { color: color-mix(in srgb, var(--emerald) 75%, var(--ink)); }
+.year-status-endangered,
+.year-status-declining { color: color-mix(in srgb, var(--amber) 75%, var(--ink)); }
+.year-status-extinct { color: color-mix(in srgb, var(--red) 75%, var(--ink)); }
 /* Two-column variant (name + detail, no rank) — e.g. the /state/ index,
    where each row is just a link and a births figure. Without this override
    rows inherit the 3-column `2.2rem 1fr auto` template built for ranked
@@ -1205,6 +1242,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 .landing-ctas a strong { display: block; color: var(--ink); margin-bottom: 0.25rem; }
 .landing-ctas a span,
 .featured-grid .suffix { color: var(--muted); font-size: 0.86rem; }
+.featured-grid .suffix { margin-left: 0.45rem; }
 
 .table {
   width: 100%;
@@ -1434,6 +1472,12 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   font-family: var(--sans);
   font-weight: 700;
 }
+.rank-label {
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
 .dossier-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1495,6 +1539,17 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 }
 .sparkline .axis { stroke: rgba(247, 239, 225, 0.18); stroke-width: 1; }
 .sparkline .axis-text { fill: rgba(247, 239, 225, 0.48); font-size: 11px; font-family: var(--mono); }
+/* The name chart stretches (preserveAspectRatio="none"), so on a phone its
+   in-SVG labels squash to ~6px. Desktop keeps the SVG labels and hides the
+   HTML caption that repeated them; phones swap: SVG text off, caption on. */
+.name-chart .chart-caption { display: none; }
+.sparkline .point-label {
+  fill: rgba(247, 239, 225, 0.82);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 @keyframes lineReveal { to { stroke-dashoffset: 0; } }
 .chart-caption {
   display: flex;
@@ -1508,7 +1563,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 }
 .compare-report .compare-vs {
   font-weight: 400;
-  color: rgba(247, 239, 225, 0.55);
+  color: var(--muted);
 }
 .compare-report {
   display: block;
@@ -1526,8 +1581,14 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   word-break: break-word;
   margin-bottom: 0.5rem;
 }
-.compare-report .lede {
+.compare-report .lede,
+.compare-report .compare-summary {
   max-width: 640px;
+}
+.compare-report .compare-summary {
+  margin: 0.4rem 0 0;
+  font-family: var(--serif);
+  color: var(--ink-soft);
 }
 .compare-editor {
   margin: 0.2rem 0 1.6rem;
@@ -2299,8 +2360,12 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
     flex-direction: column;
   }
   .year-form input[type="number"] { max-width: none; }
-  .year-result-grid,
-  .dossier-grid { grid-template-columns: 1fr; }
+  .year-result-grid { grid-template-columns: 1fr; }
+  /* Four short tiles read fine 2×2; single-column pushed the chart ~1,000px down. */
+  .dossier-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .name-chart .chart-caption { display: flex; }
+  .name-chart .sparkline .axis-text,
+  .name-chart .sparkline .point-label { display: none; }
   /* Generation hubs put ranking tables inside the two-column year grid. Let
      the grid track shrink to the viewport so the tables scroll horizontally
      (see .table below) instead of forcing the column wider than the screen. */
@@ -2313,7 +2378,7 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
     min-height: 1000px;
   }
   .insight-row { grid-template-columns: 1fr; gap: 0.2rem; }
-  .chart-caption { flex-direction: column; }
+  .chart-caption { font-size: 0.72rem; }
   .table {
     display: block;
     overflow-x: auto;
@@ -2426,6 +2491,34 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
 .blog-post-body h3 { font-size: 1.15rem; font-weight: 600; }
 .blog-post-body p { margin: 0 0 1.2rem; }
 .blog-post-body a { color: var(--accent); text-decoration: underline; }
+/* Markdown tables (spelling families, year-by-year counts) rendered with
+   browser defaults: no padding, no header rule, proportional digits. */
+.blog-post-body table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0 0 1.4rem;
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.blog-post-body th,
+.blog-post-body td {
+  padding: 0.45rem 0.9rem 0.45rem 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: baseline;
+}
+.blog-post-body th {
+  border-bottom: 2px solid var(--ink);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 .blog-post-body a:hover { color: var(--accent-dark); }
 .blog-post-body ul,
 .blog-post-body ol {
@@ -2976,10 +3069,14 @@ h3 { font-size: clamp(1.25rem, 2.2vw, 1.8rem); font-weight: 500; margin: 0 0 0.4
   text-decoration: none;
   vertical-align: baseline;
 }
-.tag-rising { background: color-mix(in srgb, var(--emerald) 18%, var(--surface)); color: var(--emerald); }
-.tag-stable { background: color-mix(in srgb, var(--blue) 18%, var(--surface)); color: var(--blue); }
-.tag-endangered { background: color-mix(in srgb, var(--amber) 18%, var(--surface)); color: var(--amber); }
-.tag-extinct { background: color-mix(in srgb, var(--red) 18%, var(--surface)); color: var(--red); }
+/* Text is the status hue pulled 25% toward --ink: the raw hue on its own 18%
+   tint measured 3.4:1 (amber) and 4.1:1 (emerald) in light mode, under AA at
+   this size. Mixing toward --ink darkens in light mode and lightens in dark,
+   so one rule clears 4.5:1 in both themes. */
+.tag-rising { background: color-mix(in srgb, var(--emerald) 18%, var(--surface)); color: color-mix(in srgb, var(--emerald) 75%, var(--ink)); }
+.tag-stable { background: color-mix(in srgb, var(--blue) 18%, var(--surface)); color: color-mix(in srgb, var(--blue) 75%, var(--ink)); }
+.tag-endangered { background: color-mix(in srgb, var(--amber) 18%, var(--surface)); color: color-mix(in srgb, var(--amber) 75%, var(--ink)); }
+.tag-extinct { background: color-mix(in srgb, var(--red) 18%, var(--surface)); color: color-mix(in srgb, var(--red) 75%, var(--ink)); }
 .inline-tag:hover { filter: brightness(0.92); text-decoration: underline; }
 
 /* Cross-links between landing pages and the viz gallery */

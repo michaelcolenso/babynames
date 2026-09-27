@@ -8,7 +8,7 @@
 // annual SSA tables (see generation-hub-compute.ts) instead of being read from
 // a precomputed D1 payload.
 
-import { pageShell } from "./render-shell";
+import { pageShell, APP_JS_SRC } from "./render-shell";
 import { contentId } from "./content-identity";
 import { GENERATION_DEFINITIONS, type GenerationDefinition } from "./content/generation-definitions";
 import type { GenerationNameRow, GenerationProfile } from "./generation-hub-compute";
@@ -271,7 +271,7 @@ ${shift ? `<section class="dh-shift"><h2>How the ${escapeHtml(profile.previous?.
       webPage(origin, title, desc, canonical),
       itemList,
     ],
-    scripts: ["/assets/app.js"],
+    scripts: [APP_JS_SRC],
     footerVariant: "minimal",
     footerYearRange: `1880–${profile.dataThroughYear}`,
   });

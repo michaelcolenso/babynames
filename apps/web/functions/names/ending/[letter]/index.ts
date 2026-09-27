@@ -1,6 +1,6 @@
 // GET /names/ending/:letter/ — programmatic SEO pages for baby names by final letter.
 
-import { getMeta, pageShell, topByEnding, META_KEYS } from "@nv/shared";
+import { getMeta, pageShell, topByEnding, META_KEYS, APP_JS_SRC } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 function parseLetter(raw: string): string | null {
@@ -134,7 +134,7 @@ export const onRequestGet: PagesFunction<Env, "letter"> = async (ctx) => {
     </div>
   `,
     structuredData: JSON.parse(structuredData),
-    scripts: ["/assets/app.js"],
+    scripts: [APP_JS_SRC],
     footerVariant: "minimal",
     footerYearRange: `${ym}–${yM}`,
   });

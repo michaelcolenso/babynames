@@ -166,12 +166,32 @@ function sexNounLabel(sex: "M" | "F"): string {
   return sex === "M" ? "masculine" : "feminine";
 }
 
+// Precomputed living-population profile (name_enrichment_profiles). When
+// present it is the single source of truth for every living/age figure on the
+// page, so the Quick answers FAQ can never disagree with the Living profile
+// card beside it.
+export interface LivingProfile {
+  total_living_est: number;
+  median_age: number;
+  age_range_low: number;
+  age_range_high: number;
+}
+
+export interface NarrativeExtras {
+  profile?: LivingProfile | null;
+  // Rank among same-sex names in record.yM, when it is in the top 200.
+  latestRank?: number | null;
+}
+
 export function generateNameNarrative(
   record: NameRecord,
   a: ClassifyResult,
   // Top geographic anomaly for the "Where is X most common?" answer.
-  // Pass the full state name (already resolved from abbreviation).
-  topAnomaly?: { state: string; lq: number },
+  // Pass the full state name (already resolved from abbreviation). Callers
+  // should pass only a latest-era signal (see pickStronghold in render-name.ts);
+  // `era` is the era's start year and is stated in the copy.
+  topAnomaly?: { state: string; lq: number; era?: number },
+  extras: NarrativeExtras = {},
 ): NameNarrative {
   const name = record.name;
   const safeName = esc(name);
@@ -181,7 +201,21 @@ export function generateNameNarrative(
   // Use the year after the latest SSA data as "current" for age arithmetic.
   const currentYear = (record.yM > 0 ? record.yM : 2024) + 1;
 
-  const age = computeAgeStats(record.series, currentYear);
+  const computed = computeAgeStats(record.series, currentYear);
+  const profile = extras.profile;
+  const age: AgeStats = profile
+    ? {
+        estimatedLiving: profile.total_living_est,
+        medianAge: profile.median_age,
+        p25Age: profile.age_range_low,
+        p75Age: profile.age_range_high,
+        playgroundFrac: computed.playgroundFrac,
+      }
+    : computed;
+  const rankPhrase =
+    extras.latestRank && extras.latestRank > 0
+      ? `#${extras.latestRank} ${sexBaby === "boys" ? "boys\u2019" : "girls\u2019"} name in ${record.yM}`
+      : "";
   const hasReliableLiving = age.estimatedLiving >= 10;
   const hasAgeStats = age.medianAge !== null && age.p25Age !== null && age.p75Age !== null;
 
@@ -275,7 +309,8 @@ export function generateNameNarrative(
         : a.latestCount >= a.peakCount
           ? `, matching its recorded peak`
           : ``;
-    rarity = `${safeName} is ${rarityLabel} among babies today, with ${fmt(a.latestCount)} ${sexBaby} receiving the name in ${record.yM}${peakContext}.`;
+    const rankContext = rankPhrase ? ` It was the ${rankPhrase}.` : "";
+    rarity = `${safeName} is ${rarityLabel} among babies today, with ${fmt(a.latestCount)} ${sexBaby} receiving the name in ${record.yM}${peakContext}.${rankContext}`;
   }
 
   // Age
@@ -315,7 +350,8 @@ export function generateNameNarrative(
   let geography: string | undefined;
   if (topAnomaly && topAnomaly.lq >= 1.5) {
     const lqStr = topAnomaly.lq.toFixed(1);
-    geography = `${safeName} has its strongest geographic signal in ${topAnomaly.state}, where it appears ${lqStr}× more often than the national baseline.`;
+    const eraPart = topAnomaly.era ? ` in the ${topAnomaly.era}s` : "";
+    geography = `${safeName} has its strongest geographic signal in ${topAnomaly.state}, where it appeared ${lqStr}× more often than the national baseline${eraPart}.`;
   }
 
   // ── Meta ──────────────────────────────────────────────────────────────────
@@ -326,7 +362,13 @@ export function generateNameNarrative(
   if (hasReliableLiving) {
     // State names come from D1 as proper-cased strings — never lowercase them.
     const geoPhrase = geography ? ` Strongest in ${topAnomaly!.state}.` : ``;
-    metaDescription = `${name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} births; ${fmt(a.latestCount)} in ${record.yM}. Rarity, median age, and vital status since 1880.${geoPhrase}`;
+    const lead =
+      a.peakYear === record.yM
+        ? `${name} hit a new high in ${record.yM} (${fmt(a.latestCount)} births)${rankPhrase ? `, the ${rankPhrase}` : ""}.`
+        : rankPhrase
+          ? `${name} was the ${rankPhrase} (${fmt(a.latestCount)} births), down from a ${a.peakYear} peak of ${fmt(a.peakCount)}.`
+          : `${name} peaked in ${a.peakYear} with ${fmt(a.peakCount)} births; ${fmt(a.latestCount)} in ${record.yM}.`;
+    metaDescription = `${lead} Rarity, median age, and vital status since 1880.${geoPhrase}`;
   } else if (a.latestCount > 0) {
     metaDescription = `${name} is a ${wave} baby name with ${fmt(a.latestCount)} births in ${record.yM}. See its full popularity history, rarity, and peak year data.`;
   } else {

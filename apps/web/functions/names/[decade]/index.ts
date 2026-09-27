@@ -4,7 +4,7 @@
 // Example: /names/a/ shows popular baby names starting with A.
 // Follows the same shell + embedded-data pattern as /era/:year/.
 
-import { getMeta, pageShell, topByDecade, topByInitial, META_KEYS, loadDecadeHubRuntime, renderDecadeHubGeneric, getGenerationDefinition, loadGenerationHubProfile, renderGenerationHub } from "@nv/shared";
+import { getMeta, pageShell, topByDecade, topByInitial, META_KEYS, loadDecadeHubRuntime, renderDecadeHubGeneric, getGenerationDefinition, loadGenerationHubProfile, renderGenerationHub, APP_JS_SRC, LANDING_JS_SRC } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
 function parseDecade(raw: string): { label: string; start: number; end: number } | null {
@@ -243,7 +243,7 @@ export const onRequestGet: PagesFunction<Env, "decade"> = async (ctx) => {
         isPartOf: { "@type": "WebSite", name: "NobodyNamed", url: origin + "/" },
       },
     ],
-    scripts: ["/assets/app.js", "/assets/landing.js"],
+    scripts: [APP_JS_SRC, LANDING_JS_SRC],
     jsonDataBlocks: [{ id: "nv-decade-data", data: JSON.parse(dataJson) }],
     inlineScripts: [
       `(function () {
@@ -377,7 +377,7 @@ async function renderInitialPage(ctx: EventContext<Env, "decade", unknown>, init
     </div>
   `,
     structuredData: JSON.parse(structuredData),
-    scripts: ["/assets/app.js"],
+    scripts: [APP_JS_SRC],
     footerVariant: "minimal",
     footerYearRange: `${ym}–${yM}`,
   });
