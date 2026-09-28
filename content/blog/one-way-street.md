@@ -1,7 +1,7 @@
 ---
 title: "The One-Way Street — When Names Crossed From Boys to Girls"
-date: "2026-09-21"
-description: "25 names made a one-way crossing: a substantial male peak came first, nearly vanished, and was followed by a much larger female wave."
+date: "2026-09-28"
+description: "In 1980, 746 boys were named Ashley. That year 7,296 girls were too. Twenty-five names made that crossing. The boys did not come back."
 author: "NobodyNamed"
 status: "published"
 og_image: "/api/og/default"
@@ -9,11 +9,11 @@ slug: "one-way-street"
 ---
 # The One-Way Street — When Names Crossed From Boys to Girls
 
-Some names cross the gender line. They do not cross back.
+In 1980, 746 boys were named [Ashley](/name/Ashley/).
 
-The pattern is not a vibe. It is in the birth records: a substantial male peak, followed by a larger female peak, with male use nearly gone by the time the girls arrive.
+That same year, 7296 girls were named Ashley.
 
-The detector found 25 names that made the crossing.
+The boys had peaked. The girls had not.
 
 <div class="chart-panel">
   <div class="chart-panel-name">Ashley</div>
@@ -39,11 +39,19 @@ The detector found 25 names that made the crossing.
 </svg>
 </div>
 
-## Ashley crossed first
+## The girls kept coming
 
-Ashley’s male wave peaked at 746 births in 1980. Seven years later, the female wave peaked at 54856. The girl version was more than seventy times larger.
+By 1987, 54856 girls were named Ashley. The boys were down to 409.
 
-By the time the female peak arrived, the boy version was already a historical footnote. The name did not become unisex. It changed lanes.
+You could still name a boy Ashley. Almost nobody did. In 2025, 27 boys got the name. 1829 girls did.
+
+## Taylor was in both rows
+
+In 1992, 8239 boys were named [Taylor](/name/Taylor/). 14954 girls were named Taylor too.
+
+The next year the girls reached 21270. The boys were still 7688.
+
+They sat in the same classrooms. Then the boys thinned out.
 
 <div class="chart-panel">
   <div class="chart-panel-name">Taylor</div>
@@ -69,11 +77,11 @@ By the time the female peak arrived, the boy version was already a historical fo
 </svg>
 </div>
 
-## Taylor was the loudest handoff
+## Tracy and Kelly had already started
 
-Taylor’s male peak was 8239 births. The female peak reached 21270. The handoff happened inside one generation.
+In 1966, 3380 boys were named [Tracy](/name/Tracy/). 12504 girls had the name that year.
 
-This is the trapdoor in a name. Parents do not need to coordinate. Once a name becomes strongly associated with girls, boys stop receiving it. The old usage disappears, and the association hardens.
+Four years later the girls numbered 18464. The boys numbered 1776.
 
 <div class="chart-panel">
   <div class="chart-panel-name">Tracy</div>
@@ -99,11 +107,9 @@ This is the trapdoor in a name. Parents do not need to coordinate. Once a name b
 </svg>
 </div>
 
-## The pattern predates the internet
+[Kelly](/name/Kelly/) went the same way. 3093 boys in 1967, and 13717 girls beside them. In 1977 the girls reached 18234.
 
-Tracy moved from 3380 boys at its male peak to 18464 girls at its female peak. Kelly made the same crossing: 3093 boys, then 18234 girls.
-
-These are not modern naming quirks. They are population-scale handoffs. A name can spend decades available to everyone, then become socially one-way.
+Parents of sons heard the name on girls. They picked another name.
 
 <div class="chart-panel">
   <div class="chart-panel-name">Kelly</div>
@@ -129,11 +135,11 @@ These are not modern naming quirks. They are population-scale handoffs. A name c
 </svg>
 </div>
 
-## The crossing is permanent
+## Leslie did not wait
 
-Leslie’s male peak was 2358. Its female peak was 6103. The original route is still technically open, but almost nobody takes it.
+In 1952, 2358 boys were named [Leslie](/name/Leslie/). 3573 girls were named Leslie.
 
-That is the one-way street: not a legal rule, not a spelling change, not a decree. A social signal gets attached to the name. The signal becomes stronger than the name’s history.
+Five years later the boys were still 2096. The girls were 6103.
 
 <div class="chart-panel">
   <div class="chart-panel-name">Leslie</div>
@@ -159,10 +165,6 @@ That is the one-way street: not a legal rule, not a spelling change, not a decre
 </svg>
 </div>
 
-## Why it matters
+25 names in the records did this. The boys peaked. The girls rose higher. The boys did not come back.
 
-American names are not just popular or unpopular. They have direction.
-
-A flash flood tells you when a cultural moment hit. A glacier shows a generation rising and aging. The one-way street shows what happens when gender association overwhelms memory.
-
-The full vital records are on the name pages. Start with [Ashley](/name/Ashley/), [Taylor](/name/Taylor/), or [Leslie](/name/Leslie/).
+The counts are on the name pages. Start with [Ashley](/name/Ashley/), [Taylor](/name/Taylor/), or [Leslie](/name/Leslie/).

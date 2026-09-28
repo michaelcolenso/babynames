@@ -201,9 +201,9 @@ export const DEFAULT_ONE_WAY_STREET_OPTIONS: OneWayStreetOptions = {
 };
 
 /**
- * One-way street: both sex series are substantial, but the male peak comes
- * first, nearly disappears by the female peak, and the female peak is larger.
- * This makes the detector about a directional handoff, not merely a unisex name.
+ * One-way street: both sex series are substantial, the male peak comes first,
+ * the female peak is larger, and male use has fallen by DATA_MAX_YEAR.
+ * Male and female waves overlap; the destination is one-way, not a clean handoff.
  */
 export function computeOneWayStreet(
   series: Map<string, Record<number, number>>,
@@ -230,14 +230,27 @@ export function computeOneWayStreet(
     const femalePeakYear = femaleYears.find((y) => pair.F![y] === femalePeak)!;
     if (malePeak < opts.minMalePeak || femalePeak < opts.minFemalePeak) continue;
     if (femalePeakYear <= malePeakYear || femalePeakYear - malePeakYear > opts.maxPeakGapYears) continue;
-    const maleAtFemalePeak = pair.M[DATA_MAX_YEAR] ?? 0;
-    if (maleAtFemalePeak > malePeak * opts.maxMaleShareAtFemalePeak) continue;
+    const maleLatest = pair.M[DATA_MAX_YEAR] ?? 0;
+    const femaleLatest = pair.F[DATA_MAX_YEAR] ?? 0;
+    const boysAtFemalePeak = pair.M[femalePeakYear] ?? 0;
+    const girlsAtMalePeak = pair.F[malePeakYear] ?? 0;
+    if (maleLatest > malePeak * opts.maxMaleShareAtFemalePeak) continue;
     if (femalePeak < malePeak * opts.minFemaleToMalePeakRatio) continue;
     members.push({
       name: displayNames.get(`${lower}|F`) ?? lower!,
       sex: "F",
-      malePeakYear, malePeak, femalePeakYear, femalePeak, maleAtFemalePeak,
-      peakYear: femalePeakYear, peakCount: femalePeak, series: pair.F,
+      malePeakYear,
+      malePeak,
+      femalePeakYear,
+      femalePeak,
+      boysAtFemalePeak,
+      girlsAtMalePeak,
+      maleAtFemalePeak: maleLatest,
+      maleLatest,
+      femaleLatest,
+      peakYear: femalePeakYear,
+      peakCount: femalePeak,
+      series: pair.F,
     });
   }
   members.sort((a, b) => b.femalePeak - a.femalePeak || a.name.localeCompare(b.name));

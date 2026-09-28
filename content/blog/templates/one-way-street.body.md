@@ -1,47 +1,49 @@
-Some names cross the gender line. They do not cross back.
+In {{claim:ashleyMaleYear}}, {{claim:ashleyMalePeak}} boys were named [Ashley](/name/Ashley/).
 
-The pattern is not a vibe. It is in the birth records: a substantial male peak, followed by a larger female peak, with male use nearly gone by the time the girls arrive.
+That same year, {{claim:ashleyGirlsAtMalePeak}} girls were named Ashley.
 
-The detector found {{claim:count}} names that made the crossing.
+The boys had peaked. The girls had not.
 
 {{panel:Ashley.F}}
 
-## Ashley crossed first
+## The girls kept coming
 
-Ashley’s male wave peaked at {{claim:ashleyMalePeak}} births in {{claim:ashleyMaleYear}}. Seven years later, the female wave peaked at {{claim:ashleyFemalePeak}}. The girl version was more than seventy times larger.
+By {{claim:ashleyFemaleYear}}, {{claim:ashleyFemalePeak}} girls were named Ashley. The boys were down to {{claim:ashleyBoysAtFemalePeak}}.
 
-By the time the female peak arrived, the boy version was already a historical footnote. The name did not become unisex. It changed lanes.
+You could still name a boy Ashley. Almost nobody did. In 2025, {{claim:ashleyMaleLatest}} boys got the name. {{claim:ashleyFemaleLatest}} girls did.
+
+## Taylor was in both rows
+
+In {{claim:taylorMaleYear}}, {{claim:taylorMalePeak}} boys were named [Taylor](/name/Taylor/). {{claim:taylorGirlsAtMalePeak}} girls were named Taylor too.
+
+The next year the girls reached {{claim:taylorFemalePeak}}. The boys were still {{claim:taylorBoysAtFemalePeak}}.
+
+They sat in the same classrooms. Then the boys thinned out.
 
 {{panel:Taylor.F}}
 
-## Taylor was the loudest handoff
+## Tracy and Kelly had already started
 
-Taylor’s male peak was {{claim:taylorMalePeak}} births. The female peak reached {{claim:taylorFemalePeak}}. The handoff happened inside one generation.
+In {{claim:tracyMaleYear}}, {{claim:tracyMalePeak}} boys were named [Tracy](/name/Tracy/). {{claim:tracyGirlsAtMalePeak}} girls had the name that year.
 
-This is the trapdoor in a name. Parents do not need to coordinate. Once a name becomes strongly associated with girls, boys stop receiving it. The old usage disappears, and the association hardens.
+Four years later the girls numbered {{claim:tracyFemalePeak}}. The boys numbered {{claim:tracyBoysAtFemalePeak}}.
 
 {{panel:Tracy.F}}
 
-## The pattern predates the internet
+[Kelly](/name/Kelly/) went the same way. {{claim:kellyMalePeak}} boys in {{claim:kellyMaleYear}}, and {{claim:kellyGirlsAtMalePeak}} girls beside them. In {{claim:kellyFemaleYear}} the girls reached {{claim:kellyFemalePeak}}.
 
-Tracy moved from {{claim:tracyMalePeak}} boys at its male peak to {{claim:tracyFemalePeak}} girls at its female peak. Kelly made the same crossing: {{claim:kellyMalePeak}} boys, then {{claim:kellyFemalePeak}} girls.
-
-These are not modern naming quirks. They are population-scale handoffs. A name can spend decades available to everyone, then become socially one-way.
+Parents of sons heard the name on girls. They picked another name.
 
 {{panel:Kelly.F}}
 
-## The crossing is permanent
+## Leslie did not wait
 
-Leslie’s male peak was {{claim:leslieMalePeak}}. Its female peak was {{claim:leslieFemalePeak}}. The original route is still technically open, but almost nobody takes it.
+In {{claim:leslieMaleYear}}, {{claim:leslieMalePeak}} boys were named [Leslie](/name/Leslie/). {{claim:leslieGirlsAtMalePeak}} girls were named Leslie.
 
-That is the one-way street: not a legal rule, not a spelling change, not a decree. A social signal gets attached to the name. The signal becomes stronger than the name’s history.
+Five years later the boys were still {{claim:leslieBoysAtFemalePeak}}. The girls were {{claim:leslieFemalePeak}}.
 
 {{panel:Leslie.F}}
 
-## Why it matters
+{{claim:count}} names in the records did this. The boys peaked. The girls rose higher. The boys did not come back.
 
-American names are not just popular or unpopular. They have direction.
-
-A flash flood tells you when a cultural moment hit. A glacier shows a generation rising and aging. The one-way street shows what happens when gender association overwhelms memory.
-
-The full vital records are on the name pages. Start with [Ashley](/name/Ashley/), [Taylor](/name/Taylor/), or [Leslie](/name/Leslie/).
+The counts are on the name pages. Start with [Ashley](/name/Ashley/), [Taylor](/name/Taylor/), or [Leslie](/name/Leslie/).

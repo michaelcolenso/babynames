@@ -36,7 +36,7 @@ export interface GlaciersResult {
   totalNames: number;
 }
 
-/** A name whose male usage peaked first, then gave way to a larger female wave. */
+/** A name whose male usage peaked first, then a larger female wave arrived. */
 export interface OneWayStreetMember {
   name: string;
   sex: "F";
@@ -44,7 +44,14 @@ export interface OneWayStreetMember {
   malePeak: number;
   femalePeakYear: number;
   femalePeak: number;
+  /** Male count in the female-peak year (overlap). */
+  boysAtFemalePeak: number;
+  /** Female count in the male-peak year (overlap). */
+  girlsAtMalePeak: number;
+  /** Male count at DATA_MAX_YEAR. Detector filter reads this. */
   maleAtFemalePeak: number;
+  maleLatest: number;
+  femaleLatest: number;
   peakYear: number;
   peakCount: number;
   series: Record<number, number>;
