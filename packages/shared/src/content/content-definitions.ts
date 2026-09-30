@@ -2,7 +2,12 @@
 // Each definition drives both a viz page and a blog post from the same
 // computed numbers. Claims are the ONLY way numbers enter prose.
 
-import type { ContentDefinition, GlacierMember } from "./factory-types";
+import type {
+  ComebackMember,
+  ContentDefinition,
+  FlashFloodMember,
+  GlacierMember,
+} from "./factory-types";
 
 function findPeak(
   members: Array<{ name: string; sex: string; peakCount: number }>,
@@ -16,6 +21,12 @@ function findPeak(
 function findMember<T extends { name: string }>(members: T[], name: string): T {
   const hit = members.find((m) => m.name === name);
   if (!hit) throw new Error(`expected member "${name}" not detected in data`);
+  return hit;
+}
+
+function findComeback(members: Array<ComebackMember>, name: string): ComebackMember {
+  const hit = members.find((m) => m.name === name);
+  if (!hit) throw new Error(`comebacks: expected member "${name}" not detected in data`);
   return hit;
 }
 
@@ -35,16 +46,16 @@ export const CONTENT_DEFINITIONS: ContentDefinition[] = [
       femalePct: (m) =>
         Math.round((m.filter((x) => x.sex === "F").length / m.length) * 100),
       topName: (m) => m[0]?.name ?? "none",
-      topCount: (m) => m[0]?.peakCount ?? 0,
-      topYear: (m) => m[0]?.peakYear ?? 0,
-      kuntaCount: (m) => findPeak(m, "Kunta"),
-      arsenioCount: (m) => findPeak(m, "Arsenio"),
-      moeshaCount: (m) => findPeak(m, "Moesha"),
-      jkwonCount: (m) => findPeak(m, "Jkwon"),
-      bethzyCount: (m) => findPeak(m, "Bethzy"),
-      kizzyCount: (m) => findPeak(m, "Kizzy"),
-      kanyeCount: (m) => findPeak(m, "Kanye"),
-      aadenCount: (m) => findPeak(m, "Aaden"),
+      topCount: (m) => (m[0] as FlashFloodMember)?.peakCount ?? 0,
+      topYear: (m) => (m[0] as FlashFloodMember)?.peakYear ?? 0,
+      kuntaCount: (m) => findPeak(m as FlashFloodMember[], "Kunta"),
+      arsenioCount: (m) => findPeak(m as FlashFloodMember[], "Arsenio"),
+      moeshaCount: (m) => findPeak(m as FlashFloodMember[], "Moesha"),
+      jkwonCount: (m) => findPeak(m as FlashFloodMember[], "Jkwon"),
+      bethzyCount: (m) => findPeak(m as FlashFloodMember[], "Bethzy"),
+      kizzyCount: (m) => findPeak(m as FlashFloodMember[], "Kizzy"),
+      kanyeCount: (m) => findPeak(m as FlashFloodMember[], "Kanye"),
+      aadenCount: (m) => findPeak(m as FlashFloodMember[], "Aaden"),
     },
     asserts: [
       // Every hand-written figure in the post body is pinned here.
@@ -85,9 +96,9 @@ export const CONTENT_DEFINITIONS: ContentDefinition[] = [
           (m as GlacierMember[]).reduce((a, x) => a + (x.fallEndYear - x.peakYear), 0) / m.length,
         ),
       topName: (m) => m[0]?.name ?? "none",
-      topCount: (m) => m[0]?.peakCount ?? 0,
-      topYear: (m) => m[0]?.peakYear ?? 0,
-      robertPeak: (m) => findPeak(m, "Robert"),
+      topCount: (m) => (m[0] as GlacierMember)?.peakCount ?? 0,
+      topYear: (m) => (m[0] as GlacierMember)?.peakYear ?? 0,
+      robertPeak: (m) => findPeak(m as GlacierMember[], "Robert"),
       robertRiseYears: (m) => {
         const g = findMember(m as GlacierMember[], "Robert");
         return g.peakYear - g.riseStartYear;
@@ -96,14 +107,14 @@ export const CONTENT_DEFINITIONS: ContentDefinition[] = [
         const g = findMember(m as GlacierMember[], "John");
         return g.fallEndYear - g.peakYear;
       },
-      maryPeak: (m) => findPeak(m, "Mary"),
+      maryPeak: (m) => findPeak(m as GlacierMember[], "Mary"),
       maryRiseYears: (m) => {
         const g = findMember(m as GlacierMember[], "Mary");
         return g.peakYear - g.riseStartYear;
       },
-      christopherPeak: (m) => findPeak(m, "Christopher"),
-      barbaraPeak: (m) => findPeak(m, "Barbara"),
-      sarahPeak: (m) => findPeak(m, "Sarah"),
+      christopherPeak: (m) => findPeak(m as GlacierMember[], "Christopher"),
+      barbaraPeak: (m) => findPeak(m as GlacierMember[], "Barbara"),
+      sarahPeak: (m) => findPeak(m as GlacierMember[], "Sarah"),
     },
     asserts: [
       // Every hand-written figure in the post body is pinned here.
@@ -122,6 +133,101 @@ export const CONTENT_DEFINITIONS: ContentDefinition[] = [
       { key: "christopherPeak", equals: 60021 },
       { key: "barbaraPeak", equals: 48800 },
       { key: "sarahPeak", equals: 28483 },
+    ],
+  },
+  {
+    slug: "comebacks",
+    kind: "both",
+    title: "The Comebacks — Names That Nearly Died and Lived Again",
+    description:
+      "91 names collapsed to near-extinction and then staged a real second life decades later. These are the comebacks of American naming — the boomerangs that broke the one-way street of name mortality.",
+    sourceVersion: "ssa-national-2025",
+    rolloutState: "draft",
+    compute: {
+      family: "comebacks",
+      minFirstLifePeak: 1000,
+      minSecondPeak: 500,
+      minFirstLifeYears: 20,
+      minGapYears: 25,
+      troughRatio: 0.15,
+    },
+    panels: ["Emma|F", "Hazel|F", "Violet|F", "Jack|M", "Leo|M", "Evelyn|F"],
+    sourceNote:
+      "Names shown peaked at 1,000+ annual births, fell to a valley below 15% of that first peak, then climbed to a second peak of 500+ births at least 25 years after the valley (and 25 years after the first peak).",
+    claims: {
+      count: (m) => m.length,
+      femalePct: (m) =>
+        Math.round((m.filter((x) => x.sex === "F").length / m.length) * 100),
+      topName: (m) => m[0]?.name ?? "none",
+      topFirstPeak: (m) => (m[0] as ComebackMember)?.firstLifePeak ?? 0,
+      topValleyCount: (m) => (m[0] as ComebackMember)?.valleyCount ?? 0,
+      topValleyYear: (m) => (m[0] as ComebackMember)?.valleyYear ?? 0,
+      topSecondPeak: (m) => (m[0] as ComebackMember)?.secondPeak ?? 0,
+      topSecondYear: (m) => (m[0] as ComebackMember)?.secondPeakYear ?? 0,
+      emmaFirstPeakN: (m) => findComeback(m as ComebackMember[], "Emma").firstLifePeak.toLocaleString("en-US"),
+      emmaSecondPeakN: (m) =>
+        findComeback(m as ComebackMember[], "Emma").secondPeak.toLocaleString("en-US"),
+      hazelSecondPeakN: (m) =>
+        findComeback(m as ComebackMember[], "Hazel").secondPeak.toLocaleString("en-US"),
+      emmaFirstPeak: (m) => findComeback(m as ComebackMember[], "Emma").firstLifePeak,
+      emmaFirstYear: (m) => findComeback(m as ComebackMember[], "Emma").firstLifePeakYear,
+      emmaValleyCount: (m) => findComeback(m as ComebackMember[], "Emma").valleyCount,
+      emmaValleyYear: (m) => findComeback(m as ComebackMember[], "Emma").valleyYear,
+      emmaSecondPeak: (m) => findComeback(m as ComebackMember[], "Emma").secondPeak,
+      emmaSecondYear: (m) => findComeback(m as ComebackMember[], "Emma").secondPeakYear,
+      hazelValleyCount: (m) => findComeback(m as ComebackMember[], "Hazel").valleyCount,
+      hazelValleyYear: (m) => findComeback(m as ComebackMember[], "Hazel").valleyYear,
+      hazelSecondPeak: (m) => findComeback(m as ComebackMember[], "Hazel").secondPeak,
+      hazelFinalCount: (m) => findComeback(m as ComebackMember[], "Hazel").finalCount,
+      violetValleyCount: (m) => findComeback(m as ComebackMember[], "Violet").valleyCount,
+      violetValleyYear: (m) => findComeback(m as ComebackMember[], "Violet").valleyYear,
+      violetSecondPeak: (m) => findComeback(m as ComebackMember[], "Violet").secondPeak,
+      jackFirstPeak: (m) => findComeback(m as ComebackMember[], "Jack").firstLifePeak,
+      jackValleyCount: (m) => findComeback(m as ComebackMember[], "Jack").valleyCount,
+      jackSecondPeak: (m) => findComeback(m as ComebackMember[], "Jack").secondPeak,
+      leoValleyCount: (m) => findComeback(m as ComebackMember[], "Leo").valleyCount,
+      leoSecondPeak: (m) => findComeback(m as ComebackMember[], "Leo").secondPeak,
+      evelynFirstPeak: (m) => findComeback(m as ComebackMember[], "Evelyn").firstLifePeak,
+      evelynSecondPeak: (m) => findComeback(m as ComebackMember[], "Evelyn").secondPeak,
+      avgGap: (m) =>
+        Math.round(
+          (m as ComebackMember[]).reduce(
+            (a, x) => a + (x.secondPeakYear - x.valleyYear),
+            0,
+          ) / m.length,
+        ),
+    },
+    asserts: [
+      // Every hand-written figure in the post body is pinned here.
+      // Values pin the verified detector run on name-vitals-2025 (1880–2025).
+      { key: "count", equals: 91 },
+      { key: "femalePct", equals: 82 },
+      { key: "topName", equals: "Emma" },
+      { key: "topFirstPeak", equals: 5324 },
+      { key: "topValleyCount", equals: 414 },
+      { key: "topValleyYear", equals: 1976 },
+      { key: "topSecondPeak", equals: 22719 },
+      { key: "topSecondYear", equals: 2003 },
+      { key: "emmaFirstPeak", equals: 5324 },
+      { key: "emmaFirstYear", equals: 1918 },
+      { key: "emmaValleyCount", equals: 414 },
+      { key: "emmaValleyYear", equals: 1976 },
+      { key: "emmaSecondPeak", equals: 22719 },
+      { key: "emmaSecondYear", equals: 2003 },
+      { key: "hazelValleyCount", equals: 90 },
+      { key: "hazelValleyYear", equals: 1983 },
+      { key: "hazelSecondPeak", equals: 6432 },
+      { key: "hazelFinalCount", equals: 6318 },
+      { key: "violetValleyCount", equals: 109 },
+      { key: "violetValleyYear", equals: 1972 },
+      { key: "violetSecondPeak", equals: 7546 },
+      { key: "jackFirstPeak", equals: 12802 },
+      { key: "jackValleyCount", equals: 1579 },
+      { key: "jackSecondPeak", equals: 10906 },
+      { key: "leoValleyCount", equals: 415 },
+      { key: "leoSecondPeak", equals: 8293 },
+      { key: "evelynFirstPeak", equals: 14278 },
+      { key: "evelynSecondPeak", equals: 10748 },
     ],
   },
 ];
