@@ -293,8 +293,10 @@ export interface NameDiasporaRow {
   origin_year: number | null;
   peak_national_year: number | null;
   spread_json: string;
-  // JSON array of the states that never "broke out": never over-represented
-  // (see diaspora-compute.ts for the thresholds). NOT "states with no births".
+  // JSON array of the states that never passed the breakout test (see
+  // diaspora-compute.ts for the thresholds). NOT "states with no births". All 51
+  // states when the name has no observable origin (national by 1910, or no state
+  // ever broke out).
   never_adopted: string;
   total_states: number;
   diffusion_years: number;
@@ -312,8 +314,9 @@ export interface DiasporaResponse {
   origin: { state: string; year: number } | null;
   peakNationalYear: number | null;
   spread: DiasporaSpreadPoint[];
-  // States that never broke out: never over-represented. A state can have
-  // thousands of bearers and still be listed here (Nevaeh in California).
+  // States that never passed the breakout test. A state can have thousands of
+  // bearers and still be listed here (Nevaeh in California), and a name with no
+  // observable origin lists all 51.
   neverAdopted: string[];
   totalStates: number;
   diffusionYears: number;

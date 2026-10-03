@@ -1,9 +1,13 @@
-// Wording tests for the diaspora data. `never_adopted` / `neverAdopted` means
-// "never over-represented" (rate at least 1.5x national, 15+ births; see
-// apps/ingest-worker/src/diaspora-compute.ts), NOT "had no births there" and not
-// "never took it up". Nevaeh in California shows the difference: it has more
-// Nevaeh births than any other state (9,666 in production D1) and is still on
-// the list. Anything user- or agent-facing has to say what the data means.
+// Wording tests for the diaspora data. `never_adopted` / `neverAdopted` lists the
+// states that never passed the breakout test in apps/ingest-worker/src/
+// diaspora-compute.ts (a rate clearly above the national rate, on enough births,
+// with a significance check). That is NOT "had no births there", not "never took
+// it up", and not even "never over-represented" (a state can be above the
+// national rate and still miss the evidence thresholds). Names with no
+// observable origin (national by 1910, or no state ever broke out) list all 51
+// states. Nevaeh in California shows the difference: it has more Nevaeh births
+// than any other state (9,666 in production D1) and is still on the list.
+// Anything user- or agent-facing has to say what the data means.
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -21,7 +25,12 @@ function read(rel: string): string {
 // Phrases that say "took it up" / "had none there" for a state that merely never
 // over-indexed. The code identifiers (neverAdopted, never_adopted) contain no
 // space, so they do not match.
-const MISLEADING = [/never adopted/i, /never reached reporting threshold/i, /states adopted it/i];
+const MISLEADING = [
+  /never adopted/i,
+  /never over-represented/i,
+  /never reached reporting threshold/i,
+  /states adopted it/i,
+];
 
 // A Nevaeh-shaped name: a national hit that spread everywhere and over-indexed
 // in only a few states, so the biggest states are in neverAdopted.
@@ -47,7 +56,7 @@ function nevaehShaped(): { record: NameRecord; diaspora: DiasporaResponse } {
   return { record, diaspora };
 }
 
-test("the name-page diaspora map says 'never over-represented', not adopted/holdout", () => {
+test("the name-page diaspora map says 'no breakout', not adopted/holdout/never over-represented", () => {
   const { record, diaspora } = nevaehShaped();
   const classification = classify({ series: record.series, yM: record.yM });
   assert.ok(classification);
@@ -56,10 +65,10 @@ test("the name-page diaspora map says 'never over-represented', not adopted/hold
   const map = html.match(/<section class="diaspora-map"[\s\S]*?<\/section>/)?.[0];
   assert.ok(map, "emergent names with an origin render the diaspora map");
 
-  // The biggest states are not in `spread`, so they must read as never over-represented.
-  assert.match(map, /California: never over-represented/);
-  assert.match(map, /Texas: never over-represented/);
-  assert.match(map, /<span class="dz-never">Never over-represented<\/span>/);
+  // The biggest states are not in `spread`, so they must read as no breakout.
+  assert.match(map, /California: no breakout/);
+  assert.match(map, /Texas: no breakout/);
+  assert.match(map, /<span class="dz-never">No breakout<\/span>/);
   assert.match(map, /broke out/i);
   for (const bad of MISLEADING) assert.doesNotMatch(map, bad, `diaspora map matches ${bad}`);
   // "Holdout" reads as resistance; California did not resist Nevaeh.
@@ -79,8 +88,9 @@ test("the MCP tool description explains what neverAdopted means", async () => {
   const tool = body.result.tools.find((t) => t.name === "get_name_diaspora");
   assert.ok(tool, "get_name_diaspora is listed");
   assert.match(tool.description, /neverAdopted/);
-  assert.match(tool.description, /never broke out/);
+  assert.match(tool.description, /never passed the breakout test/);
   assert.match(tool.description, /does not mean the name had no bearers/);
+  assert.match(tool.description, /all 51 states/);
   for (const bad of MISLEADING) assert.doesNotMatch(tool.description, bad, `description matches ${bad}`);
 });
 
@@ -93,11 +103,17 @@ test("agent docs and the wavefront viz do not call over-index misses 'never adop
     const text = read(rel);
     for (const bad of MISLEADING) assert.doesNotMatch(text, bad, `${rel} matches ${bad}`);
   }
-  assert.match(read("apps/web/public/.well-known/agent-skills/name-data-api.md"), /never over-represented/);
+  const doc = read("apps/web/public/.well-known/agent-skills/name-data-api.md");
+  assert.match(doc, /never broke out/);
+  assert.match(doc, /all 51 states/);
 
   const viz = read("apps/web/public/viz/wavefront.html");
-  assert.match(viz, /Never over-represented here/);
+  assert.match(viz, /No breakout here/);
   assert.match(viz, /<p class="defn" id="defn"/);
+  // A response with no origin lists all 51 states under neverAdopted; the page
+  // must say there is no spread to show rather than draw 51 "no breakout" tiles.
+  assert.match(viz, /if \(!diaspora\.origin\)/);
+  assert.match(viz, /No spread to show for/);
   // The old tooltip claimed these states had never reached SSA's reporting
   // threshold, which is false for a state with thousands of births.
   assert.doesNotMatch(viz, /reporting threshold/);

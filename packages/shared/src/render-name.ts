@@ -584,7 +584,7 @@ function renderDiasporaMap(record: NameRecord, d?: DiasporaResponse): string {
     const tier = diasporaTier(point?.year, originYear);
     const adoptedYear = point?.year;
     const titleYear =
-      tier === "never" ? "never over-represented" : `broke out ${adoptedYear}`;
+      tier === "never" ? "no breakout" : `broke out ${adoptedYear}`;
     const yearAttr = adoptedYear !== undefined ? ` data-year="${adoptedYear}"` : "";
     return `<g class="dz-tile dz-${tier}" data-state="${st}"${yearAttr}>
       <title>${escape(stateName(st))}: ${titleYear}</title>
@@ -602,7 +602,7 @@ function renderDiasporaMap(record: NameRecord, d?: DiasporaResponse): string {
     <span class="dz-early">≤5 yrs</span>
     <span class="dz-mid">≤15 yrs</span>
     <span class="dz-late">16+ yrs</span>
-    <span class="dz-never">Never over-represented</span>
+    <span class="dz-never">No breakout</span>
   </div>`;
 
   return `<section class="diaspora-map" id="diaspora-map" aria-label="${escape(record.name)} geographic spread across the United States">

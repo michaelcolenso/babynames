@@ -136,7 +136,7 @@ const TOOLS = [
   {
     name: "get_name_diaspora",
     description:
-      "Returns the geographic spread of a name over time: where it first broke out (became over-represented relative to the national rate), when it peaked nationally, which states broke out and when, and which states never did. `neverAdopted` lists the states that never broke out; it does not mean the name had no bearers there (a large state can have thousands and still be listed).",
+      "Returns the geographic spread of a name over time: where it first broke out (a clearly higher rate there than nationally), when it peaked nationally, which states broke out and when, and which states never did. `neverAdopted` lists the states that never passed the breakout test; it does not mean the name had no bearers there. Names already national by 1910, when state records begin, list all 51 states because no origin can be observed.",
     inputSchema: {
       type: "object",
       properties: {

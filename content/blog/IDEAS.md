@@ -125,9 +125,10 @@ dying of old age. Full draft: `how-many-karens-are-left.md`.
 14. **The Mason-Dixon Line of Names** — Names that stop dead at a regional border and the
     states that *never* adopt a national hit.
     - *Lever:* diaspora `never_adopted`. *Bet:* viral.
-    - *Caution:* `never_adopted` means a state never *over-indexed* (rate well above the national rate),
-      not that it never had the name. California has more Nevaeh births than any other state and is still
-      on Nevaeh's list. Write "never over-represented", and check the raw state counts before claiming anything.
+    - *Caution:* `never_adopted` means a state never passed the breakout test (a clearly higher rate than the
+      national rate), not that it never had the name. California has more Nevaeh births than any other state
+      and is still on Nevaeh's list, and a name with no observable origin lists all 51 states. Write "no
+      breakout", never "never adopted", and check the raw state counts before claiming anything.
 
 ## Pillar 5 — Gender (the sex series)
 

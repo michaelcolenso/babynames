@@ -335,16 +335,16 @@
   <div class="legend-item"><div class="legend-swatch" style="background:var(--mid)"></div>≤15 yrs</div>
   <div class="legend-item"><div class="legend-swatch" style="background:var(--late)"></div>16+ yrs</div>
   <div class="legend-item"><div class="legend-swatch" style="background:var(--pending)"></div>Not yet</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:var(--never)"></div>Never over-represented</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:var(--never)"></div>No breakout</div>
 </div>
 
 <div class="stats-row" id="stats" style="display:none">
   <div class="stat"><strong id="stat-origin">—</strong>Origin</div>
-  <div class="stat"><strong id="stat-states">—</strong>States over-represented</div>
+  <div class="stat"><strong id="stat-states">—</strong>States that broke out</div>
   <div class="stat"><strong id="stat-years">—</strong>Years to spread</div>
-  <div class="stat"><strong id="stat-holdouts">—</strong>Never over-represented</div>
+  <div class="stat"><strong id="stat-holdouts">—</strong>No breakout</div>
 </div>
-<p class="defn" id="defn" style="display:none">“Over-represented” means the state’s rate for this name was well above the national rate in some year. A state can have thousands of bearers and still never be over-represented.</p>
+<p class="defn" id="defn" style="display:none">“Broke out” means the state passed the site’s breakout test for this name: a rate clearly above the national rate. A state with no breakout can still have thousands of bearers.</p>
 
 <div class="tooltip" id="tooltip"></div>
 
@@ -412,7 +412,7 @@ function buildMap() {
       const stateName = STATE_NAMES[st] || st;
       let detail;
       if (yr == null) {
-        detail = 'Never over-represented here';
+        detail = 'No breakout here';
       } else if (yr === originYear) {
         detail = `<span>Origin</span> — first broke out in ${yr}`;
       } else {
@@ -528,6 +528,16 @@ async function loadName(name) {
     diaspora = await res.json();
   } catch {
     document.getElementById('loading').textContent = 'Network error.';
+    return;
+  }
+
+  // No origin means no spread to draw: either no state ever broke out, or the name was
+  // already national when state records begin (1910). In both cases the API lists all 51
+  // states under neverAdopted, which would read as 51 states with no breakout.
+  if (!diaspora.origin) {
+    d3.select('#map-container svg').remove();
+    document.getElementById('loading').textContent =
+      `No spread to show for "${name}": it never concentrated in one state, or it was already in use nationwide when state records begin (1910).`;
     return;
   }
 
