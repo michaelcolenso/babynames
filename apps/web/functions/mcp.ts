@@ -136,7 +136,7 @@ const TOOLS = [
   {
     name: "get_name_diaspora",
     description:
-      "Returns the geographic spread of a name over time: where it originated, when it peaked nationally, which states adopted it and when, and how many states never adopted it.",
+      "Returns the geographic spread of a name over time: where it first broke out (became over-represented relative to the national rate), when it peaked nationally, which states broke out and when, and which states never did. `neverAdopted` lists the states that never broke out; it does not mean the name had no bearers there (a large state can have thousands and still be listed).",
     inputSchema: {
       type: "object",
       properties: {
