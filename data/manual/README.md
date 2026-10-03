@@ -16,17 +16,15 @@ a name aged to `ANALYSIS_YEAR` (2026), and stores:
 - `median_age`, `age_range_low`, `age_range_high` = the 50th, 25th and 75th
   percentile ages of those survivors
 
-The file records no source. It has one commit (`5d6019e`, 2026-05-25).
+### Where the current values come from
 
-### Open question: production was not built from this file
+The file holds the table that production's stored rows imply, not a table
+copied from a source. Until 2026-10-03 it held a different, more optimistic
+table (commit `5d6019e`, 2026-05-25), and production's rows were not built from
+it. Checked read-only against production D1, with the real builder on
+production's own `name_years` counts (`scripts/fixtures/enrichment-d1.real.fixture.json`):
 
-Checked 2026-10-03, read-only. The values stored in production D1 do not follow
-from this CSV, although the builder's algorithm is not the problem.
-
-**Committed table vs. production, same series.** The real builder, run with this
-CSV on production's own `name_years` counts (`scripts/fixtures/enrichment-d1.real.fixture.json`):
-
-| name | production: living / median (25th–75th) | this CSV: living / median (25th–75th) | living vs production |
+| name | production: living / median (25th–75th) | previous CSV: living / median (25th–75th) | previous vs production |
 |---|---|---|---|
 | Gladys (F) | 45,132 / 74 (58–86) | 55,070 / 77 (63–88) | +22.0% |
 | Karen (F) | 774,778 / 65 (58–72) | 845,523 / 66 (58–73) | +9.1% |
@@ -37,38 +35,48 @@ CSV on production's own `name_years` counts (`scripts/fixtures/enrichment-d1.rea
 | John (M) | 2,820,437 / 60 (42–71) | 3,019,595 / 61 (44–73) | +7.1% |
 | Brandon (M) | 748,301 / 33 (26–41) | 749,858 / 33 (26–41) | +0.2% |
 
-The gap grows with age, which points at survival at older ages.
-
-**The algorithm is right; the input table differs.** With the builder's
+The builder's algorithm is right; the input table differed. With the builder's
 interpolation, living totals are linear in the survival values at the 23
 checkpoint ages, so the table behind production's rows can be recovered by least
-squares. A table fitted that way to 174 common names matches their stored living
-totals to within 2×10⁻⁵ (relative), and reproduces the median age and both
-quartiles for all 71 further names it was never fitted to, with their living
-totals within 4 people. This CSV matches none of those 71 exactly and differs in
-median or quartile for 26.
-In production's table survival at 65 is about 0.846 for women and 0.809 for men,
-against 0.905 and 0.857 here; implied life expectancy at birth (area under the
-interpolated curve) is about 79.5 (F) and 77.0 (M) against 84.0 and 80.0 here.
+squares. The values here were fitted that way to 174 common names, then checked
+on 71 more that were never fitted. With the real builder and this file, all 245
+names reproduce production's median age and both quartiles exactly, and their
+living totals to within 4 people (at most 3.6×10⁻⁴ relative; 2.8×10⁻⁵ on the
+fitted names). That is why a reseed from this file leaves the figures visitors
+see, and the published post "How Many Karens Are Left?" (about 775,000 living,
+median 65), where they are. The previous values are in git history.
 
-**Why it matters.** Visitors see production's numbers, and so does the published
-post "How Many Karens Are Left?" (about 775,000 living, median 65). A reseed
-from this CSV would change them: Karen to about 845,500 and 66, Gladys to
-about 55,000 and 77.
+| survival to age | 65 | 75 | 85 | 95 |
+|---|---|---|---|---|
+| women, now | 0.846 | 0.682 | 0.409 | 0.143 |
+| women, before | 0.905 | 0.803 | 0.572 | 0.198 |
+| men, now | 0.809 | 0.624 | 0.346 | 0.107 |
+| men, before | 0.857 | 0.716 | 0.453 | 0.133 |
 
-**Not established.** Where production's table came from (the CSV may have been
-edited locally before seeding and never committed), and which table, if either,
-matches SSA's published life tables. SSA's site refused automated access when
-this was checked, so neither table was compared with SSA's.
+Implied life expectancy at birth (area under the interpolated curve) is about
+79.5 (F) and 77.0 (M) now, against 84.0 and 80.0 before.
 
-Until this is settled:
+### What is not established
 
-- `scripts/enrichment.test.ts` keeps one test skipped
-  (`builder reproduces production's stored enrichment profiles for pinned names`).
-  It passes once this CSV reproduces production. Remove its `skip` then.
-- Do not run `npm run seed-enrichment` expecting to leave production unchanged.
-  It deletes and re-inserts every enrichment table, computed from SSA's files and
-  the CSVs in this folder.
+- Where production's table came from. It may have been edited locally before
+  seeding and never committed.
+- Whether it, or the previous table, matches SSA's published life tables. SSA's
+  site refused automated access when this was checked.
+- The survival values at ages 1 to 35 are weakly determined by the data (changes
+  below rounding), so treat them as a fit, not a measurement. Older ages are
+  tightly determined.
+- A reseed is not guaranteed to be identical to production, only to match it
+  within a few people for living totals. `npm run seed-enrichment` deletes and
+  re-inserts every enrichment table, including regional anomalies and catalysts,
+  which were not compared here.
+
+### Changing it
+
+If you have the original CSV, or prefer a table sourced from SSA, replace the
+file. `npm run test:enrichment` will then fail
+`builder reproduces production's stored enrichment profiles for pinned names`,
+which is the warning that the site's figures will change on the next seed.
+Update the fixture and that test deliberately in the same change.
 
 ### A third table
 

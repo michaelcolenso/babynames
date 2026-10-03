@@ -415,15 +415,15 @@ const d1Fixture = JSON.parse(
   readFileSync(new URL("./fixtures/enrichment-d1.real.fixture.json", import.meta.url), "utf8"),
 ) as D1Fixture;
 
-// Skipped on purpose until data/manual/life-table.csv is reconciled with
-// production — see data/manual/README.md. Production's rows were NOT built from
-// the committed table (for Karen: stored 774,778 living / median 65; the
-// committed table gives 845,523 / 66). Everything else in the builder is
-// covered above, and the SQL it emits is unchanged by the refactor that made it
-// importable. Remove `skip` once the table question is settled.
+// data/manual/life-table.csv is the table production's rows imply (see
+// data/manual/README.md), so a reseed from this repo leaves the numbers visitors
+// see unchanged. Median age and both quartiles must match exactly; living totals
+// are allowed a few people of slack because the table was fitted to stored
+// totals rather than copied from a source file. If this fails after someone
+// edits the CSV, the site's figures will change on the next seed (for Karen:
+// stored 774,778 living / median 65; the pre-fit CSV gave 845,523 / 66).
 test(
   "builder reproduces production's stored enrichment profiles for pinned names",
-  { skip: "pending life-table reconciliation (data/manual/README.md)" },
   () => {
     const rows = computeEnrichmentRows({
       analysisYear: d1Fixture.analysis_year,
