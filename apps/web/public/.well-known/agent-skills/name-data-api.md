@@ -111,7 +111,9 @@ Precomputed demographic and cultural profile: estimated living population, media
 ### Name diaspora
 `GET /api/diaspora/{name}?sex=M|F`
 
-Precomputed geographic spread: origin state, origin year, national peak year, state-by-state adoption spread, and states that never adopted the name.
+Precomputed geographic spread: origin state, origin year, national peak year, the states that broke out and the year each did (`spread`), and the states that never did (`neverAdopted`).
+
+A state "breaks out" in a year when its rate for the name is clearly above the national rate. `neverAdopted` means "never broke out", not "no births": a large state can have thousands of bearers and still be listed. Names first recorded nationally in 1910 or earlier (before state data begins) list all 51 states because no origin can be observed, and so does a name that no state ever broke out for.
 
 ---
 
