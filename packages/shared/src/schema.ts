@@ -295,8 +295,8 @@ export interface NameDiasporaRow {
   spread_json: string;
   // JSON array of the states that never passed the breakout test (see
   // diaspora-compute.ts for the thresholds). NOT "states with no births". All 51
-  // states when the name has no observable origin (national by 1910, or no state
-  // ever broke out).
+  // states when the name has no observable origin (first recorded nationally in
+  // 1910 or earlier, or no state ever broke out).
   never_adopted: string;
   total_states: number;
   diffusion_years: number;

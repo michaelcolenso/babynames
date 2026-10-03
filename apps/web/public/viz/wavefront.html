@@ -531,13 +531,14 @@ async function loadName(name) {
     return;
   }
 
-  // No origin means no spread to draw: either no state ever broke out, or the name was
-  // already national when state records begin (1910). In both cases the API lists all 51
-  // states under neverAdopted, which would read as 51 states with no breakout.
+  // No origin means no spread to draw: either no state ever broke out, or the name first
+  // appeared in the national records in 1910 or earlier, before state records begin, so its
+  // origin can't be observed. In both cases the API lists all 51 states under neverAdopted,
+  // which would read as 51 states with no breakout.
   if (!diaspora.origin) {
     d3.select('#map-container svg').remove();
     document.getElementById('loading').textContent =
-      `No spread to show for "${name}": it never concentrated in one state, or it was already in use nationwide when state records begin (1910).`;
+      `No spread to show for "${name}": either it never concentrated in one state, or it first appeared in the national records in 1910 or earlier, before state records begin, so its origin can't be observed.`;
     return;
   }
 

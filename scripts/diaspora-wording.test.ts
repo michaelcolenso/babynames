@@ -4,10 +4,11 @@
 // with a significance check). That is NOT "had no births there", not "never took
 // it up", and not even "never over-represented" (a state can be above the
 // national rate and still miss the evidence thresholds). Names with no
-// observable origin (national by 1910, or no state ever broke out) list all 51
-// states. Nevaeh in California shows the difference: it has more Nevaeh births
-// than any other state (9,666 in production D1) and is still on the list.
-// Anything user- or agent-facing has to say what the data means.
+// observable origin (first recorded nationally in 1910 or earlier, before state
+// records begin, or no state ever broke out) list all 51 states. Nevaeh in
+// California shows the difference: it has more Nevaeh births than any other
+// state (9,666 in production D1) and is still on the list. Anything user- or
+// agent-facing has to say what the data means.
 
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -30,6 +31,9 @@ const MISLEADING = [
   /never over-represented/i,
   /never reached reporting threshold/i,
   /states adopted it/i,
+  // The 1910 cutoff is on a name's first national year, not on how widespread it was.
+  /already in use nationwide/i,
+  /already national by 1910/i,
 ];
 
 // A Nevaeh-shaped name: a national hit that spread everywhere and over-indexed
