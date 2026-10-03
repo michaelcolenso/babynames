@@ -538,7 +538,7 @@ async function loadName(name) {
   if (!diaspora.origin) {
     d3.select('#map-container svg').remove();
     document.getElementById('loading').textContent =
-      `No spread to show for "${name}": either it never concentrated in one state, or it first appeared in the national records in 1910 or earlier, before state records begin, so its origin can't be observed.`;
+      `No spread to show for "${name}": either no state ever passed the breakout test for it, or it first appeared in the national records in 1910 or earlier, before state records begin, so its origin can't be observed.`;
     return;
   }
 

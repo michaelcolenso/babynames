@@ -34,6 +34,9 @@ const MISLEADING = [
   // The 1910 cutoff is on a name's first national year, not on how widespread it was.
   /already in use nationwide/i,
   /already national by 1910/i,
+  // A null origin means no state passed the breakout test, which is weaker than
+  // "never concentrated": a concentrated name can fail the births or significance guards.
+  /never concentrated/i,
 ];
 
 // A Nevaeh-shaped name: a national hit that spread everywhere and over-indexed
@@ -118,6 +121,7 @@ test("agent docs and the wavefront viz do not call over-index misses 'never adop
   // must say there is no spread to show rather than draw 51 "no breakout" tiles.
   assert.match(viz, /if \(!diaspora\.origin\)/);
   assert.match(viz, /No spread to show for/);
+  assert.match(viz, /no state ever passed the breakout test/);
   // The old tooltip claimed these states had never reached SSA's reporting
   // threshold, which is false for a state with thousands of births.
   assert.doesNotMatch(viz, /reporting threshold/);
