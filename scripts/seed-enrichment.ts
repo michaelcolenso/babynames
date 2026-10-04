@@ -15,7 +15,13 @@ import path from "node:path";
 const REPO = path.resolve(import.meta.dirname ?? __dirname, "..");
 const SQL_FILE = path.join(REPO, "data/dist/enrichment.sql");
 const CONFIG = path.join(REPO, "apps/web/wrangler.toml");
-const DB_NAME = "nobodynamed";
+
+// Read the name from wrangler.toml, as the other D1 scripts do. A hard-coded
+// "nobodynamed" does not exist there (the database is "name-vitals"), so wrangler
+// failed with "Couldn't find a D1 DB with the name or binding 'nobodynamed'".
+const dbNameMatch = fs.readFileSync(CONFIG, "utf-8").match(/^\s*database_name\s*=\s*"([^"]+)"/m);
+if (!dbNameMatch) throw new Error(`Could not find database_name in ${CONFIG}`);
+const DB_NAME = dbNameMatch[1]!;
 
 const local = process.argv.includes("--local");
 const target = local ? "--local" : "--remote";
