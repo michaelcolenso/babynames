@@ -135,9 +135,10 @@ async function nameMeta(page: NameAgg[]): Promise<Map<string, NameMeta>> {
 }
 
 async function insertBatch(aggs: NameAgg[], meta: Map<string, NameMeta>, totals: StateYearTotals) {
-  // The D1 HTTP API caps bound variables at 100 per request; at 10 columns per
-  // row that allows 10 rows, so 9 keeps a safe margin. (The Worker binding used
-  // by the production compute chain allows far more — this limit is HTTP-only.)
+  // D1 allows at most 100 bound variables per statement, over the HTTP API and
+  // in the Worker binding alike (D1_MAX_BOUND_PARAMS in @nv/shared; the compute
+  // chain's first production run failed on a 500-variable INSERT). At 10 columns
+  // per row that allows 10 rows, which the worker now uses; 9 here keeps a margin.
   const ROWS = 9;
   for (let i = 0; i < aggs.length; i += ROWS) {
     const slice = aggs.slice(i, i + ROWS);
@@ -224,9 +225,18 @@ async function main() {
     PRIMARY KEY (name_lower, sex))`);
   await q(`DROP TABLE name_diaspora_old`);
 
-  // Bump data_version so the edge cache stops serving stale diaspora JSON
-  // (the /api/diaspora response is cached for 7 days). Mirrors what the
-  // worker's /compute-diaspora route does after its swap.
+  // Bump data_version. Two caveats, both seen in the 2026-10-03 production
+  // recompute:
+  //  - It does not clear cached /api/diaspora responses. Those are cached for up
+  //    to 7 days per location under a key with no data_version in it (the
+  //    middleware's variant-cache key is the URL plus the deploy's BUILD_ID), so
+  //    only a deploy flushes them.
+  //  - It leaves rankings_version, state_rankings_version and
+  //    viz_payloads.source_version on the old version, and readers then fall
+  //    back to their live queries until the next ingest. The worker's
+  //    /compute-diaspora route and its finalize step carry the rankings and viz
+  //    markers across the bump (revalidateRankings, revalidateVizPayloads); this
+  //    script does not.
   await q(
     `UPDATE meta SET value='${crypto.randomUUID()}' WHERE key='data_version'`,
   );

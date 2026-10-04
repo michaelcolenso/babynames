@@ -38,7 +38,7 @@
 // live in a single transaction.
 
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
-import { ALL_STATES, type Sex } from "@nv/shared";
+import { ALL_STATES, rowsPerStatement, type Sex } from "@nv/shared";
 
 // First year SSA publishes state-level data. Names already national by this
 // year have no observable geographic origin (see header).
@@ -59,7 +59,11 @@ export const MIN_BREAKOUT_COUNT = 15;
 // than sampling noise around the expected value.
 export const MIN_Z = 2.5;
 const NAMES_PAGE = 200; // (name, sex) pairs aggregated per DB round
-export const DIASPORA_MAX_PAGES = 40; // pages processed per queue message
+// Pages processed per queue message. A page is two reads plus one batch of
+// ceil(200 / rowsPerStatement(10)) = 20 INSERTs, so a message issues at most ~900
+// D1 statements even if every statement in a batch counted as its own subrequest,
+// well under the Workers Paid limit of 10,000 subrequests per invocation.
+export const DIASPORA_MAX_PAGES = 40;
 
 export interface StateCountRow {
   year: number;
@@ -372,13 +376,20 @@ async function fetchNameMeta(db: D1Database, page: NameAgg[]): Promise<Map<strin
   return map;
 }
 
+// Placeholders each row contributes to the name_diaspora_staging INSERT below;
+// keep in sync with its column list. D1 rejects any statement that binds more
+// than D1_MAX_BOUND_PARAMS variables, so this fixes how many rows one statement
+// may carry (the first production run bound 50 rows x 10 = 500 and failed).
+const DIASPORA_COLUMNS = 10;
+const DIASPORA_ROW_TUPLE = `(${Array.from({ length: DIASPORA_COLUMNS }, () => "?").join(", ")})`;
+
 function buildDiasporaStatements(
   db: D1Database,
   page: NameAgg[],
   meta: Map<string, NameMeta>,
   totals: StateYearTotals,
 ): D1PreparedStatement[] {
-  const ROWS_PER_STMT = 50;
+  const ROWS_PER_STMT = rowsPerStatement(DIASPORA_COLUMNS);
   const stmts: D1PreparedStatement[] = [];
   for (let i = 0; i < page.length; i += ROWS_PER_STMT) {
     const slice = page.slice(i, i + ROWS_PER_STMT);
@@ -390,7 +401,7 @@ function buildDiasporaStatements(
       const firstYear = m?.firstYear ?? STATE_DATA_START_YEAR;
       const d = computeDiasporaForName(agg.rows, totals, firstYear, agg.sex);
       const peak = m?.peakYear ?? null;
-      values.push("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      values.push(DIASPORA_ROW_TUPLE);
       binds.push(
         agg.name,
         agg.name.toLowerCase(),
