@@ -220,6 +220,15 @@
   }
   .stat strong { color: var(--text); font-size: 1.1rem; display: block; margin-bottom: 2px; }
 
+  .defn {
+    max-width: 880px;
+    margin: -1rem auto 0;
+    padding: 0 2rem 2rem;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
   .legend-row {
     display: flex;
     gap: 1rem;
@@ -262,7 +271,7 @@
 
   @media (max-width: 640px) {
     .hero { padding: 1.5rem 1rem 1rem; }
-    .search-row, .presets, .map-container, .controls-row, .stats-row, .legend-row { padding-left: 1rem; padding-right: 1rem; }
+    .search-row, .presets, .map-container, .controls-row, .stats-row, .legend-row, .defn { padding-left: 1rem; padding-right: 1rem; }
     h1 { font-size: 1.8rem; }
   }
 </style>
@@ -326,15 +335,16 @@
   <div class="legend-item"><div class="legend-swatch" style="background:var(--mid)"></div>≤15 yrs</div>
   <div class="legend-item"><div class="legend-swatch" style="background:var(--late)"></div>16+ yrs</div>
   <div class="legend-item"><div class="legend-swatch" style="background:var(--pending)"></div>Not yet</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:var(--never)"></div>Never</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:var(--never)"></div>No breakout</div>
 </div>
 
 <div class="stats-row" id="stats" style="display:none">
   <div class="stat"><strong id="stat-origin">—</strong>Origin</div>
-  <div class="stat"><strong id="stat-states">—</strong>States reached</div>
+  <div class="stat"><strong id="stat-states">—</strong>States that broke out</div>
   <div class="stat"><strong id="stat-years">—</strong>Years to spread</div>
-  <div class="stat"><strong id="stat-holdouts">—</strong>Never adopted</div>
+  <div class="stat"><strong id="stat-holdouts">—</strong>No breakout</div>
 </div>
+<p class="defn" id="defn" style="display:none">“Broke out” means the state passed the site’s breakout test for this name: a rate clearly above the national rate. A state with no breakout can still have thousands of bearers.</p>
 
 <div class="tooltip" id="tooltip"></div>
 
@@ -402,12 +412,12 @@ function buildMap() {
       const stateName = STATE_NAMES[st] || st;
       let detail;
       if (yr == null) {
-        detail = 'Never reached reporting threshold';
+        detail = 'No breakout here';
       } else if (yr === originYear) {
-        detail = `<span>Origin</span> — first recorded ${yr}`;
+        detail = `<span>Origin</span> — first broke out in ${yr}`;
       } else {
         const lag = yr - originYear;
-        detail = `Adopted in <span>${yr}</span> (${lag} yr${lag !== 1 ? 's' : ''} after origin)`;
+        detail = `Broke out in <span>${yr}</span> (${lag} yr${lag !== 1 ? 's' : ''} after origin)`;
       }
       tip.innerHTML = `<div class="tt-state">${stateName}</div><div class="tt-detail">${detail}</div>`;
       tip.style.opacity = 1;
@@ -505,6 +515,7 @@ async function loadName(name) {
   document.getElementById('controls').style.display = 'none';
   document.getElementById('legend').style.display = 'none';
   document.getElementById('stats').style.display = 'none';
+  document.getElementById('defn').style.display = 'none';
 
   try {
     const res = await fetch(`/api/diaspora/${encodeURIComponent(name)}`);
@@ -517,6 +528,17 @@ async function loadName(name) {
     diaspora = await res.json();
   } catch {
     document.getElementById('loading').textContent = 'Network error.';
+    return;
+  }
+
+  // No origin means no spread to draw: either no state ever broke out, or the name first
+  // appeared in the national records in 1910 or earlier, before state records begin, so its
+  // origin can't be observed. In both cases the API lists all 51 states under neverAdopted,
+  // which would read as 51 states with no breakout.
+  if (!diaspora.origin) {
+    d3.select('#map-container svg').remove();
+    document.getElementById('loading').textContent =
+      `No spread to show for "${name}": either no state ever passed the breakout test for it, or it first appeared in the national records in 1910 or earlier, before state records begin, so its origin can't be observed.`;
     return;
   }
 
@@ -542,6 +564,7 @@ async function loadName(name) {
   document.getElementById('controls').style.display = '';
   document.getElementById('legend').style.display = '';
   document.getElementById('stats').style.display = '';
+  document.getElementById('defn').style.display = '';
 
   buildMap();
 
