@@ -16,6 +16,7 @@ import {
   DATA_MAX_YEAR,
   computeFlashFloods,
   computeGlaciers,
+  computePlateaus,
   csvToNameYearRows,
   chartPanelHtml,
   evaluateClaims,
@@ -113,11 +114,18 @@ function runCompute(def: ContentDefinitionT, data: LoadResult): FactoryResult {
       minPeak: def.compute.minPeak ?? undefined,
     });
   }
-  return computeGlaciers(data.series, data.display, {
+  if (def.compute.family === "glaciers") {
+    return computeGlaciers(data.series, data.display, {
+      minPeak: def.compute.minPeak ?? undefined,
+      minRiseYears: def.compute.minRiseYears ?? undefined,
+      minFallYears: def.compute.minFallYears ?? undefined,
+      thresholdShare: def.compute.thresholdShare ?? undefined,
+    });
+  }
+  return computePlateaus(data.series, data.display, {
     minPeak: def.compute.minPeak ?? undefined,
-    minRiseYears: def.compute.minRiseYears ?? undefined,
-    minFallYears: def.compute.minFallYears ?? undefined,
     thresholdShare: def.compute.thresholdShare ?? undefined,
+    minPlateauYears: def.compute.minPlateauYears ?? undefined,
   });
 }
 

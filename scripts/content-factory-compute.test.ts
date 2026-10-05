@@ -197,7 +197,7 @@ test("SSA CSV pipeline: parse, totals, convert to birth counts", () => {
 
 // ---- Glaciers (slow rise / slow fall) ----
 
-import { computeGlaciers } from "../packages/shared/src/content/factory-compute";
+import { computeGlaciers, computePlateaus } from "../packages/shared/src/content/factory-compute";
 
 const GLOPTS = { dataMaxYear: 2025 };
 
@@ -261,4 +261,62 @@ test("orders glaciers by peakCount desc", () => {
   const disp = new Map([...a.display, ...b.display]);
   const all = computeGlaciers(merged, disp, GLOPTS);
   assert.deepEqual(all.members.map((m) => m.name), ["Big", "Small"]);
+});
+
+// ---- Plateaus (sustained tableland) ----
+
+function plateauSeries(
+  firstYear: number,
+  start: number,
+  end: number,
+  peakYear: number,
+  peak: number,
+): Record<number, number> {
+  const s: Record<number, number> = {};
+  for (let y = firstYear; y <= 2025; y++) {
+    if (y >= start && y <= end) {
+      s[y] = y === peakYear ? peak : Math.round(peak * 0.6);
+    } else {
+      s[y] = Math.round(peak * 0.2);
+    }
+  }
+  return s;
+}
+
+test("detects a plateau: sustained stretch at >= 50% peak for 30+ years", () => {
+  const { series, display } = seriesFrom([
+    ["PlateauMan", "M", plateauSeries(1900, 1920, 1960, 1940, 10000)],
+  ]);
+  const result = computePlateaus(series, display, { dataMaxYear: 2025 });
+  assert.equal(result.members.length, 1);
+  const m = result.members[0]!;
+  assert.equal(m.name, "PlateauMan");
+  assert.equal(m.peakYear, 1940);
+  assert.equal(m.peakCount, 10000);
+  assert.equal(m.plateauStartYear, 1920);
+  assert.equal(m.plateauEndYear, 1960);
+  assert.equal(m.plateauDuration, 41);
+});
+
+test("excludes a plateau whose streak is under 30 years", () => {
+  const { series, display } = seriesFrom([
+    ["ShortStay", "M", plateauSeries(1900, 1920, 1945, 1930, 10000)],
+  ]);
+  assert.equal(computePlateaus(series, display, { dataMaxYear: 2025 }).members.length, 0);
+});
+
+test("excludes a plateau whose peak is below minPeak", () => {
+  const { series, display } = seriesFrom([
+    ["LowHill", "F", plateauSeries(1900, 1920, 1960, 1940, 4000)],
+  ]);
+  assert.equal(computePlateaus(series, display, { dataMaxYear: 2025 }).members.length, 0);
+});
+
+test("orders plateaus by peakCount desc", () => {
+  const a = seriesFrom([["BigPeak", "M", plateauSeries(1900, 1920, 1960, 1940, 20000)]]);
+  const b = seriesFrom([["SmallPeak", "M", plateauSeries(1900, 1920, 1960, 1940, 10000)]]);
+  const merged = new Map([...a.series, ...b.series]);
+  const disp = new Map([...a.display, ...b.display]);
+  const all = computePlateaus(merged, disp, { dataMaxYear: 2025 });
+  assert.deepEqual(all.members.map((m) => m.name), ["BigPeak", "SmallPeak"]);
 });
