@@ -36,8 +36,34 @@ export interface GlaciersResult {
   totalNames: number;
 }
 
+/** A name whose male usage peaked first, then a larger female wave arrived. */
+export interface OneWayStreetMember {
+  name: string;
+  sex: "F";
+  malePeakYear: number;
+  malePeak: number;
+  femalePeakYear: number;
+  femalePeak: number;
+  /** Male count in the female-peak year (overlap). */
+  boysAtFemalePeak: number;
+  /** Female count in the male-peak year (overlap). */
+  girlsAtMalePeak: number;
+  /** Male count at DATA_MAX_YEAR. Detector filter reads this. */
+  maleAtFemalePeak: number;
+  maleLatest: number;
+  femaleLatest: number;
+  peakYear: number;
+  peakCount: number;
+  series: Record<number, number>;
+}
+
+export interface OneWayStreetResult {
+  members: OneWayStreetMember[];
+  totalNames: number;
+}
+
 /** Union accepted by claim functions / renderers across families. */
-export type FactoryResult = FlashFloodsResult | GlaciersResult;
+export type FactoryResult = FlashFloodsResult | GlaciersResult | OneWayStreetResult;
 
 export type FactoryKind = "viz" | "post" | "both";
 export type FactoryRolloutState = "draft" | "reviewed" | "published";
@@ -57,6 +83,14 @@ export type ComputeSpec =
       minRiseYears?: number;
       minFallYears?: number;
       thresholdShare?: number;
+    }
+  | {
+      family: "one-way-street";
+      minMalePeak?: number;
+      minFemalePeak?: number;
+      maxPeakGapYears?: number;
+      maxMaleShareAtFemalePeak?: number;
+      minFemaleToMalePeakRatio?: number;
     };
 
 export type ClaimValue = number | string;
@@ -82,7 +116,7 @@ export interface ContentDefinition {
   claims: Record<
     string,
     (
-      members: Array<FlashFloodMember | GlacierMember>,
+      members: Array<FlashFloodMember | GlacierMember | OneWayStreetMember>,
       meta: { totalNames: number },
     ) => ClaimValue
   >;

@@ -2,7 +2,7 @@
 // Each definition drives both a viz page and a blog post from the same
 // computed numbers. Claims are the ONLY way numbers enter prose.
 
-import type { ContentDefinition, GlacierMember } from "./factory-types";
+import type { ContentDefinition, GlacierMember, OneWayStreetMember } from "./factory-types";
 
 function findPeak(
   members: Array<{ name: string; sex: string; peakCount: number }>,
@@ -16,6 +16,12 @@ function findPeak(
 function findMember<T extends { name: string }>(members: T[], name: string): T {
   const hit = members.find((m) => m.name === name);
   if (!hit) throw new Error(`expected member "${name}" not detected in data`);
+  return hit;
+}
+
+function findOneWay(members: Array<OneWayStreetMember>, name: string): OneWayStreetMember {
+  const hit = members.find((m) => m.name === name);
+  if (!hit) throw new Error(`one-way-street: expected member "${name}" not detected in data`);
   return hit;
 }
 
@@ -122,6 +128,100 @@ export const CONTENT_DEFINITIONS: ContentDefinition[] = [
       { key: "christopherPeak", equals: 60021 },
       { key: "barbaraPeak", equals: 48800 },
       { key: "sarahPeak", equals: 28483 },
+    ],
+  },
+  {
+    slug: "one-way-street",
+    kind: "both",
+    title: "The One-Way Street — When Names Crossed From Boys to Girls",
+    description:
+      "In 1980, 746 boys were named Ashley. That year 7,296 girls were too. Twenty-five names made that crossing. The boys did not come back.",
+    sourceVersion: "ssa-national-2025",
+    rolloutState: "draft",
+    compute: {
+      family: "one-way-street",
+      minMalePeak: 500,
+      minFemalePeak: 500,
+      maxPeakGapYears: 20,
+      maxMaleShareAtFemalePeak: 0.2,
+      minFemaleToMalePeakRatio: 1.5,
+    },
+    panels: ["Ashley|F", "Taylor|F", "Tracy|F", "Kelly|F", "Leslie|F"],
+    sourceNote:
+      "Names shown had male and female peaks of at least 500 births, with the female peak arriving within 20 years and at least 1.5× larger, and male use down below 20% of its peak by 2025.",
+    claims: {
+      count: (m) => m.length,
+      topName: (m) => m[0]?.name ?? "none",
+      topFemalePeak: (m) => (m[0] as OneWayStreetMember)?.femalePeak ?? 0,
+      topMalePeak: (m) => (m[0] as OneWayStreetMember)?.malePeak ?? 0,
+      ashleyMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Ashley").malePeak,
+      ashleyFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Ashley").femalePeak,
+      ashleyMaleYear: (m) => findOneWay(m as OneWayStreetMember[], "Ashley").malePeakYear,
+      ashleyFemaleYear: (m) => findOneWay(m as OneWayStreetMember[], "Ashley").femalePeakYear,
+      ashleyGirlsAtMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Ashley").girlsAtMalePeak,
+      ashleyBoysAtFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Ashley").boysAtFemalePeak,
+      ashleyMaleLatest: (m) => findOneWay(m as OneWayStreetMember[], "Ashley").maleLatest,
+      ashleyFemaleLatest: (m) => findOneWay(m as OneWayStreetMember[], "Ashley").femaleLatest,
+      taylorMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Taylor").malePeak,
+      taylorFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Taylor").femalePeak,
+      taylorMaleYear: (m) => findOneWay(m as OneWayStreetMember[], "Taylor").malePeakYear,
+      taylorFemaleYear: (m) => findOneWay(m as OneWayStreetMember[], "Taylor").femalePeakYear,
+      taylorGirlsAtMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Taylor").girlsAtMalePeak,
+      taylorBoysAtFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Taylor").boysAtFemalePeak,
+      tracyMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Tracy").malePeak,
+      tracyFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Tracy").femalePeak,
+      tracyMaleYear: (m) => findOneWay(m as OneWayStreetMember[], "Tracy").malePeakYear,
+      tracyFemaleYear: (m) => findOneWay(m as OneWayStreetMember[], "Tracy").femalePeakYear,
+      tracyGirlsAtMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Tracy").girlsAtMalePeak,
+      tracyBoysAtFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Tracy").boysAtFemalePeak,
+      kellyMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Kelly").malePeak,
+      kellyFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Kelly").femalePeak,
+      kellyMaleYear: (m) => findOneWay(m as OneWayStreetMember[], "Kelly").malePeakYear,
+      kellyFemaleYear: (m) => findOneWay(m as OneWayStreetMember[], "Kelly").femalePeakYear,
+      kellyGirlsAtMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Kelly").girlsAtMalePeak,
+      leslieMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Leslie").malePeak,
+      leslieFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Leslie").femalePeak,
+      leslieMaleYear: (m) => findOneWay(m as OneWayStreetMember[], "Leslie").malePeakYear,
+      leslieFemaleYear: (m) => findOneWay(m as OneWayStreetMember[], "Leslie").femalePeakYear,
+      leslieGirlsAtMalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Leslie").girlsAtMalePeak,
+      leslieBoysAtFemalePeak: (m) => findOneWay(m as OneWayStreetMember[], "Leslie").boysAtFemalePeak,
+    },
+    asserts: [
+      { key: "count", equals: 25 },
+      { key: "topName", equals: "Ashley" },
+      { key: "topFemalePeak", equals: 54856 },
+      { key: "topMalePeak", equals: 746 },
+      { key: "ashleyMalePeak", equals: 746 },
+      { key: "ashleyFemalePeak", equals: 54856 },
+      { key: "ashleyMaleYear", equals: 1980 },
+      { key: "ashleyFemaleYear", equals: 1987 },
+      { key: "ashleyGirlsAtMalePeak", equals: 7296 },
+      { key: "ashleyBoysAtFemalePeak", equals: 409 },
+      { key: "ashleyMaleLatest", equals: 27 },
+      { key: "ashleyFemaleLatest", equals: 1829 },
+      { key: "taylorMalePeak", equals: 8239 },
+      { key: "taylorFemalePeak", equals: 21270 },
+      { key: "taylorMaleYear", equals: 1992 },
+      { key: "taylorFemaleYear", equals: 1993 },
+      { key: "taylorGirlsAtMalePeak", equals: 14954 },
+      { key: "taylorBoysAtFemalePeak", equals: 7688 },
+      { key: "tracyMalePeak", equals: 3380 },
+      { key: "tracyFemalePeak", equals: 18464 },
+      { key: "tracyMaleYear", equals: 1966 },
+      { key: "tracyFemaleYear", equals: 1970 },
+      { key: "tracyGirlsAtMalePeak", equals: 12504 },
+      { key: "tracyBoysAtFemalePeak", equals: 1776 },
+      { key: "kellyMalePeak", equals: 3093 },
+      { key: "kellyFemalePeak", equals: 18234 },
+      { key: "kellyMaleYear", equals: 1967 },
+      { key: "kellyFemaleYear", equals: 1977 },
+      { key: "kellyGirlsAtMalePeak", equals: 13717 },
+      { key: "leslieMalePeak", equals: 2358 },
+      { key: "leslieFemalePeak", equals: 6103 },
+      { key: "leslieMaleYear", equals: 1952 },
+      { key: "leslieFemaleYear", equals: 1957 },
+      { key: "leslieGirlsAtMalePeak", equals: 3573 },
+      { key: "leslieBoysAtFemalePeak", equals: 2096 },
     ],
   },
 ];
