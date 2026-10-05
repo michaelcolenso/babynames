@@ -10,6 +10,8 @@ import type {
   FlashFloodsResult,
   GlacierMember,
   GlaciersResult,
+  PlateauMember,
+  PlateausResult,
 } from "./factory-types";
 import { buildSparkline } from "../sparkline";
 import { classify } from "../classify";
@@ -173,6 +175,92 @@ export function computeGlaciers(
       peakCount,
       fallEndYear,
       fallEndCount: s[fallEndYear] ?? 0,
+      finalCount: s[opts.dataMaxYear] ?? 0,
+      series: s,
+    });
+  }
+
+  members.sort((a, b) => b.peakCount - a.peakCount || a.name.localeCompare(b.name));
+  return { members, totalNames: series.size };
+}
+
+export interface PlateauOptions {
+  minPeak: number; // default 5000
+  thresholdShare: number; // default 0.50 — at least 50% of peak count
+  minPlateauYears: number; // default 30 consecutive years
+  dataMaxYear: number;
+}
+
+export const DEFAULT_PLATEAU_OPTIONS: PlateauOptions = {
+  minPeak: 5000,
+  thresholdShare: 0.5,
+  minPlateauYears: 30,
+  dataMaxYear: DATA_MAX_YEAR,
+};
+
+/**
+ * Plateau: the name reaches a major peak (>= minPeak) and maintains at least
+ * thresholdShare (50%) of its peak count across at least minPlateauYears (30)
+ * consecutive calendar years.
+ */
+export function computePlateaus(
+  series: Map<string, Record<number, number>>,
+  displayNames: Map<string, string>,
+  options: Partial<PlateauOptions> = {},
+): PlateausResult {
+  const opts = { ...DEFAULT_PLATEAU_OPTIONS, ...options };
+  const members: PlateauMember[] = [];
+
+  for (const [key, s] of series) {
+    const years = [...Object.keys(s).map(Number)].sort((a, b) => a - b);
+    if (years.length === 0) continue;
+
+    let peakYear = years[0]!;
+    let peakCount = 0;
+    for (const y of years) {
+      if (s[y]! > peakCount) {
+        peakCount = s[y]!;
+        peakYear = y;
+      }
+    }
+    if (peakCount < opts.minPeak) continue;
+
+    const thresh = peakCount * opts.thresholdShare;
+    const firstYear = years[0]!;
+    const lastYear = years[years.length - 1]!;
+
+    let maxStreak = 0;
+    let curStreak = 0;
+    let sStart = firstYear;
+    let bStart = firstYear;
+    let bEnd = firstYear;
+
+    for (let y = firstYear; y <= lastYear; y++) {
+      const c = s[y] ?? 0;
+      if (c >= thresh) {
+        if (curStreak === 0) sStart = y;
+        curStreak++;
+        if (curStreak > maxStreak) {
+          maxStreak = curStreak;
+          bStart = sStart;
+          bEnd = y;
+        }
+      } else {
+        curStreak = 0;
+      }
+    }
+
+    if (maxStreak < opts.minPlateauYears) continue;
+
+    members.push({
+      name: displayNames.get(key) ?? key.split("|")[0]!,
+      sex: key.split("|")[1] ?? "",
+      firstYear,
+      peakYear,
+      peakCount,
+      plateauStartYear: bStart,
+      plateauEndYear: bEnd,
+      plateauDuration: maxStreak,
       finalCount: s[opts.dataMaxYear] ?? 0,
       series: s,
     });

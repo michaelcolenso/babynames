@@ -36,8 +36,27 @@ export interface GlaciersResult {
   totalNames: number;
 }
 
+/** Sustained tableland — at least 50% of peak for 30+ consecutive years. */
+export interface PlateauMember {
+  name: string;
+  sex: string;
+  firstYear: number;
+  peakYear: number;
+  peakCount: number;
+  plateauStartYear: number;
+  plateauEndYear: number;
+  plateauDuration: number;
+  finalCount: number;
+  series: Record<number, number>;
+}
+
+export interface PlateausResult {
+  members: PlateauMember[];
+  totalNames: number;
+}
+
 /** Union accepted by claim functions / renderers across families. */
-export type FactoryResult = FlashFloodsResult | GlaciersResult;
+export type FactoryResult = FlashFloodsResult | GlaciersResult | PlateausResult;
 
 export type FactoryKind = "viz" | "post" | "both";
 export type FactoryRolloutState = "draft" | "reviewed" | "published";
@@ -57,6 +76,12 @@ export type ComputeSpec =
       minRiseYears?: number;
       minFallYears?: number;
       thresholdShare?: number;
+    }
+  | {
+      family: "plateaus";
+      minPeak?: number;
+      thresholdShare?: number;
+      minPlateauYears?: number;
     };
 
 export type ClaimValue = number | string;
@@ -82,7 +107,7 @@ export interface ContentDefinition {
   claims: Record<
     string,
     (
-      members: Array<FlashFloodMember | GlacierMember>,
+      members: Array<FlashFloodMember | GlacierMember | PlateauMember>,
       meta: { totalNames: number },
     ) => ClaimValue
   >;
