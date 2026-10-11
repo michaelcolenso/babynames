@@ -4,6 +4,7 @@
 // renames staging onto live in one transaction.
 
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
+import { rowsPerStatement } from "@nv/shared";
 import type { ChunkRow, StateRow, YearTotalRow } from "./chunks";
 
 export const RAW_STAGING_DDL = `CREATE TABLE IF NOT EXISTS name_year_raw_staging (
@@ -27,8 +28,12 @@ export async function clearStagingForRun(db: D1Database, runId: string): Promise
   ]);
 }
 
-// 100 rows per INSERT keeps each statement well under D1's bind cap and
-// yields ~10 statements per chunk, ~10 subrequests per consumer call.
+// National `rows` chunks (insertRowChunk): 100 rows per INSERT, ~10 statements
+// per chunk. NOTE: at 5 placeholders per row that is 500 bound variables, five
+// times D1's per-statement ceiling (D1_MAX_BOUND_PARAMS), so D1 rejects this
+// INSERT in production just as it rejected the state pipeline's. Not fixed here:
+// the national pipeline's compute step binds more than 100 variables too and
+// needs a larger change than resizing a constant.
 const STMT_ROWS = 100;
 
 export async function insertRowChunk(
@@ -51,17 +56,24 @@ export async function insertRowChunk(
   await db.batch(stmts);
 }
 
+// A state row binds 5 placeholders (name, sex, year, state, count), so D1's
+// 100-variable ceiling allows 20 rows per statement: a full 1 000-row message is
+// 50 statements, sent as one batch.
+const STATE_ROW_COLUMNS = 5;
+const STATE_ROW_TUPLE = `(${Array.from({ length: STATE_ROW_COLUMNS }, () => "?").join(", ")})`;
+const STATE_STMT_ROWS = rowsPerStatement(STATE_ROW_COLUMNS);
+
 // Raw state rows go straight to the live name_states table. INSERT OR REPLACE
 // is idempotent on the PK so queue retries are safe; no staging is needed
 // because name_states is read only by the diaspora compute step, never /api/*.
 export async function insertStateRows(db: D1Database, rows: StateRow[]): Promise<void> {
   if (!rows.length) return;
   const stmts: D1PreparedStatement[] = [];
-  for (let i = 0; i < rows.length; i += STMT_ROWS) {
-    const slice = rows.slice(i, i + STMT_ROWS);
+  for (let i = 0; i < rows.length; i += STATE_STMT_ROWS) {
+    const slice = rows.slice(i, i + STATE_STMT_ROWS);
     const sql =
       `INSERT OR REPLACE INTO name_states(name, sex, year, state, count) VALUES ` +
-      slice.map(() => "(?, ?, ?, ?, ?)").join(",");
+      slice.map(() => STATE_ROW_TUPLE).join(",");
     const binds: (string | number)[] = [];
     for (const r of slice) binds.push(r.name, r.sex, r.year, r.state, r.count);
     stmts.push(db.prepare(sql).bind(...binds));
