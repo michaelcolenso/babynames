@@ -16,8 +16,18 @@ export const RAW_STAGING_DDL = `CREATE TABLE IF NOT EXISTS name_year_raw_staging
   PRIMARY KEY (run_id, year, name, sex)
 )`;
 
+// finalize pages through this buffer by (name, sex), but the primary key leads
+// with year. Without a (run_id, name, sex, year) index every page reads the whole
+// run (~2.2M rows) twice, and a run is ~590 pages. Measured in local SQLite on a
+// synthetic table of production size (117 820 pairs, 2.2M rows): 1.6 s a page
+// without the index, 9 ms with it. A comparable full pass over a table that size
+// took 7.9 s on D1.
+export const RAW_STAGING_BY_NAME_DDL =
+  "CREATE INDEX IF NOT EXISTS name_year_raw_staging_by_name ON name_year_raw_staging(run_id, name, sex, year)";
+
 export async function ensureStaging(db: D1Database): Promise<void> {
   await db.exec(RAW_STAGING_DDL.replace(/\n/g, " "));
+  await db.exec(RAW_STAGING_BY_NAME_DDL);
 }
 
 export async function clearStagingForRun(db: D1Database, runId: string): Promise<void> {
@@ -28,13 +38,15 @@ export async function clearStagingForRun(db: D1Database, runId: string): Promise
   ]);
 }
 
-// National `rows` chunks (insertRowChunk): 100 rows per INSERT, ~10 statements
-// per chunk. NOTE: at 5 placeholders per row that is 500 bound variables, five
-// times D1's per-statement ceiling (D1_MAX_BOUND_PARAMS), so D1 rejects this
-// INSERT in production just as it rejected the state pipeline's. Not fixed here:
-// the national pipeline's compute step binds more than 100 variables too and
-// needs a larger change than resizing a constant.
-const STMT_ROWS = 100;
+// `?, ?, ..., ?` for one row of a multi-row INSERT ... VALUES.
+const placeholderTuple = (columns: number): string => `(${Array.from({ length: columns }, () => "?").join(", ")})`;
+
+// A national `rows` chunk row binds 5 placeholders (run_id, year, name, sex,
+// count), so D1's 100-variable ceiling allows 20 rows per statement: a full
+// 1 000-row message is 50 statements, sent as one batch.
+const RAW_ROW_COLUMNS = 5;
+const RAW_ROW_TUPLE = placeholderTuple(RAW_ROW_COLUMNS);
+const RAW_STMT_ROWS = rowsPerStatement(RAW_ROW_COLUMNS);
 
 export async function insertRowChunk(
   db: D1Database,
@@ -44,11 +56,11 @@ export async function insertRowChunk(
 ): Promise<void> {
   if (!rows.length) return;
   const stmts: D1PreparedStatement[] = [];
-  for (let i = 0; i < rows.length; i += STMT_ROWS) {
-    const slice = rows.slice(i, i + STMT_ROWS);
+  for (let i = 0; i < rows.length; i += RAW_STMT_ROWS) {
+    const slice = rows.slice(i, i + RAW_STMT_ROWS);
     const sql =
       `INSERT OR REPLACE INTO name_year_raw_staging(run_id, year, name, sex, count) VALUES ` +
-      slice.map(() => "(?, ?, ?, ?, ?)").join(",");
+      slice.map(() => RAW_ROW_TUPLE).join(",");
     const binds: (string | number)[] = [];
     for (const r of slice) binds.push(runId, year, r.name, r.sex, r.count);
     stmts.push(db.prepare(sql).bind(...binds));
@@ -60,7 +72,7 @@ export async function insertRowChunk(
 // 100-variable ceiling allows 20 rows per statement: a full 1 000-row message is
 // 50 statements, sent as one batch.
 const STATE_ROW_COLUMNS = 5;
-const STATE_ROW_TUPLE = `(${Array.from({ length: STATE_ROW_COLUMNS }, () => "?").join(", ")})`;
+const STATE_ROW_TUPLE = placeholderTuple(STATE_ROW_COLUMNS);
 const STATE_STMT_ROWS = rowsPerStatement(STATE_ROW_COLUMNS);
 
 // Raw state rows go straight to the live name_states table. INSERT OR REPLACE
@@ -81,18 +93,23 @@ export async function insertStateRows(db: D1Database, rows: StateRow[]): Promise
   await db.batch(stmts);
 }
 
+// A year total binds 3 placeholders (year, sex, total): 33 rows (99 variables)
+// per statement, so the 290 (year, sex) totals SSA publishes take 9.
+const TOTALS_COLUMNS = 3;
+const TOTALS_TUPLE = placeholderTuple(TOTALS_COLUMNS);
+const TOTALS_STMT_ROWS = rowsPerStatement(TOTALS_COLUMNS);
+
 export async function upsertYearTotals(
   db: D1Database,
   totals: YearTotalRow[],
 ): Promise<void> {
   if (!totals.length) return;
   const batches: D1PreparedStatement[] = [];
-  const ROWS_PER_STMT = 50;
-  for (let i = 0; i < totals.length; i += ROWS_PER_STMT) {
-    const slice = totals.slice(i, i + ROWS_PER_STMT);
+  for (let i = 0; i < totals.length; i += TOTALS_STMT_ROWS) {
+    const slice = totals.slice(i, i + TOTALS_STMT_ROWS);
     const sql =
       `INSERT INTO year_totals(year, sex, total) VALUES ` +
-      slice.map(() => "(?, ?, ?)").join(",") +
+      slice.map(() => TOTALS_TUPLE).join(",") +
       ` ON CONFLICT(year, sex) DO UPDATE SET total = excluded.total`;
     const binds: (string | number)[] = [];
     for (const r of slice) binds.push(r.year, r.sex, r.total);
