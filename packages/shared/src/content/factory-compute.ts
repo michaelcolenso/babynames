@@ -6,13 +6,19 @@
 import type {
   ClaimValue,
   ContentDefinition,
+  FactoryResult,
   FlashFloodMember,
   FlashFloodsResult,
   GlacierMember,
   GlaciersResult,
+  GrandmotherMember,
+  GrandmotherNamesResult,
 } from "./factory-types";
 import { buildSparkline } from "../sparkline";
 import { classify } from "../classify";
+import { ANALYSIS_YEAR, ageQuantiles } from "../enrichment-compute";
+import { ageShare, assertLifeTableComplete, livingAgeDistribution } from "../life-table";
+import type { SurvivalTable } from "../life-table";
 import type { Status } from "../schema";
 
 export const DATA_MIN_YEAR = 1880;
@@ -182,6 +188,120 @@ export function computeGlaciers(
   return { members, totalNames: series.size };
 }
 
+export interface GrandmotherOptions {
+  minLiving: number; // default 100_000 — a name has to be big to qualify
+  minOver50Share: number; // default 0.90 — "almost nobody young"
+  analysisYear: number; // default ANALYSIS_YEAR (2026)
+  dataMaxYear: number; // latest recorded year (for latestCount)
+  nearMissFloor: number; // default 25_000 — the tier reported as boys' near-misses
+}
+
+export const DEFAULT_GRANDMOTHER_OPTIONS: GrandmotherOptions = {
+  minLiving: 100_000,
+  minOver50Share: 0.9,
+  analysisYear: ANALYSIS_YEAR,
+  dataMaxYear: DATA_MAX_YEAR,
+  nearMissFloor: 25_000,
+};
+
+/**
+ * Grandmother names: a name with at least `minLiving` living bearers (SSA
+ * births aged to `analysisYear` with the shared life table) whose living
+ * population is at least `minOver50Share` aged 50 and over.
+ *
+ * Two rows outside `members` come back with the family:
+ * `youngest` is the name with the lowest median age at or above the living
+ * floor — the same-size contrast the post closes on — and `maleNearMisses`
+ * holds boys' names that clear the 50+ share between `nearMissFloor` and the
+ * living floor.
+ */
+export function computeGrandmotherNames(
+  series: Map<string, Record<number, number>>,
+  displayNames: Map<string, string>,
+  table: SurvivalTable,
+  options: Partial<GrandmotherOptions> = {},
+): GrandmotherNamesResult {
+  // Resolve each option explicitly: callers (the CLI among them) pass
+  // `undefined` for anything the definition leaves out, and a spread would
+  // overwrite the defaults with undefined — which silently ages every cohort
+  // to NaN and returns zero members.
+  const opts: GrandmotherOptions = {
+    minLiving: options.minLiving ?? DEFAULT_GRANDMOTHER_OPTIONS.minLiving,
+    minOver50Share: options.minOver50Share ?? DEFAULT_GRANDMOTHER_OPTIONS.minOver50Share,
+    analysisYear: options.analysisYear ?? DEFAULT_GRANDMOTHER_OPTIONS.analysisYear,
+    dataMaxYear: options.dataMaxYear ?? DEFAULT_GRANDMOTHER_OPTIONS.dataMaxYear,
+    nearMissFloor: options.nearMissFloor ?? DEFAULT_GRANDMOTHER_OPTIONS.nearMissFloor,
+  };
+  if (!Number.isFinite(opts.analysisYear) || opts.analysisYear <= 0) {
+    throw new Error(`grandmother-names: invalid analysisYear (${String(opts.analysisYear)})`);
+  }
+  assertLifeTableComplete(table);
+
+  const scoreFloor = Math.min(opts.minLiving, opts.nearMissFloor);
+  const atFloor: GrandmotherMember[] = [];
+  for (const [key, s] of series) {
+    const years = Object.keys(s).map(Number).sort((a, b) => a - b);
+    if (years.length === 0) continue;
+
+    let total = 0;
+    for (const y of years) total += s[y]!;
+    if (total < scoreFloor) continue; // living can never exceed total births
+
+    const { living, ages } = livingAgeDistribution(s, key.split("|")[1] === "M" ? "M" : "F", opts.analysisYear, table);
+    if (living < scoreFloor) continue;
+
+    const quantiles = ageQuantiles(ages);
+    let peakYear = years[0]!;
+    let peakCount = 0;
+    for (const y of years) {
+      if (s[y]! > peakCount) {
+        peakCount = s[y]!;
+        peakYear = y;
+      }
+    }
+    const lastBirthYear = years[years.length - 1]!;
+
+    atFloor.push({
+      name: displayNames.get(key) ?? key.split("|")[0]!,
+      sex: key.split("|")[1] ?? "",
+      firstYear: years[0]!,
+      peakYear,
+      peakCount,
+      livingEst: Math.round(living),
+      medianAge: quantiles.median,
+      over50Share: ageShare(ages, living, 50, Number.POSITIVE_INFINITY),
+      under18Share: ageShare(ages, living, 0, 18),
+      lastBirthYear,
+      latestCount: s[opts.dataMaxYear] ?? 0,
+      series: s,
+    });
+  }
+
+  const qualified = atFloor.filter((m) => m.over50Share >= opts.minOver50Share);
+  const members = qualified
+    .filter((m) => m.livingEst >= opts.minLiving)
+    .sort((a, b) => b.livingEst - a.livingEst || a.name.localeCompare(b.name));
+
+  // The contrast case is the youngest name in the SAME size class — the living
+  // floor, not the wider near-miss floor.
+  const youngest =
+    [...atFloor]
+      .filter((m) => m.livingEst >= opts.minLiving)
+      .sort((a, b) => a.medianAge - b.medianAge || b.livingEst - a.livingEst)[0] ?? null;
+
+  return {
+    members,
+    totalNames: series.size,
+    atFloor: atFloor.filter((m) => m.livingEst >= opts.minLiving).length,
+    analysisYear: opts.analysisYear,
+    youngest,
+    maleNearMisses: qualified
+      .filter((m) => m.sex === "M" && m.livingEst < opts.minLiving)
+      .sort((a, b) => b.livingEst - a.livingEst || a.name.localeCompare(b.name)),
+    nearMissFloor: opts.nearMissFloor,
+  };
+}
+
 export interface SsaCsvRow {
   year: number;
   name: string;
@@ -263,11 +383,21 @@ export function csvToNameYearRows(rows: SsaCsvRow[], totals: Map<number, { male:
 
 export function evaluateClaims(
   def: ContentDefinition,
-  result: FlashFloodsResult | GlaciersResult,
+  result: FactoryResult,
 ): Record<string, ClaimValue> {
   const evaluated: Record<string, ClaimValue> = {};
+  const meta = {
+    totalNames: result.totalNames,
+    youngest: "youngest" in result ? result.youngest : undefined,
+    analysisYear: "analysisYear" in result ? result.analysisYear : undefined,
+    atFloor: "atFloor" in result ? result.atFloor : undefined,
+    maleNearMisses: "maleNearMisses" in result ? result.maleNearMisses : undefined,
+  };
   for (const [key, fn] of Object.entries(def.claims)) {
-    const v = fn(result.members as Array<FlashFloodMember | GlacierMember>, { totalNames: result.totalNames });
+    const v = fn(
+      result.members as Array<FlashFloodMember | GlacierMember | GrandmotherMember>,
+      meta,
+    );
     if (typeof v !== "number" && typeof v !== "string") {
       throw new Error(`Claim "${key}" in ${def.slug} did not resolve to a number or string`);
     }

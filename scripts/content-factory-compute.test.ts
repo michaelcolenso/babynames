@@ -262,3 +262,169 @@ test("orders glaciers by peakCount desc", () => {
   const all = computeGlaciers(merged, disp, GLOPTS);
   assert.deepEqual(all.members.map((m) => m.name), ["Big", "Small"]);
 });
+
+// ---- Grandmother names (living population aged 50+) ----
+
+import { computeGrandmotherNames } from "../packages/shared/src/content/factory-compute";
+import type { GrandmotherMember } from "../packages/shared/src/content/factory-types";
+import type { SurvivalTable } from "../packages/shared/src/life-table";
+
+// Sparse checkpoints, same shape as data/manual/life-table.csv.
+const LIFE: SurvivalTable = {
+  M: [
+    [0, 1],
+    [10, 0.99],
+    [20, 0.98],
+    [50, 0.9],
+    [70, 0.6],
+    [90, 0.3],
+    [119, 0],
+  ],
+  F: [
+    [0, 1],
+    [10, 0.99],
+    [20, 0.98],
+    [50, 0.9],
+    [70, 0.6],
+    [90, 0.3],
+    [119, 0],
+  ],
+};
+
+// 1940 births sit at age 86 in 2026 (survival 0.36 → 3,000 births ≈ 1,080 living, all 50+).
+const OLD: Record<number, number> = { 1940: 3000 };
+// 2025 births sit at age 1 — the same pool, at the other end of the age range.
+const YOUNG: Record<number, number> = { 2025: 5000 };
+// Half old, half young: 1,474 living across ages 76 and 26, ~35% aged 50+.
+const SPLIT: Record<number, number> = { 1950: 1000, 2000: 1000 };
+
+test("grandmother names: detects an old living population and ignores a young one", () => {
+  const { series, display } = seriesFrom([
+    ["Olda", "F", OLD],
+    ["Newa", "F", YOUNG],
+    ["Half", "F", SPLIT],
+  ]);
+  const result = computeGrandmotherNames(series, display, LIFE, { minLiving: 1000 });
+  assert.deepEqual(result.members.map((m) => m.name), ["Olda"]);
+  assert.equal(result.atFloor, 3);
+  assert.equal(result.totalNames, 3);
+
+  const olda = result.members[0]!;
+  assert.equal(olda.livingEst, 1080); // 3,000 × 0.36
+  assert.equal(olda.medianAge, 86);
+  assert.equal(olda.over50Share, 1);
+  assert.equal(olda.peakYear, 1940);
+  assert.equal(olda.peakCount, 3000);
+
+  // The contrast case is the youngest name at or above the living floor.
+  assert.equal(result.youngest?.name, "Newa");
+  assert.equal(result.youngest?.medianAge, 1);
+});
+
+test("grandmother names: living floor and 50+ share are both enforced", () => {
+  const { series, display } = seriesFrom([
+    ["Olda", "F", OLD],
+    ["Newa", "F", YOUNG],
+    ["Half", "F", SPLIT],
+  ]);
+
+  // Olda (1,080) is under a 2,000 floor; Newa (4,995) is over it but young.
+  const high = computeGrandmotherNames(series, display, LIFE, { minLiving: 2000 });
+  assert.deepEqual(high.members, []);
+
+  // Half is 35% aged 50+, so a 30% bar takes it and a 90% bar does not.
+  assert.deepEqual(
+    computeGrandmotherNames(series, display, LIFE, { minLiving: 1000, minOver50Share: 0.3 })
+      .members.map((m) => m.name),
+    ["Half", "Olda"], // sorted by living population, not by age
+  );
+  assert.deepEqual(
+    computeGrandmotherNames(series, display, LIFE, { minLiving: 1000, minOver50Share: 0.9 })
+      .members.map((m) => m.name),
+    ["Olda"],
+  );
+});
+
+test("grandmother names: omitted options fall back to the defaults, not to undefined", () => {
+  // The CLI passes `undefined` for every option a definition leaves out; a
+  // spread of those would age every cohort against a NaN reference year.
+  const { series, display } = seriesFrom([["Olda", "F", OLD]]);
+  const explicitUndefined = computeGrandmotherNames(series, display, LIFE, {
+    minLiving: 1000,
+    minOver50Share: undefined,
+    analysisYear: undefined,
+  });
+  assert.deepEqual(explicitUndefined.members.map((m) => m.name), ["Olda"]);
+  assert.equal(explicitUndefined.analysisYear, 2026);
+  assert.throws(
+    () => computeGrandmotherNames(series, display, LIFE, { analysisYear: Number.NaN }),
+    /invalid analysisYear/,
+  );
+});
+
+test("grandmother names: sexes are aged against their own survival rows and sorted by living", () => {
+  const table: SurvivalTable = { ...LIFE, M: [[0, 1], [119, 1]] }; // men survive everything
+  const { series, display } = seriesFrom([
+    ["Olda", "F", OLD],
+    ["Oldo", "M", OLD],
+  ]);
+  const result = computeGrandmotherNames(series, display, table, { minLiving: 1000 });
+  assert.deepEqual(result.members.map((m) => `${m.name}|${m.sex}`), ["Oldo|M", "Olda|F"]);
+  assert.equal(result.members[0]!.livingEst, 3000); // full survival
+  assert.equal(result.members[1]!.livingEst, 1080);
+  assert.throws(
+    () => computeGrandmotherNames(series, display, { M: [], F: [] }, { minLiving: 1000 }),
+    /missing M or F rows/,
+  );
+});
+
+test("grandmother names: boys between the near-miss floor and the living floor are reported", () => {
+  const { series, display } = seriesFrom([
+    ["Olda", "F", OLD], // 1,080 living — a member at a 1,000 floor
+    ["Nicky", "M", { 1940: 1200 }], // 432 living — clears the 50+ share, below the floor
+    ["Newa", "F", YOUNG], // young, so never a near-miss
+  ]);
+  const result = computeGrandmotherNames(series, display, LIFE, {
+    minLiving: 1000,
+    nearMissFloor: 400,
+  });
+  assert.deepEqual(result.members.map((m) => m.name), ["Olda"]);
+  assert.deepEqual(result.maleNearMisses.map((m) => m.name), ["Nicky"]);
+  assert.equal(result.nearMissFloor, 400);
+  assert.equal(result.atFloor, 2); // Olda and Newa are at the floor; Nicky is not
+
+  // Below the near-miss floor the name is not even scored.
+  const strict = computeGrandmotherNames(series, display, LIFE, {
+    minLiving: 1000,
+    nearMissFloor: 500,
+  });
+  assert.deepEqual(strict.maleNearMisses, []);
+});
+
+test("grandmother names: claims read members plus the result-level fields", () => {
+  const def: ContentDefinition = {
+    slug: "t", kind: "both", title: "T", description: "d",
+    sourceVersion: "v", rolloutState: "draft",
+    compute: { family: "grandmother-names" },
+    claims: {
+      count: (m) => m.length,
+      youngestName: (_m, meta) => meta.youngest?.name ?? "none",
+      youngestMedianAge: (_m, meta) => meta.youngest?.medianAge ?? 0,
+      atFloor: (_m, meta) => meta.atFloor ?? -1,
+      combinedLiving: (m) => (m as GrandmotherMember[]).reduce((s, x) => s + x.livingEst, 0),
+    },
+    asserts: [{ key: "youngestName", equals: "Newa" }, { key: "count", equals: 1 }],
+  };
+  const { series, display } = seriesFrom([
+    ["Olda", "F", OLD],
+    ["Newa", "F", YOUNG],
+  ]);
+  const result = computeGrandmotherNames(series, display, LIFE, { minLiving: 1000 });
+  const claims = evaluateClaims(def, result);
+  assert.equal(claims.count, 1);
+  assert.equal(claims.youngestName, "Newa");
+  assert.equal(claims.youngestMedianAge, 1);
+  assert.equal(claims.atFloor, 2);
+  assert.equal(claims.combinedLiving, 1080);
+  assert.deepEqual(verifyAsserts(def, claims), []);
+});
