@@ -24,6 +24,7 @@ export * from "./viz-payloads";
 export * from "./spark-blob";
 export * from "./enrich";
 export * from "./enrichment-compute";
+export * from "./life-table";
 export * from "./content-identity";
 export * from "./analytics";
 export * from "./indexable-routes";

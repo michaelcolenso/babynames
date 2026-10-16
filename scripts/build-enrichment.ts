@@ -36,7 +36,28 @@ import {
   selectStoredRegionalAnomalies,
   weightedStdDev,
 } from "../packages/shared/src/enrichment-compute";
+import {
+  assertLifeTableComplete,
+  buildSurvivalTable,
+  parseLifeTableCsv,
+  survivalAt,
+  type LifeTableRow,
+  type SurvivalTable,
+} from "../packages/shared/src/life-table";
 import type { CatalystType, Sex, WaveTopology } from "../packages/shared/src/schema";
+
+// Life-table helpers live in @nv/shared so the content factory ages births the
+// same way this builder does. Re-exported here for the script's existing
+// callers and scripts/enrichment.test.ts.
+export {
+  assertLifeTableComplete,
+  buildSurvivalTable,
+  parseLifeTableCsv,
+  survivalAt,
+  type LifeTableRow,
+  type SurvivalTable,
+} from "../packages/shared/src/life-table";
+
 
 const NATIONAL_URL = "https://www.ssa.gov/oact/babynames/names.zip";
 const STATE_URL = "https://www.ssa.gov/oact/babynames/state/namesbystate.zip";
@@ -55,13 +76,6 @@ const MAX_CURRENT_ANOMALIES = 12; // latest-era rows available to the map
 // ---------------------------------------------------------------------------
 // Pure computation — inputs and outputs.
 // ---------------------------------------------------------------------------
-
-/** One checkpoint of data/manual/life-table.csv: cumulative survival from birth to `age`. */
-export interface LifeTableRow {
-  sex: Sex;
-  age: number;
-  survival_probability: number;
-}
 
 export interface NationalNameInput {
   name: string;
@@ -211,51 +225,10 @@ export function parseCsv(text: string): string[][] {
 }
 
 // ---------------------------------------------------------------------------
-// Life table: cumulative survival from birth to a given age, by sex.
-// CSV holds sparse checkpoints; we linearly interpolate between them.
+// Life table helpers: parsed/sorted/interpolated in @nv/shared (see the
+// re-export at the top of this file) so the content factory ages births the
+// same way this builder does.
 // ---------------------------------------------------------------------------
-export type SurvivalTable = Record<Sex, [number, number][]>; // sorted [age, survival]
-
-/** Parses data/manual/life-table.csv (header row `sex,age,survival_probability`). */
-export function parseLifeTableCsv(text: string): LifeTableRow[] {
-  const rows = parseCsv(text);
-  const out: LifeTableRow[] = [];
-  for (let i = 1; i < rows.length; i++) {
-    const [sex, age, surv] = rows[i]!;
-    if (sex !== "M" && sex !== "F") continue;
-    out.push({ sex, age: Number(age), survival_probability: Number(surv) });
-  }
-  return out;
-}
-
-export function buildSurvivalTable(rows: LifeTableRow[]): SurvivalTable {
-  const table: SurvivalTable = { M: [], F: [] };
-  for (const r of rows) table[r.sex].push([r.age, r.survival_probability]);
-  table.M.sort((a, b) => a[0] - b[0]);
-  table.F.sort((a, b) => a[0] - b[0]);
-  return table;
-}
-
-/** The CLI refuses a life table that lacks either sex before it fetches anything. */
-export function assertLifeTableComplete(table: SurvivalTable): void {
-  if (!table.M.length || !table.F.length) throw new Error("life-table.csv missing M or F rows");
-}
-
-export function survivalAt(table: SurvivalTable, sex: Sex, age: number): number {
-  const pts = table[sex];
-  if (!pts.length) throw new Error(`life table has no rows for sex ${sex}`);
-  if (age <= pts[0]![0]) return pts[0]![1];
-  if (age >= pts[pts.length - 1]![0]) return pts[pts.length - 1]![1];
-  for (let i = 1; i < pts.length; i++) {
-    const [a1, s1] = pts[i]!;
-    if (age <= a1) {
-      const [a0, s0] = pts[i - 1]!;
-      const t = (age - a0) / (a1 - a0);
-      return s0 + t * (s1 - s0);
-    }
-  }
-  return pts[pts.length - 1]![1];
-}
 
 // ---------------------------------------------------------------------------
 // Profile + wave computation from a national series.

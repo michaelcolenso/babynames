@@ -16,6 +16,7 @@ import {
   DATA_MAX_YEAR,
   computeFlashFloods,
   computeGlaciers,
+  computeGrandmotherNames,
   csvToNameYearRows,
   chartPanelHtml,
   evaluateClaims,
@@ -26,6 +27,12 @@ import {
   verifyAsserts,
   type NameYearRow,
 } from "../packages/shared/src/content/factory-compute";
+import {
+  assertLifeTableComplete,
+  buildSurvivalTable,
+  parseLifeTableCsv,
+  type SurvivalTable,
+} from "../packages/shared/src/life-table";
 import { CONTENT_DEFINITIONS } from "../packages/shared/src/content/content-definitions";
 import { renderFactoryVizPage } from "../packages/shared/src/content/render-factory-viz";
 import { renderFactoryPostMarkdown } from "../packages/shared/src/content/render-factory-post";
@@ -40,6 +47,26 @@ const REPO = path.resolve(import.meta.dirname ?? __dirname, "..");
 const SQLITE = path.join(REPO, ".hermes", "name-vitals-2025.sqlite");
 const CSV = path.join(REPO, "extra", "baby-names.csv");
 const TOTALS_CSV = path.join(REPO, "extra", "totals.csv");
+const LIFE_TABLE_CSV = path.join(REPO, "data", "manual", "life-table.csv");
+
+let cachedLifeTable: SurvivalTable | null = null;
+
+/**
+ * The shared survival checkpoints used both by the enrichment builder and by
+ * the grandmother-names family. Read once per process; the file is tracked in
+ * data/manual so a checkout always has it.
+ */
+function lifeTable(): SurvivalTable {
+  if (cachedLifeTable) return cachedLifeTable;
+  if (!existsSync(LIFE_TABLE_CSV)) {
+    console.error(`Missing life table: ${path.relative(REPO, LIFE_TABLE_CSV)}`);
+    process.exit(1);
+  }
+  const table = buildSurvivalTable(parseLifeTableCsv(readFileSync(LIFE_TABLE_CSV, "utf8")));
+  assertLifeTableComplete(table);
+  cachedLifeTable = table;
+  return table;
+}
 
 interface LoadResult {
   series: Map<string, Record<number, number>>;
@@ -113,6 +140,13 @@ function runCompute(def: ContentDefinitionT, data: LoadResult): FactoryResult {
       minPeak: def.compute.minPeak ?? undefined,
     });
   }
+  if (def.compute.family === "grandmother-names") {
+    return computeGrandmotherNames(data.series, data.display, lifeTable(), {
+      minLiving: def.compute.minLiving ?? undefined,
+      minOver50Share: def.compute.minOver50Share ?? undefined,
+      analysisYear: def.compute.analysisYear ?? undefined,
+    });
+  }
   return computeGlaciers(data.series, data.display, {
     minPeak: def.compute.minPeak ?? undefined,
     minRiseYears: def.compute.minRiseYears ?? undefined,
@@ -127,7 +161,11 @@ type ContentDefinitionT = (typeof CONTENT_DEFINITIONS)[number];
 function buildPanels(def: ContentDefinitionT, result: FactoryResult): Record<string, string> {
   const wanted = new Set(def.panels ?? []);
   const panels: Record<string, string> = {};
-  for (const m of result.members) {
+  // Families may nominate a row outside `members` for a chart — the
+  // grandmother-names contrast case (`youngest`) is rendered the same way.
+  const rows = [...result.members];
+  if ("youngest" in result && result.youngest) rows.push(result.youngest);
+  for (const m of rows) {
     const key = `${m.name}|${m.sex}`;
     if (!wanted.has(key)) continue;
     panels[key] = chartPanelHtml({
