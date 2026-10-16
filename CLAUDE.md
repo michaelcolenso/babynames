@@ -90,6 +90,7 @@ Indexes on `names` must be listed in `rebuildIndexesIfNeeded()` (`apps/ingest-wo
 
 ### Key Constraints
 
-- SSA publishes new data once per year (typically May). The cron is ETag-gated so weekly runs are cheap.
+- SSA publishes new data once per year (typically May). `runIngest` skips only when `meta.last_ssa_etag` matches SSA's current ETag, and that key has never been written in production. The cron (`0 14 * * 1`; Cloudflare numbers weekdays from Sunday = 1, so it fires Sundays) currently fails every run at the download with `SSA fetch failed: 403 Forbidden`, before anything is queued (Workers Logs, 2026-10-11). A refresh today means putting the zip in R2 and calling `POST /run?r2key=...` with the `TRIGGER_SECRET` bearer token (add `source=state` for the state file).
 - D1 limit: 10 GB. Current usage ~2 GB.
+- D1 per-statement limits ([docs](https://developers.cloudflare.com/d1/platform/limits/)): 100 bound variables, 100,000 bytes of SQL, 2,000,000 bytes per string, BLOB or row. Local SQLite accepts far more, so a statement can pass every local test and still fail on its first production write (the state chain's 500-variable INSERT did). Size multi-row INSERTs with `rowsPerStatement(columns)` from `@nv/shared`; when a page of rows is too big for that, bind one JSON parameter and unpack it with `json_each` (see `apps/ingest-worker/src/compute.ts`). Run ingest code through `scripts/lib/d1-limit-standin.ts`, a D1 stand-in that enforces these limits on a real SQLite database (`npm run test:ingest-limits`).
 - `classify()` runs at ingest time and results are stored — API reads never recompute classification.
