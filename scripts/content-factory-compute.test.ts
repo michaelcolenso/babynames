@@ -197,7 +197,7 @@ test("SSA CSV pipeline: parse, totals, convert to birth counts", () => {
 
 // ---- Glaciers (slow rise / slow fall) ----
 
-import { computeGlaciers } from "../packages/shared/src/content/factory-compute";
+import { computeGlaciers, computeOneWayStreet } from "../packages/shared/src/content/factory-compute";
 
 const GLOPTS = { dataMaxYear: 2025 };
 
@@ -261,4 +261,24 @@ test("orders glaciers by peakCount desc", () => {
   const disp = new Map([...a.display, ...b.display]);
   const all = computeGlaciers(merged, disp, GLOPTS);
   assert.deepEqual(all.members.map((m) => m.name), ["Big", "Small"]);
+});
+
+test("detects a one-way crossing from boys to girls", () => {
+  const { series, display } = seriesFrom([
+    ["Ashley", "M", { 1980: 746, 1987: 409, 1995: 112, 2025: 27 }],
+    ["Ashley", "F", { 1980: 100, 1987: 54856, 1995: 12000, 2025: 1829 }],
+  ]);
+  const result = computeOneWayStreet(series, display);
+  assert.equal(result.members.length, 1);
+  assert.equal(result.members[0]!.name, "Ashley");
+  assert.equal(result.members[0]!.malePeakYear, 1980);
+  assert.equal(result.members[0]!.femalePeakYear, 1987);
+});
+
+test("excludes a name whose male usage remains substantial", () => {
+  const { series, display } = seriesFrom([
+    ["Unisex", "M", { 1980: 1000, 1990: 900, 2025: 800 }],
+    ["Unisex", "F", { 1980: 100, 1990: 2000, 2025: 1000 }],
+  ]);
+  assert.equal(computeOneWayStreet(series, display).members.length, 0);
 });

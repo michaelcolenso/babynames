@@ -16,6 +16,7 @@ import {
   DATA_MAX_YEAR,
   computeFlashFloods,
   computeGlaciers,
+  computeOneWayStreet,
   csvToNameYearRows,
   chartPanelHtml,
   evaluateClaims,
@@ -113,6 +114,15 @@ function runCompute(def: ContentDefinitionT, data: LoadResult): FactoryResult {
       minPeak: def.compute.minPeak ?? undefined,
     });
   }
+  if (def.compute.family === "one-way-street") {
+    return computeOneWayStreet(data.series, data.display, {
+      minMalePeak: def.compute.minMalePeak ?? undefined,
+      minFemalePeak: def.compute.minFemalePeak ?? undefined,
+      maxPeakGapYears: def.compute.maxPeakGapYears ?? undefined,
+      maxMaleShareAtFemalePeak: def.compute.maxMaleShareAtFemalePeak ?? undefined,
+      minFemaleToMalePeakRatio: def.compute.minFemaleToMalePeakRatio ?? undefined,
+    });
+  }
   return computeGlaciers(data.series, data.display, {
     minPeak: def.compute.minPeak ?? undefined,
     minRiseYears: def.compute.minRiseYears ?? undefined,
@@ -138,6 +148,14 @@ function buildPanels(def: ContentDefinitionT, result: FactoryResult): Record<str
               firstYear: m.riseStartYear,
               peakYear: m.peakYear,
               peakCount: m.peakCount,
+              series: m.series,
+            }
+          : "malePeakYear" in m
+          ? {
+              name: m.name,
+              firstYear: m.malePeakYear,
+              peakYear: m.femalePeakYear,
+              peakCount: m.femalePeak,
               series: m.series,
             }
           : m,
