@@ -36,8 +36,31 @@ export interface GlaciersResult {
   totalNames: number;
 }
 
+/**
+ * Decline to near-death, then a second life — the comeback (boomerang)
+ * archetype. First life peaks, collapses to a deep valley decades ago,
+ * then revives to a second peak at least `minGapYears` after the valley.
+ */
+export interface ComebackMember {
+  name: string;
+  sex: string;
+  firstLifePeakYear: number;
+  firstLifePeak: number;
+  valleyYear: number;
+  valleyCount: number;
+  secondPeakYear: number;
+  secondPeak: number;
+  finalCount: number; // count at dataMaxYear (0 if absent)
+  series: Record<number, number>;
+}
+
+export interface ComebacksResult {
+  members: ComebackMember[];
+  totalNames: number;
+}
+
 /** Union accepted by claim functions / renderers across families. */
-export type FactoryResult = FlashFloodsResult | GlaciersResult;
+export type FactoryResult = FlashFloodsResult | GlaciersResult | ComebacksResult;
 
 export type FactoryKind = "viz" | "post" | "both";
 export type FactoryRolloutState = "draft" | "reviewed" | "published";
@@ -57,6 +80,14 @@ export type ComputeSpec =
       minRiseYears?: number;
       minFallYears?: number;
       thresholdShare?: number;
+    }
+  | {
+      family: "comebacks";
+      minFirstLifePeak?: number;
+      minSecondPeak?: number;
+      minFirstLifeYears?: number;
+      minGapYears?: number;
+      troughRatio?: number;
     };
 
 export type ClaimValue = number | string;
@@ -82,7 +113,7 @@ export interface ContentDefinition {
   claims: Record<
     string,
     (
-      members: Array<FlashFloodMember | GlacierMember>,
+      members: Array<FlashFloodMember | GlacierMember | ComebackMember>,
       meta: { totalNames: number },
     ) => ClaimValue
   >;

@@ -14,6 +14,7 @@ import path from "node:path";
 
 import {
   DATA_MAX_YEAR,
+  computeComebacks,
   computeFlashFloods,
   computeGlaciers,
   csvToNameYearRows,
@@ -113,6 +114,15 @@ function runCompute(def: ContentDefinitionT, data: LoadResult): FactoryResult {
       minPeak: def.compute.minPeak ?? undefined,
     });
   }
+  if (def.compute.family === "comebacks") {
+    return computeComebacks(data.series, data.display, {
+      minFirstLifePeak: def.compute.minFirstLifePeak ?? undefined,
+      minSecondPeak: def.compute.minSecondPeak ?? undefined,
+      minFirstLifeYears: def.compute.minFirstLifeYears ?? undefined,
+      minGapYears: def.compute.minGapYears ?? undefined,
+      troughRatio: def.compute.troughRatio ?? undefined,
+    });
+  }
   return computeGlaciers(data.series, data.display, {
     minPeak: def.compute.minPeak ?? undefined,
     minRiseYears: def.compute.minRiseYears ?? undefined,
@@ -130,9 +140,16 @@ function buildPanels(def: ContentDefinitionT, result: FactoryResult): Record<str
   for (const m of result.members) {
     const key = `${m.name}|${m.sex}`;
     if (!wanted.has(key)) continue;
-    panels[key] = chartPanelHtml({
-      member:
-        "riseStartYear" in m
+    const member =
+      "valleyYear" in m
+        ? {
+            name: m.name,
+            firstYear: m.firstLifePeakYear,
+            peakYear: m.secondPeakYear,
+            peakCount: m.secondPeak,
+            series: m.series,
+          }
+        : "riseStartYear" in m
           ? {
               name: m.name,
               firstYear: m.riseStartYear,
@@ -140,7 +157,9 @@ function buildPanels(def: ContentDefinitionT, result: FactoryResult): Record<str
               peakCount: m.peakCount,
               series: m.series,
             }
-          : m,
+          : m;
+    panels[key] = chartPanelHtml({
+      member,
       dataMaxYear: DATA_MAX_YEAR,
     });
   }

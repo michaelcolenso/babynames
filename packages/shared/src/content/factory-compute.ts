@@ -5,6 +5,8 @@
 
 import type {
   ClaimValue,
+  ComebackMember,
+  ComebacksResult,
   ContentDefinition,
   FlashFloodMember,
   FlashFloodsResult,
@@ -182,6 +184,103 @@ export function computeGlaciers(
   return { members, totalNames: series.size };
 }
 
+export interface ComebackOptions {
+  minFirstLifePeak: number; // default 1000 — the first life must have been substantial
+  minSecondPeak: number;    // default 500 — the second life must be real, not a blip
+  minFirstLifeYears: number; // default 20 — the first life must have run for a while pre-valley
+  minGapYears: number;      // default 25 — years between valley and each peak on either side
+  troughRatio: number;      // default 0.15 — valley count must sit below this share of first peak
+  dataMaxYear: number;      // default DATA_MAX_YEAR
+}
+
+export const DEFAULT_COMEBACK_OPTIONS: ComebackOptions = {
+  minFirstLifePeak: 1000,
+  minSecondPeak: 500,
+  minFirstLifeYears: 20,
+  minGapYears: 25,
+  troughRatio: 0.15,
+  dataMaxYear: DATA_MAX_YEAR,
+};
+
+/**
+ * Comeback (boomerang): the name lives a substantial first life (peak
+ * >= minFirstLifePeak), collapses to a valley year whose count sits below
+ * troughRatio × first peak — with each qualifying peak at least minGapYears
+ * from the valley — then revives to a real second peak (>= minSecondPeak).
+ * The valley is the deepest qualifying year; ties break toward the middle.
+ */
+export function computeComebacks(
+  series: Map<string, Record<number, number>>,
+  displayNames: Map<string, string>,
+  options: Partial<ComebackOptions> = {},
+): ComebacksResult {
+  const opts = { ...DEFAULT_COMEBACK_OPTIONS, ...options };
+  const members: ComebackMember[] = [];
+
+  for (const [key, s] of series) {
+    const years = [...Object.keys(s).map(Number)].sort((a, b) => a - b);
+    if (years.length < opts.minGapYears * 2 + 2) continue;
+    if (years[0]! > opts.dataMaxYear - 40) continue; // needs room for two lives
+
+    // Prefix max: (value, argmax year) over years[0..i].
+    const pre: Array<[number, number]> = [];
+    let mv = 0;
+    let my = years[0]!;
+    for (const y of years) {
+      if (s[y]! > mv) {
+        mv = s[y]!;
+        my = y;
+      }
+      pre.push([mv, my]);
+    }
+    // Suffix max: (value, argmax year) over years[i..end].
+    const suf: Array<[number, number]> = new Array(years.length);
+    mv = 0;
+    my = years[years.length - 1]!;
+    for (let i = years.length - 1; i >= 0; i--) {
+      const y = years[i]!;
+      if (s[y]! > mv) {
+        mv = s[y]!;
+        my = y;
+      }
+      suf[i] = [mv, my];
+    }
+
+    // Candidate valley: deepest year with real lives on both sides.
+    let best: { vy: number; vc: number; p1y: number; p1v: number; p2y: number; p2v: number } | null = null;
+    for (let i = 1; i < years.length - 1; i++) {
+      const y = years[i]!;
+      const [p1v, p1y] = pre[i - 1]!;
+      const [p2v, p2y] = suf[i + 1]!;
+      if (p1v < opts.minFirstLifePeak || p2v < opts.minSecondPeak) continue;
+      if (y - p1y < opts.minGapYears || p2y - y < opts.minGapYears) continue;
+      if (p1y - years[0]! < opts.minFirstLifeYears) continue;
+      const c = s[y]!;
+      if (c >= p1v * opts.troughRatio) continue;
+      if (!best || c < best.vc) {
+        best = { vy: y, vc: c, p1y, p1v, p2y, p2v };
+      }
+    }
+    if (!best) continue;
+
+    members.push({
+      name: displayNames.get(key) ?? key.split("|")[0]!,
+      sex: key.split("|")[1] ?? "",
+      firstLifePeakYear: best.p1y,
+      firstLifePeak: best.p1v,
+      valleyYear: best.vy,
+      valleyCount: best.vc,
+      secondPeakYear: best.p2y,
+      secondPeak: best.p2v,
+      finalCount: s[opts.dataMaxYear] ?? 0,
+      series: s,
+    });
+  }
+
+  members.sort((a, b) => b.secondPeak - a.secondPeak || a.name.localeCompare(b.name));
+  return { members, totalNames: series.size };
+}
+
 export interface SsaCsvRow {
   year: number;
   name: string;
@@ -263,7 +362,7 @@ export function csvToNameYearRows(rows: SsaCsvRow[], totals: Map<number, { male:
 
 export function evaluateClaims(
   def: ContentDefinition,
-  result: FlashFloodsResult | GlaciersResult,
+  result: FlashFloodsResult | GlaciersResult | ComebacksResult,
 ): Record<string, ClaimValue> {
   const evaluated: Record<string, ClaimValue> = {};
   for (const [key, fn] of Object.entries(def.claims)) {
