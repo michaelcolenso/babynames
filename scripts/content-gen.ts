@@ -16,6 +16,7 @@ import {
   DATA_MAX_YEAR,
   computeFlashFloods,
   computeGlaciers,
+  computeRhymeCohort,
   csvToNameYearRows,
   chartPanelHtml,
   evaluateClaims,
@@ -44,6 +45,8 @@ const TOTALS_CSV = path.join(REPO, "extra", "totals.csv");
 interface LoadResult {
   series: Map<string, Record<number, number>>;
   display: Map<string, string>;
+  /** Births by year and sex — the denominator for share-of-births claims. */
+  totals: Map<number, { male: number; female: number }>;
   source: string;
 }
 
@@ -62,6 +65,38 @@ function exportNameYearsCsv(): string {
     );
   }
   return tmp;
+}
+
+/**
+ * Export year_totals from SQLite to CSV (cached). ~146 rows; used for
+ * share-of-births claims in families that need a denominator.
+ */
+function exportYearTotalsCsv(): string {
+  const tmp = path.join(REPO, ".hermes", "year-totals-export.csv");
+  if (!existsSync(tmp)) {
+    const { execSync } = require("node:child_process") as { execSync: (cmd: string) => unknown };
+    execSync(
+      `sqlite3 -readonly -csv "${SQLITE}" "SELECT year, sex, total FROM year_totals" > "${tmp}"`,
+    );
+  }
+  return tmp;
+}
+
+function loadTotalsFromSqlite(): Map<number, { male: number; female: number }> {
+  const totals = new Map<number, { male: number; female: number }>();
+  for (const line of readFileSync(exportYearTotalsCsv(), "utf8").split("\n")) {
+    if (!line) continue;
+    const [yearRaw, sex, totalRaw] = line.split(",");
+    const year = Number(yearRaw);
+    const total = Number(totalRaw);
+    if (!Number.isFinite(year) || !Number.isFinite(total)) continue;
+    const row = totals.get(year) ?? { male: 0, female: 0 };
+    if (sex === "M") row.male = total;
+    else if (sex === "F") row.female = total;
+    else continue;
+    totals.set(year, row);
+  }
+  return totals;
 }
 
 function parseNameYearsCsv(text: string): NameYearRow[] {
@@ -85,7 +120,12 @@ function loadFromSqlite(): LoadResult {
     const key = `${r.name.toLowerCase()}|${r.sex}`;
     if (!display.has(key)) display.set(key, r.name);
   }
-  return { series: groupSeries(rows), display, source: path.basename(SQLITE) };
+  return {
+    series: groupSeries(rows),
+    display,
+    totals: loadTotalsFromSqlite(),
+    source: path.basename(SQLITE),
+  };
 }
 
 function loadFromCsv(): LoadResult {
@@ -97,7 +137,7 @@ function loadFromCsv(): LoadResult {
     const key = `${r.name.toLowerCase()}|${r.sex}`;
     if (!display.has(key)) display.set(key, r.name);
   }
-  return { series: groupSeries(nyRows), display, source: path.basename(CSV) };
+  return { series: groupSeries(nyRows), display, totals, source: path.basename(CSV) };
 }
 
 function loadData(): LoadResult {
@@ -110,6 +150,13 @@ function loadData(): LoadResult {
 function runCompute(def: ContentDefinitionT, data: LoadResult): FactoryResult {
   if (def.compute.family === "flash-floods") {
     return computeFlashFloods(data.series, data.display, {
+      minPeak: def.compute.minPeak ?? undefined,
+    });
+  }
+  if (def.compute.family === "rhyme-cohort") {
+    return computeRhymeCohort(data.series, data.display, data.totals, {
+      suffixes: def.compute.suffixes ?? undefined,
+      sex: def.compute.sex ?? undefined,
       minPeak: def.compute.minPeak ?? undefined,
     });
   }

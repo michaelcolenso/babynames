@@ -36,8 +36,41 @@ export interface GlaciersResult {
   totalNames: number;
 }
 
+/**
+ * A spelling in a rhyme cohort: names that share a stressed ending
+ * (-aiden / -ayden / -aden / -aeden). The cohort is the story; each member
+ * is one way American parents spelled the same sound.
+ */
+export interface RhymeCohortMember {
+  name: string;
+  sex: string;
+  firstYear: number;
+  peakYear: number;
+  peakCount: number;
+  lastYear: number;
+  /** Count at dataMaxYear (0 when the name is absent from the record). */
+  latestCount: number;
+  /** All births recorded under this spelling. */
+  totalCount: number;
+  series: Record<number, number>;
+}
+
+export interface RhymeCohortResult {
+  members: RhymeCohortMember[];
+  totalNames: number;
+  /** Sum of every member's annual count — the sound's own birth curve. */
+  cohortSeries: Record<number, number>;
+  cohortPeakYear: number;
+  cohortPeakCount: number;
+  latestYear: number;
+  latestCount: number;
+  /** Total births of the cohort's sex in the peak and latest years. */
+  peakYearSexBirths: number;
+  latestYearSexBirths: number;
+}
+
 /** Union accepted by claim functions / renderers across families. */
-export type FactoryResult = FlashFloodsResult | GlaciersResult;
+export type FactoryResult = FlashFloodsResult | GlaciersResult | RhymeCohortResult;
 
 export type FactoryKind = "viz" | "post" | "both";
 export type FactoryRolloutState = "draft" | "reviewed" | "published";
@@ -57,6 +90,14 @@ export type ComputeSpec =
       minRiseYears?: number;
       minFallYears?: number;
       thresholdShare?: number;
+    }
+  | {
+      family: "rhyme-cohort";
+      /** Case-insensitive endings that define the cohort. */
+      suffixes?: readonly string[];
+      sex?: "M" | "F";
+      /** A spelling must reach this many births in one year to count. */
+      minPeak?: number;
     };
 
 export type ClaimValue = number | string;
@@ -65,6 +106,19 @@ export interface FactoryAssert {
   key: string;
   equals?: ClaimValue;
   approx?: [number, number];
+}
+
+/** Second claim argument: totals, plus rows that live outside `members`. */
+export interface ClaimMeta {
+  totalNames: number;
+  /** Populated by the rhyme-cohort family: the sound's aggregate curve. */
+  cohortPeakYear?: number;
+  cohortPeakCount?: number;
+  latestYear?: number;
+  latestCount?: number;
+  /** Births of the cohort's sex in the peak and latest years (share denominators). */
+  peakYearSexBirths?: number;
+  latestYearSexBirths?: number;
 }
 
 export interface ContentDefinition {
@@ -82,8 +136,8 @@ export interface ContentDefinition {
   claims: Record<
     string,
     (
-      members: Array<FlashFloodMember | GlacierMember>,
-      meta: { totalNames: number },
+      members: Array<FlashFloodMember | GlacierMember | RhymeCohortMember>,
+      meta: ClaimMeta,
     ) => ClaimValue
   >;
   asserts?: FactoryAssert[];

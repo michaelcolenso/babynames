@@ -262,3 +262,99 @@ test("orders glaciers by peakCount desc", () => {
   const all = computeGlaciers(merged, disp, GLOPTS);
   assert.deepEqual(all.members.map((m) => m.name), ["Big", "Small"]);
 });
+
+// ---- Rhyme cohort (names sharing a stressed ending) ----
+
+import { computeRhymeCohort } from "../packages/shared/src/content/factory-compute";
+
+const RHYME_TOTALS = new Map<number, { male: number; female: number }>([
+  [2008, { male: 20_000, female: 19_000 }],
+  [2025, { male: 17_000, female: 16_000 }],
+]);
+
+function rhymeFixture() {
+  return seriesFrom([
+    ["Aiden", "M", { 2008: 1000, 2025: 200 }],
+    ["Jayden", "M", { 2008: 900, 2025: 150 }],
+    ["Hayden", "M", { 1880: 5, 1900: 40, 2025: 10 }],
+    ["Ayden", "M", { 2009: 30, 2025: 0 }],
+    ["Ayden", "F", { 2008: 500, 2025: 50 }], // wrong sex: never a member
+    ["Braden", "M", { 2008: 20, 2025: 2 }], // below the 25 floor
+  ]);
+}
+
+test("rhyme cohort: detects suffixes at the peak floor, ignores the other sex", () => {
+  const { series, display } = rhymeFixture();
+  const result = computeRhymeCohort(series, display, RHYME_TOTALS, { dataMaxYear: 2025 });
+  assert.deepEqual(result.members.map((m) => m.name), ["Aiden", "Jayden", "Hayden", "Ayden"]);
+  assert.equal(result.members[0]!.totalCount, 1200);
+  assert.equal(result.members[0]!.latestCount, 200);
+  assert.equal(result.members[3]!.latestCount, 0); // absent in 2025
+  // The female Ayden is not summed into the boys' curve.
+  assert.equal(result.cohortSeries[2008], 1900);
+  assert.equal(result.cohortPeakYear, 2008);
+  assert.equal(result.cohortPeakCount, 1900);
+  assert.equal(result.latestCount, 360);
+  assert.equal(result.peakYearSexBirths, 20_000);
+  assert.equal(result.latestYearSexBirths, 17_000);
+});
+
+test("rhyme cohort: minPeak boundary and custom suffixes", () => {
+  const { series, display } = rhymeFixture();
+  const edge = seriesFrom([
+    ["Kaiden", "M", { 2008: 25 }],
+    ["Caiden", "M", { 2008: 24 }],
+  ]);
+  const atFloor = computeRhymeCohort(edge.series, edge.display, RHYME_TOTALS, { dataMaxYear: 2025 });
+  assert.deepEqual(atFloor.members.map((m) => m.name), ["Kaiden"]);
+
+  const adenOnly = computeRhymeCohort(series, display, RHYME_TOTALS, {
+    suffixes: ["aden"],
+    minPeak: 5,
+    dataMaxYear: 2025,
+  });
+  assert.deepEqual(adenOnly.members.map((m) => m.name), ["Braden"]);
+});
+
+test("rhyme cohort: omitted options fall back to defaults, not undefined", () => {
+  const { series, display } = rhymeFixture();
+  const result = computeRhymeCohort(series, display, RHYME_TOTALS, {
+    suffixes: undefined,
+    sex: undefined,
+    minPeak: undefined,
+    dataMaxYear: undefined,
+  });
+  // Defaults: all four suffixes, boys only, peak >= 25, latest year 2025.
+  assert.equal(result.members.length, 4);
+  assert.equal(result.latestYear, 2025);
+});
+
+test("rhyme cohort: claims read the aggregate rows from meta", () => {
+  const def: ContentDefinition = {
+    slug: "t", kind: "both", title: "T", description: "d",
+    sourceVersion: "v", rolloutState: "draft",
+    compute: { family: "rhyme-cohort" },
+    claims: {
+      count: (m) => m.length,
+      peak: (_m, meta) => meta.cohortPeakCount ?? 0,
+      peakYear: (_m, meta) => meta.cohortPeakYear ?? 0,
+      per1000: (_m, meta) =>
+        Math.round(((meta.cohortPeakCount ?? 0) / (meta.peakYearSexBirths ?? 1)) * 1000 * 10) / 10,
+      latest: (_m, meta) => meta.latestCount ?? 0,
+      top: (m) => m[0]?.name ?? "none",
+    },
+    asserts: [
+      { key: "count", equals: 4 },
+      { key: "peak", equals: 1900 },
+      { key: "peakYear", equals: 2008 },
+      { key: "per1000", equals: 95 },
+      { key: "latest", equals: 360 },
+      { key: "top", equals: "Aiden" },
+    ],
+  };
+  const { series, display } = rhymeFixture();
+  const result = computeRhymeCohort(series, display, RHYME_TOTALS, { dataMaxYear: 2025 });
+  const claims = evaluateClaims(def, result);
+  assert.equal(claims.per1000, 95); // 1,900 / 20,000 boys
+  assert.deepEqual(verifyAsserts(def, claims), []);
+});
