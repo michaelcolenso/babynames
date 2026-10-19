@@ -4,12 +4,16 @@
 // claims, verify assertions, interpolate body templates.
 
 import type {
+  ClaimMeta,
   ClaimValue,
   ContentDefinition,
+  FactoryResult,
   FlashFloodMember,
   FlashFloodsResult,
   GlacierMember,
   GlaciersResult,
+  RhymeCohortMember,
+  RhymeCohortResult,
 } from "./factory-types";
 import { buildSparkline } from "../sparkline";
 import { classify } from "../classify";
@@ -182,6 +186,119 @@ export function computeGlaciers(
   return { members, totalNames: series.size };
 }
 
+export interface RhymeCohortOptions {
+  /** Case-insensitive endings that define the cohort. */
+  suffixes: readonly string[];
+  sex: "M" | "F";
+  /** A spelling must reach this many births in one year to count. */
+  minPeak: number;
+  dataMaxYear: number;
+}
+
+export const DEFAULT_RHYME_COHORT_OPTIONS: RhymeCohortOptions = {
+  suffixes: ["aiden", "ayden", "aden", "aeden"],
+  sex: "M",
+  minPeak: 25,
+  dataMaxYear: DATA_MAX_YEAR,
+};
+
+/**
+ * Rhyme cohort: every name of one sex whose lowercase form ends in one of
+ * `suffixes` and that reached `minPeak` births in some year. Members keep
+ * their own curve; the cohort also gets an aggregate curve and the sex's
+ * total births for the peak and latest years, so share-of-births claims are
+ * pinned to data rather than arithmetic in prose.
+ */
+export function computeRhymeCohort(
+  series: Map<string, Record<number, number>>,
+  displayNames: Map<string, string>,
+  totals: Map<number, { male: number; female: number }>,
+  options: Partial<RhymeCohortOptions> = {},
+): RhymeCohortResult {
+  // Resolve each option explicitly: the CLI passes `undefined` for options a
+  // definition leaves out, and a spread would overwrite the defaults.
+  const opts: RhymeCohortOptions = {
+    suffixes: options.suffixes ?? DEFAULT_RHYME_COHORT_OPTIONS.suffixes,
+    sex: options.sex ?? DEFAULT_RHYME_COHORT_OPTIONS.sex,
+    minPeak: options.minPeak ?? DEFAULT_RHYME_COHORT_OPTIONS.minPeak,
+    dataMaxYear: options.dataMaxYear ?? DEFAULT_RHYME_COHORT_OPTIONS.dataMaxYear,
+  };
+  const suffixes = opts.suffixes.map((suffix) => suffix.toLowerCase());
+  const members: RhymeCohortMember[] = [];
+
+  for (const [key, s] of series) {
+    const [lowerName, sex] = key.split("|");
+    if (!lowerName || sex !== opts.sex) continue;
+    if (!suffixes.some((suffix) => lowerName.endsWith(suffix))) continue;
+
+    const years = Object.keys(s).map(Number).sort((a, b) => a - b);
+    if (years.length === 0) continue;
+
+    // Earliest year holding the maximum count is the peak.
+    let peakYear = years[0]!;
+    let peakCount = 0;
+    let totalCount = 0;
+    for (const y of years) {
+      const count = s[y]!;
+      totalCount += count;
+      if (count > peakCount) {
+        peakCount = count;
+        peakYear = y;
+      }
+    }
+    if (peakCount < opts.minPeak) continue;
+
+    members.push({
+      name: displayNames.get(key) ?? lowerName,
+      sex: opts.sex,
+      firstYear: years[0]!,
+      peakYear,
+      peakCount,
+      lastYear: years[years.length - 1]!,
+      latestCount: s[opts.dataMaxYear] ?? 0,
+      totalCount,
+      series: s,
+    });
+  }
+
+  members.sort((a, b) => b.peakCount - a.peakCount || a.name.localeCompare(b.name));
+
+  const cohortSeries: Record<number, number> = {};
+  for (const member of members) {
+    for (const [year, count] of Object.entries(member.series)) {
+      const y = Number(year);
+      cohortSeries[y] = (cohortSeries[y] ?? 0) + count;
+    }
+  }
+
+  let cohortPeakYear = 0;
+  let cohortPeakCount = 0;
+  for (const y of Object.keys(cohortSeries).map(Number).sort((a, b) => a - b)) {
+    if (cohortSeries[y]! > cohortPeakCount) {
+      cohortPeakCount = cohortSeries[y]!;
+      cohortPeakYear = y;
+    }
+  }
+
+  const sexBirths = (year: number): number => {
+    const row = totals.get(year);
+    if (!row) return 0;
+    return opts.sex === "M" ? row.male : row.female;
+  };
+
+  return {
+    members,
+    totalNames: series.size,
+    cohortSeries,
+    cohortPeakYear,
+    cohortPeakCount,
+    latestYear: opts.dataMaxYear,
+    latestCount: cohortSeries[opts.dataMaxYear] ?? 0,
+    peakYearSexBirths: sexBirths(cohortPeakYear),
+    latestYearSexBirths: sexBirths(opts.dataMaxYear),
+  };
+}
+
 export interface SsaCsvRow {
   year: number;
   name: string;
@@ -263,11 +380,23 @@ export function csvToNameYearRows(rows: SsaCsvRow[], totals: Map<number, { male:
 
 export function evaluateClaims(
   def: ContentDefinition,
-  result: FlashFloodsResult | GlaciersResult,
+  result: FactoryResult,
 ): Record<string, ClaimValue> {
   const evaluated: Record<string, ClaimValue> = {};
+  const meta: ClaimMeta = {
+    totalNames: result.totalNames,
+    cohortPeakYear: "cohortPeakYear" in result ? result.cohortPeakYear : undefined,
+    cohortPeakCount: "cohortPeakCount" in result ? result.cohortPeakCount : undefined,
+    latestYear: "latestYear" in result ? result.latestYear : undefined,
+    latestCount: "latestCount" in result ? result.latestCount : undefined,
+    peakYearSexBirths: "peakYearSexBirths" in result ? result.peakYearSexBirths : undefined,
+    latestYearSexBirths: "latestYearSexBirths" in result ? result.latestYearSexBirths : undefined,
+  };
   for (const [key, fn] of Object.entries(def.claims)) {
-    const v = fn(result.members as Array<FlashFloodMember | GlacierMember>, { totalNames: result.totalNames });
+    const v = fn(
+      result.members as Array<FlashFloodMember | GlacierMember | RhymeCohortMember>,
+      meta,
+    );
     if (typeof v !== "number" && typeof v !== "string") {
       throw new Error(`Claim "${key}" in ${def.slug} did not resolve to a number or string`);
     }
