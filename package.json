@@ -46,7 +46,7 @@
     "test:shell": "tsx --test scripts/render-shell.test.ts",
     "test:audit-fixes": "tsx --test scripts/site-audit-fixes.test.ts",
     "test:diaspora-wording": "tsx --test scripts/diaspora-wording.test.ts",
-    "test:ingest-limits": "tsx --test scripts/ingest-d1-limits.test.ts",
+    "test:ingest-limits": "tsx --test scripts/ingest-d1-limits.test.ts scripts/ingest-national-d1-limits.test.ts",
     "test:mini-sparkline": "tsx --test scripts/mini-sparkline.test.ts",
     "test:rankings": "tsx --test scripts/rankings.test.ts",
     "test:state-rankings": "tsx --test scripts/state-rankings.test.ts",

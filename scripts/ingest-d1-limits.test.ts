@@ -5,15 +5,13 @@
 // every local check and still failed on its first write in production:
 // "D1_ERROR: too many SQL variables at offset 519", the 101st placeholder of a
 // 500-variable diaspora INSERT. These tests run the real chain code against a
-// real SQLite database behind a D1 stand-in that enforces the same ceiling.
+// real SQLite database behind a D1 stand-in that enforces the same ceiling
+// (scripts/lib/d1-limit-standin.ts).
 //
 //   npm run test:ingest-limits
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import path from "node:path";
-import type { D1Database } from "@cloudflare/workers-types";
 import { D1_MAX_BOUND_PARAMS, rowsPerStatement } from "../packages/shared/src/d1-chunk";
 import {
   addTotal,
@@ -27,130 +25,17 @@ import {
 } from "../apps/ingest-worker/src/diaspora-compute";
 import { STATE_CHUNK_ROWS, type StateRow } from "../apps/ingest-worker/src/chunks";
 import { insertStateRows } from "../apps/ingest-worker/src/upsert";
+import {
+  makeD1,
+  maxVariables,
+  openSqlite,
+  skip,
+  type Executed,
+  type SqliteDb,
+} from "./lib/d1-limit-standin";
 
-// node:sqlite ships in Node 22+ (CI runs 22). Resolve it lazily and skip rather
-// than failing the whole `npm test` run on an older Node.
-type SqliteStatement = {
-  all(...p: never[]): unknown[];
-  get(...p: never[]): unknown;
-  run(...p: never[]): unknown;
-};
-type SqliteDb = { exec(sql: string): void; prepare(sql: string): SqliteStatement };
-let DatabaseSync: (new (p: string) => SqliteDb) | null = null;
-try {
-  ({ DatabaseSync } = require("node:sqlite"));
-} catch {
-  DatabaseSync = null;
-}
-const skip = DatabaseSync ? false : "requires node:sqlite (Node 22+)";
-
-const REPO = path.resolve(import.meta.dirname ?? __dirname, "..");
-const migration = (file: string): string => readFileSync(path.join(REPO, "migrations", file), "utf-8");
-
-// ---- D1 stand-in ----------------------------------------------------------
-
-// SQLite numbers variables as it parses: a bare `?` takes one more than the
-// highest number so far, `?N` takes N. Returns the highest number (the
-// statement's variable count) and the 0-based offset of the first variable
-// above `limit` (-1 when there is none), which is the offset D1 reports.
-function scanVariables(sql: string, limit: number): { count: number; offsetOverLimit: number } {
-  let next = 0;
-  let max = 0;
-  let over = -1;
-  for (let i = 0; i < sql.length; i++) {
-    const ch = sql[i]!;
-    if (ch === "'" || ch === '"') {
-      // Skip quoted text; a doubled quote is an escaped quote.
-      i++;
-      while (i < sql.length && !(sql[i] === ch && sql[i + 1] !== ch)) i += sql[i] === ch ? 2 : 1;
-      continue;
-    }
-    if (ch !== "?") continue;
-    let j = i + 1;
-    while (j < sql.length && sql[j]! >= "0" && sql[j]! <= "9") j++;
-    const num = j > i + 1 ? Number(sql.slice(i + 1, j)) : next + 1;
-    if (num > next) next = num;
-    if (num > max) max = num;
-    if (num > limit && over < 0) over = i;
-    i = j - 1;
-  }
-  return { count: max, offsetOverLimit: over };
-}
-
-interface Executed {
-  sql: string;
-  binds: unknown[];
-}
-
-interface Stmt extends Executed {
-  bind(...args: unknown[]): Stmt;
-  all(): Promise<{ results: unknown[] }>;
-  run(): Promise<{ success: boolean }>;
-}
-
-// Just enough of the D1 surface for the chain: prepare/bind, all, run, and an
-// atomic batch(). Like the deployed runtime it rejects a statement with more
-// than D1_MAX_BOUND_PARAMS variables (a batch is rejected before anything in it
-// runs) and a statement whose bound values do not match its placeholders.
-function makeD1(sqlite: SqliteDb, executed: Executed[] = []): D1Database {
-  const check = (sql: string, binds: unknown[]): void => {
-    const { count, offsetOverLimit } = scanVariables(sql, D1_MAX_BOUND_PARAMS);
-    if (offsetOverLimit >= 0) {
-      throw new Error(`D1_ERROR: too many SQL variables at offset ${offsetOverLimit}: SQLITE_ERROR`);
-    }
-    if (binds.length !== count) {
-      throw new Error(`D1_ERROR: statement has ${count} variables but ${binds.length} values were bound`);
-    }
-  };
-  const stmt = (sql: string, binds: unknown[]): Stmt => ({
-    sql,
-    binds,
-    bind: (...args: unknown[]) => stmt(sql, args),
-    all: async () => {
-      check(sql, binds);
-      executed.push({ sql, binds });
-      return { results: sqlite.prepare(sql).all(...(binds as never[])) };
-    },
-    run: async () => {
-      check(sql, binds);
-      executed.push({ sql, binds });
-      sqlite.prepare(sql).run(...(binds as never[]));
-      return { success: true };
-    },
-  });
-  const db = {
-    prepare: (sql: string) => stmt(sql, []),
-    batch: async (stmts: Stmt[]) => {
-      for (const s of stmts) check(s.sql, s.binds);
-      sqlite.exec("BEGIN");
-      try {
-        const out = [];
-        for (const s of stmts) {
-          executed.push({ sql: s.sql, binds: s.binds });
-          sqlite.prepare(s.sql).run(...(s.binds as never[]));
-          out.push({ success: true });
-        }
-        sqlite.exec("COMMIT");
-        return out;
-      } catch (err) {
-        sqlite.exec("ROLLBACK");
-        throw err;
-      }
-    },
-  };
-  return db as unknown as D1Database;
-}
-
-function newSqlite(): SqliteDb {
-  const sqlite = new DatabaseSync!(":memory:");
-  for (const file of ["0001_init.sql", "0010_add_name_states.sql", "0011_add_name_diaspora.sql"]) {
-    sqlite.exec(migration(file));
-  }
-  return sqlite;
-}
-
-const maxVariables = (executed: Executed[]): number =>
-  Math.max(0, ...executed.map((e) => scanVariables(e.sql, D1_MAX_BOUND_PARAMS).count));
+const newSqlite = (): SqliteDb =>
+  openSqlite(["0001_init.sql", "0010_add_name_states.sql", "0011_add_name_diaspora.sql"]);
 
 // ---- Fixture --------------------------------------------------------------
 

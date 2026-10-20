@@ -6,6 +6,10 @@
 // groups by (name, sex), classifies each series, and bulk-inserts into
 // names_staging + name_years_staging. With ~100k unique (name,sex) pairs
 // and ~1.9M year rows, this needs paging.
+//
+// Writes are sized for D1, which rejects any statement that binds more than 100
+// variables: a page's rows go up as JSON, one bound parameter per statement,
+// and json_each unpacks them in SQL (see buildPageStatements).
 
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import {
@@ -103,9 +107,14 @@ async function fetchAggPage(
   limit: number,
 ): Promise<AggRow[]> {
   // Pull rows for the next NAMES_PAGE distinct (name, sex) pairs in one go.
-  const filter = cursor
-    ? `AND (name > ?2 OR (name = ?2 AND sex > ?3))`
-    : "";
+  //
+  // Written for name_year_raw_staging_by_name (ensureStaging): a row-value cursor
+  // makes the CTE a range scan that stops after `limit` pairs, and CROSS JOIN pins
+  // `ordered` as the outer loop so each pair's rows are an index seek. Left to
+  // itself SQLite picks the raw table as the outer loop and reads the whole run for
+  // every page: 1.6 s a page against 9 ms this way (local SQLite, synthetic table
+  // of production size).
+  const filter = cursor ? `AND (name, sex) > (?2, ?3)` : "";
   const sql = `
     WITH ordered AS (
       SELECT name, sex
@@ -116,8 +125,8 @@ async function fetchAggPage(
        LIMIT ${limit}
     )
     SELECT r.name, r.sex, r.year, r.count
-      FROM name_year_raw_staging r
-      JOIN ordered o ON o.name = r.name AND o.sex = r.sex
+      FROM ordered o
+      CROSS JOIN name_year_raw_staging r ON r.name = o.name AND r.sex = o.sex
      WHERE r.run_id = ?1
      ORDER BY r.name, r.sex, r.year
   `;
@@ -145,87 +154,105 @@ interface PageStatements {
   last: { name: string; sex: Sex } | null;
 }
 
+// Rows reach D1 as a JSON array of row arrays in a single bound parameter, and
+// json_each turns them back into rows. As ordinary multi-row VALUES lists they
+// would not fit: a name row binds 15 variables (6 rows per statement) and a year
+// row 4 (25 per statement), which is ~100 000 statements for one finalize against
+// the 100-variable ceiling (D1_MAX_BOUND_PARAMS). This way a page of 200 names is
+// one statement and its ~4 000 year rows are one or two.
+//
+// The columns of each row array follow the INSERT's column order. The sparkline
+// is a BLOB, which JSON cannot carry, so it travels as a hex string for unhex() to
+// turn back into the same 60 bytes. JSON numbers come back from json_extract as
+// INTEGER or REAL, and the REAL columns (decline_pct, growth_x) keep REAL affinity
+// either way.
+const NAME_COLUMNS = 15;
+const NAME_VALUES = Array.from({ length: NAME_COLUMNS }, (_, i) =>
+  i === NAME_COLUMNS - 1 ? `unhex(json_extract(r.value, '$[${i}]'))` : `json_extract(r.value, '$[${i}]')`,
+).join(", ");
+
+// WHERE true: SQLite cannot otherwise tell an upsert's ON from a join's.
+const NAMES_FROM_JSON = `INSERT INTO names_staging
+     (name, name_lower, sex, first_year, last_year, peak_year, peak_count,
+      total_count, status, decline_pct, latest_count, prev_decade,
+      curr_decade, growth_x, spark_blob)
+   SELECT ${NAME_VALUES}
+     FROM json_each(?1) AS r
+    WHERE true
+   ON CONFLICT(name, sex) DO UPDATE SET
+     first_year=excluded.first_year, last_year=excluded.last_year,
+     peak_year=excluded.peak_year, peak_count=excluded.peak_count,
+     total_count=excluded.total_count, status=excluded.status,
+     decline_pct=excluded.decline_pct, latest_count=excluded.latest_count,
+     prev_decade=excluded.prev_decade, curr_decade=excluded.curr_decade,
+     growth_x=excluded.growth_x, spark_blob=excluded.spark_blob`;
+
+// name_years_staging is keyed on names_staging's id, resolved per row with a
+// sub-SELECT on (name, sex): the page's names statement runs first.
+const YEARS_FROM_JSON = `INSERT OR REPLACE INTO name_years_staging(name_id, year, count)
+   SELECT (SELECT id FROM names_staging
+            WHERE name = json_extract(r.value, '$[0]') AND sex = json_extract(r.value, '$[1]')),
+          json_extract(r.value, '$[2]'), json_extract(r.value, '$[3]')
+     FROM json_each(?1) AS r`;
+
+// A year row is 20-30 bytes of JSON, so a full statement's parameter is 100-150 KB
+// (95.8 KB at most in a full-size rehearsal): far under D1's 2 MB limit on a
+// string value, and big enough that a typical page (200 names, ~4 000 year rows)
+// is a single statement.
+const YEAR_ROWS_PER_STMT = 5000;
+
+function toHex(bytes: Uint8Array): string {
+  let out = "";
+  for (const b of bytes) out += b.toString(16).padStart(2, "0");
+  return out;
+}
+
 function buildPageStatements(
   db: D1Database,
   page: AggRow[],
   yM: number,
 ): PageStatements {
-  const nameStmts: D1PreparedStatement[] = [];
-  const yearStmts: D1PreparedStatement[] = [];
-
-  // names_staging — 1 row per (name, sex). Use INSERT OR REPLACE keyed on UNIQUE(name, sex).
-  const NAMES_PER_STMT = 50;
-  for (let i = 0; i < page.length; i += NAMES_PER_STMT) {
-    const slice = page.slice(i, i + NAMES_PER_STMT);
-    const values: string[] = [];
-    const binds: (string | number | null | Uint8Array)[] = [];
-    for (const a of slice) {
-      const c = classify({ series: a.series, yM });
-      if (!c) continue;
-      const ym = minYear(a.series);
-      const blob = encodeSpark(a.series, ym, yM);
-      values.push(
-        "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      );
-      binds.push(
-        a.name,
-        a.name.toLowerCase(),
-        a.sex,
-        c.firstYear,
-        c.lastYear,
-        c.peakYear,
-        c.peakCount,
-        c.totalCount,
-        c.status,
-        c.declinePct,
-        c.latestCount,
-        c.prevDecadeTotal,
-        c.currDecadeTotal,
-        c.growthX,
-        blob,
-      );
-    }
-    if (!values.length) continue;
-    const sql =
-      `INSERT INTO names_staging
-         (name, name_lower, sex, first_year, last_year, peak_year, peak_count,
-          total_count, status, decline_pct, latest_count, prev_decade,
-          curr_decade, growth_x, spark_blob)
-       VALUES ${values.join(",")}
-       ON CONFLICT(name, sex) DO UPDATE SET
-         first_year=excluded.first_year, last_year=excluded.last_year,
-         peak_year=excluded.peak_year, peak_count=excluded.peak_count,
-         total_count=excluded.total_count, status=excluded.status,
-         decline_pct=excluded.decline_pct, latest_count=excluded.latest_count,
-         prev_decade=excluded.prev_decade, curr_decade=excluded.curr_decade,
-         growth_x=excluded.growth_x, spark_blob=excluded.spark_blob`;
-    nameStmts.push(db.prepare(sql).bind(...binds));
+  // names_staging - 1 row per (name, sex). Upserts on UNIQUE(name, sex), so a
+  // retried finalize overwrites what the failed attempt left behind.
+  const nameRows: (string | number | null)[][] = [];
+  for (const a of page) {
+    const c = classify({ series: a.series, yM });
+    if (!c) continue;
+    const ym = minYear(a.series);
+    nameRows.push([
+      a.name,
+      a.name.toLowerCase(),
+      a.sex,
+      c.firstYear,
+      c.lastYear,
+      c.peakYear,
+      c.peakCount,
+      c.totalCount,
+      c.status,
+      c.declinePct,
+      c.latestCount,
+      c.prevDecadeTotal,
+      c.currDecadeTotal,
+      c.growthX,
+      toHex(encodeSpark(a.series, ym, yM)),
+    ]);
   }
+  const nameStmts = nameRows.length
+    ? [db.prepare(NAMES_FROM_JSON).bind(JSON.stringify(nameRows))]
+    : [];
 
-  // name_years_staging — collected by name later. We need name_id, which
-  // we resolve via a sub-SELECT keyed on (name, sex) in names_staging.
-  // Each multi-row INSERT can bind 100 (name, sex, year, count) tuples.
-  const ROWS_PER_STMT = 100;
-  const yearsBuf: { name: string; sex: Sex; year: number; count: number }[] = [];
+  const yearRows: (string | number)[][] = [];
   for (const a of page) {
     for (const yStr of Object.keys(a.series)) {
       const y = Number(yStr);
-      yearsBuf.push({ name: a.name, sex: a.sex, year: y, count: a.series[y]! });
+      yearRows.push([a.name, a.sex, y, a.series[y]!]);
     }
   }
-  for (let i = 0; i < yearsBuf.length; i += ROWS_PER_STMT) {
-    const slice = yearsBuf.slice(i, i + ROWS_PER_STMT);
-    const tuples = slice
-      .map(
-        () =>
-          "((SELECT id FROM names_staging WHERE name=? AND sex=?), ?, ?)",
-      )
-      .join(",");
-    const sql =
-      `INSERT OR REPLACE INTO name_years_staging(name_id, year, count) VALUES ${tuples}`;
-    const binds: (string | number)[] = [];
-    for (const r of slice) binds.push(r.name, r.sex, r.year, r.count);
-    yearStmts.push(db.prepare(sql).bind(...binds));
+  const yearStmts: D1PreparedStatement[] = [];
+  for (let i = 0; i < yearRows.length; i += YEAR_ROWS_PER_STMT) {
+    yearStmts.push(
+      db.prepare(YEARS_FROM_JSON).bind(JSON.stringify(yearRows.slice(i, i + YEAR_ROWS_PER_STMT))),
+    );
   }
 
   const last = page[page.length - 1];

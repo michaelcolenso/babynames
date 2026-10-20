@@ -34,4 +34,4 @@ enabled = true
 head_sampling_rate = 1
 
 [triggers]
-crons = ["0 14 * * 1"] # Weekly Mondays 14:00 UTC
+crons = ["0 14 * * 1"] # Weekly, Sundays 14:00 UTC (Cloudflare numbers weekdays from Sunday = 1)
