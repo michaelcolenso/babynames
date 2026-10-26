@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { computeFlashFloods } from "../packages/shared/src/content/factory-compute";
-import { renderFactoryVizPage } from "../packages/shared/src/content/render-factory-viz";
+import { VIZ_PANEL_LIMIT, renderFactoryVizPage } from "../packages/shared/src/content/render-factory-viz";
 import { renderFactoryPostMarkdown } from "../packages/shared/src/content/render-factory-post";
 import { CONTENT_DEFINITIONS } from "../packages/shared/src/content/content-definitions";
 import type { ContentDefinition, FlashFloodMember } from "../packages/shared/src/content/factory-types";
@@ -139,4 +139,70 @@ test("post renderer throws on unresolved claim placeholder", () => {
   assert.throws(() =>
     renderFactoryPostMarkdown(def, { count: 2 }, "{{claim:missing}} text", {}, { date: "2026-08-22" }),
   );
+});
+
+test("viz page: half-life families get a Half-life column and mark survivors as 30+", () => {
+  type Halfish = {
+    name: string;
+    sex: string;
+    firstYear: number;
+    peakYear: number;
+    peakCount: number;
+    halfLifeYears: number;
+    halfYear: number;
+    halfCount: number;
+    survivedWindow: boolean;
+    finalCount: number;
+    series: Record<number, number>;
+  };
+  const mk = (name: string, half: number, survived: boolean): Halfish => ({
+    name,
+    sex: "F",
+    firstYear: 1980,
+    peakYear: 1990,
+    peakCount: 5000,
+    halfLifeYears: half,
+    halfYear: 1990 + half,
+    halfCount: 2400,
+    survivedWindow: survived,
+    finalCount: 800,
+    series: { 1990: 5000, 1991: 3000, 1992: 2400 },
+  });
+  const hlDef: ContentDefinition = {
+    ...def,
+    slug: "half-lives",
+    panels: [],
+    claims: {},
+  };
+  const html = renderFactoryVizPage(
+    hlDef,
+    { members: [mk("Quick", 2, false), mk("Slow", 30, true)], totalNames: 2 } as never,
+    { canonicalBase: "https://nobodynamed.com", dataMaxYear: 2025 },
+  );
+  assert.match(html, /<th>Half-life \(yrs\)<\/th>/);
+  assert.match(html, /<td>2<\/td>/);
+  assert.match(html, /<td>30\+<\/td>/);
+  assert.ok(!html.includes("undefined"));
+});
+
+test("viz page: inline panel count is capped so big families stay light", () => {
+  const members = Array.from({ length: VIZ_PANEL_LIMIT + 15 }, (_, i) => ({
+    name: `Name${i}`,
+    sex: "F",
+    firstYear: 1900,
+    peakYear: 1950,
+    peakCount: 5000 - i,
+    series: { 1900: 100, 1950: 5000 - i, 1990: 200 },
+  }));
+  const html = renderFactoryVizPage(
+    def,
+    { members, totalNames: members.length } as never,
+    { canonicalBase: "https://nobodynamed.com", dataMaxYear: 2025 },
+  );
+  assert.equal((html.match(/<svg class="sparkline/g) ?? []).length, VIZ_PANEL_LIMIT);
+  assert.match(html, new RegExp(`${VIZ_PANEL_LIMIT} largest peaks`));
+  assert.match(html, new RegExp(`the table lists all ${members.length}`));
+  // Every member still appears in the table.
+  const tableBody = html.split("<tbody>")[1] ?? "";
+  assert.equal((tableBody.match(/<tr>/g) ?? []).length, members.length);
 });

@@ -1,0 +1,277 @@
+---
+title: "The Half-Lives — American Names Now Lose Half Their Births in Eleven Years"
+date: "2026-10-26"
+description: "661 names peaked above 2,000 births in a single year. Measured over the same thirty-year window, the median one loses half its annual births in twelve years — seventeen before 1950, eleven after."
+author: "NobodyNamed"
+status: "published"
+og_image: "/api/og/default"
+slug: "half-lives"
+---
+# The Half-Lives — American Names Now Lose Half Their Births in Eleven Years
+
+In 1992, 16177 American girls were named [Chelsea](/name/Chelsea/). Two years later the count was 7718.
+
+That is the number worth having about a name. Not the year it arrived. The year it stopped being plausible.
+
+We took every name that peaked above 2,000 births in a single year, gave each one the same 30-year look, and asked a single question: when does the annual count fall below half?
+
+661 names had a full window. 604 of them halved. 57 never did.
+
+The median half-life across the whole cohort: 12 years.
+
+<div class="chart-panel">
+  <div class="chart-panel-name">Chelsea</div>
+  <div class="chart-caption"><span>1910</span><span>Peak 1992</span><span>2025</span></div>
+  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <style>
+    .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
+    .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
+    .sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{opacity:0;animation:nv-spark-fade .6s ease-out 1.35s forwards}
+    @keyframes nv-spark-draw{to{stroke-dashoffset:0}}
+    @keyframes nv-spark-fade{to{opacity:1}}
+    @media (prefers-reduced-motion:reduce){
+      .sparkline .line,.sparkline .fill,.sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{animation:none;opacity:1;stroke-dashoffset:0}
+    }
+  </style>
+  <line class="axis" x1="10" y1="254" x2="634" y2="254"/>
+  <path class="fill" d="M10.0,254.0L14.3,254.0L18.6,254.0L22.9,254.0L27.2,254.0L31.5,254.0L35.8,254.0L40.1,254.0L44.4,254.0L48.7,254.0L53.0,254.0L57.3,254.0L61.6,254.0L65.9,254.0L70.2,254.0L74.6,254.0L78.9,254.0L83.2,254.0L87.5,254.0L91.8,254.0L96.1,254.0L100.4,254.0L104.7,254.0L109.0,254.0L113.3,254.0L117.6,254.0L121.9,254.0L126.2,254.0L130.5,254.0L134.8,254.0L139.1,253.9L143.4,254.0L147.7,254.0L152.0,254.0L156.3,254.0L160.6,253.9L164.9,254.0L169.2,254.0L173.5,253.9L177.8,253.9L182.1,254.0L186.4,254.0L190.7,253.9L195.0,254.0L199.4,254.0L203.7,253.9L208.0,253.9L212.3,253.9L216.6,254.0L220.9,254.0L225.2,253.9L229.5,254.0L233.8,253.9L238.1,254.0L242.4,254.0L246.7,253.9L251.0,254.0L255.3,254.0L259.6,254.0L263.9,254.0L268.2,254.0L272.5,254.0L276.8,253.9L281.1,254.0L285.4,254.0L289.7,254.0L294.0,254.0L298.3,254.0L302.6,254.0L306.9,254.0L311.2,253.9L315.5,254.0L319.8,253.9L324.2,254.0L328.5,253.9L332.8,254.0L337.1,254.0L341.4,253.9L345.7,254.0L350.0,253.9L354.3,253.9L358.6,253.9L362.9,254.0L367.2,253.9L371.5,253.9L375.8,253.9L380.1,253.9L384.4,253.9L388.7,253.4L393.0,251.2L397.3,250.9L401.6,251.2L405.9,251.0L410.2,250.7L414.5,248.8L418.8,249.1L423.1,247.9L427.4,247.3L431.7,247.0L436.0,247.9L440.3,246.5L444.6,246.5L449.0,230.3L453.3,216.5L457.6,205.1L461.9,204.0L466.2,202.0L470.5,162.2L474.8,131.1L479.1,98.2L483.4,77.0L487.7,66.9L492.0,30.0L496.3,97.7L500.6,147.1L504.9,160.4L509.2,172.8L513.5,192.2L517.8,205.3L522.1,216.3L526.4,221.0L530.7,224.6L535.0,229.3L539.3,228.5L543.6,229.7L547.9,230.0L552.2,228.7L556.5,231.2L560.8,233.0L565.1,234.2L569.4,234.4L573.8,234.3L578.1,235.2L582.4,237.7L586.7,237.4L591.0,239.4L595.3,241.1L599.6,242.7L603.9,244.8L608.2,246.3L612.5,247.8L616.8,247.5L621.1,248.1L625.4,248.5L629.7,249.0L634.0,249.6L634.0,254.0L10.0,254.0Z"/>
+  <path class="line" pathLength="1" d="M10.0,254.0L14.3,254.0L18.6,254.0L22.9,254.0L27.2,254.0L31.5,254.0L35.8,254.0L40.1,254.0L44.4,254.0L48.7,254.0L53.0,254.0L57.3,254.0L61.6,254.0L65.9,254.0L70.2,254.0L74.6,254.0L78.9,254.0L83.2,254.0L87.5,254.0L91.8,254.0L96.1,254.0L100.4,254.0L104.7,254.0L109.0,254.0L113.3,254.0L117.6,254.0L121.9,254.0L126.2,254.0L130.5,254.0L134.8,254.0L139.1,253.9L143.4,254.0L147.7,254.0L152.0,254.0L156.3,254.0L160.6,253.9L164.9,254.0L169.2,254.0L173.5,253.9L177.8,253.9L182.1,254.0L186.4,254.0L190.7,253.9L195.0,254.0L199.4,254.0L203.7,253.9L208.0,253.9L212.3,253.9L216.6,254.0L220.9,254.0L225.2,253.9L229.5,254.0L233.8,253.9L238.1,254.0L242.4,254.0L246.7,253.9L251.0,254.0L255.3,254.0L259.6,254.0L263.9,254.0L268.2,254.0L272.5,254.0L276.8,253.9L281.1,254.0L285.4,254.0L289.7,254.0L294.0,254.0L298.3,254.0L302.6,254.0L306.9,254.0L311.2,253.9L315.5,254.0L319.8,253.9L324.2,254.0L328.5,253.9L332.8,254.0L337.1,254.0L341.4,253.9L345.7,254.0L350.0,253.9L354.3,253.9L358.6,253.9L362.9,254.0L367.2,253.9L371.5,253.9L375.8,253.9L380.1,253.9L384.4,253.9L388.7,253.4L393.0,251.2L397.3,250.9L401.6,251.2L405.9,251.0L410.2,250.7L414.5,248.8L418.8,249.1L423.1,247.9L427.4,247.3L431.7,247.0L436.0,247.9L440.3,246.5L444.6,246.5L449.0,230.3L453.3,216.5L457.6,205.1L461.9,204.0L466.2,202.0L470.5,162.2L474.8,131.1L479.1,98.2L483.4,77.0L487.7,66.9L492.0,30.0L496.3,97.7L500.6,147.1L504.9,160.4L509.2,172.8L513.5,192.2L517.8,205.3L522.1,216.3L526.4,221.0L530.7,224.6L535.0,229.3L539.3,228.5L543.6,229.7L547.9,230.0L552.2,228.7L556.5,231.2L560.8,233.0L565.1,234.2L569.4,234.4L573.8,234.3L578.1,235.2L582.4,237.7L586.7,237.4L591.0,239.4L595.3,241.1L599.6,242.7L603.9,244.8L608.2,246.3L612.5,247.8L616.8,247.5L621.1,248.1L625.4,248.5L629.7,249.0L634.0,249.6"/>
+  <circle class="peak" cx="492.0" cy="30.0" r="4"/>
+  <text x="492.0" y="22.0" class="point-label" text-anchor="middle">peak 1992</text>
+  <text x="634.0" y="241.6" class="point-label" text-anchor="end">2025</text>
+  <text x="10.0" y="274" class="axis-text" text-anchor="middle">1880</text><text x="96.1" y="274" class="axis-text" text-anchor="middle">1900</text><text x="182.1" y="274" class="axis-text" text-anchor="middle">1920</text><text x="268.2" y="274" class="axis-text" text-anchor="middle">1940</text><text x="354.3" y="274" class="axis-text" text-anchor="middle">1960</text><text x="440.3" y="274" class="axis-text" text-anchor="middle">1980</text><text x="526.4" y="274" class="axis-text" text-anchor="middle">2000</text><text x="612.5" y="274" class="axis-text" text-anchor="middle">2020</text>
+</svg>
+</div>
+
+## The break at 1950
+
+Names that peaked before 1950 were built differently. 215 of them are in the cohort, and 13 percent lost half their births inside a decade. The median one took 17 years.
+
+The 446 names that peaked after 1950 went faster. 47 percent halved inside ten years. Median: 11 years.
+
+The survivor split is starker. 20 percent of the prewar names were still above half their peak 30 years later. Since 1950, 3 percent were.
+
+<div class="chart-panel">
+  <div class="chart-panel-name">Deborah</div>
+  <div class="chart-caption"><span>1880</span><span>Peak 1954</span><span>2025</span></div>
+  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <style>
+    .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
+    .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
+    .sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{opacity:0;animation:nv-spark-fade .6s ease-out 1.35s forwards}
+    @keyframes nv-spark-draw{to{stroke-dashoffset:0}}
+    @keyframes nv-spark-fade{to{opacity:1}}
+    @media (prefers-reduced-motion:reduce){
+      .sparkline .line,.sparkline .fill,.sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{animation:none;opacity:1;stroke-dashoffset:0}
+    }
+  </style>
+  <line class="axis" x1="10" y1="254" x2="634" y2="254"/>
+  <path class="fill" d="M10.0,254.0L14.3,253.9L18.6,253.9L22.9,253.9L27.2,253.9L31.5,254.0L35.8,254.0L40.1,253.9L44.4,253.9L48.7,254.0L53.0,253.9L57.3,253.9L61.6,253.9L65.9,253.9L70.2,253.9L74.6,253.9L78.9,253.9L83.2,253.9L87.5,253.9L91.8,254.0L96.1,253.9L100.4,253.9L104.7,253.9L109.0,253.9L113.3,253.9L117.6,253.9L121.9,253.9L126.2,253.9L130.5,253.9L134.8,253.9L139.1,253.9L143.4,253.9L147.7,253.9L152.0,253.8L156.3,253.7L160.6,253.6L164.9,253.6L169.2,253.6L173.5,253.6L177.8,253.7L182.1,253.7L186.4,253.6L190.7,253.7L195.0,253.5L199.4,253.5L203.7,253.7L208.0,253.5L212.3,253.6L216.6,253.5L220.9,253.3L225.2,253.3L229.5,253.4L233.8,253.2L238.1,253.0L242.4,252.9L246.7,252.8L251.0,252.8L255.3,252.7L259.6,252.3L263.9,252.2L268.2,252.1L272.5,251.5L276.8,251.2L281.1,250.8L285.4,248.7L289.7,248.0L294.0,243.9L298.3,230.1L302.6,207.9L306.9,175.3L311.2,134.9L315.5,81.7L319.8,49.9L324.2,40.1L328.5,30.0L332.8,39.7L337.1,58.0L341.4,89.7L345.7,119.0L350.0,132.9L354.3,150.5L358.6,155.2L362.9,160.2L367.2,167.7L371.5,174.9L375.8,184.0L380.1,187.4L384.4,196.6L388.7,203.7L393.0,208.2L397.3,213.7L401.6,218.5L405.9,228.3L410.2,233.6L414.5,236.2L418.8,240.0L423.1,241.7L427.4,243.0L431.7,243.8L436.0,245.1L440.3,246.1L444.6,246.2L449.0,246.5L453.3,247.4L457.6,248.0L461.9,248.3L466.2,248.7L470.5,249.1L474.8,249.7L479.1,249.6L483.4,249.5L487.7,249.8L492.0,250.2L496.3,250.7L500.6,251.0L504.9,251.3L509.2,251.4L513.5,251.4L517.8,251.7L522.1,251.9L526.4,251.8L530.7,252.0L535.0,252.1L539.3,252.3L543.6,252.3L547.9,252.3L552.2,252.3L556.5,252.5L560.8,252.5L565.1,252.6L569.4,252.5L573.8,252.6L578.1,252.6L582.4,252.6L586.7,252.5L591.0,252.6L595.3,252.6L599.6,252.5L603.9,252.6L608.2,252.8L612.5,252.8L616.8,252.8L621.1,252.8L625.4,252.9L629.7,252.7L634.0,252.7L634.0,254.0L10.0,254.0Z"/>
+  <path class="line" pathLength="1" d="M10.0,254.0L14.3,253.9L18.6,253.9L22.9,253.9L27.2,253.9L31.5,254.0L35.8,254.0L40.1,253.9L44.4,253.9L48.7,254.0L53.0,253.9L57.3,253.9L61.6,253.9L65.9,253.9L70.2,253.9L74.6,253.9L78.9,253.9L83.2,253.9L87.5,253.9L91.8,254.0L96.1,253.9L100.4,253.9L104.7,253.9L109.0,253.9L113.3,253.9L117.6,253.9L121.9,253.9L126.2,253.9L130.5,253.9L134.8,253.9L139.1,253.9L143.4,253.9L147.7,253.9L152.0,253.8L156.3,253.7L160.6,253.6L164.9,253.6L169.2,253.6L173.5,253.6L177.8,253.7L182.1,253.7L186.4,253.6L190.7,253.7L195.0,253.5L199.4,253.5L203.7,253.7L208.0,253.5L212.3,253.6L216.6,253.5L220.9,253.3L225.2,253.3L229.5,253.4L233.8,253.2L238.1,253.0L242.4,252.9L246.7,252.8L251.0,252.8L255.3,252.7L259.6,252.3L263.9,252.2L268.2,252.1L272.5,251.5L276.8,251.2L281.1,250.8L285.4,248.7L289.7,248.0L294.0,243.9L298.3,230.1L302.6,207.9L306.9,175.3L311.2,134.9L315.5,81.7L319.8,49.9L324.2,40.1L328.5,30.0L332.8,39.7L337.1,58.0L341.4,89.7L345.7,119.0L350.0,132.9L354.3,150.5L358.6,155.2L362.9,160.2L367.2,167.7L371.5,174.9L375.8,184.0L380.1,187.4L384.4,196.6L388.7,203.7L393.0,208.2L397.3,213.7L401.6,218.5L405.9,228.3L410.2,233.6L414.5,236.2L418.8,240.0L423.1,241.7L427.4,243.0L431.7,243.8L436.0,245.1L440.3,246.1L444.6,246.2L449.0,246.5L453.3,247.4L457.6,248.0L461.9,248.3L466.2,248.7L470.5,249.1L474.8,249.7L479.1,249.6L483.4,249.5L487.7,249.8L492.0,250.2L496.3,250.7L500.6,251.0L504.9,251.3L509.2,251.4L513.5,251.4L517.8,251.7L522.1,251.9L526.4,251.8L530.7,252.0L535.0,252.1L539.3,252.3L543.6,252.3L547.9,252.3L552.2,252.3L556.5,252.5L560.8,252.5L565.1,252.6L569.4,252.5L573.8,252.6L578.1,252.6L582.4,252.6L586.7,252.5L591.0,252.6L595.3,252.6L599.6,252.5L603.9,252.6L608.2,252.8L612.5,252.8L616.8,252.8L621.1,252.8L625.4,252.9L629.7,252.7L634.0,252.7"/>
+  <circle class="peak" cx="328.5" cy="30.0" r="4"/>
+  <text x="328.5" y="22.0" class="point-label" text-anchor="middle">peak 1954</text>
+  <text x="634.0" y="244.7" class="point-label" text-anchor="end">2025</text>
+  <text x="10.0" y="274" class="axis-text" text-anchor="middle">1880</text><text x="96.1" y="274" class="axis-text" text-anchor="middle">1900</text><text x="182.1" y="274" class="axis-text" text-anchor="middle">1920</text><text x="268.2" y="274" class="axis-text" text-anchor="middle">1940</text><text x="354.3" y="274" class="axis-text" text-anchor="middle">1960</text><text x="440.3" y="274" class="axis-text" text-anchor="middle">1980</text><text x="526.4" y="274" class="axis-text" text-anchor="middle">2000</text><text x="612.5" y="274" class="axis-text" text-anchor="middle">2020</text>
+</svg>
+</div>
+
+A name that peaked in the 1920s took 21 years to halve. One that peaked in the 1970s took 9 years. One that peaked in the 1990s, when American births were climbing again, took 12.
+
+<div class="chart-panel">
+  <div class="chart-panel-name">Shirley</div>
+  <div class="chart-caption"><span>1880</span><span>Peak 1935</span><span>2025</span></div>
+  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <style>
+    .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
+    .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
+    .sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{opacity:0;animation:nv-spark-fade .6s ease-out 1.35s forwards}
+    @keyframes nv-spark-draw{to{stroke-dashoffset:0}}
+    @keyframes nv-spark-fade{to{opacity:1}}
+    @media (prefers-reduced-motion:reduce){
+      .sparkline .line,.sparkline .fill,.sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{animation:none;opacity:1;stroke-dashoffset:0}
+    }
+  </style>
+  <line class="axis" x1="10" y1="254" x2="634" y2="254"/>
+  <path class="fill" d="M10.0,254.0L14.3,254.0L18.6,254.0L22.9,253.9L27.2,253.9L31.5,253.9L35.8,253.9L40.1,253.9L44.4,253.8L48.7,253.8L53.0,253.8L57.3,253.8L61.6,253.7L65.9,253.7L70.2,253.8L74.6,253.8L78.9,253.7L83.2,253.7L87.5,253.6L91.8,253.6L96.1,253.4L100.4,253.5L104.7,253.5L109.0,253.5L113.3,253.3L117.6,253.1L121.9,253.0L126.2,252.7L130.5,252.5L134.8,252.5L139.1,252.3L143.4,252.1L147.7,251.4L152.0,250.4L156.3,249.2L160.6,248.0L164.9,247.4L169.2,244.5L173.5,240.0L177.8,237.4L182.1,229.1L186.4,223.9L190.7,220.1L195.0,212.1L199.4,203.8L203.7,198.4L208.0,191.8L212.3,183.6L216.6,178.8L220.9,176.9L225.2,175.9L229.5,177.8L233.8,177.5L238.1,178.3L242.4,133.2L246.7,30.0L251.0,68.1L255.3,112.2L259.6,128.3L263.9,145.9L268.2,159.5L272.5,164.4L276.8,160.2L281.1,159.8L285.4,167.8L289.7,168.6L294.0,159.5L298.3,160.7L302.6,168.8L306.9,162.6L311.2,170.0L315.5,180.4L319.8,187.8L324.2,189.8L328.5,196.3L332.8,202.4L337.1,204.1L341.4,207.2L345.7,211.2L350.0,215.5L354.3,220.1L358.6,224.2L362.9,228.3L367.2,230.8L371.5,233.0L375.8,236.2L380.1,238.6L384.4,240.7L388.7,242.7L393.0,244.1L397.3,245.4L401.6,245.6L405.9,246.9L410.2,247.9L414.5,248.7L418.8,249.4L423.1,249.6L427.4,249.9L431.7,250.6L436.0,250.5L440.3,250.8L444.6,250.9L449.0,250.8L453.3,251.3L457.6,251.5L461.9,251.4L466.2,251.7L470.5,251.6L474.8,251.6L479.1,251.6L483.4,251.5L487.7,251.6L492.0,251.6L496.3,251.9L500.6,252.0L504.9,252.2L509.2,252.2L513.5,252.2L517.8,252.5L522.1,252.8L526.4,252.6L530.7,252.4L535.0,252.6L539.3,252.3L543.6,252.7L547.9,252.5L552.2,252.7L556.5,252.5L560.8,252.4L565.1,252.8L569.4,253.1L573.8,253.0L578.1,253.1L582.4,253.1L586.7,252.9L591.0,253.0L595.3,253.1L599.6,253.0L603.9,253.2L608.2,253.2L612.5,253.3L616.8,253.4L621.1,253.3L625.4,253.3L629.7,253.2L634.0,253.3L634.0,254.0L10.0,254.0Z"/>
+  <path class="line" pathLength="1" d="M10.0,254.0L14.3,254.0L18.6,254.0L22.9,253.9L27.2,253.9L31.5,253.9L35.8,253.9L40.1,253.9L44.4,253.8L48.7,253.8L53.0,253.8L57.3,253.8L61.6,253.7L65.9,253.7L70.2,253.8L74.6,253.8L78.9,253.7L83.2,253.7L87.5,253.6L91.8,253.6L96.1,253.4L100.4,253.5L104.7,253.5L109.0,253.5L113.3,253.3L117.6,253.1L121.9,253.0L126.2,252.7L130.5,252.5L134.8,252.5L139.1,252.3L143.4,252.1L147.7,251.4L152.0,250.4L156.3,249.2L160.6,248.0L164.9,247.4L169.2,244.5L173.5,240.0L177.8,237.4L182.1,229.1L186.4,223.9L190.7,220.1L195.0,212.1L199.4,203.8L203.7,198.4L208.0,191.8L212.3,183.6L216.6,178.8L220.9,176.9L225.2,175.9L229.5,177.8L233.8,177.5L238.1,178.3L242.4,133.2L246.7,30.0L251.0,68.1L255.3,112.2L259.6,128.3L263.9,145.9L268.2,159.5L272.5,164.4L276.8,160.2L281.1,159.8L285.4,167.8L289.7,168.6L294.0,159.5L298.3,160.7L302.6,168.8L306.9,162.6L311.2,170.0L315.5,180.4L319.8,187.8L324.2,189.8L328.5,196.3L332.8,202.4L337.1,204.1L341.4,207.2L345.7,211.2L350.0,215.5L354.3,220.1L358.6,224.2L362.9,228.3L367.2,230.8L371.5,233.0L375.8,236.2L380.1,238.6L384.4,240.7L388.7,242.7L393.0,244.1L397.3,245.4L401.6,245.6L405.9,246.9L410.2,247.9L414.5,248.7L418.8,249.4L423.1,249.6L427.4,249.9L431.7,250.6L436.0,250.5L440.3,250.8L444.6,250.9L449.0,250.8L453.3,251.3L457.6,251.5L461.9,251.4L466.2,251.7L470.5,251.6L474.8,251.6L479.1,251.6L483.4,251.5L487.7,251.6L492.0,251.6L496.3,251.9L500.6,252.0L504.9,252.2L509.2,252.2L513.5,252.2L517.8,252.5L522.1,252.8L526.4,252.6L530.7,252.4L535.0,252.6L539.3,252.3L543.6,252.7L547.9,252.5L552.2,252.7L556.5,252.5L560.8,252.4L565.1,252.8L569.4,253.1L573.8,253.0L578.1,253.1L582.4,253.1L586.7,252.9L591.0,253.0L595.3,253.1L599.6,253.0L603.9,253.2L608.2,253.2L612.5,253.3L616.8,253.4L621.1,253.3L625.4,253.3L629.7,253.2L634.0,253.3"/>
+  <circle class="peak" cx="246.7" cy="30.0" r="4"/>
+  <text x="246.7" y="22.0" class="point-label" text-anchor="middle">peak 1935</text>
+  <text x="634.0" y="245.3" class="point-label" text-anchor="end">2025</text>
+  <text x="10.0" y="274" class="axis-text" text-anchor="middle">1880</text><text x="96.1" y="274" class="axis-text" text-anchor="middle">1900</text><text x="182.1" y="274" class="axis-text" text-anchor="middle">1920</text><text x="268.2" y="274" class="axis-text" text-anchor="middle">1940</text><text x="354.3" y="274" class="axis-text" text-anchor="middle">1960</text><text x="440.3" y="274" class="axis-text" text-anchor="middle">1980</text><text x="526.4" y="274" class="axis-text" text-anchor="middle">2000</text><text x="612.5" y="274" class="axis-text" text-anchor="middle">2020</text>
+</svg>
+</div>
+
+Shirley is the cleanest prewar case. 42366 girls in 1935, a name built by a child actress, and 4 years later it was at 20447. Hollywood handed the country a name, and the country used it up on schedule.
+
+## Two names, one year
+
+In 1992, [Hillary](/name/Hillary/) hit 2520 births. One year later it was 1064.
+
+[Chelsea](/name/Chelsea/), the same year, started from 16177 and took 2 years to reach half.
+
+Two names, two speeds, one year. The record does not say what caused either collapse. It only shows that a name can be everywhere in a season and spent inside a couple of years.
+
+A peak is invisible while it is happening. Parents in 1992 were choosing a name that was rising. The record, with hindsight, sees a name already at the top of its arc.
+
+<div class="chart-panel">
+  <div class="chart-panel-name">Hillary</div>
+  <div class="chart-caption"><span>1922</span><span>Peak 1992</span><span>2025</span></div>
+  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <style>
+    .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
+    .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
+    .sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{opacity:0;animation:nv-spark-fade .6s ease-out 1.35s forwards}
+    @keyframes nv-spark-draw{to{stroke-dashoffset:0}}
+    @keyframes nv-spark-fade{to{opacity:1}}
+    @media (prefers-reduced-motion:reduce){
+      .sparkline .line,.sparkline .fill,.sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{animation:none;opacity:1;stroke-dashoffset:0}
+    }
+  </style>
+  <line class="axis" x1="10" y1="254" x2="634" y2="254"/>
+  <path class="fill" d="M10.0,254.0L14.3,254.0L18.6,254.0L22.9,254.0L27.2,254.0L31.5,254.0L35.8,254.0L40.1,254.0L44.4,254.0L48.7,254.0L53.0,254.0L57.3,254.0L61.6,254.0L65.9,254.0L70.2,254.0L74.6,254.0L78.9,254.0L83.2,254.0L87.5,254.0L91.8,254.0L96.1,254.0L100.4,254.0L104.7,254.0L109.0,254.0L113.3,254.0L117.6,254.0L121.9,254.0L126.2,254.0L130.5,254.0L134.8,254.0L139.1,254.0L143.4,254.0L147.7,254.0L152.0,254.0L156.3,254.0L160.6,254.0L164.9,254.0L169.2,254.0L173.5,254.0L177.8,254.0L182.1,254.0L186.4,254.0L190.7,253.6L195.0,254.0L199.4,254.0L203.7,254.0L208.0,254.0L212.3,254.0L216.6,254.0L220.9,254.0L225.2,254.0L229.5,254.0L233.8,254.0L238.1,254.0L242.4,254.0L246.7,254.0L251.0,254.0L255.3,254.0L259.6,254.0L263.9,254.0L268.2,254.0L272.5,254.0L276.8,253.4L281.1,252.8L285.4,252.3L289.7,252.4L294.0,251.4L298.3,249.5L302.6,250.2L306.9,249.7L311.2,249.2L315.5,250.4L319.8,250.2L324.2,248.8L328.5,247.2L332.8,247.7L337.1,245.2L341.4,246.1L345.7,245.6L350.0,246.6L354.3,247.3L358.6,244.1L362.9,244.0L367.2,240.8L371.5,242.3L375.8,244.1L380.1,243.0L384.4,240.2L388.7,238.2L393.0,236.4L397.3,231.2L401.6,231.7L405.9,232.5L410.2,231.6L414.5,226.3L418.8,225.4L423.1,224.6L427.4,214.7L431.7,190.1L436.0,172.1L440.3,179.8L444.6,188.7L449.0,187.0L453.3,192.0L457.6,164.3L461.9,160.9L466.2,157.7L470.5,158.1L474.8,157.6L479.1,139.9L483.4,118.4L487.7,94.8L492.0,30.0L496.3,159.4L500.6,217.6L504.9,226.4L509.2,226.3L513.5,227.9L517.8,232.4L522.1,231.4L526.4,231.6L530.7,231.0L535.0,236.5L539.3,234.0L543.6,226.4L547.9,228.7L552.2,230.4L556.5,228.9L560.8,217.4L565.1,236.2L569.4,239.1L573.8,239.2L578.1,240.0L582.4,240.3L586.7,238.3L591.0,241.7L595.3,238.7L599.6,248.4L603.9,249.6L608.2,250.0L612.5,249.4L616.8,248.7L621.1,247.5L625.4,247.6L629.7,247.0L634.0,248.0L634.0,254.0L10.0,254.0Z"/>
+  <path class="line" pathLength="1" d="M10.0,254.0L14.3,254.0L18.6,254.0L22.9,254.0L27.2,254.0L31.5,254.0L35.8,254.0L40.1,254.0L44.4,254.0L48.7,254.0L53.0,254.0L57.3,254.0L61.6,254.0L65.9,254.0L70.2,254.0L74.6,254.0L78.9,254.0L83.2,254.0L87.5,254.0L91.8,254.0L96.1,254.0L100.4,254.0L104.7,254.0L109.0,254.0L113.3,254.0L117.6,254.0L121.9,254.0L126.2,254.0L130.5,254.0L134.8,254.0L139.1,254.0L143.4,254.0L147.7,254.0L152.0,254.0L156.3,254.0L160.6,254.0L164.9,254.0L169.2,254.0L173.5,254.0L177.8,254.0L182.1,254.0L186.4,254.0L190.7,253.6L195.0,254.0L199.4,254.0L203.7,254.0L208.0,254.0L212.3,254.0L216.6,254.0L220.9,254.0L225.2,254.0L229.5,254.0L233.8,254.0L238.1,254.0L242.4,254.0L246.7,254.0L251.0,254.0L255.3,254.0L259.6,254.0L263.9,254.0L268.2,254.0L272.5,254.0L276.8,253.4L281.1,252.8L285.4,252.3L289.7,252.4L294.0,251.4L298.3,249.5L302.6,250.2L306.9,249.7L311.2,249.2L315.5,250.4L319.8,250.2L324.2,248.8L328.5,247.2L332.8,247.7L337.1,245.2L341.4,246.1L345.7,245.6L350.0,246.6L354.3,247.3L358.6,244.1L362.9,244.0L367.2,240.8L371.5,242.3L375.8,244.1L380.1,243.0L384.4,240.2L388.7,238.2L393.0,236.4L397.3,231.2L401.6,231.7L405.9,232.5L410.2,231.6L414.5,226.3L418.8,225.4L423.1,224.6L427.4,214.7L431.7,190.1L436.0,172.1L440.3,179.8L444.6,188.7L449.0,187.0L453.3,192.0L457.6,164.3L461.9,160.9L466.2,157.7L470.5,158.1L474.8,157.6L479.1,139.9L483.4,118.4L487.7,94.8L492.0,30.0L496.3,159.4L500.6,217.6L504.9,226.4L509.2,226.3L513.5,227.9L517.8,232.4L522.1,231.4L526.4,231.6L530.7,231.0L535.0,236.5L539.3,234.0L543.6,226.4L547.9,228.7L552.2,230.4L556.5,228.9L560.8,217.4L565.1,236.2L569.4,239.1L573.8,239.2L578.1,240.0L582.4,240.3L586.7,238.3L591.0,241.7L595.3,238.7L599.6,248.4L603.9,249.6L608.2,250.0L612.5,249.4L616.8,248.7L621.1,247.5L625.4,247.6L629.7,247.0L634.0,248.0"/>
+  <circle class="peak" cx="492.0" cy="30.0" r="4"/>
+  <text x="492.0" y="22.0" class="point-label" text-anchor="middle">peak 1992</text>
+  <text x="634.0" y="240.0" class="point-label" text-anchor="end">2025</text>
+  <text x="10.0" y="274" class="axis-text" text-anchor="middle">1880</text><text x="96.1" y="274" class="axis-text" text-anchor="middle">1900</text><text x="182.1" y="274" class="axis-text" text-anchor="middle">1920</text><text x="268.2" y="274" class="axis-text" text-anchor="middle">1940</text><text x="354.3" y="274" class="axis-text" text-anchor="middle">1960</text><text x="440.3" y="274" class="axis-text" text-anchor="middle">1980</text><text x="526.4" y="274" class="axis-text" text-anchor="middle">2000</text><text x="612.5" y="274" class="axis-text" text-anchor="middle">2020</text>
+</svg>
+</div>
+
+## The class of 1987
+
+The late eighties produced a cluster of collapses that all landed inside 8 years.
+
+[Jessica](/name/Jessica/) peaked at 55992 in 1987 and halved in 8 years, to 27941.
+
+[Ashley](/name/Ashley/) peaked at 54856 and halved in 8 years, to 26606. [Amanda](/name/Amanda/) peaked at 41786 and halved in 6. [Brittany](/name/Brittany/) peaked at 37792 and halved in 6. [Stephanie](/name/Stephanie/) peaked at 24864 in 1990 and halved in 6 years, to 11643.
+
+<div class="chart-panel">
+  <div class="chart-panel-name">Jessica</div>
+  <div class="chart-caption"><span>1880</span><span>Peak 1987</span><span>2025</span></div>
+  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <style>
+    .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
+    .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
+    .sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{opacity:0;animation:nv-spark-fade .6s ease-out 1.35s forwards}
+    @keyframes nv-spark-draw{to{stroke-dashoffset:0}}
+    @keyframes nv-spark-fade{to{opacity:1}}
+    @media (prefers-reduced-motion:reduce){
+      .sparkline .line,.sparkline .fill,.sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{animation:none;opacity:1;stroke-dashoffset:0}
+    }
+  </style>
+  <line class="axis" x1="10" y1="254" x2="634" y2="254"/>
+  <path class="fill" d="M10.0,254.0L14.3,254.0L18.6,254.0L22.9,254.0L27.2,253.9L31.5,254.0L35.8,254.0L40.1,254.0L44.4,253.9L48.7,254.0L53.0,253.9L57.3,253.9L61.6,253.9L65.9,253.9L70.2,254.0L74.6,253.9L78.9,254.0L83.2,254.0L87.5,253.9L91.8,253.9L96.1,253.9L100.4,254.0L104.7,254.0L109.0,253.9L113.3,253.9L117.6,253.9L121.9,253.9L126.2,253.9L130.5,253.9L134.8,253.9L139.1,253.9L143.4,253.9L147.7,253.9L152.0,253.9L156.3,253.8L160.6,253.8L164.9,253.8L169.2,253.8L173.5,253.8L177.8,253.8L182.1,253.8L186.4,253.8L190.7,253.8L195.0,253.8L199.4,253.8L203.7,253.9L208.0,253.9L212.3,253.8L216.6,253.9L220.9,253.8L225.2,253.8L229.5,253.8L233.8,253.8L238.1,253.8L242.4,253.8L246.7,253.8L251.0,253.8L255.3,253.7L259.6,253.8L263.9,253.7L268.2,253.8L272.5,253.7L276.8,253.5L281.1,253.5L285.4,253.5L289.7,253.5L294.0,253.0L298.3,252.3L302.6,252.1L306.9,252.4L311.2,252.4L315.5,252.1L319.8,252.2L324.2,252.0L328.5,252.3L332.8,252.5L337.1,252.4L341.4,252.1L345.7,251.9L350.0,251.9L354.3,251.8L358.6,251.3L362.9,250.5L367.2,249.5L371.5,249.3L375.8,247.9L380.1,247.3L384.4,247.0L388.7,246.6L393.0,244.0L397.3,237.9L401.6,232.6L405.9,229.2L410.2,225.1L414.5,211.4L418.8,202.3L423.1,180.5L427.4,154.6L431.7,149.6L436.0,142.9L440.3,118.3L444.6,83.9L449.0,72.2L453.3,72.8L457.6,70.5L461.9,60.6L466.2,43.2L470.5,30.0L474.8,47.7L479.1,62.4L483.4,68.0L487.7,80.4L492.0,100.5L496.3,114.0L500.6,125.5L504.9,142.2L509.2,157.2L513.5,169.8L517.8,181.0L522.1,188.6L526.4,191.1L530.7,198.3L535.0,206.3L539.3,212.2L543.6,216.1L547.9,221.5L552.2,226.7L556.5,231.1L560.8,235.0L565.1,238.8L569.4,241.2L573.8,243.5L578.1,244.7L582.4,246.2L586.7,246.8L591.0,247.6L595.3,248.4L599.6,248.8L603.9,249.7L608.2,250.1L612.5,250.9L616.8,251.4L621.1,251.5L625.4,251.8L629.7,251.9L634.0,252.3L634.0,254.0L10.0,254.0Z"/>
+  <path class="line" pathLength="1" d="M10.0,254.0L14.3,254.0L18.6,254.0L22.9,254.0L27.2,253.9L31.5,254.0L35.8,254.0L40.1,254.0L44.4,253.9L48.7,254.0L53.0,253.9L57.3,253.9L61.6,253.9L65.9,253.9L70.2,254.0L74.6,253.9L78.9,254.0L83.2,254.0L87.5,253.9L91.8,253.9L96.1,253.9L100.4,254.0L104.7,254.0L109.0,253.9L113.3,253.9L117.6,253.9L121.9,253.9L126.2,253.9L130.5,253.9L134.8,253.9L139.1,253.9L143.4,253.9L147.7,253.9L152.0,253.9L156.3,253.8L160.6,253.8L164.9,253.8L169.2,253.8L173.5,253.8L177.8,253.8L182.1,253.8L186.4,253.8L190.7,253.8L195.0,253.8L199.4,253.8L203.7,253.9L208.0,253.9L212.3,253.8L216.6,253.9L220.9,253.8L225.2,253.8L229.5,253.8L233.8,253.8L238.1,253.8L242.4,253.8L246.7,253.8L251.0,253.8L255.3,253.7L259.6,253.8L263.9,253.7L268.2,253.8L272.5,253.7L276.8,253.5L281.1,253.5L285.4,253.5L289.7,253.5L294.0,253.0L298.3,252.3L302.6,252.1L306.9,252.4L311.2,252.4L315.5,252.1L319.8,252.2L324.2,252.0L328.5,252.3L332.8,252.5L337.1,252.4L341.4,252.1L345.7,251.9L350.0,251.9L354.3,251.8L358.6,251.3L362.9,250.5L367.2,249.5L371.5,249.3L375.8,247.9L380.1,247.3L384.4,247.0L388.7,246.6L393.0,244.0L397.3,237.9L401.6,232.6L405.9,229.2L410.2,225.1L414.5,211.4L418.8,202.3L423.1,180.5L427.4,154.6L431.7,149.6L436.0,142.9L440.3,118.3L444.6,83.9L449.0,72.2L453.3,72.8L457.6,70.5L461.9,60.6L466.2,43.2L470.5,30.0L474.8,47.7L479.1,62.4L483.4,68.0L487.7,80.4L492.0,100.5L496.3,114.0L500.6,125.5L504.9,142.2L509.2,157.2L513.5,169.8L517.8,181.0L522.1,188.6L526.4,191.1L530.7,198.3L535.0,206.3L539.3,212.2L543.6,216.1L547.9,221.5L552.2,226.7L556.5,231.1L560.8,235.0L565.1,238.8L569.4,241.2L573.8,243.5L578.1,244.7L582.4,246.2L586.7,246.8L591.0,247.6L595.3,248.4L599.6,248.8L603.9,249.7L608.2,250.1L612.5,250.9L616.8,251.4L621.1,251.5L625.4,251.8L629.7,251.9L634.0,252.3"/>
+  <circle class="peak" cx="470.5" cy="30.0" r="4"/>
+  <text x="470.5" y="22.0" class="point-label" text-anchor="middle">peak 1987</text>
+  <text x="634.0" y="244.3" class="point-label" text-anchor="end">2025</text>
+  <text x="10.0" y="274" class="axis-text" text-anchor="middle">1880</text><text x="96.1" y="274" class="axis-text" text-anchor="middle">1900</text><text x="182.1" y="274" class="axis-text" text-anchor="middle">1920</text><text x="268.2" y="274" class="axis-text" text-anchor="middle">1940</text><text x="354.3" y="274" class="axis-text" text-anchor="middle">1960</text><text x="440.3" y="274" class="axis-text" text-anchor="middle">1980</text><text x="526.4" y="274" class="axis-text" text-anchor="middle">2000</text><text x="612.5" y="274" class="axis-text" text-anchor="middle">2020</text>
+</svg>
+</div>
+
+A girl born in 1987 grew up in a country that had already decided against her name. By second grade, the supply of Jessicas had been cut in half.
+
+Her mother's generation had a slower deal. [Jennifer](/name/Jennifer/) peaked at 63600 in 1972 and took 16 years to halve. Same country, same schools, nearly twice the runway.
+
+## Men hold longer
+
+414 of the 661 names belong to girls. 247 to boys.
+
+98 percent of the girls' names halved inside 30 years. 81 percent of the boys' names did. Median half-life: 11 years for girls, 16 for boys.
+
+Boys are named for grandfathers, saints, and fathers. The name is an inheritance, and an inheritance resists revision. Girls are named for the moment. Moments end.
+
+<div class="chart-panel">
+  <div class="chart-panel-name">Michael</div>
+  <div class="chart-caption"><span>1880</span><span>Peak 1957</span><span>2025</span></div>
+  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <style>
+    .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
+    .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
+    .sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{opacity:0;animation:nv-spark-fade .6s ease-out 1.35s forwards}
+    @keyframes nv-spark-draw{to{stroke-dashoffset:0}}
+    @keyframes nv-spark-fade{to{opacity:1}}
+    @media (prefers-reduced-motion:reduce){
+      .sparkline .line,.sparkline .fill,.sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{animation:none;opacity:1;stroke-dashoffset:0}
+    }
+  </style>
+  <line class="axis" x1="10" y1="254" x2="634" y2="254"/>
+  <path class="fill" d="M10.0,253.1L14.3,253.3L18.6,253.2L22.9,253.3L27.2,253.1L31.5,253.1L35.8,253.2L40.1,253.2L44.4,252.9L48.7,253.1L53.0,253.0L57.3,253.2L61.6,253.1L65.9,253.0L70.2,253.0L74.6,253.0L78.9,253.0L83.2,253.1L87.5,253.0L91.8,253.1L96.1,252.8L100.4,253.1L104.7,252.9L109.0,252.9L113.3,252.9L117.6,252.8L121.9,252.7L126.2,252.6L130.5,252.3L134.8,252.5L139.1,252.0L143.4,251.2L147.7,248.9L152.0,247.7L156.3,245.9L160.6,244.2L164.9,243.8L169.2,243.6L173.5,243.6L177.8,244.6L182.1,244.3L186.4,243.9L190.7,244.4L195.0,244.5L199.4,244.6L203.7,244.9L208.0,245.6L212.3,245.3L216.6,245.3L220.9,245.6L225.2,245.4L229.5,245.6L233.8,245.3L238.1,245.4L242.4,244.1L246.7,242.2L251.0,240.0L255.3,236.9L259.6,232.1L263.9,227.9L268.2,222.1L272.5,215.5L276.8,201.5L281.1,194.3L285.4,189.5L289.7,181.8L294.0,154.5L298.3,132.1L302.6,127.1L306.9,109.0L311.2,96.7L315.5,78.2L319.8,63.2L324.2,50.7L328.5,40.2L332.8,40.7L337.1,35.0L341.4,30.0L345.7,35.3L350.0,48.1L354.3,50.8L358.6,44.0L362.9,48.6L367.2,51.8L371.5,54.5L375.8,58.5L380.1,60.9L384.4,55.0L388.7,56.1L393.0,48.4L397.3,48.1L401.6,66.7L405.9,81.6L410.2,90.3L414.5,91.0L418.8,88.8L423.1,92.4L427.4,90.8L431.7,91.9L436.0,90.5L440.3,88.2L444.6,88.0L449.0,89.3L453.3,89.8L457.6,90.5L461.9,97.2L466.2,98.9L470.5,100.3L474.8,99.1L479.1,96.1L483.4,96.3L487.7,107.2L492.0,122.6L496.3,134.3L500.6,146.6L504.9,154.0L509.2,161.4L513.5,163.3L517.8,165.6L522.1,172.1L526.4,176.6L530.7,182.3L535.0,185.8L539.3,188.5L543.6,192.5L547.9,196.5L552.2,199.3L556.5,200.8L560.8,204.1L565.1,208.2L569.4,212.0L573.8,213.4L578.1,214.9L582.4,216.5L586.7,216.6L591.0,219.0L595.3,219.8L599.6,223.3L603.9,225.6L608.2,228.4L612.5,230.3L616.8,231.9L621.1,232.5L625.4,233.6L629.7,234.1L634.0,234.5L634.0,254.0L10.0,254.0Z"/>
+  <path class="line" pathLength="1" d="M10.0,253.1L14.3,253.3L18.6,253.2L22.9,253.3L27.2,253.1L31.5,253.1L35.8,253.2L40.1,253.2L44.4,252.9L48.7,253.1L53.0,253.0L57.3,253.2L61.6,253.1L65.9,253.0L70.2,253.0L74.6,253.0L78.9,253.0L83.2,253.1L87.5,253.0L91.8,253.1L96.1,252.8L100.4,253.1L104.7,252.9L109.0,252.9L113.3,252.9L117.6,252.8L121.9,252.7L126.2,252.6L130.5,252.3L134.8,252.5L139.1,252.0L143.4,251.2L147.7,248.9L152.0,247.7L156.3,245.9L160.6,244.2L164.9,243.8L169.2,243.6L173.5,243.6L177.8,244.6L182.1,244.3L186.4,243.9L190.7,244.4L195.0,244.5L199.4,244.6L203.7,244.9L208.0,245.6L212.3,245.3L216.6,245.3L220.9,245.6L225.2,245.4L229.5,245.6L233.8,245.3L238.1,245.4L242.4,244.1L246.7,242.2L251.0,240.0L255.3,236.9L259.6,232.1L263.9,227.9L268.2,222.1L272.5,215.5L276.8,201.5L281.1,194.3L285.4,189.5L289.7,181.8L294.0,154.5L298.3,132.1L302.6,127.1L306.9,109.0L311.2,96.7L315.5,78.2L319.8,63.2L324.2,50.7L328.5,40.2L332.8,40.7L337.1,35.0L341.4,30.0L345.7,35.3L350.0,48.1L354.3,50.8L358.6,44.0L362.9,48.6L367.2,51.8L371.5,54.5L375.8,58.5L380.1,60.9L384.4,55.0L388.7,56.1L393.0,48.4L397.3,48.1L401.6,66.7L405.9,81.6L410.2,90.3L414.5,91.0L418.8,88.8L423.1,92.4L427.4,90.8L431.7,91.9L436.0,90.5L440.3,88.2L444.6,88.0L449.0,89.3L453.3,89.8L457.6,90.5L461.9,97.2L466.2,98.9L470.5,100.3L474.8,99.1L479.1,96.1L483.4,96.3L487.7,107.2L492.0,122.6L496.3,134.3L500.6,146.6L504.9,154.0L509.2,161.4L513.5,163.3L517.8,165.6L522.1,172.1L526.4,176.6L530.7,182.3L535.0,185.8L539.3,188.5L543.6,192.5L547.9,196.5L552.2,199.3L556.5,200.8L560.8,204.1L565.1,208.2L569.4,212.0L573.8,213.4L578.1,214.9L582.4,216.5L586.7,216.6L591.0,219.0L595.3,219.8L599.6,223.3L603.9,225.6L608.2,228.4L612.5,230.3L616.8,231.9L621.1,232.5L625.4,233.6L629.7,234.1L634.0,234.5"/>
+  <circle class="peak" cx="341.4" cy="30.0" r="4"/>
+  <text x="341.4" y="22.0" class="point-label" text-anchor="middle">peak 1957</text>
+  <text x="634.0" y="226.5" class="point-label" text-anchor="end">2025</text>
+  <text x="10.0" y="274" class="axis-text" text-anchor="middle">1880</text><text x="96.1" y="274" class="axis-text" text-anchor="middle">1900</text><text x="182.1" y="274" class="axis-text" text-anchor="middle">1920</text><text x="268.2" y="274" class="axis-text" text-anchor="middle">1940</text><text x="354.3" y="274" class="axis-text" text-anchor="middle">1960</text><text x="440.3" y="274" class="axis-text" text-anchor="middle">1980</text><text x="526.4" y="274" class="axis-text" text-anchor="middle">2000</text><text x="612.5" y="274" class="axis-text" text-anchor="middle">2020</text>
+</svg>
+</div>
+
+## The ones that held
+
+Only 7 names that peaked above 10,000 births after 1950 never halved inside 30 years. 6 of them are boys' names.
+
+[Michael](/name/Michael/) is the largest. 92781 boys in 1957. In 1987, 30 years on, it was still at 63664.
+
+[Mary](/name/Mary/) peaked at 73984 in 1921 and was still at 65721 in 1951. [Joseph](/name/Joseph/) peaked at 32749 in 1956 and was at 28834 in 1986. Both are liturgical names, which is a kind of long-term storage.
+
+<div class="chart-panel">
+  <div class="chart-panel-name">Mary</div>
+  <div class="chart-caption"><span>1880</span><span>Peak 1921</span><span>2025</span></div>
+  <svg class="sparkline sparkline-endangered" style="--line-color:var(--endangered);--fill-color:rgba(180, 35, 24, 0.13)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <style>
+    .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
+    .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
+    .sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{opacity:0;animation:nv-spark-fade .6s ease-out 1.35s forwards}
+    @keyframes nv-spark-draw{to{stroke-dashoffset:0}}
+    @keyframes nv-spark-fade{to{opacity:1}}
+    @media (prefers-reduced-motion:reduce){
+      .sparkline .line,.sparkline .fill,.sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{animation:none;opacity:1;stroke-dashoffset:0}
+    }
+  </style>
+  <line class="axis" x1="10" y1="254" x2="634" y2="254"/>
+  <path class="fill" d="M10.0,232.6L14.3,233.1L18.6,229.3L22.9,229.7L27.2,226.1L31.5,226.4L35.8,224.1L40.1,224.1L44.4,218.4L48.7,218.7L53.0,217.4L57.3,218.6L61.6,214.1L65.9,215.3L70.2,214.2L74.6,213.3L78.9,212.2L83.2,213.4L87.5,210.4L91.8,214.1L96.1,203.4L100.4,214.2L104.7,210.1L109.0,210.8L113.3,208.7L117.6,205.4L121.9,204.4L126.2,200.8L130.5,197.5L134.8,195.7L139.1,184.8L143.4,180.2L147.7,156.2L152.0,143.1L156.3,116.7L160.6,77.8L164.9,68.0L169.2,59.4L173.5,50.0L177.8,54.7L182.1,39.1L186.4,30.0L190.7,35.5L195.0,37.1L199.4,31.4L203.7,40.3L208.0,48.6L212.3,40.1L216.6,51.5L220.9,61.7L225.2,59.8L229.5,71.4L233.8,72.7L238.1,85.9L242.4,81.6L246.7,87.2L251.0,89.4L255.3,85.5L259.6,83.8L263.9,87.8L268.2,83.8L272.5,78.2L276.8,62.5L281.1,53.6L285.4,64.8L289.7,74.5L294.0,49.7L298.3,36.9L302.6,46.3L306.9,51.5L311.2,55.7L315.5,55.0L319.8,55.3L324.2,59.1L328.5,48.1L332.8,62.7L337.1,67.1L341.4,69.0L345.7,84.9L350.0,89.0L354.3,98.2L358.6,109.6L362.9,122.3L367.2,128.2L371.5,129.9L375.8,150.2L380.1,166.5L384.4,177.4L388.7,188.2L393.0,193.9L397.3,195.9L401.6,203.4L405.9,212.3L410.2,216.7L414.5,218.5L418.8,220.8L423.1,222.8L427.4,221.7L431.7,223.6L436.0,222.0L440.3,219.3L444.6,220.6L449.0,221.1L453.3,224.0L457.6,225.9L461.9,226.0L466.2,228.2L470.5,228.6L474.8,228.2L479.1,227.8L483.4,227.8L487.7,227.5L492.0,228.4L496.3,229.4L500.6,230.5L504.9,231.4L509.2,232.9L513.5,233.9L517.8,234.4L522.1,234.7L526.4,235.2L530.7,236.6L535.0,237.4L539.3,238.7L543.6,239.4L547.9,240.4L552.2,241.5L556.5,242.8L560.8,243.4L565.1,244.4L569.4,245.3L573.8,245.8L578.1,246.2L582.4,245.9L586.7,246.0L591.0,246.0L595.3,246.4L599.6,246.7L603.9,246.8L608.2,247.2L612.5,247.2L616.8,247.6L621.1,247.6L625.4,247.7L629.7,247.3L634.0,247.2L634.0,254.0L10.0,254.0Z"/>
+  <path class="line" pathLength="1" d="M10.0,232.6L14.3,233.1L18.6,229.3L22.9,229.7L27.2,226.1L31.5,226.4L35.8,224.1L40.1,224.1L44.4,218.4L48.7,218.7L53.0,217.4L57.3,218.6L61.6,214.1L65.9,215.3L70.2,214.2L74.6,213.3L78.9,212.2L83.2,213.4L87.5,210.4L91.8,214.1L96.1,203.4L100.4,214.2L104.7,210.1L109.0,210.8L113.3,208.7L117.6,205.4L121.9,204.4L126.2,200.8L130.5,197.5L134.8,195.7L139.1,184.8L143.4,180.2L147.7,156.2L152.0,143.1L156.3,116.7L160.6,77.8L164.9,68.0L169.2,59.4L173.5,50.0L177.8,54.7L182.1,39.1L186.4,30.0L190.7,35.5L195.0,37.1L199.4,31.4L203.7,40.3L208.0,48.6L212.3,40.1L216.6,51.5L220.9,61.7L225.2,59.8L229.5,71.4L233.8,72.7L238.1,85.9L242.4,81.6L246.7,87.2L251.0,89.4L255.3,85.5L259.6,83.8L263.9,87.8L268.2,83.8L272.5,78.2L276.8,62.5L281.1,53.6L285.4,64.8L289.7,74.5L294.0,49.7L298.3,36.9L302.6,46.3L306.9,51.5L311.2,55.7L315.5,55.0L319.8,55.3L324.2,59.1L328.5,48.1L332.8,62.7L337.1,67.1L341.4,69.0L345.7,84.9L350.0,89.0L354.3,98.2L358.6,109.6L362.9,122.3L367.2,128.2L371.5,129.9L375.8,150.2L380.1,166.5L384.4,177.4L388.7,188.2L393.0,193.9L397.3,195.9L401.6,203.4L405.9,212.3L410.2,216.7L414.5,218.5L418.8,220.8L423.1,222.8L427.4,221.7L431.7,223.6L436.0,222.0L440.3,219.3L444.6,220.6L449.0,221.1L453.3,224.0L457.6,225.9L461.9,226.0L466.2,228.2L470.5,228.6L474.8,228.2L479.1,227.8L483.4,227.8L487.7,227.5L492.0,228.4L496.3,229.4L500.6,230.5L504.9,231.4L509.2,232.9L513.5,233.9L517.8,234.4L522.1,234.7L526.4,235.2L530.7,236.6L535.0,237.4L539.3,238.7L543.6,239.4L547.9,240.4L552.2,241.5L556.5,242.8L560.8,243.4L565.1,244.4L569.4,245.3L573.8,245.8L578.1,246.2L582.4,245.9L586.7,246.0L591.0,246.0L595.3,246.4L599.6,246.7L603.9,246.8L608.2,247.2L612.5,247.2L616.8,247.6L621.1,247.6L625.4,247.7L629.7,247.3L634.0,247.2"/>
+  <circle class="peak" cx="186.4" cy="30.0" r="4"/>
+  <text x="186.4" y="22.0" class="point-label" text-anchor="middle">peak 1921</text>
+  <text x="634.0" y="239.2" class="point-label" text-anchor="end">2025</text>
+  <text x="10.0" y="274" class="axis-text" text-anchor="middle">1880</text><text x="96.1" y="274" class="axis-text" text-anchor="middle">1900</text><text x="182.1" y="274" class="axis-text" text-anchor="middle">1920</text><text x="268.2" y="274" class="axis-text" text-anchor="middle">1940</text><text x="354.3" y="274" class="axis-text" text-anchor="middle">1960</text><text x="440.3" y="274" class="axis-text" text-anchor="middle">1980</text><text x="526.4" y="274" class="axis-text" text-anchor="middle">2000</text><text x="612.5" y="274" class="axis-text" text-anchor="middle">2020</text>
+</svg>
+</div>
+
+[Benjamin](/name/Benjamin/) is the modern exception. 15733 boys in 1989, and 13044 in 2019. It has held its level for decades without ever becoming a trend.
+
+<div class="chart-panel">
+  <div class="chart-panel-name">Benjamin</div>
+  <div class="chart-caption"><span>1880</span><span>Peak 1989</span><span>2025</span></div>
+  <svg class="sparkline sparkline-declining" style="--line-color:var(--declining);--fill-color:rgba(162, 104, 34, 0.15)" viewBox="0 0 680 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Popularity trend from 1880 to 2025">
+  <style>
+    .sparkline .line{stroke-dasharray:1;stroke-dashoffset:1;animation:nv-spark-draw 1.5s cubic-bezier(.65,0,.35,1) forwards}
+    .sparkline .fill{opacity:0;animation:nv-spark-fade 1.1s ease-out .45s forwards}
+    .sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{opacity:0;animation:nv-spark-fade .6s ease-out 1.35s forwards}
+    @keyframes nv-spark-draw{to{stroke-dashoffset:0}}
+    @keyframes nv-spark-fade{to{opacity:1}}
+    @media (prefers-reduced-motion:reduce){
+      .sparkline .line,.sparkline .fill,.sparkline .peak,.sparkline .point-label,.sparkline .spark-marker{animation:none;opacity:1;stroke-dashoffset:0}
+    }
+  </style>
+  <line class="axis" x1="10" y1="254" x2="634" y2="254"/>
+  <path class="fill" d="M10.0,247.0L14.3,247.2L18.6,247.2L22.9,246.8L27.2,246.8L31.5,247.4L35.8,247.4L40.1,247.3L44.4,242.9L48.7,243.2L53.0,246.4L57.3,247.4L61.6,246.5L65.9,247.1L70.2,247.3L74.6,247.6L78.9,248.1L83.2,248.6L87.5,248.2L91.8,249.2L96.1,247.6L100.4,249.1L104.7,248.7L109.0,249.4L113.3,248.9L117.6,248.6L121.9,249.0L126.2,247.5L130.5,247.2L134.8,247.0L139.1,246.4L143.4,244.2L147.7,235.9L152.0,233.1L156.3,228.0L160.6,222.1L164.9,222.9L169.2,220.0L173.5,219.4L177.8,221.6L182.1,221.1L186.4,219.7L190.7,220.1L195.0,221.0L199.4,222.4L203.7,224.5L208.0,227.0L212.3,226.6L216.6,228.3L220.9,229.9L225.2,231.3L229.5,231.8L233.8,232.1L238.1,233.9L242.4,232.9L246.7,233.9L251.0,234.7L255.3,233.8L259.6,233.8L263.9,233.7L268.2,233.4L272.5,231.5L276.8,229.9L281.1,229.5L285.4,230.9L289.7,231.8L294.0,230.4L298.3,226.5L302.6,226.1L306.9,225.3L311.2,222.9L315.5,220.6L319.8,219.3L324.2,219.6L328.5,219.1L332.8,219.1L337.1,218.8L341.4,218.6L345.7,221.9L350.0,220.8L354.3,222.0L358.6,220.0L362.9,218.3L367.2,220.6L371.5,218.4L375.8,220.7L380.1,220.2L384.4,218.3L388.7,211.0L393.0,205.9L397.3,198.1L401.6,193.5L405.9,190.0L410.2,179.6L414.5,151.7L418.8,118.1L423.1,102.1L427.4,81.6L431.7,91.5L436.0,75.9L440.3,60.1L444.6,49.5L449.0,57.5L453.3,64.9L457.6,65.1L461.9,62.9L466.2,57.6L470.5,42.0L474.8,37.8L479.1,30.0L483.4,45.7L487.7,56.4L492.0,62.4L496.3,73.4L500.6,71.9L504.9,72.9L509.2,57.7L513.5,65.1L517.8,68.0L522.1,59.4L526.4,42.6L530.7,49.8L535.0,61.9L539.3,53.4L543.6,57.1L547.9,60.6L552.2,58.0L556.5,64.9L560.8,69.5L565.1,67.2L569.4,76.9L573.8,67.7L578.1,71.3L582.4,61.6L586.7,57.1L591.0,58.5L595.3,44.9L599.6,56.7L603.9,62.0L608.2,68.3L612.5,79.4L616.8,84.6L621.1,98.6L625.4,108.4L629.7,113.5L634.0,115.0L634.0,254.0L10.0,254.0Z"/>
+  <path class="line" pathLength="1" d="M10.0,247.0L14.3,247.2L18.6,247.2L22.9,246.8L27.2,246.8L31.5,247.4L35.8,247.4L40.1,247.3L44.4,242.9L48.7,243.2L53.0,246.4L57.3,247.4L61.6,246.5L65.9,247.1L70.2,247.3L74.6,247.6L78.9,248.1L83.2,248.6L87.5,248.2L91.8,249.2L96.1,247.6L100.4,249.1L104.7,248.7L109.0,249.4L113.3,248.9L117.6,248.6L121.9,249.0L126.2,247.5L130.5,247.2L134.8,247.0L139.1,246.4L143.4,244.2L147.7,235.9L152.0,233.1L156.3,228.0L160.6,222.1L164.9,222.9L169.2,220.0L173.5,219.4L177.8,221.6L182.1,221.1L186.4,219.7L190.7,220.1L195.0,221.0L199.4,222.4L203.7,224.5L208.0,227.0L212.3,226.6L216.6,228.3L220.9,229.9L225.2,231.3L229.5,231.8L233.8,232.1L238.1,233.9L242.4,232.9L246.7,233.9L251.0,234.7L255.3,233.8L259.6,233.8L263.9,233.7L268.2,233.4L272.5,231.5L276.8,229.9L281.1,229.5L285.4,230.9L289.7,231.8L294.0,230.4L298.3,226.5L302.6,226.1L306.9,225.3L311.2,222.9L315.5,220.6L319.8,219.3L324.2,219.6L328.5,219.1L332.8,219.1L337.1,218.8L341.4,218.6L345.7,221.9L350.0,220.8L354.3,222.0L358.6,220.0L362.9,218.3L367.2,220.6L371.5,218.4L375.8,220.7L380.1,220.2L384.4,218.3L388.7,211.0L393.0,205.9L397.3,198.1L401.6,193.5L405.9,190.0L410.2,179.6L414.5,151.7L418.8,118.1L423.1,102.1L427.4,81.6L431.7,91.5L436.0,75.9L440.3,60.1L444.6,49.5L449.0,57.5L453.3,64.9L457.6,65.1L461.9,62.9L466.2,57.6L470.5,42.0L474.8,37.8L479.1,30.0L483.4,45.7L487.7,56.4L492.0,62.4L496.3,73.4L500.6,71.9L504.9,72.9L509.2,57.7L513.5,65.1L517.8,68.0L522.1,59.4L526.4,42.6L530.7,49.8L535.0,61.9L539.3,53.4L543.6,57.1L547.9,60.6L552.2,58.0L556.5,64.9L560.8,69.5L565.1,67.2L569.4,76.9L573.8,67.7L578.1,71.3L582.4,61.6L586.7,57.1L591.0,58.5L595.3,44.9L599.6,56.7L603.9,62.0L608.2,68.3L612.5,79.4L616.8,84.6L621.1,98.6L625.4,108.4L629.7,113.5L634.0,115.0"/>
+  <circle class="peak" cx="479.1" cy="30.0" r="4"/>
+  <text x="479.1" y="22.0" class="point-label" text-anchor="middle">peak 1989</text>
+  <text x="634.0" y="107.0" class="point-label" text-anchor="end">2025</text>
+  <text x="10.0" y="274" class="axis-text" text-anchor="middle">1880</text><text x="96.1" y="274" class="axis-text" text-anchor="middle">1900</text><text x="182.1" y="274" class="axis-text" text-anchor="middle">1920</text><text x="268.2" y="274" class="axis-text" text-anchor="middle">1940</text><text x="354.3" y="274" class="axis-text" text-anchor="middle">1960</text><text x="440.3" y="274" class="axis-text" text-anchor="middle">1980</text><text x="526.4" y="274" class="axis-text" text-anchor="middle">2000</text><text x="612.5" y="274" class="axis-text" text-anchor="middle">2020</text>
+</svg>
+</div>
+
+## What this measures
+
+Every figure here counts births, not living people. A name that halves is not a name whose bearers are dying. It is a name that stopped being given.
+
+The SSA record only includes names with at least five births in a year. A name that drops below five counts as zero here.
+
+Every name gets the same 30 years. That means names that peaked after 1995 are not in this cohort — the record has not run long enough to judge them. Madison and Nevaeh are the obvious absences. Both may halve. Neither has had its window yet.
+
+The half-life of a name's living population is a different number, and it runs the other way: the Karens are still here, decades after their births collapsed. That measurement lives on the individual name pages — [Karen](/name/Karen/), [Chelsea](/name/Chelsea/), [Shirley](/name/Shirley/).
+
+A name is a fashion with a death certificate. The certificate is public. This is the arithmetic of it.
+
