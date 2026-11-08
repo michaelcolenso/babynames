@@ -4,7 +4,16 @@ import test from "node:test";
 
 import { classify } from "../packages/shared/src/classify";
 import { getNameEnrichmentBundle } from "../packages/shared/src/d1-queries";
-import { renderFullPage } from "../packages/shared/src/render-name";
+import { livingBreakdown, renderFullPage } from "../packages/shared/src/render-name";
+import { GENERATION_DEFINITIONS } from "../packages/shared/src/content/generation-definitions";
+import {
+  GENERATION_BANDS,
+  LIFE_TABLE,
+  generationShares,
+  interpolateSurvival,
+  livingAgeMap,
+  yearsToHalf,
+} from "../packages/shared/src/living-population";
 import { buildSparkline } from "../packages/shared/src/sparkline";
 import type {
   NameEnrichmentBundle,
@@ -457,3 +466,102 @@ test(
     }
   },
 );
+
+// ---------------------------------------------------------------------------
+// Living-population breakdown (generational ownership + zero-birth half-life),
+// derived on the name page from the series it already carries.
+// ---------------------------------------------------------------------------
+
+test("LIFE_TABLE in @nv/shared mirrors data/manual/life-table.csv exactly", () => {
+  const table = buildSurvivalTable(parseLifeTableCsv(lifeTableCsv));
+  for (const sex of ["M", "F"] as const) {
+    assert.deepEqual(
+      LIFE_TABLE[sex].map(([a, s]) => [a, s]),
+      table[sex],
+      `${sex}: edit both files together, or the page's breakdown and the stored profile drift apart`,
+    );
+  }
+});
+
+test("generation bands match the generation hub definitions", () => {
+  for (const def of GENERATION_DEFINITIONS) {
+    const band = GENERATION_BANDS.find((b) => b.startYear === def.startYear);
+    assert.ok(band, `no band starts in ${def.startYear} (${def.label})`);
+    // Gen Alpha is open-ended here (the hub stops at the latest data year).
+    if (Number.isFinite(band.endYear)) assert.equal(band.endYear, def.endYear, `${def.label} end`);
+  }
+  for (let i = 1; i < GENERATION_BANDS.length; i++) {
+    assert.equal(GENERATION_BANDS[i]!.startYear, GENERATION_BANDS[i - 1]!.endYear + 1, "bands are contiguous");
+  }
+});
+
+test("generationShares partitions the living population and yearsToHalf ages it forward", () => {
+  const survival = (age: number) => interpolateSurvival(LIFE_TABLE.F, age);
+  const old = livingAgeMap([[1950, 1000], [1955, 1000]], survival, 2026);
+  const shares = generationShares(old, 2026);
+  assert.equal(shares.length, GENERATION_BANDS.length);
+  assert.ok(Math.abs(shares.reduce((s, g) => s + g.share, 0) - 1) < 1e-12);
+  assert.equal(shares.find((g) => g.label === "Boomer")!.share, 1);
+  assert.deepEqual(generationShares(new Map(), 2026), []);
+
+  const half = yearsToHalf(old, survival);
+  assert.ok(half !== null && half > 5 && half < 30, `70-somethings halve within decades, got ${half}`);
+  // Hand check of the definition: just before `half`, more than half survive.
+  const start = [...old.values()].reduce((s, w) => s + w, 0);
+  const livingAt = (t: number) => [...old].reduce((s, [a, w]) => s + (w * survival(a + t)) / survival(a), 0);
+  assert.ok(livingAt(half!) <= start / 2 && livingAt(half! - 1) > start / 2);
+
+  const young = livingAgeMap([[2020, 1000]], survival, 2026);
+  assert.equal(yearsToHalf(young, survival, 50), null, "6-year-olds do not halve within 50 years");
+  assert.equal(yearsToHalf(new Map(), survival), null);
+});
+
+test("living breakdown on real production series: dominant generation, half-life only where it means something", () => {
+  const got = new Map<string, ReturnType<typeof livingBreakdown>>();
+  for (const n of d1Fixture.names) {
+    const series = Object.fromEntries(Object.entries(n.series).map(([y, c]) => [Number(y), c]));
+    const years = Object.keys(series).map(Number);
+    const record: NameRecord = { name: n.name_lower, sex: n.sex, ym: Math.min(...years), yM: Math.max(...years), series };
+    const b = livingBreakdown(record, classify({ series, yM: record.yM }), d1Fixture.analysis_year);
+    assert.ok(Math.abs(b.generations.reduce((s, g) => s + g.share, 0) - 1) < 1e-9, `${n.name_lower}: shares sum to 1`);
+    got.set(`${n.name_lower}/${n.sex}`, b);
+  }
+  // Karen: stored median 65 (core 58–72) sits inside the Boomer band.
+  assert.equal(got.get("karen/F")!.dominant?.label, "Boomer");
+  assert.equal(got.get("karen/F")!.yearsToHalf, 20);
+  assert.equal(got.get("linda/F")!.dominant?.label, "Boomer");
+  assert.equal(got.get("jennifer/F")!.dominant?.label, "Gen X");
+  assert.equal(got.get("brandon/M")!.dominant?.label, "Millennial");
+  // Rising/stable names, names still given 5,000+ times a year, and young
+  // populations get no half-life sentence.
+  for (const key of ["olivia/F", "noah/M", "michael/M", "john/M", "claire/F", "colton/M"]) {
+    assert.equal(got.get(key)!.yearsToHalf, null, `${key}: no half-life`);
+  }
+});
+
+test("name page renders generational ownership and the half-life sentence for Karen", () => {
+  const n = d1Fixture.names.find((x) => x.name_lower === "karen")!;
+  const series = Object.fromEntries(Object.entries(n.series).map(([y, c]) => [Number(y), c]));
+  const years = Object.keys(series).map(Number);
+  const record: NameRecord = { name: "Karen", sex: "F", ym: Math.min(...years), yM: Math.max(...years), series };
+  const html = renderFullPage(record, classify({ series, yM: record.yM }), {
+    canonical: "https://nobodynamed.com/name/Karen/",
+    enrichment: {
+      profile: {
+        name_lower: "karen",
+        sex: "F",
+        ...n.expected,
+        wave_topology: "Flash Flood",
+        latest_pct: 0.00001,
+        analysis_year: d1Fixture.analysis_year,
+        source_version: "ssa-2025",
+      },
+      catalysts: [],
+      historicalProfiles: [],
+      regionalAnomalies: [],
+    } as NameEnrichmentBundle,
+  });
+  assert.match(html, /Mostly <strong>Boomer<\/strong>: about 58% of living people named Karen were born 1946–1964\./);
+  assert.match(html, /living population would halve in about <strong>20 years<\/strong>/);
+  assert.match(html, /class="living-gen-label">Gen X</);
+});

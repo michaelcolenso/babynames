@@ -36,6 +36,7 @@ import {
   selectStoredRegionalAnomalies,
   weightedStdDev,
 } from "../packages/shared/src/enrichment-compute";
+import { interpolateSurvival, livingAgeMap } from "../packages/shared/src/living-population";
 import type { CatalystType, Sex, WaveTopology } from "../packages/shared/src/schema";
 
 const NATIONAL_URL = "https://www.ssa.gov/oact/babynames/names.zip";
@@ -242,19 +243,8 @@ export function assertLifeTableComplete(table: SurvivalTable): void {
 }
 
 export function survivalAt(table: SurvivalTable, sex: Sex, age: number): number {
-  const pts = table[sex];
-  if (!pts.length) throw new Error(`life table has no rows for sex ${sex}`);
-  if (age <= pts[0]![0]) return pts[0]![1];
-  if (age >= pts[pts.length - 1]![0]) return pts[pts.length - 1]![1];
-  for (let i = 1; i < pts.length; i++) {
-    const [a1, s1] = pts[i]!;
-    if (age <= a1) {
-      const [a0, s0] = pts[i - 1]!;
-      const t = (age - a0) / (a1 - a0);
-      return s0 + t * (s1 - s0);
-    }
-  }
-  return pts[pts.length - 1]![1];
+  if (!table[sex].length) throw new Error(`life table has no rows for sex ${sex}`);
+  return interpolateSurvival(table[sex], age);
 }
 
 // ---------------------------------------------------------------------------
@@ -281,16 +271,9 @@ function buildProfile(
   if (total < MIN_TOTAL_COUNT) return null;
 
   // Actuarial: age the birth-year cohorts to the analysis year.
-  const ages = new Map<number, number>();
+  const ages = livingAgeMap(series, (age) => survivalAt(table, sex, age), analysisYear);
   let living = 0;
-  for (const [year, count] of series) {
-    const age = analysisYear - year;
-    if (age < 0) continue;
-    const surv = survivalAt(table, sex, age);
-    const alive = count * surv;
-    living += alive;
-    ages.set(age, (ages.get(age) ?? 0) + alive);
-  }
+  for (const alive of ages.values()) living += alive;
   const quant = ageQuantiles(ages);
 
   // latest_pct from latest national year of same sex.
