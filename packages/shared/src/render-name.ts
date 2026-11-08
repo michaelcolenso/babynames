@@ -8,6 +8,7 @@ import { contentId, contentIdentityMeta } from "./content-identity";
 import type { YearTopRow, YearTotal } from "./d1-queries";
 import { generateNameNarrative, type NameNarrative } from "./generate-narrative";
 import { playgroundDensity } from "./enrichment-compute";
+import { LIFE_TABLE, generationShares, interpolateSurvival, livingAgeMap, yearsToHalf } from "./living-population";
 import { pageShell, APP_JS_SRC } from "./render-shell";
 import { buildSparkline } from "./sparkline";
 import { ALL_STATES, TILE_COLS, TILE_ROWS, US_TILE_GRID } from "./us-states-map";
@@ -337,7 +338,7 @@ function renderReportWithOptions(record: NameRecord, opts: RenderReportOptions =
       <div class="insight-row"><span>Trajectory</span><strong>${dossier.trajectory}</strong></div>
     </div>
     ${collisionBox}
-    ${renderEnrichmentPanel(record, opts.enrichment, opts.strongholds)}
+    ${renderEnrichmentPanel(record, a, opts.enrichment, opts.strongholds)}
     ${relatedNames}
     ${discoveryModule}
     <div class="share-row">
@@ -694,6 +695,7 @@ function renderStrongholdsMap(record: NameRecord, anomalies: NameRegionalAnomaly
 
 function renderEnrichmentPanel(
   record: NameRecord,
+  a: ClassifyResult,
   enrichment: NameEnrichmentBundle | undefined,
   strongholds: NameRegionalAnomaly[] | undefined,
 ): string {
@@ -701,7 +703,7 @@ function renderEnrichmentPanel(
   const profile = enrichment.profile;
   const legacyClass = profile.median_age > LEGACY_MEDIAN_AGE ? " enrichment-panel--legacy" : "";
   return `<section class="enrichment-panel${legacyClass}" aria-label="${escape(record.name)} enrichment dossier">
-    ${renderActuarialVitals(profile)}
+    ${renderActuarialVitals(record, a, profile)}
     ${renderPlaygroundDensity(profile)}
     ${renderWaveTopology(profile)}
     ${renderCatalysts(enrichment.catalysts)}
@@ -710,7 +712,92 @@ function renderEnrichmentPanel(
   </section>`;
 }
 
-function renderActuarialVitals(profile: NameEnrichmentProfile): string {
+// Statuses where "what if nobody else got this name" is close to what is
+// actually happening. For rising and stable names the counterfactual misleads,
+// as it does for a name still given 5,000+ times a year ("Past peak").
+const HALF_LIFE_STATUSES: ReadonlySet<Status> = new Set(["declining", "endangered", "extinct"]);
+// A living population that takes longer than this to halve is young; the
+// counterfactual says more about the life table than about the name.
+const HALF_LIFE_MAX_YEARS = 50;
+// Below this share, a generation does not "own" the name enough to headline it.
+const DOMINANT_GENERATION_MIN_SHARE = 0.25;
+// Generations under this share are left out of the bars (still in the total).
+const GENERATION_BAR_MIN_SHARE = 0.01;
+
+export interface LivingBreakdown {
+  generations: { label: string; startYear: number; endYear: number; share: number }[];
+  dominant: { label: string; share: number } | null;
+  yearsToHalf: number | null;
+}
+
+/**
+ * Generational ownership and zero-birth half-life for one name, from the
+ * series the page already has and the same life table the stored profile was
+ * built from (aged to the profile's own analysis_year).
+ */
+export function livingBreakdown(record: NameRecord, a: ClassifyResult, analysisYear: number): LivingBreakdown {
+  const pts = LIFE_TABLE[record.sex];
+  const survival = (age: number) => interpolateSurvival(pts, age);
+  const series = Object.entries(record.series).map(([y, c]) => [Number(y), Number(c)] as [number, number]);
+  const ages = livingAgeMap(series, survival, analysisYear);
+  const generations = generationShares(ages, analysisYear);
+  let dominant: LivingBreakdown["dominant"] = null;
+  for (const g of generations) {
+    if (g.share >= DOMINANT_GENERATION_MIN_SHARE && (!dominant || g.share > dominant.share)) {
+      dominant = { label: g.label, share: g.share };
+    }
+  }
+  return {
+    generations,
+    dominant,
+    yearsToHalf:
+      HALF_LIFE_STATUSES.has(a.status) && a.latestCount < STILL_COMMON_THRESHOLD
+        ? yearsToHalf(ages, survival, HALF_LIFE_MAX_YEARS)
+        : null,
+  };
+}
+
+function bandYears(g: { startYear: number; endYear: number }): string {
+  if (!Number.isFinite(g.startYear)) return `born before ${g.endYear + 1}`;
+  if (!Number.isFinite(g.endYear)) return `born ${g.startYear} or later`;
+  return `born ${g.startYear}–${g.endYear}`;
+}
+
+function renderLivingBreakdown(record: NameRecord, a: ClassifyResult, profile: NameEnrichmentProfile): string {
+  if (!(profile.total_living_est > 0)) return "";
+  const b = livingBreakdown(record, a, profile.analysis_year);
+  const shown = b.generations.filter((g) => g.share >= GENERATION_BAR_MIN_SHARE);
+  if (!shown.length) return "";
+  const pct = (x: number) => `${Math.round(x * 100)}%`;
+  const owner = b.dominant
+    ? `<p class="living-owner">Mostly <strong>${escape(b.dominant.label)}</strong>: about ${pct(b.dominant.share)} of living people named ${escape(record.name)} were ${bandYears(b.generations.find((g) => g.label === b.dominant!.label)!)}.</p>`
+    : `<p class="living-owner">No single generation holds a quarter of living people named ${escape(record.name)}.</p>`;
+  const max = Math.max(...shown.map((g) => g.share));
+  const rows = shown
+    .map(
+      (g) => `<li title="${escape(g.label)}, ${bandYears(g)}">
+        <span class="living-gen-label">${escape(g.label)}</span>
+        <span class="living-gen-track"><span class="living-gen-bar" style="width:${((g.share / max) * 100).toFixed(1)}%"></span></span>
+        <span class="living-gen-pct">${pct(g.share)}</span>
+      </li>`,
+    )
+    .join("");
+  const halfLife =
+    b.yearsToHalf !== null
+      ? `<p class="living-half-life">${
+          a.status === "extinct"
+            ? `With almost no new births, the living population halves in about <strong>${b.yearsToHalf} years</strong>.`
+            : `If no more babies got this name, the living population would halve in about <strong>${b.yearsToHalf} years</strong>.`
+        }</p>`
+      : "";
+  return `<div class="living-breakdown">
+      ${owner}
+      <ul class="living-generations" aria-label="Living people named ${escape(record.name)}, by generation">${rows}</ul>
+      ${halfLife}
+    </div>`;
+}
+
+function renderActuarialVitals(record: NameRecord, a: ClassifyResult, profile: NameEnrichmentProfile): string {
   return `<div class="enrichment-card actuarial-card">
     <div class="label">Living profile</div>
     <div class="value">${fmt(profile.total_living_est)}</div>
@@ -719,6 +806,7 @@ function renderActuarialVitals(profile: NameEnrichmentProfile): string {
       <div><span>Median age</span><strong>${profile.median_age}</strong></div>
       <div><span>Core range</span><strong>${profile.age_range_low}–${profile.age_range_high}</strong></div>
     </div>
+    ${renderLivingBreakdown(record, a, profile)}
   </div>`;
 }
 
