@@ -55,8 +55,32 @@ export interface PlateausResult {
   totalNames: number;
 }
 
+/** Half-life — years from peak until the name drops below half its peak count. */
+export interface HalfLifeMember {
+  name: string;
+  sex: string;
+  firstYear: number;
+  peakYear: number;
+  peakCount: number;
+  /** Years from peakYear until the count first fell below 50% of peak (capped at observationYears). */
+  halfLifeYears: number;
+  /** Calendar year of the crossing (peakYear + halfLifeYears). */
+  halfYear: number;
+  /** Count in halfYear. */
+  halfCount: number;
+  /** True when the name never fell below half its peak inside the observation window. */
+  survivedWindow: boolean;
+  finalCount: number; // count at dataMaxYear (0 if absent)
+  series: Record<number, number>;
+}
+
+export interface HalfLivesResult {
+  members: HalfLifeMember[];
+  totalNames: number;
+}
+
 /** Union accepted by claim functions / renderers across families. */
-export type FactoryResult = FlashFloodsResult | GlaciersResult | PlateausResult;
+export type FactoryResult = FlashFloodsResult | GlaciersResult | PlateausResult | HalfLivesResult;
 
 export type FactoryKind = "viz" | "post" | "both";
 export type FactoryRolloutState = "draft" | "reviewed" | "published";
@@ -82,6 +106,11 @@ export type ComputeSpec =
       minPeak?: number;
       thresholdShare?: number;
       minPlateauYears?: number;
+    }
+  | {
+      family: "half-lives";
+      minPeak?: number;
+      observationYears?: number;
     };
 
 export type ClaimValue = number | string;
@@ -107,7 +136,7 @@ export interface ContentDefinition {
   claims: Record<
     string,
     (
-      members: Array<FlashFloodMember | GlacierMember | PlateauMember>,
+      members: Array<FlashFloodMember | GlacierMember | HalfLifeMember | PlateauMember>,
       meta: { totalNames: number },
     ) => ClaimValue
   >;

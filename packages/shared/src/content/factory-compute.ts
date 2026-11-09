@@ -10,6 +10,8 @@ import type {
   FlashFloodsResult,
   GlacierMember,
   GlaciersResult,
+  HalfLifeMember,
+  HalfLivesResult,
   PlateauMember,
   PlateausResult,
 } from "./factory-types";
@@ -270,6 +272,81 @@ export function computePlateaus(
   return { members, totalNames: series.size };
 }
 
+export interface HalfLifeOptions {
+  minPeak: number;           // default 2000 — names below this are never big enough to measure
+  observationYears: number;  // default 30 — every name gets the same post-peak window
+  dataMaxYear: number;       // peaks whose window would run past the record are excluded
+}
+
+export const DEFAULT_HALF_LIFE_OPTIONS: HalfLifeOptions = {
+  minPeak: 2000,
+  observationYears: 30,
+  dataMaxYear: DATA_MAX_YEAR,
+};
+
+/**
+ * Half-life: years from the peak year until the annual count first falls below
+ * 50% of the peak. Every name is measured over the same observationYears window
+ * (default 30), so a name that never halves inside it is recorded as
+ * survivedWindow with halfLifeYears = observationYears — no name is dropped for
+ * being slow, and no cohort gets a longer look than another.
+ */
+export function computeHalfLives(
+  series: Map<string, Record<number, number>>,
+  displayNames: Map<string, string>,
+  options: Partial<HalfLifeOptions> = {},
+): HalfLivesResult {
+  const opts = { ...DEFAULT_HALF_LIFE_OPTIONS, ...options };
+  const members: HalfLifeMember[] = [];
+
+  for (const [key, s] of series) {
+    const years = [...Object.keys(s).map(Number)].sort((a, b) => a - b);
+    if (years.length === 0) continue;
+
+    let peakYear = years[0]!;
+    let peakCount = 0;
+    for (const y of years) {
+      if (s[y]! > peakCount) {
+        peakCount = s[y]!;
+        peakYear = y;
+      }
+    }
+    if (peakCount < opts.minPeak) continue;
+    // Censoring guard: only names whose full window sits inside the record.
+    if (peakYear + opts.observationYears > opts.dataMaxYear) continue;
+
+    const half = peakCount / 2;
+    let halfLifeYears: number | undefined;
+    for (let y = peakYear; y <= peakYear + opts.observationYears; y++) {
+      if ((s[y] ?? 0) < half) {
+        halfLifeYears = y - peakYear;
+        break;
+      }
+    }
+
+    const survivedWindow = halfLifeYears === undefined;
+    const span = halfLifeYears ?? opts.observationYears;
+    const halfYear = peakYear + span;
+
+    members.push({
+      name: displayNames.get(key) ?? key.split("|")[0]!,
+      sex: key.split("|")[1] ?? "",
+      firstYear: years[0]!,
+      peakYear,
+      peakCount,
+      halfLifeYears: span,
+      halfYear,
+      halfCount: s[halfYear] ?? 0,
+      survivedWindow,
+      finalCount: s[opts.dataMaxYear] ?? 0,
+      series: s,
+    });
+  }
+
+  members.sort((a, b) => b.peakCount - a.peakCount || a.name.localeCompare(b.name));
+  return { members, totalNames: series.size };
+}
+
 export interface SsaCsvRow {
   year: number;
   name: string;
@@ -351,11 +428,14 @@ export function csvToNameYearRows(rows: SsaCsvRow[], totals: Map<number, { male:
 
 export function evaluateClaims(
   def: ContentDefinition,
-  result: FlashFloodsResult | GlaciersResult,
+  result: FlashFloodsResult | GlaciersResult | HalfLivesResult | PlateausResult,
 ): Record<string, ClaimValue> {
   const evaluated: Record<string, ClaimValue> = {};
   for (const [key, fn] of Object.entries(def.claims)) {
-    const v = fn(result.members as Array<FlashFloodMember | GlacierMember>, { totalNames: result.totalNames });
+    const v = fn(
+      result.members as Array<FlashFloodMember | GlacierMember | HalfLifeMember | PlateauMember>,
+      { totalNames: result.totalNames },
+    );
     if (typeof v !== "number" && typeof v !== "string") {
       throw new Error(`Claim "${key}" in ${def.slug} did not resolve to a number or string`);
     }

@@ -14,8 +14,10 @@ import path from "node:path";
 
 import {
   DATA_MAX_YEAR,
+  DEFAULT_HALF_LIFE_OPTIONS,
   computeFlashFloods,
   computeGlaciers,
+  computeHalfLives,
   computePlateaus,
   csvToNameYearRows,
   chartPanelHtml,
@@ -122,10 +124,18 @@ function runCompute(def: ContentDefinitionT, data: LoadResult): FactoryResult {
       thresholdShare: def.compute.thresholdShare ?? undefined,
     });
   }
-  return computePlateaus(data.series, data.display, {
-    minPeak: def.compute.minPeak ?? undefined,
-    thresholdShare: def.compute.thresholdShare ?? undefined,
-    minPlateauYears: def.compute.minPlateauYears ?? undefined,
+  if (def.compute.family === "plateaus") {
+    return computePlateaus(data.series, data.display, {
+      minPeak: def.compute.minPeak ?? undefined,
+      thresholdShare: def.compute.thresholdShare ?? undefined,
+      minPlateauYears: def.compute.minPlateauYears ?? undefined,
+    });
+  }
+  // Resolve each option against the defaults explicitly: spreading an object
+  // with `undefined` values would overwrite the defaults inside the compute fn.
+  return computeHalfLives(data.series, data.display, {
+    minPeak: def.compute.minPeak ?? DEFAULT_HALF_LIFE_OPTIONS.minPeak,
+    observationYears: def.compute.observationYears ?? DEFAULT_HALF_LIFE_OPTIONS.observationYears,
   });
 }
 

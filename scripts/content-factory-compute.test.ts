@@ -3,6 +3,9 @@ import test from "node:test";
 
 import {
   computeFlashFloods,
+  computeHalfLives,
+  computeGlaciers,
+  computePlateaus,
   csvToNameYearRows,
   evaluateClaims,
   groupSeries,
@@ -318,5 +321,85 @@ test("orders plateaus by peakCount desc", () => {
   const merged = new Map([...a.series, ...b.series]);
   const disp = new Map([...a.display, ...b.display]);
   const all = computePlateaus(merged, disp, { dataMaxYear: 2025 });
+  assert.deepEqual(all.members.map((m) => m.name), ["BigPeak", "SmallPeak"]);
+});
+
+// ---- Half-lives (years from peak to below 50%) ----
+
+function halvesSeries(peak: number, peakYear: number, after: Record<number, number>): Record<number, number> {
+  const s: Record<number, number> = {};
+  for (let y = peakYear - 10; y < peakYear; y++) s[y] = Math.round(peak * 0.9);
+  s[peakYear] = peak;
+  return { ...s, ...after };
+}
+
+test("half-life: counts years until the count first drops below 50% of peak", () => {
+  const { series, display } = seriesFrom([
+    ["ChelseaLike", "F", halvesSeries(16000, 1992, { 1993: 11287, 1994: 7718, 1995: 6761 })],
+  ]);
+  const result = computeHalfLives(series, display, { dataMaxYear: 2025 });
+  assert.equal(result.members.length, 1);
+  const m = result.members[0]!;
+  assert.equal(m.halfLifeYears, 2);
+  assert.equal(m.halfYear, 1994);
+  assert.equal(m.halfCount, 7718);
+  assert.equal(m.survivedWindow, false);
+});
+
+test("half-life: a name that never halves is kept as a survivor of the window", () => {
+  const after: Record<number, number> = {};
+  for (let y = 1993; y <= 2025; y++) after[y] = 9000;
+  const { series, display } = seriesFrom([["SteadyMan", "M", halvesSeries(10000, 1992, after)]]);
+  const result = computeHalfLives(series, display, { dataMaxYear: 2025, observationYears: 30 });
+  assert.equal(result.members.length, 1);
+  const m = result.members[0]!;
+  assert.equal(m.survivedWindow, true);
+  assert.equal(m.halfLifeYears, 30);
+  assert.equal(m.halfYear, 2022);
+  assert.equal(m.halfCount, 9000);
+});
+
+test("half-life: excludes a peak whose window would run past dataMaxYear", () => {
+  const { series, display } = seriesFrom([
+    ["TooRecent", "F", halvesSeries(20000, 2001, { 2002: 5000, 2003: 2000 })],
+  ]);
+  assert.equal(computeHalfLives(series, display, { dataMaxYear: 2025 }).members.length, 0);
+  // With a shorter window the same name resolves.
+  const short = computeHalfLives(series, display, { dataMaxYear: 2025, observationYears: 20 });
+  assert.equal(short.members.length, 1);
+  assert.equal(short.members[0]!.halfLifeYears, 1);
+});
+
+test("half-life: minPeak boundary is inclusive", () => {
+  const at = seriesFrom([["Edge", "M", halvesSeries(2000, 1990, { 1991: 900 })]]);
+  const below = seriesFrom([["Edge2", "M", halvesSeries(1999, 1990, { 1991: 900 })]]);
+  assert.equal(computeHalfLives(at.series, at.display, { dataMaxYear: 2025 }).members.length, 1);
+  assert.equal(
+    computeHalfLives(below.series, below.display, { dataMaxYear: 2025 }).members.length,
+    0,
+  );
+});
+
+test("half-life: explicit undefined options do not wipe the defaults", () => {
+  // content-gen passes `options.x ?? undefined` for unsupplied fields; the
+  // defaults must survive that, or every name ages to the wrong window.
+  const { series, display } = seriesFrom([
+    ["Defaulted", "F", halvesSeries(2000, 1990, { 1991: 900 })],
+  ]);
+  const result = computeHalfLives(series, display, {
+    minPeak: undefined,
+    observationYears: undefined,
+    dataMaxYear: 2025,
+  });
+  assert.equal(result.members.length, 1);
+  assert.equal(result.members[0]!.peakCount, 2000);
+});
+
+test("half-life: orders members by peakCount desc", () => {
+  const a = seriesFrom([["BigPeak", "F", halvesSeries(20000, 1990, { 1991: 5000 })]]);
+  const b = seriesFrom([["SmallPeak", "F", halvesSeries(3000, 1970, { 1971: 800 })]]);
+  const merged = new Map([...a.series, ...b.series]);
+  const disp = new Map([...a.display, ...b.display]);
+  const all = computeHalfLives(merged, disp, { dataMaxYear: 2025 });
   assert.deepEqual(all.members.map((m) => m.name), ["BigPeak", "SmallPeak"]);
 });

@@ -13,6 +13,13 @@ export interface RenderVizOpts {
   dataMinYear?: number;
 }
 
+/**
+ * A viz page renders one inline sparkline per member, so a large family
+ * (half-lives: 661 names) would ship megabytes of SVG. Panels are capped at the
+ * largest-N members; the table below still lists every name in the cohort.
+ */
+export const VIZ_PANEL_LIMIT = 60;
+
 export function renderFactoryVizPage(
   def: ContentDefinition,
   result: FactoryResult,
@@ -35,6 +42,7 @@ export function renderFactoryVizPage(
     series: Record<number, number>;
   };
   const panels = (result.members as PanelCapable[])
+    .slice(0, VIZ_PANEL_LIMIT)
     .map((m) =>
       chartPanelHtml({
         member: {
@@ -50,24 +58,40 @@ export function renderFactoryVizPage(
     )
     .join("\n");
 
+  // Half-life families carry a decay number per member; show it as an extra column.
+  type HalfLifeCapable = { halfLifeYears?: number; survivedWindow?: boolean };
+  const showsHalfLife = result.members.some(
+    (m) => typeof (m as HalfLifeCapable).halfLifeYears === "number",
+  );
+
   const tableRows = result.members
-    .map(
-      (m) =>
-        `<tr><td><a href="/name/${encodeURIComponent(m.name)}/">${escapeHtml(m.name)}</a></td><td>${escapeHtml(m.sex)}</td><td>${m.peakYear}</td><td>${m.peakCount.toLocaleString("en-US")}</td></tr>`,
-    )
+    .map((m) => {
+      const hl = m as HalfLifeCapable;
+      const halfCell = showsHalfLife
+        ? `<td>${hl.survivedWindow ? `${hl.halfLifeYears ?? 0}+` : String(hl.halfLifeYears ?? 0)}</td>`
+        : "";
+      return `<tr><td><a href="/name/${encodeURIComponent(m.name)}/">${escapeHtml(m.name)}</a></td><td>${escapeHtml(m.sex)}</td><td>${m.peakYear}</td><td>${m.peakCount.toLocaleString("en-US")}</td>${halfCell}</tr>`;
+    })
     .join("\n");
+
+  const halfHeader = showsHalfLife ? "<th>Half-life (yrs)</th>" : "";
+
+  const panelNote =
+    result.members.length > VIZ_PANEL_LIMIT
+      ? ` Charts show the ${VIZ_PANEL_LIMIT} largest peaks; the table lists all ${result.members.length}.`
+      : "";
 
   const body = `<div ${contentIdentityMeta(identity)}>
 <h1>${escapeHtml(def.title)}</h1>
 <p class="factory-intro">${escapeHtml(def.description)}</p>
 ${panels}
 <table class="factory-table">
-<thead><tr><th>Name</th><th>Sex</th><th>Peak year</th><th>Peak births</th></tr></thead>
+<thead><tr><th>Name</th><th>Sex</th><th>Peak year</th><th>Peak births</th>${halfHeader}</tr></thead>
 <tbody>
 ${tableRows}
 </tbody>
 </table>
-<p class="factory-source">Source: SSA birth records (${opts.dataMinYear ?? 1880}–${opts.dataMaxYear}), ${escapeHtml(def.sourceVersion)}. ${escapeHtml(def.sourceNote ?? "Names shown peaked within two years of debut and fell below 20% of peak within five years.")}</p>
+<p class="factory-source">Source: SSA birth records (${opts.dataMinYear ?? 1880}–${opts.dataMaxYear}), ${escapeHtml(def.sourceVersion)}. ${escapeHtml(def.sourceNote ?? "Names shown peaked within two years of debut and fell below 20% of peak within five years.")}${escapeHtml(panelNote)}</p>
 </div>`;
 
   return pageShell({
