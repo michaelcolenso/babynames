@@ -50,18 +50,19 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const hit = await cache.match(cacheKey);
   if (hit) return hit;
 
-  const [names, blogPosts, ymStr, yMStr, stateYears] = await Promise.all([
+  const [names, blogPosts, ymStr, yMStr, stateYears, lastIngestAt] = await Promise.all([
     listIndexableNames(ctx.env.DB, MAX_SITEMAP_URLS),
     listBlogPosts(ctx.env.DB, "published", 100, 0),
     getMeta(ctx.env.DB, META_KEYS.minYear),
     getMeta(ctx.env.DB, META_KEYS.maxYear),
     listStateDataYears(ctx.env.DB).catch(() => [] as number[]),
+    getMeta(ctx.env.DB, META_KEYS.lastIngestAt).catch(() => null),
   ]);
 
   const ym = Number(ymStr ?? 1880);
   const yM = Number(yMStr ?? 2024);
   const stateMaxYear = stateYears.length ? stateYears[stateYears.length - 1] : undefined;
-  const routes = buildIndexableRoutes({ minYear: ym, maxYear: yM, stateMaxYear, names, blogPosts, maxRoutes: MAX_SITEMAP_URLS });
+  const routes = buildIndexableRoutes({ minYear: ym, maxYear: yM, stateMaxYear, names, blogPosts, maxRoutes: MAX_SITEMAP_URLS, dataUpdatedAt: lastIngestAt });
 
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
