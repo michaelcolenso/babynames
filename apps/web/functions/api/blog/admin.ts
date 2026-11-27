@@ -4,23 +4,69 @@
 // GET    /api/blog/admin?list=1   — list all posts (JSON, admin auth)
 // GET    /api/blog/admin?load=<slug> — fetch any post incl. drafts (JSON, admin auth)
 //
-// Authentication (tried in order):
-//   1. Cloudflare Access — Cf-Access-Authenticated-User-Email header (cannot be spoofed)
-//   2. Bearer token      — Authorization: Bearer <BLOG_ADMIN_SECRET>
-//   3. Open (dev only)   — no auth configured; logs a warning
+// Authentication (fails closed — any request that matches none of these is 401):
+//   1. Cloudflare Access — a valid Cf-Access-Jwt-Assertion, verified against
+//      CF_ACCESS_TEAM_DOMAIN / CF_ACCESS_AUD. The Cf-Access-Authenticated-User-Email
+//      header alone proves nothing: on any hostname Access does not front
+//      (name-vitals.pages.dev, preview deployments) a client can send it.
+//   2. Bearer token      — Authorization: Bearer <BLOG_ADMIN_SECRET>, timing-safe.
+//   3. Local dev only    — localhost / 127.0.0.1 with neither configured.
 
-import { upsertBlogPost, listAllBlogPostsAdmin, getBlogPostAdmin, deleteBlogPost } from "@nv/shared";
+import { upsertBlogPost, listAllBlogPostsAdmin, getBlogPostAdmin, deleteBlogPost, verifyAccessJwt } from "@nv/shared";
 import type { PagesFunction } from "@cloudflare/workers-types";
 
-function isAuthed(ctx: Parameters<PagesFunction<Env>>[0]): boolean {
-  if (ctx.request.headers.get("Cf-Access-Authenticated-User-Email")) return true;
-  const secret = ctx.env.BLOG_ADMIN_SECRET;
-  if (secret) {
-    const auth = ctx.request.headers.get("Authorization") ?? "";
-    const provided = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-    return provided === secret;
+export interface AdminAuthEnv {
+  BLOG_ADMIN_SECRET?: string;
+  CF_ACCESS_AUD?: string;
+  CF_ACCESS_TEAM_DOMAIN?: string;
+}
+
+type VerifyJwt = (request: Request, opts: { teamDomain: string; aud: string }) => Promise<string | null>;
+
+export async function isAdminRequest(
+  request: Request,
+  env: AdminAuthEnv,
+  verifyJwt: VerifyJwt = verifyAccessJwt,
+): Promise<boolean> {
+  const teamDomain = env.CF_ACCESS_TEAM_DOMAIN?.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+  const aud = env.CF_ACCESS_AUD?.trim();
+  if (teamDomain && aud && request.headers.get("Cf-Access-Jwt-Assertion")) {
+    try {
+      if (await verifyJwt(request, { teamDomain, aud })) return true;
+    } catch (err) {
+      console.warn(JSON.stringify({ event: "blog_admin_access_jwt_rejected", error: String(err).slice(0, 200) }));
+    }
   }
-  return true; // open in dev
+
+  const secret = env.BLOG_ADMIN_SECRET;
+  if (secret) {
+    const auth = request.headers.get("Authorization") ?? "";
+    const provided = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    if (provided && (await constantTimeEqual(provided, secret))) return true;
+  }
+
+  if (!secret && !(teamDomain && aud)) {
+    const host = new URL(request.url).hostname;
+    if (host === "localhost" || host === "127.0.0.1") return true;
+  }
+  return false;
+}
+
+async function constantTimeEqual(a: string, b: string): Promise<boolean> {
+  const enc = new TextEncoder();
+  const [x, y] = await Promise.all([
+    crypto.subtle.digest("SHA-256", enc.encode(a)),
+    crypto.subtle.digest("SHA-256", enc.encode(b)),
+  ]);
+  const ax = new Uint8Array(x);
+  const by = new Uint8Array(y);
+  let diff = 0;
+  for (let i = 0; i < ax.length; i++) diff |= ax[i]! ^ by[i]!;
+  return diff === 0;
+}
+
+function isAuthed(ctx: Parameters<PagesFunction<Env>>[0]): Promise<boolean> {
+  return isAdminRequest(ctx.request as unknown as Request, ctx.env);
 }
 
 function authError(): Response {
@@ -31,14 +77,14 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
   const url = new URL(ctx.request.url);
 
   if (url.searchParams.has("list")) {
-    if (!isAuthed(ctx)) return authError();
+    if (!(await isAuthed(ctx))) return authError();
     const posts = await listAllBlogPostsAdmin(ctx.env.DB);
     return Response.json(posts, { headers: { "Cache-Control": "no-store" } });
   }
 
   const loadSlug = url.searchParams.get("load");
   if (loadSlug) {
-    if (!isAuthed(ctx)) return authError();
+    if (!(await isAuthed(ctx))) return authError();
     const post = await getBlogPostAdmin(ctx.env.DB, loadSlug);
     if (!post) return Response.json({ error: "not_found" }, { status: 404 });
     return Response.json(post, { headers: { "Cache-Control": "no-store" } });
@@ -50,7 +96,7 @@ export const onRequestGet: PagesFunction<Env> = async (ctx) => {
 };
 
 export const onRequestPost: PagesFunction<Env> = async (ctx) => {
-  if (!isAuthed(ctx)) return authError();
+  if (!(await isAuthed(ctx))) return authError();
 
   let body: Record<string, unknown>;
   try {
@@ -89,7 +135,7 @@ export const onRequestPost: PagesFunction<Env> = async (ctx) => {
 };
 
 export const onRequestDelete: PagesFunction<Env> = async (ctx) => {
-  if (!isAuthed(ctx)) return authError();
+  if (!(await isAuthed(ctx))) return authError();
 
   let body: Record<string, unknown>;
   try {
