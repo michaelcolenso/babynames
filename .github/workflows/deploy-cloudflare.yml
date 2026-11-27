@@ -7,9 +7,16 @@ on:
       - master
       - main
 
+# One deploy at a time, in push order. A newer push waits for the running
+# deploy instead of racing it, and is never cancelled halfway through.
+concurrency:
+  group: deploy-cloudflare
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       deployments: write
@@ -28,6 +35,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # The same checks as validate.yml. A push straight to master, or a merge
+      # whose PR checks went stale, must not ship code that fails them.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
 
       - name: Verify Cloudflare credentials
         run: |
