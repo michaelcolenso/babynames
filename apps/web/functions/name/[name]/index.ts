@@ -18,6 +18,7 @@ import {
   getShadowName,
   getTopNamesForYear,
   getYearTotalsForYears,
+  isIndexableName,
   listRelatedNames,
   META_KEYS,
   pageShell,
@@ -129,6 +130,7 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
   ]);
   const url = new URL(ctx.request.url);
   const canonical = `${url.origin}/name/${encodeURIComponent(record.name)}/`;
+  const indexable = isIndexableName(rows.map((r) => r.row));
 
   const html = renderFullPage(record, cls, {
     canonical,
@@ -143,12 +145,14 @@ export const onRequestGet: PagesFunction<Env, "name"> = async (ctx) => {
     affiliateTag: ctx.env.AMAZON_ASSOCIATES_TAG,
     hasShadow,
     latestRank,
+    noindex: !indexable,
   });
   return new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
       "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
       Link: `<${canonical}>; rel="canonical"`,
+      ...(indexable ? {} : { "X-Robots-Tag": "noindex, follow" }),
     },
   });
 };
