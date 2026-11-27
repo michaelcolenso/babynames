@@ -91,7 +91,35 @@ export function cachesOwnResponse(pathname: string): boolean {
   return pathname === "/sitemap.xml";
 }
 
+// The production deployment answers on its Pages alias as well as the custom
+// domain, and every page there carried a canonical pointing at itself, so
+// search engines saw a second copy of the site. Page loads on the alias are
+// sent to the custom domain. Hash preview hosts (`<hash>.name-vitals.pages.dev`)
+// stay reachable for review; Cloudflare already serves them noindex. Machine
+// endpoints are left alone because a redirect would turn a POST into a GET or
+// break a client that does not follow redirects.
+export const CANONICAL_ORIGIN = "https://nobodynamed.com";
+const PRODUCTION_ALIAS_HOST = "name-vitals.pages.dev";
+const ALIAS_PASSTHROUGH = /^\/(?:api\/|mcp(?:\/|$)|a2a(?:\/|$)|\.well-known\/)/;
+
+export function productionAliasRedirect(url: URL, method: string): string | null {
+  if (url.hostname !== PRODUCTION_ALIAS_HOST) return null;
+  if (method !== "GET" && method !== "HEAD") return null;
+  if (ALIAS_PASSTHROUGH.test(url.pathname)) return null;
+  const target = new URL(canonicalizePath(url.pathname) ?? url.pathname, CANONICAL_ORIGIN);
+  target.search = url.search;
+  return target.toString();
+}
+
 async function handleRequest(ctx: Parameters<PagesFunction>[0], url: URL): Promise<Response> {
+  const aliasTarget = productionAliasRedirect(url, ctx.request.method);
+  if (aliasTarget) {
+    return new Response(null, {
+      status: 301,
+      headers: { Location: aliasTarget, "Cache-Control": "public, max-age=86400" },
+    });
+  }
+
   const legacyName = url.pathname === "/" ? url.searchParams.get("name")?.trim() : "";
   if (legacyName) {
     const target = new URL(`/name/${encodeURIComponent(legacyName)}/`, url.origin);
