@@ -28,6 +28,25 @@ export interface ClassifyResult {
   growthX: number | null;
 }
 
+/**
+ * A name first recorded in the last three years of data has at most three
+ * reported years, too few for a trend. The classifier still assigns a status
+ * (a name seen only in an earlier year reads as "declining"), so pages use this
+ * to say "too new to call" instead of describing a decline from its only year.
+ */
+export const TOO_NEW_YEARS = 3;
+export const TOO_NEW_MAX_BIRTHS = 500;
+export function isTooNewToCall(a: Pick<ClassifyResult, "firstYear" | "status" | "totalCount">, yM: number): boolean {
+  // Rising and endangered (a spike that already crashed) are real signals even
+  // over three years, and so is a newcomer with hundreds of births. Only small
+  // names on the quiet "declining"/"stable" fallbacks are noise.
+  return (
+    (a.status === "declining" || a.status === "stable") &&
+    a.firstYear > yM - TOO_NEW_YEARS &&
+    a.totalCount < TOO_NEW_MAX_BIRTHS
+  );
+}
+
 export function classify(input: ClassifyInput): ClassifyResult | null {
   const { series, yM } = input;
   const years = Object.keys(series).map(Number).sort((a, b) => a - b);

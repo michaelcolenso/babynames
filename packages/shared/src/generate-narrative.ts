@@ -1,7 +1,7 @@
 // Pure function for generating SEO-friendly narrative copy from name statistics.
 // No hallucinated etymology or made-up origin/meaning. Gracefully omits unavailable fields.
 
-import type { ClassifyResult } from "./classify";
+import { isTooNewToCall, type ClassifyResult } from "./classify";
 import type { NameRecord } from "./schema";
 
 export interface NameNarrative {
@@ -145,7 +145,8 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function waveLabel(a: ClassifyResult): string {
+function waveLabel(a: ClassifyResult, yM: number): string {
+  if (isTooNewToCall(a, yM)) return "new";
   if (a.status === "extinct") return "historic";
   if (a.status === "endangered") return "fading";
   if (a.status === "rising") {
@@ -197,7 +198,7 @@ export function generateNameNarrative(
   const safeName = esc(name);
   const sexNoun = sexNounLabel(record.sex);
   const sexBaby = sexBabyLabel(record.sex);
-  const wave = waveLabel(a);
+  const wave = waveLabel(a, record.yM);
   // Use the year after the latest SSA data as "current" for age arithmetic.
   const currentYear = (record.yM > 0 ? record.yM : 2024) + 1;
 
@@ -339,6 +340,8 @@ export function generateNameNarrative(
     } else {
       trend = `No. ${safeName} is <a href="/endangered">endangered</a> as a baby name, down ${a.declinePct ?? 0}% from its ${a.peakYear} peak with ${fmt(a.latestCount)} births in ${record.yM}.`;
     }
+  } else if (isTooNewToCall(a, record.yM)) {
+    trend = `Too early to say. ${safeName} first appears in the SSA records in ${a.firstYear}, with ${fmt(a.latestCount)} births in ${record.yM}.`;
   } else if (a.status === "declining") {
     trend = `${a.latestCount >= 1000 ? "Somewhat" : "Not especially"}. ${safeName} has been declining since its ${a.peakYear} peak and registered ${fmt(a.latestCount)} births in ${record.yM}.`;
   } else {

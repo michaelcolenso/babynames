@@ -3,7 +3,7 @@
 //   - client app.js (re-renders into #view-name on the index page, after
 //     hydrating from the embedded <script type="application/json">)
 
-import { classify, type ClassifyResult } from "./classify";
+import { classify, isTooNewToCall, type ClassifyResult } from "./classify";
 import { contentId, contentIdentityMeta } from "./content-identity";
 import type { YearTopRow, YearTotal } from "./d1-queries";
 import { generateNameNarrative, type NameNarrative } from "./generate-narrative";
@@ -95,6 +95,16 @@ export function describeStatus(
           ? "Era-bound, still legible"
           : "Highly era-bound";
 
+  if (isTooNewToCall(a, record.yM)) {
+    return {
+      status: "Too new to call",
+      trajectory: `First recorded in ${a.firstYear}`,
+      vitality,
+      rarity,
+      stability,
+      summary: `${name} first appears in the SSA records in ${a.firstYear}. That is too few years to tell a trend from noise, so the next few releases will show whether it catches on.`,
+    };
+  }
   if (a.status === "extinct") {
     return {
       status: "Extinct",
@@ -1135,6 +1145,7 @@ function labelStatus(status: Status): string {
 // mass-culture even after a 91% decline. When a name still gets 5,000+ births,
 // "Past peak" reads more honestly than "Endangered".
 function displayStatus(a: ClassifyResult, yM: number): string {
+  if (isTooNewToCall(a, yM)) return "Too new to call";
   if (a.status === "endangered" && a.latestCount >= STILL_COMMON_THRESHOLD) {
     return "Past peak";
   }
