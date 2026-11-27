@@ -139,7 +139,7 @@ test("rebuildStateRankings also writes state_year_totals", { skip }, async () =>
   const totals = sqlite
     .prepare("SELECT births, names FROM state_year_totals WHERE state = 'CA' AND year = 2023")
     .get() as { births: number; names: number };
-  assert.deepEqual(totals, { births: 2200, names: 4 });
+  assert.deepEqual({ ...totals }, { births: 2200, names: 4 });
 });
 
 test("rebuildStateRankings is idempotent and clears vacated ranks", { skip }, async () => {
