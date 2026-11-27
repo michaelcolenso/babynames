@@ -672,3 +672,31 @@ test("the ingest cron sweeps newsletter housekeeping independently of signups", 
   const worker = await import("../apps/ingest-worker/src/index");
   assert.ok(typeof worker.default.scheduled === "function");
 });
+
+test("the weekly cron runs the newsletter sweeps and never downloads from SSA", async () => {
+  const swept: string[] = [];
+  const db = {
+    prepare(sql: string) {
+      return { bind() { return { async run() { swept.push(sql); } }; } };
+    },
+  } as unknown as D1Database;
+  const fetched: string[] = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    fetched.push(String(input instanceof Request ? input.url : input));
+    return new Response(null, { status: 403 });
+  }) as typeof fetch;
+  try {
+    const pending: Promise<unknown>[] = [];
+    const ctx = { waitUntil: (p: Promise<unknown>) => pending.push(p), passThroughOnException() {} };
+    const env = { DB: db, SSA_URL: "https://www.ssa.gov/oact/babynames/names.zip" };
+    const worker = await import("../apps/ingest-worker/src/index");
+    await worker.default.scheduled({} as never, env as never, ctx as never);
+    await Promise.all(pending);
+    assert.ok(swept.some((s) => /DELETE FROM newsletter_subscribers/.test(s)));
+    assert.ok(swept.some((s) => /DELETE FROM newsletter_rate_limit/.test(s)));
+    assert.deepEqual(fetched, []);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});

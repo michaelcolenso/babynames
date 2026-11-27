@@ -93,12 +93,13 @@ npm run dev:ingest          # starts wrangler dev
 
 ## Data refresh
 
-The ingest Worker runs weekly (ETag-gated; exits immediately if the SSA zip is unchanged). The SSA publishes new data once a year, typically in May. Manual trigger:
+The SSA publishes new data once a year, typically in May. SSA.gov blocks the ingest Worker's own download, so the weekly cron no longer fetches it (the cron still runs the newsletter sweeps). Each May:
 
-```bash
-wrangler dev --test-scheduled   # local
-# or POST to the /run endpoint of the deployed Worker
-```
+1. Download `names.zip` from SSA by hand.
+2. Upload it to the `name-vitals-ingest` R2 bucket.
+3. POST to the deployed Worker's `/run?r2key=<key>` with the `TRIGGER_SECRET` bearer token (add `&source=state` for the state zip).
+
+Locally, `npm run dev:ingest`, then call `http://localhost:8787/run` with the same bearer token.
 
 ## GitHub Actions secrets
 
