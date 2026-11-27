@@ -395,6 +395,9 @@ export function renderFullPage(
     // in which case the destination 404s.
     hasShadow?: boolean;
     latestRank?: number | null;
+    // Names below the sitemap gate (see name-indexability.ts) stay live for
+    // readers and links but ask search engines not to index them.
+    noindex?: boolean;
   } = { canonical: "" },
 ): string {
   const narrative = generateNameNarrative(record, classifyResult, pickStronghold(opts.strongholds), {
@@ -438,6 +441,7 @@ export function renderFullPage(
     ogImageAlt: `${record.name} — ${statusLabel}, peak ${classifyResult.peakYear}`,
     ogType: "article",
     currentPath: undefined,
+    headExtras: opts.noindex ? '<meta name="robots" content="noindex,follow">' : undefined,
     body: `<div id="view-name">${renderReportWithOptions(record, {
       relatedNames: opts.relatedNames,
       discovery: opts.discovery,
