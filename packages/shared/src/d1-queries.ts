@@ -78,7 +78,7 @@ export async function listIndexableNames(db: D1Database, limit = 49_900, offset 
          SELECT name, name_lower, total_count, peak_count, latest_count, status, curr_decade, growth_x,
                 ROW_NUMBER() OVER (
                   PARTITION BY name_lower
-                  ORDER BY total_count DESC, peak_count DESC
+                  ORDER BY total_count DESC, peak_count DESC, sex ASC
                 ) AS rn
            FROM names
        ),

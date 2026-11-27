@@ -58,18 +58,24 @@ test("the page-level gate matches the sitemap SQL on the same rows", async () =>
   let id = 0;
   for (let i = 0; i < 3_000; i++) {
     const lower = `n${i}`;
-    const sexes = rand() < 0.3 ? (["F", "M"] as const) : ([pick(["F", "M"] as const)] as const);
+    // Two-sex names insert the M row first, the reverse of the F-first order the
+    // name page reads rows in, and half of them tie on total and peak, so the
+    // tie-breaker has to agree between the two selectors.
+    const sexes = rand() < 0.3 ? (["M", "F"] as const) : ([pick(["F", "M"] as const)] as const);
+    const tie = rand() < 0.5;
     const rows: NameRow[] = [];
     for (const sex of sexes) {
       const r = row({
         id: ++id, name: `N${i}`, name_lower: lower, sex,
-        total_count: pick(totals) + (sex === "M" ? 1 : 0), peak_count: pick(peaks), latest_count: pick(latests),
+        total_count: tie && rows[0] ? rows[0].total_count : pick(totals),
+        peak_count: tie && rows[0] ? rows[0].peak_count : pick(peaks),
+        latest_count: pick(latests),
         status: pick(statuses), curr_decade: pick(decades), growth_x: pick(growths),
       });
       insert.run(r.id, r.name, r.name_lower, r.sex, r.peak_count, r.total_count, r.status, r.latest_count, r.curr_decade, r.growth_x);
       rows.push(r);
     }
-    byName.set(lower, rows);
+    byName.set(lower, [...rows].sort((a, b) => a.sex.localeCompare(b.sex)));
   }
 
   const db = {

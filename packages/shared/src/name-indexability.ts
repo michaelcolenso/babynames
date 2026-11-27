@@ -40,10 +40,16 @@ export function isIndexableNameRow(row: GateRow): boolean {
 
 /**
  * The sitemap judges a name by its strongest sex row (most births, then the
- * higher peak), so the page must judge it by the same row.
+ * higher peak, then F before M on a full tie), so the page must judge it by
+ * the same row.
  */
-export function isIndexableName(rows: readonly GateRow[]): boolean {
+export function isIndexableName(rows: readonly (GateRow & Pick<NameRow, "sex">)[]): boolean {
   if (!rows.length) return false;
-  const canonical = [...rows].sort((a, b) => b.total_count - a.total_count || b.peak_count - a.peak_count)[0]!;
+  const canonical = [...rows].sort(
+    (a, b) =>
+      b.total_count - a.total_count ||
+      b.peak_count - a.peak_count ||
+      (a.sex < b.sex ? -1 : a.sex > b.sex ? 1 : 0),
+  )[0]!;
   return isIndexableNameRow(canonical);
 }
