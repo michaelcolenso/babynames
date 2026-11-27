@@ -22,6 +22,11 @@ interface Env extends Cloudflare.Env {
   // Used as a Bearer token fallback when Cloudflare Access is not in front
   // of the endpoint (e.g. local dev with wrangler dev).
   BLOG_ADMIN_SECRET?: string;
+  // Cloudflare Access application AUD tag and team domain
+  // (e.g. "myteam.cloudflareaccess.com") used to verify Cf-Access-Jwt-Assertion
+  // on the blog admin endpoint. Set as Pages secrets.
+  CF_ACCESS_AUD?: string;
+  CF_ACCESS_TEAM_DOMAIN?: string;
   // ── Newsletter ─────────────────────────────────────────────────────────
   //
   // HMAC key for confirmation and unsubscribe links. Set as a Pages *secret*
