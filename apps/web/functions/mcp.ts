@@ -236,6 +236,24 @@ function asBindableString(v: unknown, maxLen = 300): string | null {
   return v.slice(0, maxLen);
 }
 
+// Tool calls are logged one row each. Handshakes are logged at most once per
+// client (name, version and user agent) per UTC day: uptime monitors and
+// directory crawlers re-run `initialize` every few minutes and made up ~97% of
+// rows (20,005 of 20,506 in the 30 days to 2026-11-27) while adding nothing
+// that a daily row doesn't already say. Both statements bind the same ?1–?7.
+export const MCP_TOOL_CALL_INSERT_SQL = `INSERT INTO mcp_events(event_type, tool_name, client_name, client_version, is_error, session_id, user_agent)
+         VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7)`;
+export const MCP_INITIALIZE_INSERT_SQL = `INSERT INTO mcp_events(event_type, tool_name, client_name, client_version, is_error, session_id, user_agent)
+         SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7
+          WHERE NOT EXISTS (
+            SELECT 1 FROM mcp_events
+             WHERE event_type = ?1
+               AND occurred_at >= datetime('now', 'start of day')
+               AND client_name IS ?3
+               AND client_version IS ?4
+               AND user_agent IS ?7
+          )`;
+
 // Best-effort usage logging — fired via ctx.waitUntil so a slow insert never
 // delays the actual MCP response, and wrapped in try/catch so a failure to
 // even construct the query (e.g. a bind error) can't break it either.
@@ -254,10 +272,7 @@ function logMcpEvent(
 ): void {
   try {
     const promise = db
-      .prepare(
-        `INSERT INTO mcp_events(event_type, tool_name, client_name, client_version, is_error, session_id, user_agent)
-         VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7)`,
-      )
+      .prepare(fields.eventType === "initialize" ? MCP_INITIALIZE_INSERT_SQL : MCP_TOOL_CALL_INSERT_SQL)
       .bind(
         fields.eventType,
         asBindableString(fields.toolName),
