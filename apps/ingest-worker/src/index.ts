@@ -1,6 +1,7 @@
-// Cron-triggered SSA ingest worker.
+// SSA ingest worker. The weekly cron runs newsletter housekeeping only; the
+// SSA load is started by hand through /run (SSA blocks the scheduled fetch).
 //
-//   Cron → scheduled() → check ETag → fetch zip → store in R2 → parse →
+//   /run → runIngest() → check ETag → fetch zip (or read R2) → parse →
 //          enqueue 1k-row chunks on INGEST_QUEUE → enqueue finalize message
 //   Queue → queue() → insert chunks into name_year_raw_staging
 //                   → on finalize, aggregate into names_staging /
@@ -73,17 +74,10 @@ export default {
       }),
     );
 
-    ctx.waitUntil(
-      runIngest(env, /*force*/ false, /*r2Key*/ null).catch((err) => {
-        console.error(
-          JSON.stringify({
-            message: "scheduled ingest failed",
-            error: err instanceof Error ? err.message : String(err),
-          }),
-        );
-        throw err;
-      }),
-    );
+    // The weekly SSA download is off on purpose. SSA.gov answers this Worker
+    // with 403 on every run, so the cron only logged a failure each week.
+    // SSA publishes once a year (usually May): download names.zip by hand,
+    // put it in R2, then POST /run?r2key=<key> (see README "Data refresh").
   },
 
   // Manual trigger via `wrangler dev --test-scheduled` hits this path.

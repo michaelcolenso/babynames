@@ -27,11 +27,12 @@ dead_letter_queue = "name-ingest-dlq"
 SSA_URL = "https://www.ssa.gov/oact/babynames/names.zip"
 STATE_SSA_URL = "https://www.ssa.gov/oact/babynames/state/namesbystate.zip"
 
-# SSA releases new data once per year (typically May). The scheduled() handler
-# checks the ETag so runs cost nothing when the dataset hasn't changed.
+# SSA releases new data once per year (typically May). The weekly cron only
+# runs newsletter housekeeping; SSA blocks this Worker's download, so the
+# yearly load is started by hand through /run.
 [observability]
 enabled = true
 head_sampling_rate = 1
 
 [triggers]
-crons = ["0 14 * * 1"] # Weekly, Sundays 14:00 UTC (Cloudflare numbers weekdays from Sunday = 1)
+crons = ["0 14 * * 1"] # Weekly newsletter sweeps, Sundays 14:00 UTC (Cloudflare numbers weekdays from Sunday = 1)
