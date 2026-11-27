@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(npm run *)",
-      "Bash(gh pr create --title 'Resolve stash conflicts: apply dossier redesign + narrative enhancements' --body ' *)"
-    ]
-  }
-}

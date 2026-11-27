@@ -43,3 +43,13 @@ scripts/cache/
 
 # Agent worktree scratch space
 .claude/worktrees/
+
+# Generated SSA ingest SQL (large; produced by scripts/ingest-ssa.ts)
+migrations/ssa-ingest/
+
+# Per-machine tool state
+.claude/settings.local.json
+**/.claude/settings.local.json
+.playwright-mcp/
+.worktrees/
+*.tsbuildinfo
