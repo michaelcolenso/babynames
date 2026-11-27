@@ -27,6 +27,7 @@ export * from "./enrichment-compute";
 export * from "./content-identity";
 export * from "./analytics";
 export * from "./indexable-routes";
+export * from "./name-indexability";
 export * from "./decade-hub-types";
 export * from "./decade-hub-validate";
 export * from "./decade-hub-runtime";
