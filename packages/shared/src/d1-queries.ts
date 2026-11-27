@@ -67,6 +67,8 @@ export async function searchByPrefix(db: D1Database, prefix: string, limit = 10)
 // Sitemap cohort: one canonical URL per spelling, using the dominant sex row.
 // The threshold keeps very sparse SSA records out of initial indexation while
 // preserving broad coverage for names with meaningful history.
+// The gate below is mirrored by `isIndexableNameRow` in name-indexability.ts,
+// which marks every other name page noindex. Change both together.
 export async function listIndexableNames(db: D1Database, limit = 49_900, offset = 0): Promise<IndexableName[]> {
   const cappedLimit = Math.max(1, Math.min(49_900, Math.floor(limit)));
   const safeOffset = Math.max(0, Math.floor(offset));
@@ -76,7 +78,7 @@ export async function listIndexableNames(db: D1Database, limit = 49_900, offset 
          SELECT name, name_lower, total_count, peak_count, latest_count, status, curr_decade, growth_x,
                 ROW_NUMBER() OVER (
                   PARTITION BY name_lower
-                  ORDER BY total_count DESC, peak_count DESC
+                  ORDER BY total_count DESC, peak_count DESC, sex ASC
                 ) AS rn
            FROM names
        ),
