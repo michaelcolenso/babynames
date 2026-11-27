@@ -47,6 +47,11 @@ export interface IndexableRouteOptions {
   names?: IndexableNameInput[];
   blogPosts?: IndexableBlogInput[];
   maxRoutes?: number;
+  /** When the national dataset was last ingested (`meta.last_ingest_at`, ISO).
+   * Pages built from the latest data use it as lastmod; without it they fall
+   * back to a synthetic `${maxYear}-05-15`, which runs about a year behind
+   * because SSA publishes each year's file the following May. */
+  dataUpdatedAt?: string | null;
 }
 
 const LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
@@ -101,14 +106,17 @@ function shouldHaveTrailingSlash(path: string): boolean {
 /** The canonical URL universe consumed by sitemap, IndexNow, and link auditing. */
 export function buildIndexableRoutes(options: IndexableRouteOptions): IndexableRoute[] {
   const { minYear, maxYear } = options;
-  const dataDate = `${maxYear}-05-15`;
+  const ingestDate = options.dataUpdatedAt && /^\d{4}-\d{2}-\d{2}/.test(options.dataUpdatedAt) ? options.dataUpdatedAt.slice(0, 10) : undefined;
+  const dataDate = ingestDate ?? `${maxYear}-05-15`;
   const routes: IndexableRoute[] = [...STATIC_ROUTES];
 
   // Google rejects sitemap lastmod dates before 1970 ("Invalid date" — it
   // treats pre-epoch dates as implausible). Historical year/decade pages are
   // archival content whose lastmod is a synthetic `${year}-05-15` anyway, so
   // for anything before 1970 we omit the tag rather than lie about it.
-  const dataDateFor = (year: number): string | undefined => (year < 1970 ? undefined : `${year}-05-15`);
+  // The latest year (and the decade that contains it) changed at the last
+  // ingest, so it carries the ingest date like every other current page.
+  const dataDateFor = (year: number): string | undefined => (year < 1970 ? undefined : year >= maxYear ? dataDate : `${year}-05-15`);
   for (let year = minYear; year <= maxYear; year++) routes.push({ path: `/year/${year}/`, family: "year", lastmod: dataDateFor(year), priority: 0.6 });
   const stateDataDate = `${options.stateMaxYear ?? maxYear - 1}-05-15`;
   for (const state of ALL_STATES) {
