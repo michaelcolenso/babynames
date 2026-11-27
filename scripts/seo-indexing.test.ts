@@ -28,14 +28,6 @@ test("the alias redirect leaves machine endpoints, writes, previews and the apex
   assert.equal(go("http://localhost:8788/name/Olivia/"), null);
 });
 
-function row(partial: Partial<NameRow>): NameRow {
-  return {
-    id: 0, name: "X", name_lower: "x", sex: "F", first_year: 1990, last_year: 2025, peak_year: 2000,
-    peak_count: 0, total_count: 0, status: "stable", decline_pct: null, latest_count: 0,
-    prev_decade: null, curr_decade: null, growth_x: null,
-    ...partial,
-  };
-}
 
 test("sitemap lastmod follows the last ingest, not the data year", () => {
   const routes = buildIndexableRoutes({ minYear: 1880, maxYear: 2025, names: [{ name: "Olivia" }], dataUpdatedAt: "2026-05-19T04:12:00.000Z" });
