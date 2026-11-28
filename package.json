@@ -76,7 +76,10 @@
     "test:blog-admin-auth": "tsx --test scripts/blog-admin-auth.test.ts",
     "test:webmcp": "tsx --test scripts/webmcp.test.ts",
     "test:content-negotiation": "tsx --test scripts/content-negotiation.test.ts",
-    "build-decade-hub:1920s": "tsx scripts/build-decade-hub-1920.ts"
+    "build-decade-hub:1920s": "tsx scripts/build-decade-hub-1920.ts",
+    "gsc:quickwins": "tsx scripts/gsc/quickwins.ts",
+    "gsc:diff": "tsx scripts/gsc/diff.ts",
+    "gsc:inspect": "tsx scripts/gsc/inspect.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260621.1",

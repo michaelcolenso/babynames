@@ -53,3 +53,11 @@ migrations/ssa-ingest/
 .playwright-mcp/
 .worktrees/
 *.tsbuildinfo
+
+# Google Search Console service-account key (sensitive)
+scripts/.gsc-service-account.json
+
+# GSC script output (generated CSVs)
+scripts/gsc-quickwins.csv
+scripts/gsc-data/
+scripts/gsc-inspect.csv
