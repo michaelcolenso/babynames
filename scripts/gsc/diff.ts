@@ -63,16 +63,19 @@ function parseLine(line: string): string[] {
   return vals;
 }
 
+// Dated keyword snapshots only: skips quickwins-pages-*.csv and quickwins-latest.csv.
+const KEYWORD_SNAPSHOT = /^quickwins-\d{4}-\d{2}-\d{2}\.csv$/;
+
 function findLatestCsv(dir: string): string | undefined {
   const files = readdirSync(dir)
-    .filter((f) => f.startsWith("quickwins-") && f.endsWith(".csv") && f !== "quickwins-latest.csv")
+    .filter((f) => KEYWORD_SNAPSHOT.test(f))
     .sort();
   return files.length >= 2 ? files.at(-2) : undefined;
 }
 
 function findLatestCsvPath(dir: string): string | undefined {
   const files = readdirSync(dir)
-    .filter((f) => f.startsWith("quickwins-") && f.endsWith(".csv") && f !== "quickwins-latest.csv")
+    .filter((f) => KEYWORD_SNAPSHOT.test(f))
     .sort();
   return files.length ? `${dir}/${files.at(-1)}` : undefined;
 }
@@ -93,7 +96,7 @@ if (args.length >= 2) {
   newPath = findLatestCsvPath(dir);
 } else {
   const files = readdirSync(dir)
-    .filter((f) => f.startsWith("quickwins-") && f.endsWith(".csv") && f !== "quickwins-latest.csv")
+    .filter((f) => KEYWORD_SNAPSHOT.test(f))
     .sort();
   if (files.length < 2) {
     console.error(`Need at least 2 dated CSVs in ${dir}. Found ${files.length}.`);

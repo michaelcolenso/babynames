@@ -232,6 +232,8 @@ function aggregateByPage(wins: QuickWin[]): PageAgg[] {
     const existing = map.get(w.page);
     if (existing) {
       existing.keywords += 1;
+      // avgPosition holds the running sum here; it is divided by keywords below.
+      existing.avgPosition += w.position;
       existing.totalImpressions += w.impressions;
       existing.totalClicks += w.clicks;
       existing.totalScore += w.score;

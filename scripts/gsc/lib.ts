@@ -255,7 +255,9 @@ export async function inspectUrl(
   retries = 3,
   delayMs = 1000,
 ): Promise<InspectResult> {
-  const apiUrl = `${API_BASE}/sites/${encodeURIComponent(site)}/urlInspection/index/inspect`;
+  // URL Inspection is a v1 API with its own endpoint; the property goes in
+  // the siteUrl body field, not the path.
+  const apiUrl = "https://searchconsole.googleapis.com/v1/urlInspection/index:inspect";
   const payload = { inspectionUrl: url, siteUrl: site };
 
   let lastErr: Error | undefined;
@@ -273,7 +275,9 @@ export async function inspectUrl(
         const txt = await res.text();
         throw new Error(`Inspect failed (${res.status}): ${txt}`);
       }
-      return (await res.json()) as InspectResult;
+      // The response wraps the result: { inspectionResult: { indexStatusResult, ... } }.
+      const body = (await res.json()) as { inspectionResult?: InspectResult };
+      return body.inspectionResult ?? {};
     } catch (err) {
       lastErr = err as Error;
       if (attempt < retries - 1) {
