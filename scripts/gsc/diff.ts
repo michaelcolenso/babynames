@@ -245,6 +245,7 @@ printTable(
 printTable(
   "Biggest impression movers",
   movers
-    .filter((m) => m.direction !== "stable")
+    // Impressions can swing while position holds, so filter on impressions.
+    .filter((m) => m.imprDelta !== 0)
     .sort((a, b) => Math.abs(b.imprDelta) - Math.abs(a.imprDelta)),
 );
